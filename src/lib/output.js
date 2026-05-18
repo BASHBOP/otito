@@ -20,7 +20,7 @@ Usage:
   dev-context deps <package> [--query text] [--limit n] [--json]
   dev-context matrix [--json]
   dev-context mcp
-  dev-context pr <path> [--number n] [--base ref] [--head ref] [--out file] [--json]
+  dev-context pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
   dev-context report <path> [--out file] [--json]
   dev-context workspace <repo...> [--out file] [--json]
   dev-context agent-tools [--json|--markdown]

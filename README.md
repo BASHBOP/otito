@@ -104,7 +104,7 @@ Generates a PR review context pack from local git diff metadata, code-map classi
 
 ```bash
 node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
-node src/cli.js pr . --number 123 --json
+node src/cli.js pr . --number 123 --comment
 ```
 
 Useful flags:
@@ -113,6 +113,11 @@ Useful flags:
 - `--head <ref>`: compare to a specific head ref. Defaults to `HEAD`.
 - `--number <n>`: enrich with `gh pr view` metadata and review comments.
 - `--github`: ask `gh` to infer the PR from the current branch.
+- `--comment`: create or update a sticky GitHub PR comment using `gh`.
+
+### GitHub Actions
+
+This repo includes `.github/workflows/dev-context-pr.yml`. Copy it into another repository to run the PR review on every pull request, upload the full Markdown report as an artifact, and post/update a sticky PR comment.
 
 ### `mcp`
 

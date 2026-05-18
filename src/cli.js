@@ -190,6 +190,7 @@ async function handlePr(parsed) {
   const result = generatePrReview(repoPath, {
     number: parsed.flags.number ?? parsed.flags.pr,
     github: parsed.flags.github,
+    comment: parsed.flags.comment,
     base: parsed.flags.base,
     head: parsed.flags.head
   });
@@ -201,11 +202,11 @@ async function handlePr(parsed) {
 
   if (parsed.flags.out) {
     const artifact = writeArtifact(parsed.flags.out, result.markdown);
-    printText(`PR review context written: ${artifact.path}`);
+    printText(["PR review context written:", artifact.path, formatCommentResult(result.data.comment)].filter(Boolean).join("\n"));
     return;
   }
 
-  printText(result.markdown);
+  printText([result.markdown, formatCommentResult(result.data.comment)].filter(Boolean).join("\n"));
 }
 
 async function handleReport(parsed) {
@@ -263,6 +264,16 @@ async function handleAgentTools(parsed) {
 
 function handleHelp() {
   printHelp();
+}
+
+function formatCommentResult(comment) {
+  if (!comment) {
+    return undefined;
+  }
+  if (comment.ok) {
+    return `PR comment ${comment.action}: ${comment.url ?? comment.id ?? "ok"}`;
+  }
+  return `PR comment skipped: ${comment.error}`;
 }
 
 function formatRepoSummary(result) {

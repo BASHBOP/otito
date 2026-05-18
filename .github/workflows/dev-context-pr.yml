@@ -1,0 +1,47 @@
+name: dev-context PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  review:
+    name: Generate PR review context
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch base branch
+        run: git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}" --depth=1
+
+      - name: Generate PR review context
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node src/cli.js pr . \
+            --base "origin/${{ github.base_ref }}" \
+            --head HEAD \
+            --number "${{ github.event.pull_request.number }}" \
+            --out .dev-context/pr-review.md \
+            --comment
+
+      - name: Upload PR review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-context-pr-review
+          path: .dev-context/pr-review.md

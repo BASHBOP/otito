@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { generateCodeMap } from "./code-map.js";
 import { inspectRepo } from "./repo.js";
@@ -41,6 +42,7 @@ const preferredScripts = [
   "test:e2e",
   "build"
 ];
+const prCommentMarker = "<!-- dev-context-pr-review -->";
 
 export function generatePrReview(repoPath = ".", options = {}) {
   const repo = inspectRepo(repoPath);
@@ -88,6 +90,10 @@ export function generatePrReview(repoPath = ".", options = {}) {
     testHints,
     nextSteps: inferNextSteps(changedFiles, risk, reviewComments, testHints)
   };
+
+  if (options.comment) {
+    data.comment = tryPostPrReviewComment(root, data);
+  }
 
   return {
     data,
@@ -184,9 +190,69 @@ export function formatPrReviewMarkdown(data) {
   return lines.join("\n");
 }
 
+export function formatPrCommentMarkdown(data) {
+  const lines = [
+    prCommentMarker,
+    "## dev-context PR Review",
+    "",
+    `**Risk:** ${data.risk.level} (${data.risk.score})`,
+    `**Changed files:** ${data.comparison.changedFileCount}`,
+    `**Diff:** ${data.comparison.shortstat || `${data.comparison.insertions} insertion(s), ${data.comparison.deletions} deletion(s)`}`,
+    ""
+  ];
+
+  lines.push("### Risk Flags", "");
+  if (data.risk.flags.length) {
+    for (const flag of data.risk.flags) {
+      lines.push(`- ${flag}`);
+    }
+  } else {
+    lines.push("- none detected");
+  }
+
+  lines.push("", "### Changed Domains", "");
+  if (data.domains.length) {
+    lines.push("| Domain | Files | +/- | Kinds |", "|---|---:|---:|---|");
+    for (const domain of data.domains.slice(0, 10)) {
+      lines.push(`| ${domain.name} | ${domain.fileCount} | +${domain.additions} / -${domain.deletions} | ${domain.kinds.map((item) => `${item.kind} ${item.count}`).join(", ")} |`);
+    }
+  } else {
+    lines.push("- none detected");
+  }
+
+  const riskyFiles = data.changedFiles.filter((file) => file.riskFlags.length).slice(0, 15);
+  lines.push("", "### Risky Files", "");
+  if (riskyFiles.length) {
+    for (const file of riskyFiles) {
+      lines.push(`- \`${formatFileCell(file)}\`: ${file.riskFlags.join(", ")}`);
+    }
+  } else {
+    lines.push("- none detected");
+  }
+
+  lines.push("", "### Suggested Verification", "");
+  if (!data.changedFiles.length) {
+    lines.push("- no verification needed; no changed files detected");
+  } else if (data.testHints.length) {
+    for (const hint of data.testHints) {
+      lines.push(`- \`${hint.command}\`: ${hint.reason}`);
+    }
+  } else {
+    lines.push("- no obvious package scripts detected");
+  }
+
+  lines.push("", "### Next Steps", "");
+  for (const step of data.nextSteps.slice(0, 6)) {
+    lines.push(`- ${step}`);
+  }
+
+  lines.push("", "_Full Markdown report is uploaded as the `dev-context-pr-review` workflow artifact when run in GitHub Actions._", "");
+  return lines.join("\n");
+}
+
 function loadPrMetadata(root, options) {
   const number = options.number ?? options.pr;
-  const shouldLoad = Boolean(number ?? options.github);
+  const shouldLoad = Boolean(number ?? options.github ?? options.comment);
   if (!shouldLoad) {
     return {
       requested: false,
@@ -246,6 +312,105 @@ function loadPrMetadata(root, options) {
       reviews: [],
       reviewComments: []
     };
+  }
+}
+
+function tryPostPrReviewComment(root, data) {
+  try {
+    return postPrReviewComment(root, data);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
+function postPrReviewComment(root, data) {
+  const number = data.pr.number;
+  if (!number) {
+    throw new Error(data.pr.error ? `could not resolve PR number: ${data.pr.error}` : "could not resolve PR number");
+  }
+
+  const repoResult = runCommand("gh", ["repo", "view", "--json", "nameWithOwner"], { cwd: root, timeout: 20000 });
+  if (!repoResult.ok) {
+    throw new Error(cleanCommandError(repoResult, "gh repo view failed"));
+  }
+
+  const nameWithOwner = JSON.parse(repoResult.stdout).nameWithOwner;
+  if (!nameWithOwner) {
+    throw new Error("gh repo view did not return nameWithOwner");
+  }
+
+  const body = formatPrCommentMarkdown(data);
+  const existing = findExistingPrComment(root, nameWithOwner, number);
+  const payloadPath = writeCommentPayload(body);
+  try {
+    if (existing) {
+      const update = runCommand("gh", ["api", `repos/${nameWithOwner}/issues/comments/${existing.id}`, "--method", "PATCH", "--input", payloadPath], {
+        cwd: root,
+        timeout: 30000
+      });
+      if (!update.ok) {
+        throw new Error(cleanCommandError(update, "gh api comment update failed"));
+      }
+      const parsed = JSON.parse(update.stdout || "{}");
+      return {
+        ok: true,
+        action: "updated",
+        id: parsed.id ?? existing.id,
+        url: parsed.html_url ?? existing.html_url
+      };
+    }
+
+    const create = runCommand("gh", ["api", `repos/${nameWithOwner}/issues/${number}/comments`, "--method", "POST", "--input", payloadPath], {
+      cwd: root,
+      timeout: 30000
+    });
+    if (!create.ok) {
+      throw new Error(cleanCommandError(create, "gh api comment create failed"));
+    }
+    const parsed = JSON.parse(create.stdout || "{}");
+    return {
+      ok: true,
+      action: "created",
+      id: parsed.id,
+      url: parsed.html_url
+    };
+  } finally {
+    safeUnlink(payloadPath);
+  }
+}
+
+function findExistingPrComment(root, nameWithOwner, number) {
+  const comments = runCommand("gh", ["api", `repos/${nameWithOwner}/issues/${number}/comments?per_page=100`], {
+    cwd: root,
+    timeout: 30000
+  });
+  if (!comments.ok || !comments.stdout.trim()) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(comments.stdout).find((comment) => String(comment.body ?? "").includes(prCommentMarker));
+  } catch {
+    return undefined;
+  }
+}
+
+function writeCommentPayload(body) {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-comment-"));
+  const payloadPath = path.join(directory, "body.json");
+  fs.writeFileSync(payloadPath, JSON.stringify({ body }));
+  return payloadPath;
+}
+
+function safeUnlink(filePath) {
+  try {
+    fs.unlinkSync(filePath);
+    fs.rmdirSync(path.dirname(filePath));
+  } catch {
+    // Best effort cleanup for a temp file.
   }
 }
 

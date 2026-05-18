@@ -65,6 +65,7 @@ const tools = [
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         number: { type: "number", description: "Optional GitHub PR number for gh enrichment." },
         github: { type: "boolean", description: "Ask gh to infer the current branch PR." },
+        comment: { type: "boolean", description: "Create or update a sticky GitHub PR comment using gh." },
         base: { type: "string", description: "Base ref. Defaults to PR base, upstream, origin/main, or main." },
         head: { type: "string", description: "Head ref. Defaults to HEAD." },
         includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." }
