@@ -15,6 +15,7 @@ export function printHelp() {
 Usage:
   dev-context doctor [--json]
   dev-context repo <path> [--json]
+  dev-context map <path> [--out file] [--json]
   dev-context structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
   dev-context deps <package> [--query text] [--limit n] [--json]
   dev-context matrix [--json]
@@ -25,6 +26,7 @@ Usage:
 Examples:
   node src/cli.js doctor
   node src/cli.js repo . --json
+  node src/cli.js map . --json
   node src/cli.js deps zod --query parse
   node src/cli.js report . --out .dev-context/report.md
   node src/cli.js workspace ../web ../api --out .dev-context/workspace.md

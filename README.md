@@ -9,6 +9,7 @@ It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. The 
 - generate TypeScript structure HTML through `code-structure`
 - search dependency source through `opensrc`
 - produce Markdown or JSON reports
+- generate JSON-first code maps for agents
 - expose simple agent-friendly tool metadata
 
 ## Quick Start
@@ -19,6 +20,7 @@ This build has no runtime npm dependencies.
 node src/cli.js help
 node src/cli.js doctor
 node src/cli.js repo . --json
+node src/cli.js map . --json
 node src/cli.js matrix
 node src/cli.js report . --out .dev-context/report.md
 node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace.md

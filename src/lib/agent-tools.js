@@ -22,6 +22,14 @@ export function getAgentTools() {
         }
       },
       {
+        name: "repo_map",
+        command: "dev-context map <path> --json",
+        description: "Generate a JSON-first code map with routes, controllers, services, modules, components, hooks, API clients, DTOs, schemas, imports, exports, and symbols.",
+        input: {
+          path: "string"
+        }
+      },
+      {
         name: "structure_generate",
         command: "dev-context structure <path> --out <file> --json",
         description: "Generate TypeScript structure HTML through code-structure.",

@@ -2,6 +2,7 @@
 import { parseArgv } from "./lib/args.js";
 import { getDoctorReport } from "./lib/doctor.js";
 import { inspectRepo } from "./lib/repo.js";
+import { formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { generateStructure } from "./lib/structure.js";
 import { inspectDependency } from "./lib/deps.js";
 import { getToolMatrix } from "./lib/matrix.js";
@@ -13,6 +14,7 @@ import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js"
 const commandHandlers = {
   doctor: handleDoctor,
   repo: handleRepo,
+  map: handleMap,
   structure: handleStructure,
   deps: handleDeps,
   matrix: handleMatrix,
@@ -71,6 +73,26 @@ async function handleRepo(parsed) {
   }
 
   printText(formatRepoSummary(result));
+}
+
+async function handleMap(parsed) {
+  const repoPath = parsed.positionals[0] ?? ".";
+  const result = generateCodeMap(repoPath, {
+    maxSymbols: parsed.flags.max_symbols
+  });
+
+  if (parsed.flags.json) {
+    printJson(result);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, formatCodeMapMarkdown(result));
+    printText(`Code map written: ${artifact.path}`);
+    return;
+  }
+
+  printText(formatCodeMapMarkdown(result));
 }
 
 async function handleStructure(parsed) {
