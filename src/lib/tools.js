@@ -41,6 +41,24 @@ export function runCommand(command, args, options = {}) {
   };
 }
 
+export function runShellCommand(commandLine, options = {}) {
+  const result = spawnSync("/bin/sh", ["-lc", commandLine], {
+    cwd: options.cwd,
+    env: options.env ?? process.env,
+    encoding: "utf8",
+    timeout: options.timeout ?? 120000,
+    maxBuffer: options.maxBuffer ?? 1024 * 1024 * 20
+  });
+
+  return {
+    ok: result.status === 0,
+    status: result.status,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    error: result.error
+  };
+}
+
 export function quote(value) {
   return `'${String(value).replaceAll("'", "'\\''")}'`;
 }

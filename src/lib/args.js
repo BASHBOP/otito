@@ -45,8 +45,8 @@ export function parseArgv(argv) {
 }
 
 function assignFlag(flags, key, value) {
-  if (key === "exclude") {
-    flags.exclude = Array.isArray(flags.exclude) ? [...flags.exclude, value] : [value];
+  if (["exclude", "pattern"].includes(key)) {
+    flags[key] = Array.isArray(flags[key]) ? [...flags[key], value] : [value];
     return;
   }
   flags[key] = value;
@@ -58,7 +58,8 @@ function normalizeFlagName(flag) {
     e: "exclude",
     h: "help",
     q: "query",
-    j: "json"
+    j: "json",
+    p: "pattern"
   };
   return aliases[flag] ?? flag.replaceAll("-", "_");
 }
@@ -68,5 +69,5 @@ function expandShortFlag(short) {
 }
 
 function shortFlagTakesValue(short) {
-  return ["e", "o", "q"].includes(short);
+  return ["e", "o", "q", "p"].includes(short);
 }

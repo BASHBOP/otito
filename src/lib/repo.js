@@ -4,15 +4,26 @@ import { runCommand } from "./tools.js";
 
 const ignoredDirs = new Set([
   ".git",
+  ".husky",
+  ".vscode",
   ".dev-context",
+  ".augment",
   ".claude",
+  ".codex",
+  ".vercel",
   ".worktrees",
   ".yarn",
   "node_modules",
   "dist",
   "build",
   "coverage",
+  "database-backups",
+  "backups",
+  "documentation",
   ".next",
+  "playwright-report",
+  "storybook-static",
+  "test-results",
   ".turbo",
   ".cache",
   "target",
@@ -111,7 +122,14 @@ export function walk(root) {
 }
 
 function isIgnoredFile(fileName) {
-  return fileName === ".DS_Store" || fileName === ".env" || fileName.startsWith(".env.");
+  const extension = path.extname(fileName).toLowerCase();
+  return fileName === ".DS_Store"
+    || fileName === ".eslintcache"
+    || fileName === ".env"
+    || fileName.startsWith(".env.")
+    || fileName.endsWith(".log")
+    || fileName.endsWith(".tsbuildinfo")
+    || [".pem", ".key", ".crt", ".p12", ".sql", ".gz", ".tar"].includes(extension);
 }
 
 function safeReadDir(directory) {
@@ -174,6 +192,20 @@ function detectEntrypoints(root, files, packageJson) {
     }
   }
 
+  for (const file of ["src/main.ts", "main.ts", "middleware.ts", "next.config.js", "next.config.mjs", "next.config.ts"]) {
+    if (files.includes(file) || fs.existsSync(path.join(root, file))) {
+      candidates.add(file);
+    }
+  }
+
+  if (packageJson?.dependencies?.next || packageJson?.devDependencies?.next) {
+    for (const file of ["app/page.tsx", "app/layout.tsx", "pages/index.tsx", "src/app/page.tsx", "src/pages/index.tsx"]) {
+      if (files.includes(file) || fs.existsSync(path.join(root, file))) {
+        candidates.add(file);
+      }
+    }
+  }
+
   return [...candidates];
 }
 
@@ -190,10 +222,17 @@ function getGitInfo(root) {
 
   const branch = runCommand("git", ["branch", "--show-current"], { cwd: root, timeout: 5000 });
   const commit = runCommand("git", ["rev-parse", "--short", "HEAD"], { cwd: root, timeout: 5000 });
+  const status = runCommand("git", ["status", "--short", "--branch"], { cwd: root, timeout: 5000 });
+  const statusLines = status.stdout.trim().split("\n").filter(Boolean);
+  const branchLine = statusLines[0] ?? "";
+  const changeLines = statusLines.slice(1);
   return {
     available: true,
     root: result.stdout.trim(),
     branch: branch.stdout.trim() || undefined,
-    commit: commit.stdout.trim() || undefined
+    commit: commit.stdout.trim() || undefined,
+    clean: changeLines.length === 0,
+    changes: changeLines.length,
+    status: branchLine || undefined
   };
 }

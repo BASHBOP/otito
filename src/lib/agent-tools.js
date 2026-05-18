@@ -27,6 +27,7 @@ export function getAgentTools() {
         description: "Generate TypeScript structure HTML through code-structure.",
         input: {
           path: "string",
+          pattern: "string[]?",
           out: "string?"
         }
       },
@@ -36,6 +37,14 @@ export function getAgentTools() {
         description: "Generate a developer-context report with repo facts, tool availability, and adoption guidance.",
         input: {
           path: "string"
+        }
+      },
+      {
+        name: "workspace_report_generate",
+        command: "dev-context workspace <repo...> --json",
+        description: "Generate a product-level report across multiple related repositories.",
+        input: {
+          paths: "string[]"
         }
       }
     ]

@@ -31,7 +31,7 @@ function formatReport(data) {
     "",
     `- Root: ${repo.root}`,
     `- Files scanned: ${repo.fileCount}`,
-    `- Git: ${repo.git.available ? `${repo.git.branch ?? "unknown"} @ ${repo.git.commit ?? "unknown"}` : "not detected"}`,
+    `- Git: ${formatGit(repo.git)}`,
     `- Languages: ${repo.languages.map((item) => `${item.language} (${item.count})`).join(", ") || "unknown"}`,
     `- Package managers: ${repo.packageManagers.join(", ") || "none detected"}`,
     `- Entrypoints: ${repo.entrypoints.join(", ") || "none detected"}`,
@@ -59,4 +59,13 @@ function formatReport(data) {
     "- Add MCP/Harnss integration after CLI JSON output has stabilized.",
     ""
   ].join("\n");
+}
+
+function formatGit(git) {
+  if (!git.available) {
+    return "not detected";
+  }
+
+  const dirty = git.clean ? "clean" : `${git.changes} change(s)`;
+  return `${git.branch ?? "unknown"} @ ${git.commit ?? "unknown"} (${dirty})`;
 }

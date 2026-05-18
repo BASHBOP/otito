@@ -21,6 +21,7 @@ node src/cli.js doctor
 node src/cli.js repo . --json
 node src/cli.js matrix
 node src/cli.js report . --out .dev-context/report.md
+node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace.md
 ```
 
 Optional external tools:
@@ -59,10 +60,11 @@ node src/cli.js repo . --json
 Runs `code-structure` against TypeScript files.
 
 ```bash
-node src/cli.js structure . --out .dev-context/structure.html
+node src/cli.js structure . --pattern "app/**/*.tsx" --out .dev-context/structure.html
 ```
 
 If `code-structure` is missing, the command returns an install hint instead of failing mysteriously.
+If it is not installed globally but `npx` is available, `dev-context` can run it through `npx --yes code-structure`.
 
 ### `deps <package>`
 
@@ -79,6 +81,15 @@ Generates a shareable developer report.
 ```bash
 node src/cli.js report . --out .dev-context/report.md
 node src/cli.js report . --json
+```
+
+### `workspace <repo...>`
+
+Generates one product-level report across related repos.
+
+```bash
+node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace.md
+node src/cli.js workspace /path/to/web /path/to/api --json
 ```
 
 ### `matrix`

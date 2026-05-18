@@ -15,3 +15,8 @@ test("parseArgv collects repeated exclude flags", () => {
   const parsed = parseArgv(["structure", ".", "--exclude", "a.ts", "-e", "b.ts"]);
   assert.deepEqual(parsed.flags.exclude, ["a.ts", "b.ts"]);
 });
+
+test("parseArgv collects repeated pattern flags", () => {
+  const parsed = parseArgv(["structure", ".", "--pattern", "app/**/*.tsx", "-p", "src/**/*.ts"]);
+  assert.deepEqual(parsed.flags.pattern, ["app/**/*.tsx", "src/**/*.ts"]);
+});

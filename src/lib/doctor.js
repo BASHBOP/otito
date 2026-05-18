@@ -20,6 +20,12 @@ const toolDefinitions = [
     installHint: "Install ripgrep for faster source searching."
   },
   {
+    name: "npx",
+    command: "npx",
+    versionArgs: ["--version"],
+    installHint: "Install npm/npx, or install optional tools globally."
+  },
+  {
     name: "opensrc",
     command: "opensrc",
     versionArgs: ["--version"],
@@ -29,7 +35,7 @@ const toolDefinitions = [
     name: "code-structure",
     command: "code-structure",
     versionArgs: ["--version"],
-    installHint: "Install with: npm install -g code-structure"
+    installHint: "Install with: npm install -g code-structure for faster runs; structure can fall back to npx."
   }
 ];
 

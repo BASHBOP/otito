@@ -6,6 +6,7 @@ import { generateStructure } from "./lib/structure.js";
 import { inspectDependency } from "./lib/deps.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { generateReport } from "./lib/report.js";
+import { generateWorkspaceReport } from "./lib/workspace.js";
 import { getAgentTools } from "./lib/agent-tools.js";
 import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
 
@@ -16,6 +17,7 @@ const commandHandlers = {
   deps: handleDeps,
   matrix: handleMatrix,
   report: handleReport,
+  workspace: handleWorkspace,
   "agent-tools": handleAgentTools,
   help: handleHelp
 };
@@ -75,6 +77,7 @@ async function handleStructure(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateStructure(repoPath, {
     out: parsed.flags.out,
+    pattern: parsed.flags.pattern,
     exclude: parsed.flags.exclude
   });
 
@@ -87,7 +90,12 @@ async function handleStructure(parsed) {
   }
 
   if (!result.ok) {
-    printText(`Structure generation skipped: ${result.error}\n${result.installHint}`);
+    const details = [
+      `Structure generation skipped: ${result.error}`,
+      result.command ? `Command: ${result.command}` : undefined,
+      result.installHint
+    ].filter(Boolean);
+    printText(details.join("\n"));
     process.exitCode = 1;
     return;
   }
@@ -159,6 +167,27 @@ async function handleReport(parsed) {
   if (parsed.flags.out) {
     const artifact = writeArtifact(parsed.flags.out, result.markdown);
     printText(`Report written: ${artifact.path}`);
+    return;
+  }
+
+  printText(result.markdown);
+}
+
+async function handleWorkspace(parsed) {
+  if (parsed.positionals.length < 2) {
+    throw new Error("workspace requires at least two repo paths, for example: dev-context workspace ../web ../api");
+  }
+
+  const result = generateWorkspaceReport(parsed.positionals);
+
+  if (parsed.flags.json) {
+    printJson(result.data);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, result.markdown);
+    printText(`Workspace report written: ${artifact.path}`);
     return;
   }
 
