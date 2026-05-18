@@ -10,6 +10,7 @@ It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. The 
 - search dependency source through `opensrc`
 - produce Markdown or JSON reports
 - generate JSON-first code maps for agents
+- run a dependency-free MCP server for agent hosts
 - expose simple agent-friendly tool metadata
 
 ## Quick Start
@@ -21,6 +22,7 @@ node src/cli.js help
 node src/cli.js doctor
 node src/cli.js repo . --json
 node src/cli.js map . --json
+node src/cli.js mcp
 node src/cli.js matrix
 node src/cli.js report . --out .dev-context/report.md
 node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace.md
@@ -93,6 +95,37 @@ Generates one product-level report across related repos.
 node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace.md
 node src/cli.js workspace /path/to/web /path/to/api --json
 ```
+
+### `mcp`
+
+Starts a stdio MCP server exposing `dev-context` as agent-callable tools.
+
+```bash
+node src/cli.js mcp
+```
+
+When wiring it into an MCP host, point the host at this repo's CLI:
+
+```json
+{
+  "mcpServers": {
+    "dev-context": {
+      "command": "node",
+      "args": ["/absolute/path/to/dev-context/src/cli.js", "mcp"]
+    }
+  }
+}
+```
+
+Useful tools exposed through MCP:
+
+- `repo_inspect`
+- `repo_map`
+- `workspace_report`
+- `find_domain`
+- `find_file_kind`
+- `find_backend_route`
+- `find_frontend_api_client`
 
 ### `matrix`
 

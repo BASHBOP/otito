@@ -6,6 +6,7 @@ import { formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { generateStructure } from "./lib/structure.js";
 import { inspectDependency } from "./lib/deps.js";
 import { getToolMatrix } from "./lib/matrix.js";
+import { startMcpServer } from "./lib/mcp.js";
 import { generateReport } from "./lib/report.js";
 import { generateWorkspaceReport } from "./lib/workspace.js";
 import { getAgentTools } from "./lib/agent-tools.js";
@@ -18,6 +19,7 @@ const commandHandlers = {
   structure: handleStructure,
   deps: handleDeps,
   matrix: handleMatrix,
+  mcp: handleMcp,
   report: handleReport,
   workspace: handleWorkspace,
   "agent-tools": handleAgentTools,
@@ -175,6 +177,10 @@ async function handleMatrix(parsed) {
     ...matrix.tools.map((tool) => `| ${tool.name} | ${tool.role} | ${tool.pilotUse} | ${tool.notes} |`)
   ];
   printText(["# Tool Evaluation Matrix", "", ...rows].join("\n"));
+}
+
+async function handleMcp() {
+  await startMcpServer();
 }
 
 async function handleReport(parsed) {
