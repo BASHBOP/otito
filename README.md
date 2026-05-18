@@ -21,6 +21,7 @@ This build has no runtime npm dependencies.
 ```bash
 node src/cli.js help
 node src/cli.js doctor
+node src/cli.js init /path/to/target-repo
 node src/cli.js repo . --json
 node src/cli.js map . --json
 node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
@@ -64,6 +65,24 @@ Inspects repo shape: files, languages, package managers, scripts, likely entrypo
 ```bash
 node src/cli.js repo . --json
 ```
+
+### `init <path>`
+
+Scaffolds `dev-context` into another repository.
+
+```bash
+node src/cli.js init /path/to/target-repo
+node src/cli.js init /path/to/target-repo --force
+node src/cli.js init /path/to/target-repo --no-workflow
+node src/cli.js init /path/to/target-repo --tool-repo nugehs/dev-context --tool-ref main
+```
+
+Generated files:
+
+- `.dev-context/README.md`
+- `.github/workflows/dev-context-pr.yml`
+
+The generated workflow runs on pull requests and commit pushes. Pull request runs generate the report, upload an artifact, and create or update a sticky PR comment. Push runs generate and upload the report artifact without commenting.
 
 ### `structure <path>`
 
@@ -121,7 +140,7 @@ Useful flags:
 
 ### GitHub Actions
 
-This repo includes `.github/workflows/dev-context-pr.yml`. Copy it into another repository to run the PR review on every pull request, upload the full Markdown report as an artifact, and post/update a sticky PR comment.
+This repo includes `.github/workflows/dev-context-pr.yml`. Use `node src/cli.js init /path/to/target-repo` to scaffold the workflow into another repository.
 
 ### `mcp`
 

@@ -18,6 +18,7 @@ Usage:
   dev-context map <path> [--out file] [--json]
   dev-context structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
   dev-context deps <package> [--query text] [--limit n] [--json]
+  dev-context init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--json]
   dev-context matrix [--json]
   dev-context mcp
   dev-context pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
@@ -29,6 +30,7 @@ Examples:
   node src/cli.js doctor
   node src/cli.js repo . --json
   node src/cli.js map . --json
+  node src/cli.js init ../my-repo
   node src/cli.js mcp
   node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
   node src/cli.js deps zod --query parse

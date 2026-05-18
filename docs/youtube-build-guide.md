@@ -26,6 +26,7 @@ By the end, viewers should have a tool that can:
 - generate PR review context
 - post a sticky GitHub PR comment
 - run in GitHub Actions
+- scaffold the workflow into another repo with `init`
 
 ## Core Teaching Principle
 
@@ -83,7 +84,8 @@ flowchart LR
   Workspace --> MCP["MCP server"]
   MCP --> PR["PR review workflow"]
   PR --> Actions["GitHub Actions"]
-  Actions --> Package["Package and share"]
+  Actions --> Init["Init scaffolding"]
+  Init --> Package["Package and share"]
 ```
 
 Use this diagram when teaching the PR review workflow.
@@ -540,6 +542,50 @@ Teaching note:
 
 This is the point where the tool becomes team infrastructure.
 
+### Episode 9: Init Scaffolding
+
+Working title:
+
+> Make Your Tool Easy To Install In Another Repo
+
+Objective:
+
+Add `init <path>` so another repo can get the `.dev-context` folder and GitHub Actions workflow without manual copying.
+
+Prompt:
+
+```text
+Add an init command.
+
+Command:
+init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--json]
+
+It should:
+- create .dev-context/README.md
+- create .github/workflows/dev-context-pr.yml
+- avoid overwriting existing files unless --force is passed
+- generate a target-repo workflow that checks out the dev-context tool repo into .dev-context/tool
+- run on pull_request and push events
+- on pull_request, generate the report and update the sticky PR comment
+- on push, generate and upload the artifact without commenting
+
+Add tests using a temporary directory.
+```
+
+Commands to demo:
+
+```bash
+node src/cli.js init /path/to/target-repo
+node src/cli.js init /path/to/target-repo --force
+```
+
+Quality gates:
+
+- Existing workflows are not overwritten by default.
+- `--force` overwrites generated files.
+- The generated workflow uses `.dev-context/tool/src/cli.js`.
+- Push events do not try to post PR comments.
+
 ## Prompting Pattern
 
 Use this structure repeatedly:
@@ -608,6 +654,9 @@ npm test
 
 # Inspect this repo
 node src/cli.js repo . --json
+
+# Scaffold dev-context into another repo
+node src/cli.js init /path/to/target-repo
 
 # Generate a report
 node src/cli.js report . --out .dev-context/report.md

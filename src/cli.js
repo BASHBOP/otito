@@ -5,6 +5,7 @@ import { inspectRepo } from "./lib/repo.js";
 import { formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { generateStructure } from "./lib/structure.js";
 import { inspectDependency } from "./lib/deps.js";
+import { formatInitSummary, initProject } from "./lib/init.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
 import { generatePrReview } from "./lib/pr-review.js";
@@ -19,6 +20,7 @@ const commandHandlers = {
   map: handleMap,
   structure: handleStructure,
   deps: handleDeps,
+  init: handleInit,
   matrix: handleMatrix,
   mcp: handleMcp,
   pr: handlePr,
@@ -179,6 +181,23 @@ async function handleMatrix(parsed) {
     ...matrix.tools.map((tool) => `| ${tool.name} | ${tool.role} | ${tool.pilotUse} | ${tool.notes} |`)
   ];
   printText(["# Tool Evaluation Matrix", "", ...rows].join("\n"));
+}
+
+async function handleInit(parsed) {
+  const targetPath = parsed.positionals[0] ?? ".";
+  const result = initProject(targetPath, {
+    force: parsed.flags.force,
+    noWorkflow: parsed.flags.no_workflow,
+    toolRepo: parsed.flags.tool_repo,
+    toolRef: parsed.flags.tool_ref
+  });
+
+  if (parsed.flags.json) {
+    printJson(result);
+    return;
+  }
+
+  printText(formatInitSummary(result));
 }
 
 async function handleMcp() {

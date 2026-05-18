@@ -3,6 +3,7 @@ name: dev-context PR Review
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  push:
 
 permissions:
   contents: read
@@ -16,9 +17,17 @@ jobs:
 
     steps:
       - name: Checkout PR head
+        if: github.event_name == 'pull_request'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Checkout pushed commit
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -27,9 +36,11 @@ jobs:
           node-version: 22
 
       - name: Fetch base branch
+        if: github.event_name == 'pull_request'
         run: git fetch origin "${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}" --depth=1
 
       - name: Generate PR review context
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -39,6 +50,23 @@ jobs:
             --number "${{ github.event.pull_request.number }}" \
             --out .dev-context/pr-review.md \
             --comment
+
+      - name: Generate commit review context
+        if: github.event_name == 'push'
+        run: |
+          BASE="${{ github.event.before }}"
+          if ! git rev-parse --verify "$BASE^{commit}" >/dev/null 2>&1; then
+            if git rev-parse --verify "HEAD~1^{commit}" >/dev/null 2>&1; then
+              BASE="HEAD~1"
+            else
+              BASE="HEAD"
+            fi
+          fi
+
+          node src/cli.js pr . \
+            --base "$BASE" \
+            --head "${{ github.sha }}" \
+            --out .dev-context/pr-review.md
 
       - name: Upload PR review artifact
         uses: actions/upload-artifact@v4
