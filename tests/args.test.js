@@ -20,3 +20,10 @@ test("parseArgv collects repeated pattern flags", () => {
   const parsed = parseArgv(["structure", ".", "--pattern", "app/**/*.tsx", "-p", "src/**/*.ts"]);
   assert.deepEqual(parsed.flags.pattern, ["app/**/*.tsx", "src/**/*.ts"]);
 });
+
+test("parseArgv parses PR review short flags", () => {
+  const parsed = parseArgv(["pr", ".", "-n", "42", "-b", "origin/main", "--head", "HEAD"]);
+  assert.equal(parsed.flags.number, "42");
+  assert.equal(parsed.flags.base, "origin/main");
+  assert.equal(parsed.flags.head, "HEAD");
+});

@@ -59,7 +59,9 @@ function normalizeFlagName(flag) {
     h: "help",
     q: "query",
     j: "json",
-    p: "pattern"
+    p: "pattern",
+    n: "number",
+    b: "base"
   };
   return aliases[flag] ?? flag.replaceAll("-", "_");
 }
@@ -69,5 +71,5 @@ function expandShortFlag(short) {
 }
 
 function shortFlagTakesValue(short) {
-  return ["e", "o", "q", "p"].includes(short);
+  return ["e", "o", "q", "p", "n", "b"].includes(short);
 }

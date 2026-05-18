@@ -10,6 +10,7 @@ It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. The 
 - search dependency source through `opensrc`
 - produce Markdown or JSON reports
 - generate JSON-first code maps for agents
+- generate PR review context from git diffs and optional GitHub comments
 - run a dependency-free MCP server for agent hosts
 - expose simple agent-friendly tool metadata
 
@@ -22,6 +23,7 @@ node src/cli.js help
 node src/cli.js doctor
 node src/cli.js repo . --json
 node src/cli.js map . --json
+node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
 node src/cli.js mcp
 node src/cli.js matrix
 node src/cli.js report . --out .dev-context/report.md
@@ -96,6 +98,22 @@ node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace
 node src/cli.js workspace /path/to/web /path/to/api --json
 ```
 
+### `pr <path>`
+
+Generates a PR review context pack from local git diff metadata, code-map classification, risk flags, suggested verification commands, and optional GitHub PR comments.
+
+```bash
+node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
+node src/cli.js pr . --number 123 --json
+```
+
+Useful flags:
+
+- `--base <ref>`: compare from a specific base ref. Defaults to PR base, upstream, `origin/main`, or `main`.
+- `--head <ref>`: compare to a specific head ref. Defaults to `HEAD`.
+- `--number <n>`: enrich with `gh pr view` metadata and review comments.
+- `--github`: ask `gh` to infer the PR from the current branch.
+
 ### `mcp`
 
 Starts a stdio MCP server exposing `dev-context` as agent-callable tools.
@@ -122,6 +140,7 @@ Useful tools exposed through MCP:
 - `repo_inspect`
 - `repo_map`
 - `workspace_report`
+- `pr_review`
 - `find_domain`
 - `find_file_kind`
 - `find_backend_route`

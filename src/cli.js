@@ -7,6 +7,7 @@ import { generateStructure } from "./lib/structure.js";
 import { inspectDependency } from "./lib/deps.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
+import { generatePrReview } from "./lib/pr-review.js";
 import { generateReport } from "./lib/report.js";
 import { generateWorkspaceReport } from "./lib/workspace.js";
 import { getAgentTools } from "./lib/agent-tools.js";
@@ -20,6 +21,7 @@ const commandHandlers = {
   deps: handleDeps,
   matrix: handleMatrix,
   mcp: handleMcp,
+  pr: handlePr,
   report: handleReport,
   workspace: handleWorkspace,
   "agent-tools": handleAgentTools,
@@ -181,6 +183,29 @@ async function handleMatrix(parsed) {
 
 async function handleMcp() {
   await startMcpServer();
+}
+
+async function handlePr(parsed) {
+  const repoPath = parsed.positionals[0] ?? ".";
+  const result = generatePrReview(repoPath, {
+    number: parsed.flags.number ?? parsed.flags.pr,
+    github: parsed.flags.github,
+    base: parsed.flags.base,
+    head: parsed.flags.head
+  });
+
+  if (parsed.flags.json) {
+    printJson(result.data);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, result.markdown);
+    printText(`PR review context written: ${artifact.path}`);
+    return;
+  }
+
+  printText(result.markdown);
 }
 
 async function handleReport(parsed) {

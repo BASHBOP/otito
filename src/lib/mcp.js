@@ -4,6 +4,7 @@ import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { generateCodeMap } from "./code-map.js";
 import { inspectRepo } from "./repo.js";
+import { generatePrReview } from "./pr-review.js";
 import { generateWorkspaceReport } from "./workspace.js";
 
 const protocolVersion = "2025-06-18";
@@ -52,6 +53,22 @@ const tools = [
         includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." }
       },
       required: ["paths"]
+    }
+  },
+  {
+    name: "pr_review",
+    title: "PR Review",
+    description: "Generate PR review context from local git diff metadata and optional GitHub PR comments.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        number: { type: "number", description: "Optional GitHub PR number for gh enrichment." },
+        github: { type: "boolean", description: "Ask gh to infer the current branch PR." },
+        base: { type: "string", description: "Base ref. Defaults to PR base, upstream, origin/main, or main." },
+        head: { type: "string", description: "Head ref. Defaults to HEAD." },
+        includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." }
+      }
     }
   },
   {
@@ -171,7 +188,8 @@ async function handleMessage(message) {
         return errorResponse(message.id, -32601, `Method not found: ${message.method}`);
     }
   } catch (error) {
-    return errorResponse(message.id, error.code ?? -32603, error instanceof Error ? error.message : String(error));
+    const code = error instanceof McpProtocolError ? error.code : -32603;
+    return errorResponse(message.id, code, error instanceof Error ? error.message : String(error));
   }
 }
 
@@ -230,6 +248,10 @@ function dispatchTool(name, args) {
     case "workspace_report": {
       const paths = requirePaths(args);
       const result = generateWorkspaceReport(paths);
+      return args.includeMarkdown ? result : result.data;
+    }
+    case "pr_review": {
+      const result = generatePrReview(args.path ?? ".", args);
       return args.includeMarkdown ? result : result.data;
     }
     case "find_domain":

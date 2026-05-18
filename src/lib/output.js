@@ -20,6 +20,7 @@ Usage:
   dev-context deps <package> [--query text] [--limit n] [--json]
   dev-context matrix [--json]
   dev-context mcp
+  dev-context pr <path> [--number n] [--base ref] [--head ref] [--out file] [--json]
   dev-context report <path> [--out file] [--json]
   dev-context workspace <repo...> [--out file] [--json]
   dev-context agent-tools [--json|--markdown]
@@ -29,6 +30,7 @@ Examples:
   node src/cli.js repo . --json
   node src/cli.js map . --json
   node src/cli.js mcp
+  node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
   node src/cli.js deps zod --query parse
   node src/cli.js report . --out .dev-context/report.md
   node src/cli.js workspace ../web ../api --out .dev-context/workspace.md
