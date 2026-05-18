@@ -1,0 +1,17 @@
+{
+  "name": "dev-context",
+  "version": "0.1.0",
+  "description": "A thin CLI wrapper for repo context, dependency source lookup, and code-structure reports.",
+  "type": "module",
+  "bin": {
+    "dev-context": "./src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
