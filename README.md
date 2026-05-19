@@ -38,6 +38,8 @@ node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace
 
 For a YouTube-friendly build plan with prompts, diagrams, milestones, and quality gates, see [docs/youtube-build-guide.md](docs/youtube-build-guide.md).
 
+For a local-model walkthrough, see [docs/local-ollama-tutorial.md](docs/local-ollama-tutorial.md).
+
 Optional external tools:
 
 ```bash
@@ -77,6 +79,30 @@ GitHub Actions bootstrap:
 
 ```bash
 node src/cli.js init /path/to/target-repo
+```
+
+Local Ollama review:
+
+```bash
+node src/cli.js harness . --out .dev-context/harness.md
+
+{
+  echo "Use this repo harness to explain the project and suggest the next best engineering task."
+  echo
+  cat .dev-context/harness.md
+} | ollama run qwen3:8b --think false --hidethinking --nowordwrap
+```
+
+Local Ollama PR review:
+
+```bash
+node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
+
+{
+  echo "Review this PR context. Focus on bugs, missing tests, and risky changes."
+  echo
+  cat .dev-context/pr-review.md
+} | ollama run qwen3:8b --think false --hidethinking --nowordwrap
 ```
 
 ## Commands
@@ -206,6 +232,8 @@ When wiring it into an MCP host, point the host at this repo's CLI:
   }
 }
 ```
+
+Ollama can provide the local model, but it does not call MCP tools by itself. To use `dev-context` through MCP with a local model, use an MCP-capable agent client that supports Ollama as the model provider and configure the `dev-context` server above.
 
 Useful tools exposed through MCP:
 
