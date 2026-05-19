@@ -22,6 +22,7 @@ By the end, viewers should have a tool that can:
 - generate Markdown reports
 - create a code map for agents
 - wrap optional tools like `opensrc` and `code-structure`
+- explain where `harness`, Daytona, Harnss, MCP, and GitHub Actions fit
 - run as an MCP server
 - generate PR review context
 - post a sticky GitHub PR comment
@@ -40,6 +41,76 @@ This matters because many developers start by rebuilding everything. That usuall
 - dogfood on real repos
 - expose the same capability through CLI, MCP, and CI
 
+## Tool Roles And How They Work
+
+Use this section early in the tutorial so viewers understand the tool stack before any code is written.
+
+The important distinction:
+
+- `dev-context harness` is a generated context artifact and command plan.
+- Harnss is a separate desktop agent UI/control surface.
+- Daytona is a separate sandbox execution platform.
+
+`dev-context` should be the stable orchestration layer between these pieces. It should not become a sandbox, a desktop UI, or a full coding agent.
+
+| Tool or concept | What it does | How `dev-context` uses it | Build phase |
+|---|---|---|---|
+| `dev-context` | Local CLI and MCP server for repo context | Owns repo inspection, code maps, reports, PR context, harness generation, and stable JSON output | Core product |
+| `dev-context harness` | Produces setup, validation, runtime, and context commands for a repo | Reads package managers, scripts, git metadata, and code-map facts, then emits Markdown/JSON with token estimates | Core product |
+| Greploop | Problem pattern, not a required dependency | Frames the repeated search/read/retry loop that wastes agent context | Episode 1 framing |
+| `opensrc` | Resolves package source code for dependencies | `dev-context deps` calls `opensrc path <package>`, then searches the resolved source path | Current optional wrapper |
+| `code-structure` | Generates HTML structure views for TypeScript/JavaScript files | `dev-context structure` runs the tool globally or through `npx`, then writes an artifact | Current optional wrapper |
+| `gh` | Reads PR metadata and posts GitHub comments | `dev-context pr --number <n> --comment` enriches reports and updates a sticky PR comment | Current optional wrapper |
+| MCP | Lets agent hosts call repo tools directly | `dev-context mcp` exposes repo inspection, code map, harness, workspace, and PR tools over stdio JSON-RPC | Core interface |
+| Daytona | Runs code inside isolated sandboxes | Future adapter should create a sandbox, copy or clone the repo, run the generated harness commands, and return logs/artifacts | Phase 2 |
+| Harnss | Desktop UI for running and observing coding agents | Future integration should display `dev-context` outputs and tool calls in an agent control surface | Future UI reference |
+| GitHub Actions | Runs context generation in team workflow | Generated workflows run PR reports, upload artifacts, and optionally comment on PRs | CI automation |
+
+### Wrapper Flow
+
+The teaching loop should be:
+
+```text
+repo -> inspect -> map -> harness -> report -> MCP/CI -> optional external execution
+```
+
+In practical terms:
+
+1. `repo` discovers the project shape.
+2. `map` creates an agent-readable code map.
+3. `harness` turns repo facts into commands an agent or CI job can safely run.
+4. `deps` and `structure` call optional external tools only when those tools add value.
+5. `mcp` and GitHub Actions expose the same contracts to agents and team workflows.
+6. Daytona can later execute the harness in isolation.
+7. Harnss can later make agent runs and tool calls easier to observe.
+
+### Commands To Show
+
+```bash
+node src/cli.js matrix
+node src/cli.js doctor --json
+node src/cli.js repo . --json
+node src/cli.js map . --json
+node src/cli.js harness . --out .dev-context/harness.md
+node src/cli.js deps zod --query parse
+node src/cli.js structure . --pattern "src/**/*.js" --out .dev-context/structure.html
+```
+
+When explaining the output, keep repeating the boundary:
+
+```text
+dev-context gathers context and produces stable commands.
+Other tools execute, visualize, or enrich specific parts of that workflow.
+```
+
+Reference links for the tool discussion:
+
+- Daytona sandboxes: https://www.daytona.io/docs/en/sandboxes/
+- Daytona CLI: https://www.daytona.io/docs/tools/cli/
+- opensrc: https://opensrc.sh/
+- code-structure: https://npm.io/package/code-structure
+- Harnss: https://github.com/OpenSource03/harnss
+
 ## Visual Overview
 
 Use this diagram near the start of the video to explain the product shape.
@@ -55,20 +126,26 @@ flowchart TD
   CLI --> CodeMap["Code map"]
   CLI --> Reports["Markdown and JSON reports"]
   CLI --> PRReview["PR review context"]
+  CLI --> HarnessArtifact["Harness command plan"]
 
   MCP --> RepoInspect
   MCP --> CodeMap
   MCP --> Reports
   MCP --> PRReview
+  MCP --> HarnessArtifact
 
   CI --> PRReview
   PRReview --> StickyComment["Sticky PR comment"]
   PRReview --> Artifact["Markdown artifact"]
+  CI --> HarnessArtifact
 
   Interface --> ExternalTools["Optional external tools"]
   ExternalTools --> OpenSrc["opensrc"]
   ExternalTools --> CodeStructure["code-structure"]
   ExternalTools --> GitHubCLI["gh"]
+  HarnessArtifact --> Daytona["Daytona sandbox adapter later"]
+  Interface --> AgentUI["Agent UI/control surface later"]
+  AgentUI --> Harnss["Harnss"]
 ```
 
 Use this diagram when explaining the series roadmap.
@@ -124,6 +201,7 @@ Key points:
 - AI agents fail when they lack repo context.
 - Existing tools solve pieces of the problem.
 - The missing layer is orchestration.
+- Tool choice should be explicit: wrap what works, own the stable contract, defer sandboxes and UIs until they are needed.
 - The first version should be boring, inspectable, and useful.
 
 Demo setup:
@@ -206,12 +284,20 @@ Quality gates:
 ```bash
 npm test
 node src/cli.js repo . --json
+node src/cli.js matrix
 node src/cli.js report . --out .dev-context/report.md
 ```
 
 Teaching note:
 
 The important design decision is stable JSON output. Markdown is for humans. JSON is for agents and automation.
+
+The `matrix` command should not just list tools. It should explain boundaries:
+
+- `opensrc` and `code-structure` are wrappers to implement now.
+- Daytona is for later isolated execution.
+- Harnss is for later agent UI inspiration.
+- `dev-context harness` is the bridge that makes future execution predictable.
 
 ### Episode 3: Wrap Existing Tools
 
@@ -263,6 +349,13 @@ Quality gates:
 Teaching note:
 
 External tools are allowed to fail. Your wrapper should fail clearly.
+
+Do not build Daytona or Harnss adapters in this episode. Those are bigger integration surfaces:
+
+- Daytona needs sandbox credentials, lifecycle rules, repo transfer, command execution, log capture, and cleanup.
+- Harnss is a control surface for watching and managing agents, not a command-line dependency for the MVP.
+
+The correct bridge is the harness artifact. Once `dev-context harness` can reliably say how to set up, validate, run, and inspect a repo, a sandbox or UI can consume that plan later.
 
 ### Episode 4: Build Code Maps
 
@@ -585,6 +678,134 @@ Quality gates:
 - `--force` overwrites generated files.
 - The generated workflow uses `.dev-context/tool/src/cli.js`.
 - Push events do not try to post PR comments.
+
+### Optional Episode 10: Daytona Sandbox Adapter
+
+Working title:
+
+> Run The Harness In A Clean Sandbox
+
+Objective:
+
+Show how a future Daytona adapter would execute the same harness commands outside the developer's machine.
+
+Do not start here. Build this only after `repo`, `map`, `harness`, `pr`, and MCP have stable JSON contracts.
+
+Adapter shape:
+
+```text
+dev-context harness . --json
+        |
+        v
+create Daytona sandbox
+        |
+        v
+clone or upload repo
+        |
+        v
+run setup commands
+        |
+        v
+run validation commands
+        |
+        v
+collect logs, artifacts, status
+```
+
+Prompt:
+
+```text
+Design a Daytona adapter for dev-context.
+
+Input:
+- repo path or git URL
+- harness JSON from dev-context
+- optional timeout and cleanup policy
+
+Behavior:
+- create an isolated sandbox
+- copy or clone the repo
+- run harness setup commands
+- run harness validation commands
+- stream logs
+- return JSON with command status, stdout/stderr summaries, artifact paths, and cleanup result
+
+Keep Daytona optional. If credentials or CLI/SDK are missing, return a clear install/configuration hint.
+Do not make ordinary repo inspection depend on Daytona.
+```
+
+Commands to demo once implemented:
+
+```bash
+node src/cli.js harness . --json
+node src/cli.js sandbox . --provider daytona --json
+```
+
+Quality gates:
+
+- Missing Daytona configuration produces a readable hint.
+- Sandbox creation and cleanup are explicit.
+- Failed setup or test commands return structured status.
+- Local `harness` behavior still works without Daytona.
+
+Teaching note:
+
+Daytona is execution isolation. `dev-context` should decide what to run; Daytona should provide where to run it.
+
+### Optional Episode 11: Harnss Or Agent UI Integration
+
+Working title:
+
+> Make Agent Work Visible
+
+Objective:
+
+Explain how an agent UI can consume `dev-context` outputs without making the CLI depend on a desktop app.
+
+Integration shape:
+
+```text
+dev-context MCP tools
+        |
+        v
+agent host or desktop UI
+        |
+        v
+repo facts, code maps, harness commands, PR reports
+        |
+        v
+visible tool calls, diffs, logs, and artifacts
+```
+
+Prompt:
+
+```text
+Design an integration between dev-context and an agent control surface like Harnss.
+
+The CLI should remain the source of truth.
+The UI should call dev-context through MCP or shell commands.
+
+Expose:
+- repo_inspect
+- repo_map
+- repo_harness
+- pr_review
+- workspace_report
+
+The UI should display structured results, command plans, changed files, logs, and generated artifacts.
+Do not move repo scanning logic into the UI.
+```
+
+Quality gates:
+
+- The UI can list MCP tools.
+- The UI can call `repo_harness`.
+- Generated reports are linked as artifacts.
+- The same CLI command still works in terminal and CI.
+
+Teaching note:
+
+Harnss is about visibility and control. `dev-context` is about context contracts.
 
 ## Prompting Pattern
 
