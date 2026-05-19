@@ -59,7 +59,7 @@ export function inspectRepo(repoPath = ".") {
     throw new Error(`repo path does not exist: ${root}`);
   }
 
-  const files = walk(root);
+  const files = listRepoFiles(root);
   const packageJson = readJsonIfExists(path.join(root, "package.json"));
   const languageCounts = countLanguages(files);
 
@@ -67,15 +67,17 @@ export function inspectRepo(repoPath = ".") {
     ok: true,
     root,
     fileCount: files.length,
+    package: summarizePackage(packageJson),
     languages: [...languageCounts.entries()]
       .map(([language, count]) => ({ language, count }))
       .sort((a, b) => b.count - a.count || languagePriority(a.language) - languagePriority(b.language) || a.language.localeCompare(b.language)),
-    packageManagers: detectPackageManagers(root),
+    packageManagers: detectPackageManagers(root, packageJson),
     scripts: packageJson?.scripts ?? {},
     entrypoints: detectEntrypoints(root, files, packageJson),
     importantDirectories: detectImportantDirectories(root),
     git: getGitInfo(root),
-    files: files.slice(0, 250)
+    files: files.slice(0, 250),
+    filesTruncated: files.length > 250
   };
 }
 
@@ -100,7 +102,7 @@ function languagePriority(language) {
 export function walk(root) {
   const results = [];
   visit(root);
-  return results;
+  return results.sort();
 
   function visit(current) {
     const entries = safeReadDir(current);
@@ -121,6 +123,36 @@ export function walk(root) {
   }
 }
 
+export function listRepoFiles(root) {
+  const gitFiles = gitTrackedAndUntrackedFiles(root);
+  if (gitFiles.length) {
+    return gitFiles;
+  }
+
+  return walk(root);
+}
+
+function gitTrackedAndUntrackedFiles(root) {
+  const result = runCommand("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
+    cwd: root,
+    timeout: 10000
+  });
+  if (!result.ok) {
+    return [];
+  }
+
+  const seen = new Set();
+  const files = [];
+  for (const file of result.stdout.split("\n").map((line) => line.trim()).filter(Boolean)) {
+    if (seen.has(file) || isIgnoredRepoPath(file) || !fs.existsSync(path.join(root, file))) {
+      continue;
+    }
+    seen.add(file);
+    files.push(file);
+  }
+  return files.sort();
+}
+
 function isIgnoredFile(fileName) {
   const extension = path.extname(fileName).toLowerCase();
   return fileName === ".DS_Store"
@@ -130,6 +162,12 @@ function isIgnoredFile(fileName) {
     || fileName.endsWith(".log")
     || fileName.endsWith(".tsbuildinfo")
     || [".pem", ".key", ".crt", ".p12", ".sql", ".gz", ".tar"].includes(extension);
+}
+
+function isIgnoredRepoPath(filePath) {
+  return filePath
+    .split(path.sep)
+    .some((segment) => ignoredDirs.has(segment) || isIgnoredFile(segment));
 }
 
 function safeReadDir(directory) {
@@ -163,19 +201,58 @@ function countLanguages(files) {
   return counts;
 }
 
-function detectPackageManagers(root) {
+function summarizePackage(packageJson) {
+  if (!packageJson) {
+    return undefined;
+  }
+
+  return {
+    name: packageJson.name,
+    version: packageJson.version,
+    type: packageJson.type,
+    private: packageJson.private,
+    packageManager: packageJson.packageManager,
+    bin: packageJson.bin
+  };
+}
+
+function detectPackageManagers(root, packageJson) {
   const checks = [
     ["package-lock.json", "npm"],
     ["pnpm-lock.yaml", "pnpm"],
     ["yarn.lock", "yarn"],
     ["bun.lockb", "bun"],
+    ["bun.lock", "bun"],
     ["requirements.txt", "pip"],
     ["pyproject.toml", "python"],
     ["Cargo.toml", "cargo"],
     ["go.mod", "go"],
     ["Gemfile", "bundler"]
   ];
-  return checks.filter(([file]) => fs.existsSync(path.join(root, file))).map(([, manager]) => manager);
+  const managers = new Set();
+  const declaredManager = parsePackageManager(packageJson?.packageManager);
+  if (declaredManager) {
+    managers.add(declaredManager);
+  }
+
+  for (const [file, manager] of checks) {
+    if (fs.existsSync(path.join(root, file))) {
+      managers.add(manager);
+    }
+  }
+
+  if (packageJson && !managers.size) {
+    managers.add("npm");
+  }
+
+  return [...managers];
+}
+
+function parsePackageManager(value) {
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+  return value.split("@")[0];
 }
 
 function detectEntrypoints(root, files, packageJson) {
@@ -184,6 +261,10 @@ function detectEntrypoints(root, files, packageJson) {
     if (typeof packageJson?.[key] === "string") {
       candidates.add(packageJson[key]);
     }
+  }
+
+  for (const file of packageBinEntrypoints(packageJson)) {
+    candidates.add(file);
   }
 
   for (const file of ["src/index.ts", "src/index.tsx", "src/index.js", "index.ts", "index.js", "main.py", "cmd/main.go"]) {
@@ -209,8 +290,25 @@ function detectEntrypoints(root, files, packageJson) {
   return [...candidates];
 }
 
+function packageBinEntrypoints(packageJson) {
+  const bin = packageJson?.bin;
+  if (typeof bin === "string") {
+    return [normalizePackagePath(bin)];
+  }
+  if (!bin || typeof bin !== "object" || Array.isArray(bin)) {
+    return [];
+  }
+  return Object.values(bin)
+    .filter((value) => typeof value === "string")
+    .map(normalizePackagePath);
+}
+
+function normalizePackagePath(value) {
+  return String(value).replace(/^\.\//, "");
+}
+
 function detectImportantDirectories(root) {
-  const candidates = ["src", "app", "pages", "lib", "server", "client", "components", "tests", "test", "docs", "scripts"];
+  const candidates = ["src", "app", "apps", "packages", "pages", "lib", "server", "client", "components", "tests", "test", "docs", "scripts", "bin", "cli"];
   return candidates.filter((dir) => fs.existsSync(path.join(root, dir)));
 }
 

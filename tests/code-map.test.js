@@ -28,3 +28,21 @@ test("generateCodeMap classifies Nest controllers and methods", () => {
   assert.equal(result.files[0].controllerBasePath, "events");
   assert.deepEqual(result.files[0].httpMethods, [{ method: "GET", path: ":id" }]);
 });
+
+test("generateCodeMap ignores code-like strings in fixtures", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-fixture-"));
+  fs.mkdirSync(path.join(root, "tests"), { recursive: true });
+  fs.writeFileSync(path.join(root, "tests", "fixture.test.ts"), [
+    "const fixture = \"import { Controller, Get } from '@nestjs/common';\\n@Controller('fake')\\nexport class FakeController { @Get(':id') find() {} }\";",
+    "export const realFixture = true;",
+    ""
+  ].join("\n"));
+
+  const result = generateCodeMap(root);
+  assert.equal(result.summary.controllers, 0);
+  assert.equal(result.files[0].controllerBasePath, undefined);
+  assert.deepEqual(result.files[0].httpMethods, []);
+  assert.deepEqual(result.files[0].imports, []);
+  assert.ok(result.files[0].symbols.some((symbol) => symbol.name === "realFixture"));
+  assert.ok(!result.files[0].symbols.some((symbol) => symbol.name === "FakeController"));
+});

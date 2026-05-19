@@ -24,6 +24,7 @@ Usage:
   dev-context pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
   dev-context report <path> [--out file] [--json]
   dev-context workspace <repo...> [--out file] [--json]
+  dev-context harness <path> [--out file] [--json]
   dev-context agent-tools [--json|--markdown]
 
 Examples:
@@ -33,6 +34,7 @@ Examples:
   node src/cli.js init ../my-repo
   node src/cli.js mcp
   node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
+  node src/cli.js harness . --out .dev-context/harness.md
   node src/cli.js deps zod --query parse
   node src/cli.js report . --out .dev-context/report.md
   node src/cli.js workspace ../web ../api --out .dev-context/workspace.md

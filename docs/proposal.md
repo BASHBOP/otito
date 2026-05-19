@@ -2,9 +2,9 @@
 
 ## Decision
 
-Build a wrapper first, not a replacement for the existing tools.
+Build harnesses first, not a replacement for the existing tools.
 
-The first useful product is an orchestration layer that gives developers and coding agents one interface for repo inspection, dependency source lookup, structure reports, and future sandbox execution.
+The first useful product is an orchestration layer that gives developers and coding agents one reproducible interface for repo inspection, validation commands, dependency source lookup, structure reports, PR review context, and future sandbox execution.
 
 ## Why Wrapper First
 
@@ -16,11 +16,12 @@ The first useful product is an orchestration layer that gives developers and cod
 
 ## Current MVP
 
-This repository now contains a dependency-free Node CLI:
+This repository now contains a Node CLI for repo and agent harnesses:
 
 ```bash
 node src/cli.js doctor
 node src/cli.js repo . --json
+node src/cli.js harness . --out .dev-context/harness.md
 node src/cli.js matrix
 node src/cli.js report . --out .dev-context/report.md
 ```

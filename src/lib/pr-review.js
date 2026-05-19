@@ -4,6 +4,7 @@ import path from "node:path";
 import { generateCodeMap } from "./code-map.js";
 import { inspectRepo } from "./repo.js";
 import { runCommand } from "./tools.js";
+import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
 const ghPrFields = [
   "number",
@@ -61,6 +62,8 @@ export function generatePrReview(repoPath = ".", options = {}) {
   const reviewComments = normalizeReviewComments(pr);
   const risk = inferRisk(changedFiles, diff, reviewComments);
   const testHints = inferTestHints(repo, changedFiles, risk);
+  const reviewTargets = inferReviewTargets(changedFiles);
+  const reviewPrompts = inferReviewPrompts(changedFiles, risk, reviewTargets);
 
   const data = {
     ok: true,
@@ -87,17 +90,35 @@ export function generatePrReview(repoPath = ".", options = {}) {
     domains,
     reviewComments,
     risk,
+    reviewTargets,
+    reviewPrompts,
     testHints,
     nextSteps: inferNextSteps(changedFiles, risk, reviewComments, testHints)
   };
+
+  data.tokenEstimate = {
+    ...estimateTokenSections([
+      { name: "comparison", value: data.comparison },
+      { name: "changedFiles", value: data.changedFiles },
+      { name: "reviewTargets", value: data.reviewTargets },
+      { name: "reviewPrompts", value: data.reviewPrompts },
+      { name: "reviewComments", value: data.reviewComments }
+    ])
+  };
+  data.tokenEstimate.fullJson = estimateTokens(data);
 
   if (options.comment) {
     data.comment = tryPostPrReviewComment(root, data);
   }
 
+  let markdown = formatPrReviewMarkdown(data);
+  data.tokenEstimate.markdown = estimateTokens(markdown);
+  markdown = formatPrReviewMarkdown(data);
+  data.tokenEstimate.markdown = estimateTokens(markdown);
+
   return {
     data,
-    markdown: formatPrReviewMarkdown(data)
+    markdown
   };
 }
 
@@ -115,7 +136,9 @@ export function formatPrReviewMarkdown(data) {
     `- Comparison: ${data.comparison.base}...${data.comparison.head}`,
     `- Changed files: ${data.comparison.changedFileCount}`,
     `- Diff: ${data.comparison.shortstat || `${data.comparison.insertions} insertion(s), ${data.comparison.deletions} deletion(s)`}`,
-    `- Risk: ${data.risk.level} (${data.risk.score})`
+    `- Risk: ${data.risk.level} (${data.risk.score})`,
+    `- Estimated JSON tokens: ${data.tokenEstimate.fullJson}`,
+    `- Estimated Markdown tokens: ${data.tokenEstimate.markdown ?? "pending"}`
   ];
 
   if (data.comparison.fallbackReason) {
@@ -137,6 +160,32 @@ export function formatPrReviewMarkdown(data) {
       lines.push(`- ${flag}`);
     }
   } else {
+    lines.push("- none detected");
+  }
+
+  lines.push("", "## Targeted Review Prompts", "");
+  if (data.reviewPrompts.length) {
+    for (const prompt of data.reviewPrompts) {
+      lines.push(`- ${prompt}`);
+    }
+  } else {
+    lines.push("- no targeted prompts generated");
+  }
+
+  lines.push("", "## Review Targets", "");
+  if (data.reviewTargets.routes.length) {
+    lines.push("Routes:");
+    for (const route of data.reviewTargets.routes.slice(0, 20)) {
+      lines.push(`- ${route.method ? `${route.method} ` : ""}${route.route}: ${route.file}`);
+    }
+  }
+  if (data.reviewTargets.symbols.length) {
+    lines.push("Symbols:");
+    for (const item of data.reviewTargets.symbols.slice(0, 30)) {
+      lines.push(`- ${item.file}: ${item.symbols.join(", ")}`);
+    }
+  }
+  if (!data.reviewTargets.routes.length && !data.reviewTargets.symbols.length) {
     lines.push("- none detected");
   }
 
@@ -208,6 +257,15 @@ export function formatPrCommentMarkdown(data) {
     }
   } else {
     lines.push("- none detected");
+  }
+
+  lines.push("", "### Review Prompts", "");
+  if (data.reviewPrompts.length) {
+    for (const prompt of data.reviewPrompts.slice(0, 6)) {
+      lines.push(`- ${prompt}`);
+    }
+  } else {
+    lines.push("- none generated");
   }
 
   lines.push("", "### Changed Domains", "");
@@ -866,6 +924,61 @@ function inferTestHints(repo, files, risk) {
   return uniqueBy(hints, (hint) => hint.command).slice(0, 6);
 }
 
+function inferReviewTargets(files) {
+  return {
+    routes: files.flatMap(routeTargetsForFile).slice(0, 100),
+    symbols: files
+      .filter((file) => file.symbols.length)
+      .map((file) => ({
+        file: file.path,
+        symbols: file.symbols.slice(0, 12).map((symbol) => `${symbol.type} ${symbol.name}`)
+      }))
+      .slice(0, 100),
+    configFiles: files.filter((file) => file.kind === "config" || file.riskFlags.includes("configuration")).map((file) => file.path),
+    testFiles: files.filter((file) => file.kind === "test").map((file) => file.path)
+  };
+}
+
+function routeTargetsForFile(file) {
+  if (file.route) {
+    return [{ file: file.path, route: file.route }];
+  }
+  if (!file.httpMethods.length) {
+    return [];
+  }
+  return file.httpMethods.map((method) => ({
+    file: file.path,
+    method: method.method,
+    route: combineRoute(file.controllerBasePath, method.path)
+  }));
+}
+
+function inferReviewPrompts(files, risk, targets) {
+  const prompts = [];
+  if (targets.routes.length) {
+    prompts.push(`Review touched request routes: ${targets.routes.slice(0, 5).map((target) => `${target.method ? `${target.method} ` : ""}${target.route}`).join(", ")}.`);
+  }
+  if (risk.flags.includes("frontend/backend contract")) {
+    prompts.push("Check each API client change against the matching backend route, response shape, and error handling.");
+  }
+  if (risk.flags.includes("auth/security")) {
+    prompts.push("Verify auth, session, role, token, and permission assumptions around the changed paths.");
+  }
+  if (risk.flags.includes("money flow")) {
+    prompts.push("Trace payment or billing state transitions, idempotency, and failure behavior.");
+  }
+  if (risk.flags.includes("data model")) {
+    prompts.push("Check migration compatibility, generated types, seed data, and rollback behavior.");
+  }
+  if (targets.configFiles.length) {
+    prompts.push(`Confirm config/runtime impact for: ${targets.configFiles.slice(0, 5).join(", ")}.`);
+  }
+  if (risk.flags.includes("no test files changed") && files.some((file) => file.kind !== "test")) {
+    prompts.push("Decide whether the behavior change needs a focused test or an explicit no-test rationale.");
+  }
+  return prompts;
+}
+
 function reasonForScript(name, files, risk) {
   const changedKinds = new Set(files.map((file) => file.kind));
   const hasTypedSource = files.some((file) => /\.[cm]?[jt]sx?$/.test(file.path));
@@ -904,6 +1017,19 @@ function uniqueBy(items, keyFn) {
     result.push(item);
   }
   return result;
+}
+
+function combineRoute(basePath, methodPath) {
+  const base = normalizeRoutePart(basePath);
+  const child = normalizeRoutePart(methodPath);
+  return `/${[base, child].filter(Boolean).join("/")}`.replace(/\/+/g, "/");
+}
+
+function normalizeRoutePart(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "")
+    .replace(/^:$/, "");
 }
 
 function inferNextSteps(files, risk, comments, hints) {

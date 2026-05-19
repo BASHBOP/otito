@@ -1,18 +1,31 @@
 {
   "name": "dev-context",
-  "version": "0.1.0",
-  "description": "A thin CLI wrapper for repo context, dependency source lookup, and code-structure reports.",
+  "version": "0.2.0",
+  "description": "Agent harnesses for repo context, PR review, token budgeting, and code-structure reports.",
   "type": "module",
   "bin": {
     "dev-context": "./src/cli.js"
   },
+  "files": [
+    "src",
+    "README.md",
+    "docs"
+  ],
   "scripts": {
     "start": "node src/cli.js",
     "mcp": "node src/cli.js mcp",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "smoke": "node src/cli.js doctor && node src/cli.js harness . --json"
   },
   "engines": {
     "node": ">=18"
   },
-  "license": "MIT"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nugehs/dev-context.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "typescript": "^5.9.3"
+  }
 }

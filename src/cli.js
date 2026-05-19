@@ -11,6 +11,7 @@ import { startMcpServer } from "./lib/mcp.js";
 import { generatePrReview } from "./lib/pr-review.js";
 import { generateReport } from "./lib/report.js";
 import { generateWorkspaceReport } from "./lib/workspace.js";
+import { generateHarness } from "./lib/harness.js";
 import { getAgentTools } from "./lib/agent-tools.js";
 import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
 
@@ -26,6 +27,7 @@ const commandHandlers = {
   pr: handlePr,
   report: handleReport,
   workspace: handleWorkspace,
+  harness: handleHarness,
   "agent-tools": handleAgentTools,
   help: handleHelp
 };
@@ -261,6 +263,26 @@ async function handleWorkspace(parsed) {
   if (parsed.flags.out) {
     const artifact = writeArtifact(parsed.flags.out, result.markdown);
     printText(`Workspace report written: ${artifact.path}`);
+    return;
+  }
+
+  printText(result.markdown);
+}
+
+async function handleHarness(parsed) {
+  const repoPath = parsed.positionals[0] ?? ".";
+  const result = generateHarness(repoPath, {
+    maxSymbols: parsed.flags.max_symbols
+  });
+
+  if (parsed.flags.json) {
+    printJson(result.data);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, result.markdown);
+    printText(`Harness written: ${artifact.path}`);
     return;
   }
 

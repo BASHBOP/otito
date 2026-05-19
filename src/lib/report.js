@@ -1,6 +1,7 @@
 import { getDoctorReport } from "./doctor.js";
 import { getToolMatrix } from "./matrix.js";
 import { inspectRepo } from "./repo.js";
+import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
 export function generateReport(repoPath = ".") {
   const data = {
@@ -11,9 +12,23 @@ export function generateReport(repoPath = ".") {
     matrix: getToolMatrix()
   };
 
+  data.tokenEstimate = {
+    ...estimateTokenSections([
+      { name: "repo", value: data.repo },
+      { name: "doctor", value: data.doctor },
+      { name: "matrix", value: data.matrix }
+    ])
+  };
+  data.tokenEstimate.fullJson = estimateTokens(data);
+
+  let markdown = formatReport(data);
+  data.tokenEstimate.markdown = estimateTokens(markdown);
+  markdown = formatReport(data);
+  data.tokenEstimate.markdown = estimateTokens(markdown);
+
   return {
     data,
-    markdown: formatReport(data)
+    markdown
   };
 }
 
@@ -35,6 +50,8 @@ function formatReport(data) {
     `- Languages: ${repo.languages.map((item) => `${item.language} (${item.count})`).join(", ") || "unknown"}`,
     `- Package managers: ${repo.packageManagers.join(", ") || "none detected"}`,
     `- Entrypoints: ${repo.entrypoints.join(", ") || "none detected"}`,
+    `- Estimated JSON tokens: ${data.tokenEstimate.fullJson}`,
+    `- Estimated Markdown tokens: ${data.tokenEstimate.markdown}`,
     "",
     "## Available Tools",
     "",

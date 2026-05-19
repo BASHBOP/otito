@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
-import { generateCodeMap } from "./code-map.js";
+import { generateHarness } from "./harness.js";
+import { getCachedCodeMap } from "./index-cache.js";
 import { inspectRepo } from "./repo.js";
 import { generatePrReview } from "./pr-review.js";
 import { generateWorkspaceReport } from "./workspace.js";
@@ -69,6 +70,18 @@ const tools = [
         base: { type: "string", description: "Base ref. Defaults to PR base, upstream, origin/main, or main." },
         head: { type: "string", description: "Head ref. Defaults to HEAD." },
         includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." }
+      }
+    }
+  },
+  {
+    name: "repo_harness",
+    title: "Repository Harness",
+    description: "Generate setup, validation, runtime, and context commands for an agent or CI harness.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        includeMarkdown: { type: "boolean", description: "Include the markdown harness. Defaults to false." }
       }
     }
   },
@@ -245,7 +258,7 @@ function dispatchTool(name, args) {
     case "repo_inspect":
       return inspectRepo(args.path ?? ".");
     case "repo_map":
-      return compactCodeMap(generateCodeMap(args.path ?? "."), args);
+      return compactCodeMap(getCachedCodeMap(args.path ?? "."), args);
     case "workspace_report": {
       const paths = requirePaths(args);
       const result = generateWorkspaceReport(paths);
@@ -253,6 +266,10 @@ function dispatchTool(name, args) {
     }
     case "pr_review": {
       const result = generatePrReview(args.path ?? ".", args);
+      return args.includeMarkdown ? result : result.data;
+    }
+    case "repo_harness": {
+      const result = generateHarness(args.path ?? ".", args);
       return args.includeMarkdown ? result : result.data;
     }
     case "find_domain":
@@ -274,6 +291,7 @@ function compactCodeMap(map, args = {}) {
   return {
     ok: true,
     repo: map.repo,
+    cache: map.cache,
     summary: map.summary,
     domains: map.domains.slice(0, 30),
     files: args.includeFiles || args.domain || args.kind ? files : undefined,
@@ -288,7 +306,7 @@ function findDomain(args) {
     ok: true,
     domain,
     repos: pathList(args).map((repoPath) => {
-      const map = generateCodeMap(repoPath);
+      const map = getCachedCodeMap(repoPath);
       return {
         repo: map.repo,
         files: map.files
@@ -307,7 +325,7 @@ function findFileKind(args) {
     ok: true,
     kind,
     repos: pathList(args).map((repoPath) => {
-      const map = generateCodeMap(repoPath);
+      const map = getCachedCodeMap(repoPath);
       return {
         repo: map.repo,
         files: map.files
@@ -324,7 +342,7 @@ function findBackendRoute(args) {
   const limit = normalizeLimit(args.limit, 100);
   const routes = [];
   for (const repoPath of pathList(args)) {
-    const map = generateCodeMap(repoPath);
+    const map = getCachedCodeMap(repoPath);
     for (const file of map.files.filter((entry) => entry.kind === "controller")) {
       for (const method of file.httpMethods) {
         const route = combineRoute(file.controllerBasePath, method.path);
@@ -351,7 +369,7 @@ function findFrontendApiClient(args) {
     ok: true,
     query,
     repos: pathList(args).map((repoPath) => {
-      const map = generateCodeMap(repoPath);
+      const map = getCachedCodeMap(repoPath);
       return {
         repo: map.repo,
         files: map.files

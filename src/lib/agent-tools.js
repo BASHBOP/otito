@@ -24,7 +24,15 @@ export function getAgentTools() {
       {
         name: "repo_map",
         command: "dev-context map <path> --json",
-        description: "Generate a JSON-first code map with routes, controllers, services, modules, components, hooks, API clients, DTOs, schemas, imports, exports, and symbols.",
+        description: "Generate a JSON-first AST-backed code map with routes, controllers, services, modules, components, hooks, API clients, DTOs, schemas, imports, exports, symbols, and token estimates.",
+        input: {
+          path: "string"
+        }
+      },
+      {
+        name: "repo_harness",
+        command: "dev-context harness <path> --json",
+        description: "Generate setup, validation, runtime, and context commands for an agent or CI harness, including estimated context tokens.",
         input: {
           path: "string"
         }

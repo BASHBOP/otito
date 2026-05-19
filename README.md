@@ -1,22 +1,24 @@
 # dev-context
 
-`dev-context` is a thin wrapper for making existing developer-context tools work together.
+`dev-context` builds lightweight developer harnesses for coding agents and reviewers.
 
-It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. The first version gives developers and coding agents a single CLI that can:
+It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. It gives developers and coding agents a single CLI that can:
 
 - inspect a repository
 - check tool availability
+- generate a setup/validation/runtime harness for a repo
 - generate TypeScript structure HTML through `code-structure`
 - search dependency source through `opensrc`
 - produce Markdown or JSON reports
-- generate JSON-first code maps for agents
-- generate PR review context from git diffs and optional GitHub comments
-- run a dependency-free MCP server for agent hosts
+- generate AST-backed JSON-first code maps for agents
+- estimate context-token size for generated artifacts
+- generate actionable PR review context from git diffs and optional GitHub comments
+- run an MCP server for agent hosts with a persisted repo index cache
 - expose simple agent-friendly tool metadata
 
 ## Quick Start
 
-This build has no runtime npm dependencies.
+This build uses the TypeScript parser for JS/TS code maps. Optional external tools are only needed for dependency-source lookup and HTML structure reports.
 
 ```bash
 node src/cli.js help
@@ -24,6 +26,7 @@ node src/cli.js doctor
 node src/cli.js init /path/to/target-repo
 node src/cli.js repo . --json
 node src/cli.js map . --json
+node src/cli.js harness . --out .dev-context/harness.md
 node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
 node src/cli.js mcp
 node src/cli.js matrix
@@ -48,6 +51,34 @@ node src/cli.js deps zod --query parse
 node src/cli.js structure . --out .dev-context/structure.html
 ```
 
+## Common Workflows
+
+Agent repo harness:
+
+```bash
+node src/cli.js harness . --out .dev-context/harness.md
+node src/cli.js map . --json
+```
+
+PR review harness:
+
+```bash
+node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
+node src/cli.js pr . --number 123 --comment
+```
+
+Multi-repo product context:
+
+```bash
+node src/cli.js workspace ../web ../api --out .dev-context/workspace.md
+```
+
+GitHub Actions bootstrap:
+
+```bash
+node src/cli.js init /path/to/target-repo
+```
+
 ## Commands
 
 ### `doctor`
@@ -60,11 +91,24 @@ node src/cli.js doctor --json
 
 ### `repo <path>`
 
-Inspects repo shape: files, languages, package managers, scripts, likely entrypoints, git metadata, and ignored-heavy directories.
+Inspects repo shape: files, package metadata, languages, package managers, scripts, likely entrypoints, git metadata, and ignored-heavy directories.
 
 ```bash
 node src/cli.js repo . --json
 ```
+
+Git repositories are scanned through `git ls-files --cached --others --exclude-standard` so ignored files do not pollute harness context. Plain directories fall back to the built-in walker.
+
+### `harness <path>`
+
+Generates a repo harness with setup commands, validation scripts, runtime scripts, context commands, focus areas, and estimated context-token usage.
+
+```bash
+node src/cli.js harness . --out .dev-context/harness.md
+node src/cli.js harness . --json
+```
+
+Use this as the first artifact an agent or CI workflow reads before touching code.
 
 ### `init <path>`
 
@@ -123,7 +167,7 @@ node src/cli.js workspace /path/to/web /path/to/api --json
 
 ### `pr <path>`
 
-Generates a PR review context pack from local git diff metadata, code-map classification, risk flags, suggested verification commands, and optional GitHub PR comments.
+Generates a PR review context pack from local git diff metadata, code-map classification, review targets, targeted review prompts, risk flags, suggested verification commands, estimated tokens, and optional GitHub PR comments.
 
 ```bash
 node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
@@ -144,7 +188,7 @@ This repo includes `.github/workflows/dev-context-pr.yml`. Use `node src/cli.js 
 
 ### `mcp`
 
-Starts a stdio MCP server exposing `dev-context` as agent-callable tools.
+Starts a stdio MCP server exposing `dev-context` as agent-callable tools. MCP repo-map lookups cache `.dev-context/index.json` with a file fingerprint and automatically refresh when files change.
 
 ```bash
 node src/cli.js mcp
@@ -167,6 +211,7 @@ Useful tools exposed through MCP:
 
 - `repo_inspect`
 - `repo_map`
+- `repo_harness`
 - `workspace_report`
 - `pr_review`
 - `find_domain`
