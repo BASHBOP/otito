@@ -34,12 +34,6 @@ node src/cli.js report . --out .dev-context/report.md
 node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace.md
 ```
 
-## Learning Guide
-
-For a YouTube-friendly build plan with prompts, diagrams, milestones, and quality gates, see [Building Useful Developer Context Tools With Codex](https://github.com/nugehs/tutorials/blob/main/youtube-build-guide.md).
-
-For a local-model walkthrough, see [Using dev-context With Local Ollama](https://github.com/nugehs/tutorials/blob/main/local-ollama-tutorial.md).
-
 Optional external tools:
 
 ```bash
