@@ -8,8 +8,7 @@
   },
   "files": [
     "src",
-    "README.md",
-    "docs"
+    "README.md"
   ],
   "scripts": {
     "start": "node src/cli.js",

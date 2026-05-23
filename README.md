@@ -36,9 +36,9 @@ node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace
 
 ## Learning Guide
 
-For a YouTube-friendly build plan with prompts, diagrams, milestones, and quality gates, see [docs/youtube-build-guide.md](docs/youtube-build-guide.md).
+For a YouTube-friendly build plan with prompts, diagrams, milestones, and quality gates, see [Building Useful Developer Context Tools With Codex](https://github.com/nugehs/tutorials/blob/main/youtube-build-guide.md).
 
-For a local-model walkthrough, see [docs/local-ollama-tutorial.md](docs/local-ollama-tutorial.md).
+For a local-model walkthrough, see [Using dev-context With Local Ollama](https://github.com/nugehs/tutorials/blob/main/local-ollama-tutorial.md).
 
 Optional external tools:
 
