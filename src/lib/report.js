@@ -21,18 +21,19 @@ export function generateReport(repoPath = ".") {
   };
   data.tokenEstimate.fullJson = estimateTokens(data);
 
-  let markdown = formatReport(data);
+  let markdown = formatReportMarkdown(data);
   data.tokenEstimate.markdown = estimateTokens(markdown);
-  markdown = formatReport(data);
+  markdown = formatReportMarkdown(data);
   data.tokenEstimate.markdown = estimateTokens(markdown);
 
   return {
     data,
-    markdown
+    markdown,
+    terminal: formatReportTerminal(data)
   };
 }
 
-function formatReport(data) {
+function formatReportMarkdown(data) {
   const repo = data.repo;
   const missing = data.doctor.tools.filter((tool) => !tool.available);
   const present = data.doctor.tools.filter((tool) => tool.available);
@@ -78,6 +79,81 @@ function formatReport(data) {
   ].join("\n");
 }
 
+export function formatReportTerminal(data, options = {}) {
+  const width = normalizeColumns(options.columns);
+  const repo = data.repo;
+  const missing = data.doctor.tools.filter((tool) => !tool.available);
+  const present = data.doctor.tools.filter((tool) => tool.available);
+  const lines = [
+    "Dev Context Field Report",
+    "=".repeat("Dev Context Field Report".length),
+    `Generated: ${data.generatedAt}`,
+    ...formatLabeledParagraph("Status", formatStatusLine(data), { width })
+  ];
+
+  addSection(lines, "At a Glance");
+  lines.push(
+    ...formatKeyValues(
+      [
+        ["Root", repo.root],
+        ["Files scanned", String(repo.fileCount)],
+        ["Git", formatGit(repo.git)],
+        ["Languages", repo.languages.map((item) => `${item.language} (${item.count})`).join(", ") || "unknown"],
+        ["Package managers", repo.packageManagers.join(", ") || "none detected"],
+        ["Entrypoints", repo.entrypoints.join(", ") || "none detected"]
+      ],
+      { width }
+    )
+  );
+
+  addSection(lines, "Ready Tools");
+  lines.push(...formatToolRows(present, { width, fallback: "none" }));
+
+  addSection(lines, "Optional Gaps");
+  lines.push(...formatToolRows(missing, { width, fallback: "none", includeHint: true }));
+
+  addSection(lines, "Best Fits");
+  if (data.matrix.tools.length) {
+    data.matrix.tools.forEach((tool, index) => {
+      if (index > 0) {
+        lines.push("");
+      }
+      lines.push(`  ${tool.name}`);
+      lines.push(
+        ...formatKeyValues(
+          [
+            ["Role", tool.role],
+            ["Pilot", tool.pilotUse],
+            ["Notes", tool.notes]
+          ],
+          { width, indent: "    " }
+        )
+      );
+    });
+  } else {
+    lines.push("  none");
+  }
+
+  addSection(lines, "Next Moves");
+  lines.push(
+    ...formatNumberedList(
+      [
+        "Use this wrapper to standardize repo inspection and dependency lookup.",
+        "Install `opensrc` first if dependency-source inspection is important.",
+        "Install `code-structure` only for TypeScript structure HTML generation.",
+        "Add Daytona after execution isolation becomes a real workflow requirement.",
+        "Add MCP/Harnss integration after CLI JSON output has stabilized."
+      ],
+      { width }
+    )
+  );
+
+  addSection(lines, "Token Use");
+  lines.push(...formatTokenSummary(data, { width }));
+
+  return lines.join("\n");
+}
+
 function formatGit(git) {
   if (!git.available) {
     return "not detected";
@@ -85,4 +161,155 @@ function formatGit(git) {
 
   const dirty = git.clean ? "clean" : `${git.changes} change(s)`;
   return `${git.branch ?? "unknown"} @ ${git.commit ?? "unknown"} (${dirty})`;
+}
+
+function formatStatusLine(data) {
+  const repo = data.repo;
+  const missing = data.doctor.tools.filter((tool) => !tool.available);
+  const present = data.doctor.tools.filter((tool) => tool.available);
+  const gitState = repo.git.available
+    ? repo.git.clean
+      ? "clean git tree"
+      : `${repo.git.changes} uncommitted change(s)`
+    : "git unavailable";
+  const optionalGaps = missing.length ? `${missing.length} optional gap(s)` : "no optional gaps";
+  return `${gitState}; ${repo.fileCount} files scanned; ${present.length} tools ready; ${optionalGaps}.`;
+}
+
+function addSection(lines, title) {
+  lines.push("", title, "-".repeat(title.length));
+}
+
+function formatKeyValues(rows, { width, indent = "  " }) {
+  const labelWidth = Math.max(...rows.map(([label]) => label.length));
+  const valuePrefix = `${indent}${" ".repeat(labelWidth)}  `;
+  const valueWidth = Math.max(20, width - valuePrefix.length);
+
+  return rows.flatMap(([label, rawValue]) => {
+    const wrapped = wrapText(String(rawValue ?? ""), valueWidth);
+    const first = `${indent}${label.padEnd(labelWidth)}  ${wrapped[0] ?? ""}`;
+    return [first, ...wrapped.slice(1).map((line) => `${valuePrefix}${line}`)];
+  });
+}
+
+function formatToolRows(tools, { width, fallback, includeHint = false }) {
+  if (!tools.length) {
+    return [`  ${fallback}`];
+  }
+
+  const nameWidth = Math.max(...tools.map((tool) => tool.name.length));
+  const valuePrefix = `  ${" ".repeat(nameWidth)}  `;
+  const valueWidth = Math.max(20, width - valuePrefix.length);
+
+  return tools.flatMap((tool) => {
+    const detail = includeHint ? tool.installHint || "install hint unavailable" : tool.version || "available";
+    const wrapped = wrapText(detail, valueWidth);
+    return [
+      `  ${tool.name.padEnd(nameWidth)}  ${wrapped[0] ?? ""}`,
+      ...wrapped.slice(1).map((line) => `${valuePrefix}${line}`)
+    ];
+  });
+}
+
+function formatTokenSummary(data, { width }) {
+  const sections = data.tokenEstimate.sections ?? [];
+  const lines = [
+    ...formatKeyValues(
+      [
+        ["Full JSON", `${data.tokenEstimate.fullJson} estimated tokens`],
+        ["Markdown", `${data.tokenEstimate.markdown} estimated tokens`]
+      ],
+      { width }
+    )
+  ];
+
+  if (sections.length) {
+    lines.push("");
+    lines.push("  Breakdown");
+    lines.push(
+      ...formatKeyValues(
+        sections.map((section) => [titleCase(section.name), `${section.tokens} estimated tokens`]),
+        { width, indent: "    " }
+      )
+    );
+  }
+
+  return lines;
+}
+
+function formatLabeledParagraph(label, value, { width, indent = "" }) {
+  const prefix = `${indent}${label}: `;
+  const continuationPrefix = `${indent}${" ".repeat(label.length + 2)}`;
+  const wrapped = wrapText(value, Math.max(20, width - prefix.length));
+  return [
+    `${prefix}${wrapped[0] ?? ""}`,
+    ...wrapped.slice(1).map((line) => `${continuationPrefix}${line}`)
+  ];
+}
+
+function formatNumberedList(items, { width }) {
+  const markerWidth = `${items.length}. `.length;
+  return items.flatMap((item, index) => {
+    const marker = `${index + 1}. `.padStart(markerWidth);
+    const prefix = `  ${marker}`;
+    const continuationPrefix = `  ${" ".repeat(markerWidth)}`;
+    const wrapped = wrapText(item, Math.max(20, width - prefix.length));
+    return [
+      `${prefix}${wrapped[0] ?? ""}`,
+      ...wrapped.slice(1).map((line) => `${continuationPrefix}${line}`)
+    ];
+  });
+}
+
+function wrapText(value, width) {
+  const text = String(value).replace(/\s+/g, " ").trim();
+  if (!text) {
+    return [""];
+  }
+
+  const lines = [];
+  let current = "";
+  for (const word of text.split(" ")) {
+    if (!current && word.length > width) {
+      lines.push(...chunkWord(word, width));
+      continue;
+    }
+
+    if (current.length + word.length + 1 > width) {
+      lines.push(current);
+      current = "";
+    }
+
+    if (word.length > width) {
+      lines.push(...chunkWord(word, width));
+    } else {
+      current = current ? `${current} ${word}` : word;
+    }
+  }
+
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines;
+}
+
+function chunkWord(word, width) {
+  const chunks = [];
+  for (let index = 0; index < word.length; index += width) {
+    chunks.push(word.slice(index, index + width));
+  }
+  return chunks;
+}
+
+function normalizeColumns(columns) {
+  const value = Number(columns);
+  if (!Number.isFinite(value) || value < 40) {
+    return 100;
+  }
+  return Math.min(140, Math.floor(value));
+}
+
+function titleCase(value) {
+  return String(value).replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

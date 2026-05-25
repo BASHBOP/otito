@@ -9,7 +9,7 @@ import { formatInitSummary, initProject } from "./lib/init.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
 import { generatePrReview } from "./lib/pr-review.js";
-import { generateReport } from "./lib/report.js";
+import { formatReportTerminal, generateReport } from "./lib/report.js";
 import { generateWorkspaceReport } from "./lib/workspace.js";
 import { generateHarness } from "./lib/harness.js";
 import { getAgentTools } from "./lib/agent-tools.js";
@@ -245,7 +245,7 @@ async function handleReport(parsed) {
     return;
   }
 
-  printText(result.markdown);
+  printText(formatReportTerminal(result.data, { columns: process.stdout.columns }));
 }
 
 async function handleWorkspace(parsed) {

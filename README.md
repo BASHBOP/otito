@@ -172,9 +172,12 @@ node src/cli.js deps zod --query parse --limit 20
 Generates a shareable developer report.
 
 ```bash
+node src/cli.js report .
 node src/cli.js report . --out .dev-context/report.md
 node src/cli.js report . --json
 ```
+
+The default output is formatted for terminal reading and ends with estimated token usage. Use `--out` for the Markdown artifact or `--json` for structured data.
 
 ### `workspace <repo...>`
 
