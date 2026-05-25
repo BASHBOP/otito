@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dev Context"
+  short_description: "Generate repo maps, harnesses, and PR context"
+  default_prompt: "Use $dev-context to generate repository context before planning, editing, or reviewing this change."
