@@ -5,7 +5,18 @@ import { inspectRepo } from "./lib/repo.js";
 import { formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { generateStructure } from "./lib/structure.js";
 import { inspectDependency } from "./lib/deps.js";
+import {
+  discoverRepositories,
+  formatCatalogSummary,
+  formatDiscoverSummary,
+  formatIndexSummary,
+  formatSearchResults,
+  indexRepositories,
+  listCatalog,
+  searchCatalog
+} from "./lib/catalog.js";
 import { formatInitSummary, initProject } from "./lib/init.js";
+import { formatInstallSummary, installDevContext } from "./lib/install.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
 import { generatePrReview } from "./lib/pr-review.js";
@@ -18,6 +29,12 @@ import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js"
 const commandHandlers = {
   doctor: handleDoctor,
   repo: handleRepo,
+  discover: handleDiscover,
+  index: handleIndex,
+  catalog: handleCatalog,
+  search: handleSearch,
+  install: handleInstall,
+  i: handleInstall,
   map: handleMap,
   structure: handleStructure,
   deps: handleDeps,
@@ -50,7 +67,7 @@ async function main(argv = process.argv.slice(2)) {
     if (parsed.flags.json) {
       printJson({ ok: false, error: message });
     } else {
-      console.error(`dev-context: ${message}`);
+      console.error(`repoctx: ${message}`);
     }
     process.exitCode = 1;
   }
@@ -69,7 +86,7 @@ async function handleDoctor(parsed) {
     const hint = tool.available ? "" : ` - ${tool.installHint}`;
     return `- ${marker}: ${tool.name}${version}${hint}`;
   });
-  printText(["# dev-context doctor", "", ...rows].join("\n"));
+  printText(["# repoctx doctor", "", ...rows].join("\n"));
 }
 
 async function handleRepo(parsed) {
@@ -81,6 +98,93 @@ async function handleRepo(parsed) {
   }
 
   printText(formatRepoSummary(result));
+}
+
+async function handleDiscover(parsed) {
+  const roots = parsed.positionals.length ? parsed.positionals : ["."];
+  const result = discoverRepositories(roots, {
+    depth: parsed.flags.depth,
+    limit: parsed.flags.limit
+  });
+
+  if (parsed.flags.json) {
+    printJson(result);
+    return;
+  }
+
+  printText(formatDiscoverSummary(result));
+}
+
+async function handleIndex(parsed) {
+  const repoPaths = parsed.positionals.length ? parsed.positionals : ["."];
+  const result = indexRepositories(repoPaths, {
+    catalog: parsed.flags.catalog,
+    discover: parsed.flags.discover,
+    depth: parsed.flags.depth,
+    limit: parsed.flags.limit
+  });
+
+  if (parsed.flags.json) {
+    printJson(result);
+    if (!result.ok) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  printText(formatIndexSummary(result));
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
+}
+
+async function handleCatalog(parsed) {
+  const result = listCatalog({
+    catalog: parsed.flags.catalog
+  });
+
+  if (parsed.flags.json) {
+    printJson(result);
+    return;
+  }
+
+  printText(formatCatalogSummary(result));
+}
+
+async function handleSearch(parsed) {
+  const query = parsed.positionals.join(" ").trim();
+  const result = searchCatalog(query, {
+    catalog: parsed.flags.catalog,
+    limit: parsed.flags.limit,
+    offline: parsed.flags.offline
+  });
+
+  if (parsed.flags.json) {
+    printJson(result);
+    return;
+  }
+
+  printText(formatSearchResults(result));
+}
+
+async function handleInstall(parsed) {
+  const result = installDevContext({
+    global: parsed.flags.global,
+    link: parsed.flags.link
+  });
+
+  if (parsed.flags.json) {
+    printJson(result);
+    if (result.applied === false) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  printText(formatInstallSummary(result));
+  if (result.applied === false) {
+    process.exitCode = 1;
+  }
 }
 
 async function handleMap(parsed) {
@@ -136,7 +240,7 @@ async function handleStructure(parsed) {
 async function handleDeps(parsed) {
   const packageName = parsed.positionals[0];
   if (!packageName) {
-    throw new Error("deps requires a package name, for example: dev-context deps zod --query parse");
+    throw new Error("deps requires a package name, for example: repoctx deps zod --query parse");
   }
 
   const result = inspectDependency(packageName, {
@@ -250,7 +354,7 @@ async function handleReport(parsed) {
 
 async function handleWorkspace(parsed) {
   if (parsed.positionals.length < 2) {
-    throw new Error("workspace requires at least two repo paths, for example: dev-context workspace ../web ../api");
+    throw new Error("workspace requires at least two repo paths, for example: repoctx workspace ../web ../api");
   }
 
   const result = generateWorkspaceReport(parsed.positionals);

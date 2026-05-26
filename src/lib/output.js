@@ -10,26 +10,39 @@ export function printJson(value) {
 }
 
 export function printHelp() {
-  printText(`dev-context
+  printText(`repoctx
 
 Usage:
-  dev-context doctor [--json]
-  dev-context repo <path> [--json]
-  dev-context map <path> [--out file] [--json]
-  dev-context structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
-  dev-context deps <package> [--query text] [--limit n] [--json]
-  dev-context init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--json]
-  dev-context matrix [--json]
-  dev-context mcp
-  dev-context pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
-  dev-context report <path> [--out file] [--json]
-  dev-context workspace <repo...> [--out file] [--json]
-  dev-context harness <path> [--out file] [--json]
-  dev-context agent-tools [--json|--markdown]
+  repoctx doctor [--json]
+  repoctx repo <path> [--json]
+  repoctx discover <root...> [--depth n] [--limit n] [--json]
+  repoctx index <repo...> [--discover] [--catalog file] [--json]
+  repoctx catalog [--catalog file] [--json]
+  repoctx search <query> [--catalog file] [--limit n] [--offline] [--json]
+  repoctx install|i [--global|--link] [--json]
+  repoctx map <path> [--out file] [--json]
+  repoctx structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
+  repoctx deps <package> [--query text] [--limit n] [--json]
+  repoctx init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--json]
+  repoctx matrix [--json]
+  repoctx mcp
+  repoctx pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
+  repoctx report <path> [--out file] [--json]
+  repoctx workspace <repo...> [--out file] [--json]
+  repoctx harness <path> [--out file] [--json]
+  repoctx agent-tools [--json|--markdown]
+
+Legacy alias:
+  dev-context <command>
 
 Examples:
   node src/cli.js doctor
   node src/cli.js repo . --json
+  node src/cli.js discover ~/projects --depth 2
+  node src/cli.js index ~/projects --discover
+  node src/cli.js catalog
+  node src/cli.js search "events controller"
+  node src/cli.js install
   node src/cli.js map . --json
   node src/cli.js init ../my-repo
   node src/cli.js mcp

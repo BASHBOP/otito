@@ -53,6 +53,24 @@
       ]
     },
     {
+      "id": "local-catalog-search",
+      "prompt": "Use $dev-context to discover, index, catalog, and search the sample repos under evals/files for event RSVP code. Keep everything local.",
+      "expected_output": "A local workflow using discover, index, catalog, and search commands or matching MCP tools, without cloud storage or model-provider requirements.",
+      "files": [
+        "evals/files/sample-web/package.json",
+        "evals/files/sample-web/src/api/events.ts",
+        "evals/files/sample-api/package.json",
+        "evals/files/sample-api/src/events/events.controller.ts"
+      ],
+      "assertions": [
+        "The output uses dev-context discover or repo_discover.",
+        "The output uses dev-context index or repo_index.",
+        "The output uses dev-context catalog or repo_catalog.",
+        "The output uses dev-context search or repo_search for an RSVP/event query.",
+        "The output keeps the workflow local and does not require cloud storage or an LLM provider."
+      ]
+    },
+    {
       "id": "pr-review-context",
       "prompt": "Use $dev-context to generate PR review context for the current repo against HEAD. Summarize risks and verification commands.",
       "expected_output": "A diff-aware PR review context using dev-context pr with --base HEAD, focused on changed files, risks, and validation commands.",

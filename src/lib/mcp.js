@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
+import { discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "./catalog.js";
 import { generateHarness } from "./harness.js";
 import { getCachedCodeMap } from "./index-cache.js";
 import { inspectRepo } from "./repo.js";
@@ -37,6 +38,61 @@ const tools = [
         includeFiles: { type: "boolean", description: "Include matching files in the response. Defaults to false." },
         limit: { type: "number", description: "Maximum files to include. Defaults to 100." }
       }
+    }
+  },
+  {
+    name: "repo_discover",
+    title: "Discover Repositories",
+    description: "Discover repository roots under one or more local directories.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        paths: { type: "array", items: { type: "string" }, description: "Directories to scan. Defaults to current working directory." },
+        depth: { type: "number", description: "Maximum directory depth. Defaults to 4." },
+        limit: { type: "number", description: "Maximum repositories to return. Defaults to 100." }
+      }
+    }
+  },
+  {
+    name: "repo_index",
+    title: "Index Repositories",
+    description: "Generate local .dev-context indexes and add repositories to the local catalog.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        paths: { type: "array", items: { type: "string" }, description: "Repository paths, or roots when discover is true." },
+        path: { type: "string", description: "Single repository path." },
+        discover: { type: "boolean", description: "Discover repositories under the provided paths before indexing." },
+        catalog: { type: "string", description: "Optional catalog JSON path." },
+        depth: { type: "number", description: "Maximum discovery depth." },
+        limit: { type: "number", description: "Maximum discovered repositories." }
+      }
+    }
+  },
+  {
+    name: "repo_catalog",
+    title: "List Catalog",
+    description: "List the local dev-context repository catalog.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        catalog: { type: "string", description: "Optional catalog JSON path." }
+      }
+    }
+  },
+  {
+    name: "repo_search",
+    title: "Search Repository Catalog",
+    description: "Search indexed local repositories by path, domain, kind, route, imports, exports, and symbols.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search query." },
+        catalog: { type: "string", description: "Optional catalog JSON path." },
+        limit: { type: "number", description: "Maximum matches. Defaults to 25." },
+        offline: { type: "boolean", description: "Use stored index files without refreshing fingerprints." }
+      },
+      required: ["query"]
     }
   },
   {
@@ -259,6 +315,14 @@ function dispatchTool(name, args) {
       return inspectRepo(args.path ?? ".");
     case "repo_map":
       return compactCodeMap(getCachedCodeMap(args.path ?? "."), args);
+    case "repo_discover":
+      return discoverRepositories(args.paths ?? [args.path ?? "."], args);
+    case "repo_index":
+      return indexRepositories(args.paths ?? [args.path ?? "."], args);
+    case "repo_catalog":
+      return listCatalog(args);
+    case "repo_search":
+      return searchCatalog(requiredString(args.query, "query"), args);
     case "workspace_report": {
       const paths = requirePaths(args);
       const result = generateWorkspaceReport(paths);

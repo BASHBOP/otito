@@ -33,6 +33,10 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
   assert.equal(exitCode, 0);
   assert.equal(messages[0].result.serverInfo.name, "dev-context");
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_map"));
+  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_discover"));
+  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_index"));
+  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_catalog"));
+  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_search"));
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "pr_review"));
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_harness"));
   assert.equal(messages[2].result.structuredContent.root, fixture);

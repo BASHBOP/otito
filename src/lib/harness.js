@@ -115,15 +115,15 @@ function inferCommands(repo) {
     runtime: inferScriptCommands(repo.scripts, runner, runtimeScripts),
     context: [
       {
-        command: "dev-context repo . --json",
+        command: "repoctx repo . --json",
         reason: "inspect repository facts"
       },
       {
-        command: "dev-context map . --json",
+        command: "repoctx map . --json",
         reason: "generate agent-readable code map"
       },
       {
-        command: "dev-context harness . --json",
+        command: "repoctx harness . --json",
         reason: "refresh harness commands and token estimates"
       }
     ]

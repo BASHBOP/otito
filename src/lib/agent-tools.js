@@ -1,11 +1,11 @@
 export function getAgentTools() {
   return {
     ok: true,
-    protocol: "dev-context-agent-tools/v0",
+    protocol: "repoctx-agent-tools/v0",
     tools: [
       {
         name: "repo_inspect",
-        command: "dev-context repo <path> --json",
+        command: "repoctx repo <path> --json",
         description: "Inspect repository shape, languages, package managers, scripts, entrypoints, and git metadata.",
         input: {
           path: "string"
@@ -13,7 +13,7 @@ export function getAgentTools() {
       },
       {
         name: "dependency_search",
-        command: "dev-context deps <package> --query <query> --json",
+        command: "repoctx deps <package> --query <query> --json",
         description: "Resolve package source through opensrc and search within it.",
         input: {
           package: "string",
@@ -23,15 +23,54 @@ export function getAgentTools() {
       },
       {
         name: "repo_map",
-        command: "dev-context map <path> --json",
+        command: "repoctx map <path> --json",
         description: "Generate a JSON-first AST-backed code map with routes, controllers, services, modules, components, hooks, API clients, DTOs, schemas, imports, exports, symbols, and token estimates.",
         input: {
           path: "string"
         }
       },
       {
+        name: "repo_discover",
+        command: "repoctx discover <root...> --json",
+        description: "Discover repository roots under one or more local directories without indexing them.",
+        input: {
+          paths: "string[]?",
+          depth: "number?",
+          limit: "number?"
+        }
+      },
+      {
+        name: "repo_index",
+        command: "repoctx index <repo...> --json",
+        description: "Generate local .dev-context indexes and add repositories to the local catalog.",
+        input: {
+          paths: "string[]",
+          discover: "boolean?",
+          catalog: "string?"
+        }
+      },
+      {
+        name: "repo_catalog",
+        command: "repoctx catalog --json",
+        description: "List repositories currently available in the local repoctx catalog.",
+        input: {
+          catalog: "string?"
+        }
+      },
+      {
+        name: "repo_search",
+        command: "repoctx search <query> --json",
+        description: "Search indexed local repositories by path, domain, kind, route, imports, exports, and symbols.",
+        input: {
+          query: "string",
+          catalog: "string?",
+          limit: "number?",
+          offline: "boolean?"
+        }
+      },
+      {
         name: "repo_harness",
-        command: "dev-context harness <path> --json",
+        command: "repoctx harness <path> --json",
         description: "Generate setup, validation, runtime, and context commands for an agent or CI harness, including estimated context tokens.",
         input: {
           path: "string"
@@ -39,7 +78,7 @@ export function getAgentTools() {
       },
       {
         name: "structure_generate",
-        command: "dev-context structure <path> --out <file> --json",
+        command: "repoctx structure <path> --out <file> --json",
         description: "Generate TypeScript structure HTML through code-structure.",
         input: {
           path: "string",
@@ -49,7 +88,7 @@ export function getAgentTools() {
       },
       {
         name: "report_generate",
-        command: "dev-context report <path> --json",
+        command: "repoctx report <path> --json",
         description: "Generate a developer-context report with repo facts, tool availability, and adoption guidance.",
         input: {
           path: "string"
@@ -57,7 +96,7 @@ export function getAgentTools() {
       },
       {
         name: "workspace_report_generate",
-        command: "dev-context workspace <repo...> --json",
+        command: "repoctx workspace <repo...> --json",
         description: "Generate a product-level report across multiple related repositories.",
         input: {
           paths: "string[]"

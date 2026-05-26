@@ -35,14 +35,14 @@ export function initProject(targetPath = ".", options = {}) {
     skipped: operations.filter((item) => item.action === "skipped").map((item) => item.path),
     nextSteps: [
       "Review the generated workflow before opening a PR.",
-      "If dev-context is private, add a DEV_CONTEXT_REPO_TOKEN secret and enable the token line in the workflow.",
+      "If the repoctx tool repository is private, add a DEV_CONTEXT_REPO_TOKEN secret and enable the token line in the workflow.",
       "Open or update a pull request to verify the PR comment and artifact."
     ]
   };
 }
 
 export function formatInitSummary(result) {
-  const lines = [`dev-context initialized: ${result.root}`, ""];
+  const lines = [`repoctx initialized: ${result.root}`, ""];
   lines.push(formatList("Created", result.created));
   lines.push(formatList("Updated", result.updated));
   lines.push(formatList("Skipped", result.skipped));
@@ -74,9 +74,9 @@ function formatList(title, values) {
 }
 
 function contextReadme(toolRepo, toolRef) {
-  return `# dev-context
+  return `# repoctx
 
-This folder is managed by dev-context.
+This folder is managed by repoctx.
 
 Generated assets:
 
@@ -91,7 +91,7 @@ Tool source:
 Local command:
 
 \`\`\`bash
-node /path/to/dev-context/src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
+repoctx pr . --base origin/main --out .dev-context/pr-review.md
 \`\`\`
 `;
 }

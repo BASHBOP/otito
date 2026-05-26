@@ -10,7 +10,6 @@ const ignoredDirs = new Set([
   ".augment",
   ".claude",
   ".codex",
-  ".vercel",
   ".worktrees",
   ".yarn",
   "node_modules",

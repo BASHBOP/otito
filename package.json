@@ -1,9 +1,10 @@
 {
   "name": "dev-context",
   "version": "0.2.0",
-  "description": "Agent harnesses for repo context, PR review, token budgeting, and code-structure reports.",
+  "description": "repoctx: local repo discovery, indexing, catalog search, and agent harnesses.",
   "type": "module",
   "bin": {
+    "repoctx": "./src/cli.js",
     "dev-context": "./src/cli.js"
   },
   "files": [
