@@ -11,13 +11,19 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
   fs.mkdirSync(path.join(fixture, "tests"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
   fs.writeFileSync(path.join(fixture, "src", "index.ts"), "export const ok = true;\n");
-  fs.writeFileSync(path.join(fixture, "src", "cli.js"), "import { startMcpServer } from './lib/mcp.js';\nexport function main() { return startMcpServer(); }\n");
-  fs.writeFileSync(path.join(fixture, "src", "lib", "mcp.js"), "const tools = [];\nexport function startMcpServer() { return tools; }\nfunction dispatchTool() {}\n");
+  fs.writeFileSync(
+    path.join(fixture, "src", "cli.js"),
+    "import { startMcpServer } from './lib/mcp.js';\nexport function main() { return startMcpServer(); }\n",
+  );
+  fs.writeFileSync(
+    path.join(fixture, "src", "lib", "mcp.js"),
+    "const tools = [];\nexport function startMcpServer() { return tools; }\nfunction dispatchTool() {}\n",
+  );
   fs.writeFileSync(path.join(fixture, "tests", "mcp.test.js"), "import test from 'node:test';\ntest('mcp', () => {});\n");
 
   const child = spawn(process.execPath, ["src/cli.js", "mcp"], {
     cwd: process.cwd(),
-    stdio: ["pipe", "pipe", "pipe"]
+    stdio: ["pipe", "pipe", "pipe"],
   });
 
   const messages = [];
@@ -32,10 +38,14 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
     }
   });
 
-  child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0.0.0" } } })}\n`);
+  child.stdin.write(
+    `${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0.0.0" } } })}\n`,
+  );
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} })}\n`);
   child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "repo_inspect", arguments: { path: fixture } } })}\n`);
-  child.stdin.write(`${JSON.stringify({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "context_pack", arguments: { query: "add MCP tool", path: fixture } } })}\n`);
+  child.stdin.write(
+    `${JSON.stringify({ jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "context_pack", arguments: { query: "add MCP tool", path: fixture } } })}\n`,
+  );
   child.stdin.end();
 
   const exitCode = await new Promise((resolve) => child.on("close", resolve));
@@ -43,7 +53,7 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
     messages.push(JSON.parse(buffer));
   }
   assert.equal(exitCode, 0);
-  assert.equal(messages[0].result.serverInfo.name, "dev-context");
+  assert.equal(messages[0].result.serverInfo.name, "repoctx");
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_map"));
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_discover"));
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_index"));

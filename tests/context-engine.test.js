@@ -9,36 +9,38 @@ test("generateContextPack returns task-aware files, tests, patterns, and command
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-"));
   fs.mkdirSync(path.join(root, "src", "lib"), { recursive: true });
   fs.mkdirSync(path.join(root, "tests"), { recursive: true });
-  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({
-    name: "context-fixture",
-    scripts: {
-      test: "node --test"
-    },
-    bin: {
-      repoctx: "./src/cli.js"
-    }
-  }));
-  fs.writeFileSync(path.join(root, "src", "cli.js"), [
-    "import { startMcpServer } from './lib/mcp.js';",
-    "const commandHandlers = { mcp: startMcpServer };",
-    "function handleAgentTools() { return true; }",
-    ""
-  ].join("\n"));
-  fs.writeFileSync(path.join(root, "src", "lib", "mcp.js"), [
-    "const tools = [{ name: 'repo_inspect' }];",
-    "export function startMcpServer() { return tools; }",
-    "function dispatchTool(name) { return name; }",
-    ""
-  ].join("\n"));
-  fs.writeFileSync(path.join(root, "src", "lib", "agent-tools.js"), [
-    "export function getAgentTools() { return { tools: [] }; }",
-    ""
-  ].join("\n"));
-  fs.writeFileSync(path.join(root, "tests", "mcp.test.js"), [
-    "import test from 'node:test';",
-    "test('mcp tools', () => {});",
-    ""
-  ].join("\n"));
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "context-fixture",
+      scripts: {
+        test: "node --test",
+      },
+      bin: {
+        repoctx: "./src/cli.js",
+      },
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "cli.js"),
+    [
+      "import { startMcpServer } from './lib/mcp.js';",
+      "const commandHandlers = { mcp: startMcpServer };",
+      "function handleAgentTools() { return true; }",
+      "",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "lib", "mcp.js"),
+    [
+      "const tools = [{ name: 'repo_inspect' }];",
+      "export function startMcpServer() { return tools; }",
+      "function dispatchTool(name) { return name; }",
+      "",
+    ].join("\n"),
+  );
+  fs.writeFileSync(path.join(root, "src", "lib", "agent-tools.js"), ["export function getAgentTools() { return { tools: [] }; }", ""].join("\n"));
+  fs.writeFileSync(path.join(root, "tests", "mcp.test.js"), ["import test from 'node:test';", "test('mcp tools', () => {});", ""].join("\n"));
 
   const result = generateContextPack("add a new MCP tool", { path: root });
 
