@@ -1,5 +1,7 @@
 # repoctx
 
+![repoctx design print](assets/repoctx-design-print.svg)
+
 `repoctx` is a local-first code context system. It discovers repositories, builds local indexes, maintains a catalog, searches code context, and generates lightweight harnesses for coding agents and reviewers.
 
 The legacy `dev-context` command remains available as an alias.
@@ -100,12 +102,21 @@ The gate runs:
 - `npm run format:check`
 - `npm run lint`
 - `npm run typecheck`
+- `npm run version:check`
 - `npm test`
 - `npm run test:coverage`
 - `npm run audit`
 - `npm run smoke`
 
 Coverage currently gates source files at 70% lines, 60% branches, and 75% functions. Generated artifacts under `.dev-context/` are ignored by git, linting, and formatting; keep durable reports there instead of committing them.
+
+repoctx follows Semantic Versioning. Pull requests should identify whether they are no-version-impact, patch, minor, or major changes; maintainers apply the final package version during release.
+
+## Contributing
+
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), open an issue or draft PR for substantial changes, and run `npm run ci` before requesting review.
+
+All code changes must be reviewed by a maintainer/code owner before merge. The protected `main` branch requires maintainer approval, passing quality gates, and resolved PR conversations.
 
 ## Common Workflows
 

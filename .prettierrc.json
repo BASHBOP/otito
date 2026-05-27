@@ -1,4 +1,12 @@
 {
   "printWidth": 160,
-  "proseWrap": "never"
+  "proseWrap": "never",
+  "overrides": [
+    {
+      "files": "*.svg",
+      "options": {
+        "parser": "html"
+      }
+    }
+  ]
 }
