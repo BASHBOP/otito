@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getInstallPlan, installDevContext } from "../src/lib/install.js";
+import { formatInstallSummary, getInstallPlan, installDevContext } from "../src/lib/install.js";
 
 test("getInstallPlan reports product name, binary, and commands", () => {
   const plan = getInstallPlan();
@@ -19,4 +19,12 @@ test("installDevContext defaults to a non-mutating plan", () => {
   assert.equal(result.ok, true);
   assert.equal(result.applied, undefined);
   assert.equal(result.commands.developmentLink, "npm link");
+});
+
+test("formatInstallSummary includes the repoctx identity print", () => {
+  const summary = formatInstallSummary(getInstallPlan());
+
+  assert.match(summary, /^repoctx\n\+[-]+\+\n\| Hello builder, welcome to repoctx/);
+  assert.match(summary, /files routes tests prompts/);
+  assert.match(summary, /repoctx installer/);
 });
