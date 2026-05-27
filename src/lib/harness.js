@@ -10,6 +10,7 @@ const validationScripts = [
   "lint",
   "format:check",
   "typecheck",
+  "version:check",
   "type-check",
   "check:type",
   "tsc",
