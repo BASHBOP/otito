@@ -6,7 +6,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const productName = "repoctx";
 const binaryName = "repoctx";
 const legacyBinaryName = "dev-context";
-const repoUrl = "https://github.com/nugehs/dev-context";
+const repoUrl = "https://github.com/nugehs/repoctx";
 
 export function installDevContext(options = {}) {
   const plan = getInstallPlan(options);
@@ -16,12 +16,11 @@ export function installDevContext(options = {}) {
     return plan;
   }
 
-  const command = mode === "global"
-    ? { command: "npm", args: ["install", "-g", "."], display: "npm install -g ." }
-    : { command: "npm", args: ["link"], display: "npm link" };
+  const command =
+    mode === "global" ? { command: "npm", args: ["install", "-g", "."], display: "npm install -g ." } : { command: "npm", args: ["link"], display: "npm link" };
   const result = runCommand(command.command, command.args, {
     cwd: packageRoot,
-    timeout: 120000
+    timeout: 120000,
   });
 
   return {
@@ -31,7 +30,7 @@ export function installDevContext(options = {}) {
     command: command.display,
     stdout: result.stdout.trim(),
     stderr: result.stderr.trim(),
-    error: result.error?.message
+    error: result.error?.message,
   };
 }
 
@@ -50,16 +49,16 @@ export function getInstallPlan() {
     legacyInstalled: legacyStatus.available,
     legacyBinaryPath: legacyStatus.path,
     commands: {
-      fromGitHub: "npm install -g github:nugehs/dev-context",
+      fromGitHub: "npm install -g github:nugehs/repoctx",
       fromCheckout: "npm install -g .",
       developmentLink: "npm link",
-      verify: `${binaryName} doctor`
+      verify: `${binaryName} doctor`,
     },
     nextSteps: [
       `Run \`${binaryName} doctor\` to verify the install.`,
       `Run \`${binaryName} index ~/projects --discover\` to build a local catalog.`,
-      `Run \`${binaryName} search "auth"\` to search indexed repositories.`
-    ]
+      `Run \`${binaryName} search "auth"\` to search indexed repositories.`,
+    ],
   };
 }
 
@@ -79,7 +78,7 @@ export function formatInstallSummary(result) {
     `- From this checkout: ${result.commands.fromCheckout}`,
     `- Development link: ${result.commands.developmentLink}`,
     "",
-    `Verify: ${result.commands.verify}`
+    `Verify: ${result.commands.verify}`,
   ];
 
   if (result.mode && result.mode !== "plan") {

@@ -8,18 +8,21 @@ import { inspectRepo } from "../src/lib/repo.js";
 test("inspectRepo detects TypeScript repo basics", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-repo-"));
   fs.mkdirSync(path.join(root, "src"));
-  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({
-    name: "fixture-cli",
-    version: "1.2.3",
-    type: "module",
-    bin: {
-      fixture: "./src/cli.js"
-    },
-    scripts: {
-      test: "node --test"
-    },
-    main: "src/index.js"
-  }));
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "fixture-cli",
+      version: "1.2.3",
+      type: "module",
+      bin: {
+        fixture: "./src/cli.js",
+      },
+      scripts: {
+        test: "node --test",
+      },
+      main: "src/index.js",
+    }),
+  );
   fs.writeFileSync(path.join(root, "src", "index.ts"), "export const ok = true;\n");
   fs.writeFileSync(path.join(root, "src", "cli.js"), "console.log('ok');\n");
 

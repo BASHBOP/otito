@@ -6,19 +6,7 @@ import { inspectRepo } from "./repo.js";
 import { runCommand } from "./tools.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
-const ghPrFields = [
-  "number",
-  "title",
-  "body",
-  "state",
-  "url",
-  "author",
-  "baseRefName",
-  "headRefName",
-  "comments",
-  "reviews",
-  "files"
-].join(",");
+const ghPrFields = ["number", "title", "body", "state", "url", "author", "baseRefName", "headRefName", "comments", "reviews", "files"].join(",");
 
 const statusNames = {
   A: "added",
@@ -28,22 +16,12 @@ const statusNames = {
   R: "renamed",
   T: "type-changed",
   U: "unmerged",
-  X: "unknown"
+  X: "unknown",
 };
 
-const preferredScripts = [
-  "lint",
-  "typecheck",
-  "type-check",
-  "check:type",
-  "tsc",
-  "tsc:check",
-  "test",
-  "test:unit",
-  "test:e2e",
-  "build"
-];
-const prCommentMarker = "<!-- dev-context-pr-review -->";
+const preferredScripts = ["lint", "typecheck", "type-check", "check:type", "tsc", "tsc:check", "test", "test:unit", "test:e2e", "build"];
+const prCommentMarker = "<!-- repoctx-pr-review -->";
+const legacyPrCommentMarker = "<!-- dev-context-pr-review -->";
 
 export function generatePrReview(repoPath = ".", options = {}) {
   const repo = inspectRepo(repoPath);
@@ -73,7 +51,7 @@ export function generatePrReview(repoPath = ".", options = {}) {
       name: path.basename(root),
       git: repo.git,
       packageManagers: repo.packageManagers,
-      scripts: repo.scripts
+      scripts: repo.scripts,
     },
     pr,
     comparison: {
@@ -84,7 +62,7 @@ export function generatePrReview(repoPath = ".", options = {}) {
       insertions: diff.insertions,
       deletions: diff.deletions,
       shortstat: diff.shortstat,
-      fallbackReason: diff.fallbackReason
+      fallbackReason: diff.fallbackReason,
     },
     changedFiles,
     domains,
@@ -93,7 +71,7 @@ export function generatePrReview(repoPath = ".", options = {}) {
     reviewTargets,
     reviewPrompts,
     testHints,
-    nextSteps: inferNextSteps(changedFiles, risk, reviewComments, testHints)
+    nextSteps: inferNextSteps(changedFiles, risk, reviewComments, testHints),
   };
 
   data.tokenEstimate = {
@@ -102,8 +80,8 @@ export function generatePrReview(repoPath = ".", options = {}) {
       { name: "changedFiles", value: data.changedFiles },
       { name: "reviewTargets", value: data.reviewTargets },
       { name: "reviewPrompts", value: data.reviewPrompts },
-      { name: "reviewComments", value: data.reviewComments }
-    ])
+      { name: "reviewComments", value: data.reviewComments },
+    ]),
   };
   data.tokenEstimate.fullJson = estimateTokens(data);
 
@@ -118,7 +96,7 @@ export function generatePrReview(repoPath = ".", options = {}) {
 
   return {
     data,
-    markdown
+    markdown,
   };
 }
 
@@ -138,7 +116,7 @@ export function formatPrReviewMarkdown(data) {
     `- Diff: ${data.comparison.shortstat || `${data.comparison.insertions} insertion(s), ${data.comparison.deletions} deletion(s)`}`,
     `- Risk: ${data.risk.level} (${data.risk.score})`,
     `- Estimated JSON tokens: ${data.tokenEstimate.fullJson}`,
-    `- Estimated Markdown tokens: ${data.tokenEstimate.markdown ?? "pending"}`
+    `- Estimated Markdown tokens: ${data.tokenEstimate.markdown ?? "pending"}`,
   ];
 
   if (data.comparison.fallbackReason) {
@@ -193,7 +171,9 @@ export function formatPrReviewMarkdown(data) {
   if (data.domains.length) {
     lines.push("| Domain | Files | +/- | Kinds |", "|---|---:|---:|---|");
     for (const domain of data.domains.slice(0, 20)) {
-      lines.push(`| ${domain.name} | ${domain.fileCount} | +${domain.additions} / -${domain.deletions} | ${domain.kinds.map((item) => `${item.kind} ${item.count}`).join(", ")} |`);
+      lines.push(
+        `| ${domain.name} | ${domain.fileCount} | +${domain.additions} / -${domain.deletions} | ${domain.kinds.map((item) => `${item.kind} ${item.count}`).join(", ")} |`,
+      );
     }
   } else {
     lines.push("- none detected");
@@ -203,7 +183,9 @@ export function formatPrReviewMarkdown(data) {
   if (data.changedFiles.length) {
     lines.push("| File | Status | Kind | Domain | +/- | Notes |", "|---|---|---|---|---:|---|");
     for (const file of data.changedFiles.slice(0, 80)) {
-      lines.push(`| ${formatFileCell(file)} | ${file.statusName} | ${file.kind} | ${file.domain} | +${file.additions} / -${file.deletions} | ${file.riskFlags.join("; ") || ""} |`);
+      lines.push(
+        `| ${formatFileCell(file)} | ${file.statusName} | ${file.kind} | ${file.domain} | +${file.additions} / -${file.deletions} | ${file.riskFlags.join("; ") || ""} |`,
+      );
     }
   } else {
     lines.push("- no changed files detected");
@@ -242,12 +224,12 @@ export function formatPrReviewMarkdown(data) {
 export function formatPrCommentMarkdown(data) {
   const lines = [
     prCommentMarker,
-    "## dev-context PR Review",
+    "## repoctx PR Review",
     "",
     `**Risk:** ${data.risk.level} (${data.risk.score})`,
     `**Changed files:** ${data.comparison.changedFileCount}`,
     `**Diff:** ${data.comparison.shortstat || `${data.comparison.insertions} insertion(s), ${data.comparison.deletions} deletion(s)`}`,
-    ""
+    "",
   ];
 
   lines.push("### Risk Flags", "");
@@ -272,7 +254,9 @@ export function formatPrCommentMarkdown(data) {
   if (data.domains.length) {
     lines.push("| Domain | Files | +/- | Kinds |", "|---|---:|---:|---|");
     for (const domain of data.domains.slice(0, 10)) {
-      lines.push(`| ${domain.name} | ${domain.fileCount} | +${domain.additions} / -${domain.deletions} | ${domain.kinds.map((item) => `${item.kind} ${item.count}`).join(", ")} |`);
+      lines.push(
+        `| ${domain.name} | ${domain.fileCount} | +${domain.additions} / -${domain.deletions} | ${domain.kinds.map((item) => `${item.kind} ${item.count}`).join(", ")} |`,
+      );
     }
   } else {
     lines.push("- none detected");
@@ -304,7 +288,7 @@ export function formatPrCommentMarkdown(data) {
     lines.push(`- ${step}`);
   }
 
-  lines.push("", "_Full Markdown report is uploaded as the `dev-context-pr-review` workflow artifact when run in GitHub Actions._", "");
+  lines.push("", "_Full Markdown report is uploaded as the `repoctx-pr-review` workflow artifact when run in GitHub Actions._", "");
   return lines.join("\n");
 }
 
@@ -317,7 +301,7 @@ function loadPrMetadata(root, options) {
       available: false,
       comments: [],
       reviews: [],
-      reviewComments: []
+      reviewComments: [],
     };
   }
 
@@ -336,7 +320,7 @@ function loadPrMetadata(root, options) {
       error: cleanCommandError(result, "gh pr view failed"),
       comments: [],
       reviews: [],
-      reviewComments: []
+      reviewComments: [],
     };
   }
 
@@ -358,7 +342,7 @@ function loadPrMetadata(root, options) {
       files: Array.isArray(raw.files) ? raw.files : [],
       comments: Array.isArray(raw.comments) ? raw.comments : [],
       reviews: Array.isArray(raw.reviews) ? raw.reviews : [],
-      reviewComments: prNumber ? loadGhReviewComments(root, prNumber) : []
+      reviewComments: prNumber ? loadGhReviewComments(root, prNumber) : [],
     };
   } catch (error) {
     return {
@@ -368,7 +352,7 @@ function loadPrMetadata(root, options) {
       error: `failed to parse gh output: ${error.message}`,
       comments: [],
       reviews: [],
-      reviewComments: []
+      reviewComments: [],
     };
   }
 }
@@ -379,7 +363,7 @@ function tryPostPrReviewComment(root, data) {
   } catch (error) {
     return {
       ok: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
@@ -407,7 +391,7 @@ function postPrReviewComment(root, data) {
     if (existing) {
       const update = runCommand("gh", ["api", `repos/${nameWithOwner}/issues/comments/${existing.id}`, "--method", "PATCH", "--input", payloadPath], {
         cwd: root,
-        timeout: 30000
+        timeout: 30000,
       });
       if (!update.ok) {
         throw new Error(cleanCommandError(update, "gh api comment update failed"));
@@ -417,13 +401,13 @@ function postPrReviewComment(root, data) {
         ok: true,
         action: "updated",
         id: parsed.id ?? existing.id,
-        url: parsed.html_url ?? existing.html_url
+        url: parsed.html_url ?? existing.html_url,
       };
     }
 
     const create = runCommand("gh", ["api", `repos/${nameWithOwner}/issues/${number}/comments`, "--method", "POST", "--input", payloadPath], {
       cwd: root,
-      timeout: 30000
+      timeout: 30000,
     });
     if (!create.ok) {
       throw new Error(cleanCommandError(create, "gh api comment create failed"));
@@ -433,7 +417,7 @@ function postPrReviewComment(root, data) {
       ok: true,
       action: "created",
       id: parsed.id,
-      url: parsed.html_url
+      url: parsed.html_url,
     };
   } finally {
     safeUnlink(payloadPath);
@@ -443,14 +427,17 @@ function postPrReviewComment(root, data) {
 function findExistingPrComment(root, nameWithOwner, number) {
   const comments = runCommand("gh", ["api", `repos/${nameWithOwner}/issues/${number}/comments?per_page=100`], {
     cwd: root,
-    timeout: 30000
+    timeout: 30000,
   });
   if (!comments.ok || !comments.stdout.trim()) {
     return undefined;
   }
 
   try {
-    return JSON.parse(comments.stdout).find((comment) => String(comment.body ?? "").includes(prCommentMarker));
+    return JSON.parse(comments.stdout).find((comment) => {
+      const body = String(comment.body ?? "");
+      return body.includes(prCommentMarker) || body.includes(legacyPrCommentMarker);
+    });
   } catch {
     return undefined;
   }
@@ -486,7 +473,7 @@ function loadGhReviewComments(root, number) {
 
     const comments = runCommand("gh", ["api", `repos/${nameWithOwner}/pulls/${number}/comments`, "--paginate"], {
       cwd: root,
-      timeout: 30000
+      timeout: 30000,
     });
     if (!comments.ok || !comments.stdout.trim()) {
       return [];
@@ -498,16 +485,7 @@ function loadGhReviewComments(root, number) {
 }
 
 function resolveBaseRef(root, options, pr) {
-  const candidates = [
-    options.base,
-    pr.baseRefName,
-    upstreamRef(root),
-    "origin/main",
-    "main",
-    "origin/master",
-    "master",
-    "HEAD~1"
-  ].filter(Boolean).map(String);
+  const candidates = [options.base, pr.baseRefName, upstreamRef(root), "origin/main", "main", "origin/master", "master", "HEAD~1"].filter(Boolean).map(String);
 
   for (const candidate of candidates) {
     if (refExists(root, candidate)) {
@@ -521,7 +499,7 @@ function resolveBaseRef(root, options, pr) {
 function upstreamRef(root) {
   const result = runCommand("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], {
     cwd: root,
-    timeout: 5000
+    timeout: 5000,
   });
   return result.ok ? result.stdout.trim() : undefined;
 }
@@ -546,7 +524,7 @@ function getDiff(root, base, head) {
         numstat: stats.files,
         insertions: stats.insertions,
         deletions: stats.deletions,
-        shortstat: shortstat.stdout.trim()
+        shortstat: shortstat.stdout.trim(),
       };
     }
   }
@@ -569,7 +547,7 @@ function getDiff(root, base, head) {
       numstat: new Map(),
       insertions: 0,
       deletions: 0,
-      shortstat: shortstat.stdout.trim()
+      shortstat: shortstat.stdout.trim(),
     };
   }
 
@@ -580,7 +558,7 @@ function getDiff(root, base, head) {
     insertions,
     deletions,
     shortstat: formatShortstat(fallbackFiles.length, insertions, deletions, fallbackShortstat.stdout.trim()),
-    fallbackReason: `no committed diff found for ${comparison}; used working tree diff from HEAD`
+    fallbackReason: `no committed diff found for ${comparison}; used working tree diff from HEAD`,
   };
 }
 
@@ -643,12 +621,12 @@ function parseNameStatus(output) {
           status,
           score: rawStatus.slice(1) || undefined,
           previousPath: parts[1],
-          path: parts[2]
+          path: parts[2],
         };
       }
       return {
         status,
-        path: parts[1]
+        path: parts[1],
       };
     })
     .filter((file) => file.path);
@@ -709,7 +687,7 @@ function enrichChangedFiles(files, numstat, codeMap) {
       httpMethods: codeInfo?.httpMethods ?? [],
       imports: codeInfo?.imports?.slice(0, 20) ?? [],
       exports: codeInfo?.exports?.slice(0, 20) ?? [],
-      symbols: codeInfo?.symbols?.slice(0, 20) ?? []
+      symbols: codeInfo?.symbols?.slice(0, 20) ?? [],
     };
     enriched.riskFlags = inferFileRiskFlags(enriched);
     return enriched;
@@ -745,14 +723,15 @@ function inferBasicDomain(file) {
 }
 
 function cleanDomain(value) {
-  return value
-    .replace(/\.[cm]?[jt]sx?$/, "")
-    .replace(/-api$/, "")
-    .replace(/-apis$/, "")
-    .replace(/-service$/, "")
-    .replace(/[()[\]]/g, "")
-    .replace(/^\.+$/, "root")
-    || "root";
+  return (
+    value
+      .replace(/\.[cm]?[jt]sx?$/, "")
+      .replace(/-api$/, "")
+      .replace(/-apis$/, "")
+      .replace(/-service$/, "")
+      .replace(/[()[\]]/g, "")
+      .replace(/^\.+$/, "root") || "root"
+  );
 }
 
 function inferFileRiskFlags(file) {
@@ -790,7 +769,7 @@ function summarizeDomains(files) {
       fileCount: 0,
       additions: 0,
       deletions: 0,
-      kinds: new Map()
+      kinds: new Map(),
     };
     domain.fileCount += 1;
     domain.additions += file.additions;
@@ -805,9 +784,7 @@ function summarizeDomains(files) {
       fileCount: domain.fileCount,
       additions: domain.additions,
       deletions: domain.deletions,
-      kinds: [...domain.kinds.entries()]
-        .map(([kind, count]) => ({ kind, count }))
-        .sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind))
+      kinds: [...domain.kinds.entries()].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind)),
     }))
     .sort((a, b) => b.fileCount - a.fileCount || b.additions + b.deletions - (a.additions + a.deletions) || a.name.localeCompare(b.name));
 }
@@ -821,7 +798,7 @@ function normalizeReviewComments(pr) {
       path: comment.path,
       line: comment.line ?? comment.original_line,
       body: compactText(comment.body),
-      url: comment.html_url
+      url: comment.html_url,
     });
   }
 
@@ -830,7 +807,7 @@ function normalizeReviewComments(pr) {
       type: "comment",
       author: comment.author?.login ?? comment.author?.name,
       body: compactText(comment.body),
-      url: comment.url
+      url: comment.url,
     });
   }
 
@@ -843,13 +820,13 @@ function normalizeReviewComments(pr) {
       author: review.author?.login ?? review.author?.name,
       state: review.state,
       body: compactText(review.body),
-      url: review.url
+      url: review.url,
     });
   }
 
   return {
     count: items.length,
-    items
+    items,
   };
 }
 
@@ -893,7 +870,7 @@ function inferRisk(files, diff, comments) {
   return {
     level: score >= 9 ? "high" : score >= 4 ? "medium" : "low",
     score,
-    flags: [...flags].sort()
+    flags: [...flags].sort(),
   };
 }
 
@@ -917,7 +894,7 @@ function inferTestHints(repo, files, risk) {
     hints.push({
       script: name,
       command: commandForScript(runner, name),
-      reason
+      reason,
     });
   }
 
@@ -931,11 +908,11 @@ function inferReviewTargets(files) {
       .filter((file) => file.symbols.length)
       .map((file) => ({
         file: file.path,
-        symbols: file.symbols.slice(0, 12).map((symbol) => `${symbol.type} ${symbol.name}`)
+        symbols: file.symbols.slice(0, 12).map((symbol) => `${symbol.type} ${symbol.name}`),
       }))
       .slice(0, 100),
     configFiles: files.filter((file) => file.kind === "config" || file.riskFlags.includes("configuration")).map((file) => file.path),
-    testFiles: files.filter((file) => file.kind === "test").map((file) => file.path)
+    testFiles: files.filter((file) => file.kind === "test").map((file) => file.path),
   };
 }
 
@@ -949,14 +926,19 @@ function routeTargetsForFile(file) {
   return file.httpMethods.map((method) => ({
     file: file.path,
     method: method.method,
-    route: combineRoute(file.controllerBasePath, method.path)
+    route: combineRoute(file.controllerBasePath, method.path),
   }));
 }
 
 function inferReviewPrompts(files, risk, targets) {
   const prompts = [];
   if (targets.routes.length) {
-    prompts.push(`Review touched request routes: ${targets.routes.slice(0, 5).map((target) => `${target.method ? `${target.method} ` : ""}${target.route}`).join(", ")}.`);
+    prompts.push(
+      `Review touched request routes: ${targets.routes
+        .slice(0, 5)
+        .map((target) => `${target.method ? `${target.method} ` : ""}${target.route}`)
+        .join(", ")}.`,
+    );
   }
   if (risk.flags.includes("frontend/backend contract")) {
     prompts.push("Check each API client change against the matching backend route, response shape, and error handling.");
@@ -982,11 +964,17 @@ function inferReviewPrompts(files, risk, targets) {
 function reasonForScript(name, files, risk) {
   const changedKinds = new Set(files.map((file) => file.kind));
   const hasTypedSource = files.some((file) => /\.[cm]?[jt]sx?$/.test(file.path));
-  const hasRuntimeSource = hasTypedSource || files.some((file) => ["route", "apiRoute", "controller", "service", "module", "component", "hook", "apiClient", "dto", "schema"].includes(file.kind));
+  const hasRuntimeSource =
+    hasTypedSource ||
+    files.some((file) => ["route", "apiRoute", "controller", "service", "module", "component", "hook", "apiClient", "dto", "schema"].includes(file.kind));
   if (name.includes("lint")) return hasRuntimeSource ? "changed source files should pass style/static checks" : undefined;
   if (name.includes("type") || name === "tsc") return hasTypedSource ? "TypeScript contracts changed" : undefined;
-  if (name === "build") return hasRuntimeSource && (changedKinds.has("route") || changedKinds.has("component") || risk.level !== "low") ? "build catches integration and bundling issues" : undefined;
-  if (name.includes("e2e")) return risk.flags.some((flag) => ["request surface", "money flow", "auth/security"].includes(flag)) ? "request/user-flow surface changed" : undefined;
+  if (name === "build")
+    return hasRuntimeSource && (changedKinds.has("route") || changedKinds.has("component") || risk.level !== "low")
+      ? "build catches integration and bundling issues"
+      : undefined;
+  if (name.includes("e2e"))
+    return risk.flags.some((flag) => ["request surface", "money flow", "auth/security"].includes(flag)) ? "request/user-flow surface changed" : undefined;
   if (name.includes("test")) return hasRuntimeSource ? "verify behavior around changed domains" : undefined;
   return undefined;
 }

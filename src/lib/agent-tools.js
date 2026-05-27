@@ -8,8 +8,8 @@ export function getAgentTools() {
         command: "repoctx repo <path> --json",
         description: "Inspect repository shape, languages, package managers, scripts, entrypoints, and git metadata.",
         input: {
-          path: "string"
-        }
+          path: "string",
+        },
       },
       {
         name: "dependency_search",
@@ -18,16 +18,17 @@ export function getAgentTools() {
         input: {
           package: "string",
           query: "string",
-          limit: "number?"
-        }
+          limit: "number?",
+        },
       },
       {
         name: "repo_map",
         command: "repoctx map <path> --json",
-        description: "Generate a JSON-first AST-backed code map with routes, controllers, services, modules, components, hooks, API clients, DTOs, schemas, imports, exports, symbols, and token estimates.",
+        description:
+          "Generate a JSON-first AST-backed code map with routes, controllers, services, modules, components, hooks, API clients, DTOs, schemas, imports, exports, symbols, and token estimates.",
         input: {
-          path: "string"
-        }
+          path: "string",
+        },
       },
       {
         name: "repo_discover",
@@ -36,8 +37,8 @@ export function getAgentTools() {
         input: {
           paths: "string[]?",
           depth: "number?",
-          limit: "number?"
-        }
+          limit: "number?",
+        },
       },
       {
         name: "repo_index",
@@ -46,16 +47,16 @@ export function getAgentTools() {
         input: {
           paths: "string[]",
           discover: "boolean?",
-          catalog: "string?"
-        }
+          catalog: "string?",
+        },
       },
       {
         name: "repo_catalog",
         command: "repoctx catalog --json",
         description: "List repositories currently available in the local repoctx catalog.",
         input: {
-          catalog: "string?"
-        }
+          catalog: "string?",
+        },
       },
       {
         name: "repo_search",
@@ -65,8 +66,8 @@ export function getAgentTools() {
           query: "string",
           catalog: "string?",
           limit: "number?",
-          offline: "boolean?"
-        }
+          offline: "boolean?",
+        },
       },
       {
         name: "context_pack",
@@ -75,16 +76,16 @@ export function getAgentTools() {
         input: {
           query: "string",
           path: "string?",
-          limit: "number?"
-        }
+          limit: "number?",
+        },
       },
       {
         name: "repo_harness",
         command: "repoctx harness <path> --json",
         description: "Generate setup, validation, runtime, and context commands for an agent or CI harness, including estimated context tokens.",
         input: {
-          path: "string"
-        }
+          path: "string",
+        },
       },
       {
         name: "structure_generate",
@@ -93,25 +94,25 @@ export function getAgentTools() {
         input: {
           path: "string",
           pattern: "string[]?",
-          out: "string?"
-        }
+          out: "string?",
+        },
       },
       {
         name: "report_generate",
         command: "repoctx report <path> --json",
         description: "Generate a developer-context report with repo facts, tool availability, and adoption guidance.",
         input: {
-          path: "string"
-        }
+          path: "string",
+        },
       },
       {
         name: "workspace_report_generate",
         command: "repoctx workspace <repo...> --json",
         description: "Generate a product-level report across multiple related repositories.",
         input: {
-          paths: "string[]"
-        }
-      }
-    ]
+          paths: "string[]",
+        },
+      },
+    ],
   };
 }

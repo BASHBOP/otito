@@ -5,38 +5,38 @@ const toolDefinitions = [
     name: "node",
     command: "node",
     versionArgs: ["--version"],
-    installHint: "Install Node.js 18+."
+    installHint: "Install Node.js 18+.",
   },
   {
     name: "git",
     command: "git",
     versionArgs: ["--version"],
-    installHint: "Install git."
+    installHint: "Install git.",
   },
   {
     name: "rg",
     command: "rg",
     versionArgs: ["--version"],
-    installHint: "Install ripgrep for faster source searching."
+    installHint: "Install ripgrep for faster source searching.",
   },
   {
     name: "npx",
     command: "npx",
     versionArgs: ["--version"],
-    installHint: "Install npm/npx, or install optional tools globally."
+    installHint: "Install npm/npx, or install optional tools globally.",
   },
   {
     name: "opensrc",
     command: "opensrc",
     versionArgs: ["--version"],
-    installHint: "Install with: npm install -g opensrc"
+    installHint: "Install with: npm install -g opensrc",
   },
   {
     name: "code-structure",
     command: "code-structure",
     versionArgs: ["--version"],
-    installHint: "Install with: npm install -g code-structure for faster runs; structure can fall back to npx."
-  }
+    installHint: "Install with: npm install -g code-structure for faster runs; structure can fall back to npx.",
+  },
 ];
 
 export function getDoctorReport() {
@@ -50,8 +50,8 @@ export function getDoctorReport() {
         available: exists.available,
         path: exists.path,
         version: exists.available ? commandVersion(tool.command, tool.versionArgs) : undefined,
-        installHint: tool.installHint
+        installHint: tool.installHint,
       };
-    })
+    }),
   };
 }

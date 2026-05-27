@@ -9,7 +9,7 @@ test("getInstallPlan reports product name, binary, and commands", () => {
   assert.equal(plan.productName, "repoctx");
   assert.equal(plan.binaryName, "repoctx");
   assert.equal(plan.legacyBinaryName, "dev-context");
-  assert.equal(plan.commands.fromGitHub, "npm install -g github:nugehs/dev-context");
+  assert.equal(plan.commands.fromGitHub, "npm install -g github:nugehs/repoctx");
   assert.equal(plan.commands.verify, "repoctx doctor");
 });
 

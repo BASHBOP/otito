@@ -1,5 +1,5 @@
 {
-  "name": "dev-context",
+  "name": "repoctx",
   "version": "0.2.0",
   "description": "repoctx: local repo discovery, indexing, catalog search, and agent harnesses.",
   "type": "module",
@@ -9,23 +9,40 @@
   },
   "files": [
     "src",
-    "README.md"
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md",
+    "SECURITY.md"
   ],
   "scripts": {
     "start": "node src/cli.js",
     "mcp": "node src/cli.js mcp",
+    "doctor": "node src/cli.js doctor",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.js",
-    "smoke": "node src/cli.js doctor && node src/cli.js harness . --json"
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" --test-coverage-lines=70 --test-coverage-branches=60 --test-coverage-functions=75 tests/*.test.js",
+    "audit": "npm audit --omit=dev",
+    "smoke": "node src/cli.js doctor && node src/cli.js harness . --json",
+    "quality": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:coverage && npm run audit && npm run smoke",
+    "ci": "npm run quality"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=18.18"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nugehs/dev-context.git"
+    "url": "https://github.com/nugehs/repoctx.git"
   },
   "license": "MIT",
   "dependencies": {
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.3"
   }
 }

@@ -9,15 +9,15 @@ export function generateReport(repoPath = ".") {
     generatedAt: new Date().toISOString(),
     repo: inspectRepo(repoPath),
     doctor: getDoctorReport(),
-    matrix: getToolMatrix()
+    matrix: getToolMatrix(),
   };
 
   data.tokenEstimate = {
     ...estimateTokenSections([
       { name: "repo", value: data.repo },
       { name: "doctor", value: data.doctor },
-      { name: "matrix", value: data.matrix }
-    ])
+      { name: "matrix", value: data.matrix },
+    ]),
   };
   data.tokenEstimate.fullJson = estimateTokens(data);
 
@@ -29,7 +29,7 @@ export function generateReport(repoPath = ".") {
   return {
     data,
     markdown,
-    terminal: formatReportTerminal(data)
+    terminal: formatReportTerminal(data),
   };
 }
 
@@ -39,7 +39,7 @@ function formatReportMarkdown(data) {
   const present = data.doctor.tools.filter((tool) => tool.available);
 
   return [
-    "# Dev Context Report",
+    "# repoctx Report",
     "",
     `Generated: ${data.generatedAt}`,
     "",
@@ -75,7 +75,7 @@ function formatReportMarkdown(data) {
     "- Install `code-structure` only for TypeScript structure HTML generation.",
     "- Add Daytona after execution isolation becomes a real workflow requirement.",
     "- Add MCP/Harnss integration after CLI JSON output has stabilized.",
-    ""
+    "",
   ].join("\n");
 }
 
@@ -85,10 +85,10 @@ export function formatReportTerminal(data, options = {}) {
   const missing = data.doctor.tools.filter((tool) => !tool.available);
   const present = data.doctor.tools.filter((tool) => tool.available);
   const lines = [
-    "Dev Context Field Report",
-    "=".repeat("Dev Context Field Report".length),
+    "repoctx Field Report",
+    "=".repeat("repoctx Field Report".length),
     `Generated: ${data.generatedAt}`,
-    ...formatLabeledParagraph("Status", formatStatusLine(data), { width })
+    ...formatLabeledParagraph("Status", formatStatusLine(data), { width }),
   ];
 
   addSection(lines, "At a Glance");
@@ -100,10 +100,10 @@ export function formatReportTerminal(data, options = {}) {
         ["Git", formatGit(repo.git)],
         ["Languages", repo.languages.map((item) => `${item.language} (${item.count})`).join(", ") || "unknown"],
         ["Package managers", repo.packageManagers.join(", ") || "none detected"],
-        ["Entrypoints", repo.entrypoints.join(", ") || "none detected"]
+        ["Entrypoints", repo.entrypoints.join(", ") || "none detected"],
       ],
-      { width }
-    )
+      { width },
+    ),
   );
 
   addSection(lines, "Ready Tools");
@@ -124,10 +124,10 @@ export function formatReportTerminal(data, options = {}) {
           [
             ["Role", tool.role],
             ["Pilot", tool.pilotUse],
-            ["Notes", tool.notes]
+            ["Notes", tool.notes],
           ],
-          { width, indent: "    " }
-        )
+          { width, indent: "    " },
+        ),
       );
     });
   } else {
@@ -142,10 +142,10 @@ export function formatReportTerminal(data, options = {}) {
         "Install `opensrc` first if dependency-source inspection is important.",
         "Install `code-structure` only for TypeScript structure HTML generation.",
         "Add Daytona after execution isolation becomes a real workflow requirement.",
-        "Add MCP/Harnss integration after CLI JSON output has stabilized."
+        "Add MCP/Harnss integration after CLI JSON output has stabilized.",
       ],
-      { width }
-    )
+      { width },
+    ),
   );
 
   addSection(lines, "Token Use");
@@ -167,11 +167,7 @@ function formatStatusLine(data) {
   const repo = data.repo;
   const missing = data.doctor.tools.filter((tool) => !tool.available);
   const present = data.doctor.tools.filter((tool) => tool.available);
-  const gitState = repo.git.available
-    ? repo.git.clean
-      ? "clean git tree"
-      : `${repo.git.changes} uncommitted change(s)`
-    : "git unavailable";
+  const gitState = repo.git.available ? (repo.git.clean ? "clean git tree" : `${repo.git.changes} uncommitted change(s)`) : "git unavailable";
   const optionalGaps = missing.length ? `${missing.length} optional gap(s)` : "no optional gaps";
   return `${gitState}; ${repo.fileCount} files scanned; ${present.length} tools ready; ${optionalGaps}.`;
 }
@@ -204,10 +200,7 @@ function formatToolRows(tools, { width, fallback, includeHint = false }) {
   return tools.flatMap((tool) => {
     const detail = includeHint ? tool.installHint || "install hint unavailable" : tool.version || "available";
     const wrapped = wrapText(detail, valueWidth);
-    return [
-      `  ${tool.name.padEnd(nameWidth)}  ${wrapped[0] ?? ""}`,
-      ...wrapped.slice(1).map((line) => `${valuePrefix}${line}`)
-    ];
+    return [`  ${tool.name.padEnd(nameWidth)}  ${wrapped[0] ?? ""}`, ...wrapped.slice(1).map((line) => `${valuePrefix}${line}`)];
   });
 }
 
@@ -217,10 +210,10 @@ function formatTokenSummary(data, { width }) {
     ...formatKeyValues(
       [
         ["Full JSON", `${data.tokenEstimate.fullJson} estimated tokens`],
-        ["Markdown", `${data.tokenEstimate.markdown} estimated tokens`]
+        ["Markdown", `${data.tokenEstimate.markdown} estimated tokens`],
       ],
-      { width }
-    )
+      { width },
+    ),
   ];
 
   if (sections.length) {
@@ -229,8 +222,8 @@ function formatTokenSummary(data, { width }) {
     lines.push(
       ...formatKeyValues(
         sections.map((section) => [titleCase(section.name), `${section.tokens} estimated tokens`]),
-        { width, indent: "    " }
-      )
+        { width, indent: "    " },
+      ),
     );
   }
 
@@ -241,10 +234,7 @@ function formatLabeledParagraph(label, value, { width, indent = "" }) {
   const prefix = `${indent}${label}: `;
   const continuationPrefix = `${indent}${" ".repeat(label.length + 2)}`;
   const wrapped = wrapText(value, Math.max(20, width - prefix.length));
-  return [
-    `${prefix}${wrapped[0] ?? ""}`,
-    ...wrapped.slice(1).map((line) => `${continuationPrefix}${line}`)
-  ];
+  return [`${prefix}${wrapped[0] ?? ""}`, ...wrapped.slice(1).map((line) => `${continuationPrefix}${line}`)];
 }
 
 function formatNumberedList(items, { width }) {
@@ -254,10 +244,7 @@ function formatNumberedList(items, { width }) {
     const prefix = `  ${marker}`;
     const continuationPrefix = `  ${" ".repeat(markerWidth)}`;
     const wrapped = wrapText(item, Math.max(20, width - prefix.length));
-    return [
-      `${prefix}${wrapped[0] ?? ""}`,
-      ...wrapped.slice(1).map((line) => `${continuationPrefix}${line}`)
-    ];
+    return [`${prefix}${wrapped[0] ?? ""}`, ...wrapped.slice(1).map((line) => `${continuationPrefix}${line}`)];
   });
 }
 

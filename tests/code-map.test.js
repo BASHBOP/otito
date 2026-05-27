@@ -21,7 +21,10 @@ test("generateCodeMap classifies Nest controllers and methods", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-api-"));
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ main: "dist/main" }));
-  fs.writeFileSync(path.join(root, "src", "events", "events.controller.ts"), "import { Controller, Get } from '@nestjs/common';\n@Controller('events')\nexport class EventsController {\n  @Get(':id')\n  findOne() {}\n}\n");
+  fs.writeFileSync(
+    path.join(root, "src", "events", "events.controller.ts"),
+    "import { Controller, Get } from '@nestjs/common';\n@Controller('events')\nexport class EventsController {\n  @Get(':id')\n  findOne() {}\n}\n",
+  );
 
   const result = generateCodeMap(root);
   assert.equal(result.summary.controllers, 1);
@@ -32,11 +35,14 @@ test("generateCodeMap classifies Nest controllers and methods", () => {
 test("generateCodeMap ignores code-like strings in fixtures", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-fixture-"));
   fs.mkdirSync(path.join(root, "tests"), { recursive: true });
-  fs.writeFileSync(path.join(root, "tests", "fixture.test.ts"), [
-    "const fixture = \"import { Controller, Get } from '@nestjs/common';\\n@Controller('fake')\\nexport class FakeController { @Get(':id') find() {} }\";",
-    "export const realFixture = true;",
-    ""
-  ].join("\n"));
+  fs.writeFileSync(
+    path.join(root, "tests", "fixture.test.ts"),
+    [
+      "const fixture = \"import { Controller, Get } from '@nestjs/common';\\n@Controller('fake')\\nexport class FakeController { @Get(':id') find() {} }\";",
+      "export const realFixture = true;",
+      "",
+    ].join("\n"),
+  );
 
   const result = generateCodeMap(root);
   assert.equal(result.summary.controllers, 0);

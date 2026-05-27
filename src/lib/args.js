@@ -2,7 +2,7 @@ export function parseArgv(argv) {
   const result = {
     command: undefined,
     positionals: [],
-    flags: {}
+    flags: {},
   };
 
   const args = [...argv];
@@ -61,7 +61,7 @@ function normalizeFlagName(flag) {
     j: "json",
     p: "pattern",
     n: "number",
-    b: "base"
+    b: "base",
   };
   return aliases[flag] ?? flag.replaceAll("-", "_");
 }

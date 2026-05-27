@@ -18,8 +18,8 @@ export function getCachedCodeMap(repoPath = ".") {
         hit: true,
         path: cachePath,
         generatedAt: cached.generatedAt,
-        fingerprint
-      }
+        fingerprint,
+      },
     };
   }
 
@@ -28,7 +28,7 @@ export function getCachedCodeMap(repoPath = ".") {
     version: cacheVersion,
     generatedAt: new Date().toISOString(),
     fingerprint,
-    map
+    map,
   });
 
   return {
@@ -36,8 +36,8 @@ export function getCachedCodeMap(repoPath = ".") {
     cache: {
       hit: false,
       path: cachePath,
-      fingerprint
-    }
+      fingerprint,
+    },
   };
 }
 

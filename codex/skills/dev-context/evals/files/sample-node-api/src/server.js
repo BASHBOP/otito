@@ -1,5 +1,5 @@
 export function createServer() {
   return {
-    routes: ["/health", "/events/:id/rsvp"]
+    routes: ["/health", "/events/:id/rsvp"],
   };
 }

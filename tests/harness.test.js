@@ -8,24 +8,30 @@ import { generateHarness } from "../src/lib/harness.js";
 test("generateHarness returns commands, focus areas, and token estimates", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-harness-"));
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
-  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({
-    name: "events-api",
-    scripts: {
-      lint: "eslint .",
-      typecheck: "tsc --noEmit",
-      test: "node --test",
-      dev: "node src/main.ts"
-    }
-  }));
-  fs.writeFileSync(path.join(root, "src", "events", "events.controller.ts"), [
-    "import { Controller, Get } from '@nestjs/common';",
-    "@Controller('events')",
-    "export class EventsController {",
-    "  @Get(':id')",
-    "  findOne() {}",
-    "}",
-    ""
-  ].join("\n"));
+  fs.writeFileSync(
+    path.join(root, "package.json"),
+    JSON.stringify({
+      name: "events-api",
+      scripts: {
+        lint: "eslint .",
+        typecheck: "tsc --noEmit",
+        test: "node --test",
+        dev: "node src/main.ts",
+      },
+    }),
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "events", "events.controller.ts"),
+    [
+      "import { Controller, Get } from '@nestjs/common';",
+      "@Controller('events')",
+      "export class EventsController {",
+      "  @Get(':id')",
+      "  findOne() {}",
+      "}",
+      "",
+    ].join("\n"),
+  );
 
   const result = generateHarness(root);
   assert.equal(result.data.ok, true);
@@ -35,6 +41,6 @@ test("generateHarness returns commands, focus areas, and token estimates", () =>
   assert.ok(result.data.commands.runtime.some((command) => command.command === "npm run dev"));
   assert.ok(result.data.focusAreas.includes("backend request controllers"));
   assert.ok(result.data.tokenEstimate.fullJson > 0);
-  assert.match(result.markdown, /# Dev Context Harness: events-api/);
+  assert.match(result.markdown, /# repoctx Harness: events-api/);
   assert.match(result.markdown, /## Token Budget/);
 });
