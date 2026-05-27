@@ -15,7 +15,7 @@ const defaultExcludes = [
   ".yarn/**",
   "dist/**",
   "build/**",
-  "coverage/**"
+  "coverage/**",
 ];
 
 export function generateStructure(repoPath = ".", options = {}) {
@@ -29,7 +29,7 @@ export function generateStructure(repoPath = ".", options = {}) {
       ok: false,
       error: "code-structure is not installed.",
       installHint: "Install with: npm install -g code-structure, or make npx available.",
-      outputPath
+      outputPath,
     };
   }
 
@@ -43,9 +43,7 @@ export function generateStructure(repoPath = ".", options = {}) {
 
   const commandLine = args.join(" ");
   const result = runShellCommand(commandLine, { cwd: root, timeout: 120000 });
-  const failureOutput = [result.stderr.trim(), result.stdout.trim(), result.error?.message]
-    .filter(Boolean)
-    .join("\n");
+  const failureOutput = [result.stderr.trim(), result.stdout.trim(), result.error?.message].filter(Boolean).join("\n");
 
   return {
     ok: result.ok,
@@ -56,7 +54,7 @@ export function generateStructure(repoPath = ".", options = {}) {
     stdoutLineCount: countLines(result.stdout),
     stdoutPreview: previewOutput(result.stdout),
     stderr: result.stderr.trim(),
-    error: result.ok ? undefined : failureOutput || `code-structure failed with status ${result.status ?? "unknown"}`
+    error: result.ok ? undefined : failureOutput || `code-structure failed with status ${result.status ?? "unknown"}`,
   };
 }
 
@@ -91,14 +89,15 @@ function countLines(text) {
 }
 
 function previewOutput(text, lineLimit = 40) {
-  const lines = text.trim().split("\n").filter((line) => line && !/^\d+$/.test(line.trim()));
+  const lines = text
+    .trim()
+    .split("\n")
+    .filter((line) => line && !/^\d+$/.test(line.trim()));
   if (lines.length <= lineLimit) {
     return lines.join("\n");
   }
 
-  return [
-    ...lines.slice(0, Math.floor(lineLimit / 2)),
-    `... ${lines.length - lineLimit} lines omitted ...`,
-    ...lines.slice(-Math.ceil(lineLimit / 2))
-  ].join("\n");
+  return [...lines.slice(0, Math.floor(lineLimit / 2)), `... ${lines.length - lineLimit} lines omitted ...`, ...lines.slice(-Math.ceil(lineLimit / 2))].join(
+    "\n",
+  );
 }

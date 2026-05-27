@@ -9,14 +9,14 @@ export function estimateTokenSections(sections) {
   const items = sections.map((section) => ({
     name: section.name,
     tokens: estimateTokens(section.value),
-    characters: textLength(section.value)
+    characters: textLength(section.value),
   }));
 
   return {
     estimated: true,
     method: `ceil(characters / ${charsPerToken})`,
     total: items.reduce((sum, item) => sum + item.tokens, 0),
-    sections: items
+    sections: items,
   };
 }
 

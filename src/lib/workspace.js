@@ -18,12 +18,12 @@ export function generateWorkspaceReport(repoPaths) {
     repos: repos.map((repo, index) => summarizeRepo(repo, maps[index])),
     domains: aggregateDomains(maps),
     integrations: inferIntegrations(maps),
-    doctor: getDoctorReport()
+    doctor: getDoctorReport(),
   };
 
   return {
     data,
-    markdown: formatWorkspaceReport(data)
+    markdown: formatWorkspaceReport(data),
   };
 }
 
@@ -39,7 +39,7 @@ function summarizeRepo(repo, codeMap) {
     git: repo.git,
     scripts: pickKeyScripts(repo.scripts),
     map: codeMap.summary,
-    topDomains: codeMap.domains.slice(0, 10)
+    topDomains: codeMap.domains.slice(0, 10),
   };
 }
 
@@ -51,9 +51,7 @@ function aggregateLanguages(repos) {
     }
   }
 
-  return [...counts.entries()]
-    .map(([language, count]) => ({ language, count }))
-    .sort((a, b) => b.count - a.count || a.language.localeCompare(b.language));
+  return [...counts.entries()].map(([language, count]) => ({ language, count })).sort((a, b) => b.count - a.count || a.language.localeCompare(b.language));
 }
 
 function pickKeyScripts(scripts) {
@@ -62,7 +60,7 @@ function pickKeyScripts(scripts) {
 
 function formatWorkspaceReport(data) {
   const lines = [
-    "# Dev Context Workspace Report",
+    "# repoctx Workspace Report",
     "",
     `Generated: ${data.generatedAt}`,
     "",
@@ -76,12 +74,14 @@ function formatWorkspaceReport(data) {
     "## Repositories",
     "",
     "| Repo | Files | Git | Languages | Entrypoints |",
-    "|---|---:|---|---|---|"
+    "|---|---:|---|---|---|",
   ];
 
   for (const repo of data.repos) {
     const git = formatGit(repo.git);
-    lines.push(`| ${repo.name} | ${repo.fileCount} | ${git} | ${repo.languages.map((item) => `${item.language} ${item.count}`).join(", ") || "unknown"} | ${repo.entrypoints.join(", ") || "none detected"} |`);
+    lines.push(
+      `| ${repo.name} | ${repo.fileCount} | ${git} | ${repo.languages.map((item) => `${item.language} ${item.count}`).join(", ") || "unknown"} | ${repo.entrypoints.join(", ") || "none detected"} |`,
+    );
   }
 
   lines.push("", "## Key Scripts", "");
@@ -103,11 +103,13 @@ function formatWorkspaceReport(data) {
     "## Code Map Summary",
     "",
     "| Repo | Routes | Controllers | Services | Components | API Clients | Tests | Symbols |",
-    "|---|---:|---:|---:|---:|---:|---:|---:|"
+    "|---|---:|---:|---:|---:|---:|---:|---:|",
   );
 
   for (const repo of data.repos) {
-    lines.push(`| ${repo.name} | ${repo.map.routes + repo.map.apiRoutes} | ${repo.map.controllers} | ${repo.map.services} | ${repo.map.components} | ${repo.map.apiClients} | ${repo.map.tests} | ${repo.map.symbols} |`);
+    lines.push(
+      `| ${repo.name} | ${repo.map.routes + repo.map.apiRoutes} | ${repo.map.controllers} | ${repo.map.services} | ${repo.map.components} | ${repo.map.apiClients} | ${repo.map.tests} | ${repo.map.symbols} |`,
+    );
   }
 
   lines.push("", "## Shared Domains", "", "| Domain | Files | Repos |", "|---|---:|---|");
@@ -115,13 +117,7 @@ function formatWorkspaceReport(data) {
     lines.push(`| ${domain.name} | ${domain.fileCount} | ${domain.repos.join(", ")} |`);
   }
 
-  lines.push(
-    "",
-    "## Likely Integration Domains",
-    "",
-    "| Domain | Frontend API Clients | Backend Controllers | Backend Services |",
-    "|---|---:|---:|---:|"
-  );
+  lines.push("", "## Likely Integration Domains", "", "| Domain | Frontend API Clients | Backend Controllers | Backend Services |", "|---|---:|---:|---:|");
 
   if (data.integrations.length) {
     for (const integration of data.integrations.slice(0, 30)) {
@@ -139,7 +135,7 @@ function formatWorkspaceReport(data) {
     "- Use repo-level reports for detailed file lists, and this workspace report for cross-repo orientation.",
     "- Avoid full-repo `code-structure` on this workspace; prefer narrowed scopes like `app/**/*.tsx` or `src/**/*.ts`.",
     "- Add MCP tooling around `workspace` next so agents can understand both repos before editing either one.",
-    ""
+    "",
   );
 
   return lines.join("\n");
@@ -178,7 +174,7 @@ function inferIntegrations(maps) {
       domain,
       frontendApiClients: frontendCounts.get(domain) ?? 0,
       backendControllers: backendControllers.get(domain) ?? 0,
-      backendServices: backendServices.get(domain) ?? 0
+      backendServices: backendServices.get(domain) ?? 0,
     }))
     .filter((item) => item.frontendApiClients > 0 && (item.backendControllers > 0 || item.backendServices > 0))
     .sort((a, b) => scoreIntegration(b) - scoreIntegration(a) || a.domain.localeCompare(b.domain));

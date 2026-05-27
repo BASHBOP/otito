@@ -9,7 +9,7 @@ export function inspectDependency(packageName, options = {}) {
       ok: false,
       packageName,
       error: "opensrc is not installed.",
-      installHint: "Install with: npm install -g opensrc"
+      installHint: "Install with: npm install -g opensrc",
     };
   }
 
@@ -19,7 +19,7 @@ export function inspectDependency(packageName, options = {}) {
       ok: false,
       packageName,
       error: pathResult.stderr.trim() || pathResult.error?.message || "opensrc path failed",
-      installHint: "Check package name or opensrc authentication."
+      installHint: "Check package name or opensrc authentication.",
     };
   }
 
@@ -27,7 +27,7 @@ export function inspectDependency(packageName, options = {}) {
   const result = {
     ok: true,
     packageName,
-    sourcePath
+    sourcePath,
   };
 
   if (options.query) {
@@ -42,7 +42,7 @@ export function searchSource(sourcePath, query, limit = 25) {
   const rg = commandExists("rg");
   if (rg.available) {
     const result = runCommand("rg", ["--line-number", "--no-heading", "--color", "never", query, sourcePath], {
-      timeout: 120000
+      timeout: 120000,
     });
     return parseRipgrep(result.stdout, sourcePath).slice(0, limit);
   }
@@ -59,7 +59,7 @@ function parseRipgrep(output, sourcePath) {
       return {
         file: path.relative(sourcePath, file),
         line: Number(lineNumber),
-        text: rest.join(":").trim()
+        text: rest.join(":").trim(),
       };
     });
 }
@@ -108,7 +108,7 @@ function fallbackSearch(sourcePath, query, limit) {
           results.push({
             file: path.relative(sourcePath, absolute),
             line: index + 1,
-            text: lines[index].trim()
+            text: lines[index].trim(),
           });
         }
       }

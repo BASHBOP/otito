@@ -26,7 +26,7 @@ const ignoredDirs = new Set([
   ".turbo",
   ".cache",
   "target",
-  "vendor"
+  "vendor",
 ]);
 
 const languageByExtension = new Map([
@@ -49,7 +49,7 @@ const languageByExtension = new Map([
   [".md", "Markdown"],
   [".yml", "YAML"],
   [".yaml", "YAML"],
-  [".toml", "TOML"]
+  [".toml", "TOML"],
 ]);
 
 export function inspectRepo(repoPath = ".") {
@@ -76,7 +76,7 @@ export function inspectRepo(repoPath = ".") {
     importantDirectories: detectImportantDirectories(root),
     git: getGitInfo(root),
     files: files.slice(0, 250),
-    filesTruncated: files.length > 250
+    filesTruncated: files.length > 250,
   };
 }
 
@@ -93,7 +93,7 @@ function languagePriority(language) {
     JSON: 20,
     Markdown: 21,
     YAML: 22,
-    TOML: 23
+    TOML: 23,
   };
   return priorities[language] ?? 10;
 }
@@ -134,7 +134,7 @@ export function listRepoFiles(root) {
 function gitTrackedAndUntrackedFiles(root) {
   const result = runCommand("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
     cwd: root,
-    timeout: 10000
+    timeout: 10000,
   });
   if (!result.ok) {
     return [];
@@ -142,7 +142,10 @@ function gitTrackedAndUntrackedFiles(root) {
 
   const seen = new Set();
   const files = [];
-  for (const file of result.stdout.split("\n").map((line) => line.trim()).filter(Boolean)) {
+  for (const file of result.stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)) {
     if (seen.has(file) || isIgnoredRepoPath(file) || !fs.existsSync(path.join(root, file))) {
       continue;
     }
@@ -154,19 +157,19 @@ function gitTrackedAndUntrackedFiles(root) {
 
 function isIgnoredFile(fileName) {
   const extension = path.extname(fileName).toLowerCase();
-  return fileName === ".DS_Store"
-    || fileName === ".eslintcache"
-    || fileName === ".env"
-    || fileName.startsWith(".env.")
-    || fileName.endsWith(".log")
-    || fileName.endsWith(".tsbuildinfo")
-    || [".pem", ".key", ".crt", ".p12", ".sql", ".gz", ".tar"].includes(extension);
+  return (
+    fileName === ".DS_Store" ||
+    fileName === ".eslintcache" ||
+    fileName === ".env" ||
+    fileName.startsWith(".env.") ||
+    fileName.endsWith(".log") ||
+    fileName.endsWith(".tsbuildinfo") ||
+    [".pem", ".key", ".crt", ".p12", ".sql", ".gz", ".tar"].includes(extension)
+  );
 }
 
 function isIgnoredRepoPath(filePath) {
-  return filePath
-    .split(path.sep)
-    .some((segment) => ignoredDirs.has(segment) || isIgnoredFile(segment));
+  return filePath.split(path.sep).some((segment) => ignoredDirs.has(segment) || isIgnoredFile(segment));
 }
 
 function safeReadDir(directory) {
@@ -211,7 +214,7 @@ function summarizePackage(packageJson) {
     type: packageJson.type,
     private: packageJson.private,
     packageManager: packageJson.packageManager,
-    bin: packageJson.bin
+    bin: packageJson.bin,
   };
 }
 
@@ -226,7 +229,7 @@ function detectPackageManagers(root, packageJson) {
     ["pyproject.toml", "python"],
     ["Cargo.toml", "cargo"],
     ["go.mod", "go"],
-    ["Gemfile", "bundler"]
+    ["Gemfile", "bundler"],
   ];
   const managers = new Set();
   const declaredManager = parsePackageManager(packageJson?.packageManager);
@@ -330,6 +333,6 @@ function getGitInfo(root) {
     commit: commit.stdout.trim() || undefined,
     clean: changeLines.length === 0,
     changes: changeLines.length,
-    status: branchLine || undefined
+    status: branchLine || undefined,
   };
 }

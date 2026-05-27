@@ -22,9 +22,9 @@ const tools = [
     inputSchema: {
       type: "object",
       properties: {
-        path: { type: "string", description: "Repository path. Defaults to current working directory." }
-      }
-    }
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+      },
+    },
   },
   {
     name: "repo_map",
@@ -37,9 +37,9 @@ const tools = [
         domain: { type: "string", description: "Optional domain filter such as booking, payment, email, events." },
         kind: { type: "string", description: "Optional file kind filter such as route, controller, service, apiClient, component, test." },
         includeFiles: { type: "boolean", description: "Include matching files in the response. Defaults to false." },
-        limit: { type: "number", description: "Maximum files to include. Defaults to 100." }
-      }
-    }
+        limit: { type: "number", description: "Maximum files to include. Defaults to 100." },
+      },
+    },
   },
   {
     name: "repo_discover",
@@ -50,9 +50,9 @@ const tools = [
       properties: {
         paths: { type: "array", items: { type: "string" }, description: "Directories to scan. Defaults to current working directory." },
         depth: { type: "number", description: "Maximum directory depth. Defaults to 4." },
-        limit: { type: "number", description: "Maximum repositories to return. Defaults to 100." }
-      }
-    }
+        limit: { type: "number", description: "Maximum repositories to return. Defaults to 100." },
+      },
+    },
   },
   {
     name: "repo_index",
@@ -66,20 +66,20 @@ const tools = [
         discover: { type: "boolean", description: "Discover repositories under the provided paths before indexing." },
         catalog: { type: "string", description: "Optional catalog JSON path." },
         depth: { type: "number", description: "Maximum discovery depth." },
-        limit: { type: "number", description: "Maximum discovered repositories." }
-      }
-    }
+        limit: { type: "number", description: "Maximum discovered repositories." },
+      },
+    },
   },
   {
     name: "repo_catalog",
     title: "List Catalog",
-    description: "List the local dev-context repository catalog.",
+    description: "List the local repoctx repository catalog.",
     inputSchema: {
       type: "object",
       properties: {
-        catalog: { type: "string", description: "Optional catalog JSON path." }
-      }
-    }
+        catalog: { type: "string", description: "Optional catalog JSON path." },
+      },
+    },
   },
   {
     name: "repo_search",
@@ -91,10 +91,10 @@ const tools = [
         query: { type: "string", description: "Search query." },
         catalog: { type: "string", description: "Optional catalog JSON path." },
         limit: { type: "number", description: "Maximum matches. Defaults to 25." },
-        offline: { type: "boolean", description: "Use stored index files without refreshing fingerprints." }
+        offline: { type: "boolean", description: "Use stored index files without refreshing fingerprints." },
       },
-      required: ["query"]
-    }
+      required: ["query"],
+    },
   },
   {
     name: "context_pack",
@@ -107,10 +107,10 @@ const tools = [
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         paths: { type: "array", items: { type: "string" }, description: "Repository paths for a multi-repo context packet." },
         limit: { type: "number", description: "Maximum primary, related, and test files per section. Defaults to 8." },
-        includeMarkdown: { type: "boolean", description: "Include the markdown context pack. Defaults to false." }
+        includeMarkdown: { type: "boolean", description: "Include the markdown context pack. Defaults to false." },
       },
-      required: ["query"]
-    }
+      required: ["query"],
+    },
   },
   {
     name: "workspace_report",
@@ -122,12 +122,12 @@ const tools = [
         paths: {
           type: "array",
           items: { type: "string" },
-          description: "Repository paths to inspect together."
+          description: "Repository paths to inspect together.",
         },
-        includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." }
+        includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." },
       },
-      required: ["paths"]
-    }
+      required: ["paths"],
+    },
   },
   {
     name: "pr_review",
@@ -142,9 +142,9 @@ const tools = [
         comment: { type: "boolean", description: "Create or update a sticky GitHub PR comment using gh." },
         base: { type: "string", description: "Base ref. Defaults to PR base, upstream, origin/main, or main." },
         head: { type: "string", description: "Head ref. Defaults to HEAD." },
-        includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." }
-      }
-    }
+        includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." },
+      },
+    },
   },
   {
     name: "repo_harness",
@@ -154,9 +154,9 @@ const tools = [
       type: "object",
       properties: {
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
-        includeMarkdown: { type: "boolean", description: "Include the markdown harness. Defaults to false." }
-      }
-    }
+        includeMarkdown: { type: "boolean", description: "Include the markdown harness. Defaults to false." },
+      },
+    },
   },
   {
     name: "find_domain",
@@ -168,10 +168,10 @@ const tools = [
         path: { type: "string", description: "Single repository path." },
         paths: { type: "array", items: { type: "string" }, description: "Repository paths." },
         domain: { type: "string", description: "Domain to find, such as booking, payment, email, events." },
-        limit: { type: "number", description: "Maximum files per repository. Defaults to 100." }
+        limit: { type: "number", description: "Maximum files per repository. Defaults to 100." },
       },
-      required: ["domain"]
-    }
+      required: ["domain"],
+    },
   },
   {
     name: "find_file_kind",
@@ -182,11 +182,14 @@ const tools = [
       properties: {
         path: { type: "string", description: "Single repository path." },
         paths: { type: "array", items: { type: "string" }, description: "Repository paths." },
-        kind: { type: "string", description: "File kind: route, apiRoute, controller, service, module, component, hook, apiClient, dto, schema, test, source." },
-        limit: { type: "number", description: "Maximum files per repository. Defaults to 100." }
+        kind: {
+          type: "string",
+          description: "File kind: route, apiRoute, controller, service, module, component, hook, apiClient, dto, schema, test, source.",
+        },
+        limit: { type: "number", description: "Maximum files per repository. Defaults to 100." },
       },
-      required: ["kind"]
-    }
+      required: ["kind"],
+    },
   },
   {
     name: "find_backend_route",
@@ -198,9 +201,9 @@ const tools = [
         path: { type: "string", description: "Backend repository path." },
         paths: { type: "array", items: { type: "string" }, description: "Repository paths." },
         query: { type: "string", description: "Optional route/controller query." },
-        limit: { type: "number", description: "Maximum route entries. Defaults to 100." }
-      }
-    }
+        limit: { type: "number", description: "Maximum route entries. Defaults to 100." },
+      },
+    },
   },
   {
     name: "find_frontend_api_client",
@@ -213,10 +216,10 @@ const tools = [
         paths: { type: "array", items: { type: "string" }, description: "Repository paths." },
         domain: { type: "string", description: "Optional domain such as booking, payment, email." },
         query: { type: "string", description: "Optional file/import/export query." },
-        limit: { type: "number", description: "Maximum files. Defaults to 100." }
-      }
-    }
-  }
+        limit: { type: "number", description: "Maximum files. Defaults to 100." },
+      },
+    },
+  },
 ];
 
 export async function startMcpServer({ input = process.stdin, output = process.stdout } = {}) {
@@ -255,13 +258,13 @@ async function handleMessage(message) {
           protocolVersion,
           capabilities: {
             tools: {
-              listChanged: false
-            }
+              listChanged: false,
+            },
           },
           serverInfo: {
             name: packageJson.name,
-            version: packageJson.version
-          }
+            version: packageJson.version,
+          },
         });
       case "notifications/initialized":
         return undefined;
@@ -307,10 +310,10 @@ function callTool(params = {}) {
       content: [
         {
           type: "text",
-          text: error instanceof Error ? error.message : String(error)
-        }
+          text: error instanceof Error ? error.message : String(error),
+        },
       ],
-      isError: true
+      isError: true,
     };
   }
 
@@ -318,11 +321,11 @@ function callTool(params = {}) {
     content: [
       {
         type: "text",
-        text: JSON.stringify(result, null, 2)
-      }
+        text: JSON.stringify(result, null, 2),
+      },
     ],
     structuredContent: result,
-    isError: false
+    isError: false,
   };
 }
 
@@ -380,7 +383,7 @@ function compactCodeMap(map, args = {}) {
     summary: map.summary,
     domains: map.domains.slice(0, 30),
     files: args.includeFiles || args.domain || args.kind ? files : undefined,
-    notableFiles: args.includeFiles || args.domain || args.kind ? undefined : map.files.filter(isNotableFile).slice(0, limit).map(summarizeFile)
+    notableFiles: args.includeFiles || args.domain || args.kind ? undefined : map.files.filter(isNotableFile).slice(0, limit).map(summarizeFile),
   };
 }
 
@@ -397,9 +400,9 @@ function findDomain(args) {
         files: map.files
           .filter((file) => matches(file.domain, domain))
           .slice(0, limit)
-          .map(summarizeFile)
+          .map(summarizeFile),
       };
-    })
+    }),
   };
 }
 
@@ -416,9 +419,9 @@ function findFileKind(args) {
         files: map.files
           .filter((file) => file.kind === kind)
           .slice(0, limit)
-          .map(summarizeFile)
+          .map(summarizeFile),
       };
-    })
+    }),
   };
 }
 
@@ -436,7 +439,7 @@ function findBackendRoute(args) {
           file: file.path,
           controllerBasePath: file.controllerBasePath,
           method: method.method,
-          route
+          route,
         };
         if (!query || matches(`${file.path} ${route} ${method.method}`, query)) {
           routes.push(item);
@@ -461,16 +464,14 @@ function findFrontendApiClient(args) {
           .filter((file) => file.kind === "apiClient")
           .filter((file) => !query || matches(`${file.path} ${file.domain} ${file.imports.join(" ")} ${file.exports.join(" ")}`, query))
           .slice(0, limit)
-          .map(summarizeFile)
+          .map(summarizeFile),
       };
-    })
+    }),
   };
 }
 
 function filterFiles(files, args = {}) {
-  return files
-    .filter((file) => !args.domain || matches(file.domain, args.domain))
-    .filter((file) => !args.kind || file.kind === args.kind);
+  return files.filter((file) => !args.domain || matches(file.domain, args.domain)).filter((file) => !args.kind || file.kind === args.kind);
 }
 
 function summarizeFile(file) {
@@ -483,7 +484,7 @@ function summarizeFile(file) {
     httpMethods: file.httpMethods,
     imports: file.imports.slice(0, 20),
     exports: file.exports.slice(0, 20),
-    symbols: file.symbols.slice(0, 20)
+    symbols: file.symbols.slice(0, 20),
   };
 }
 
@@ -524,7 +525,9 @@ function normalizeLimit(value, fallback) {
 }
 
 function matches(value, query) {
-  return String(value ?? "").toLowerCase().includes(String(query ?? "").toLowerCase());
+  return String(value ?? "")
+    .toLowerCase()
+    .includes(String(query ?? "").toLowerCase());
 }
 
 function combineRoute(basePath, methodPath) {

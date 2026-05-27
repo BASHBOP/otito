@@ -34,7 +34,7 @@ const stopWords = new Set([
   "where",
   "which",
   "who",
-  "with"
+  "with",
 ]);
 
 const actionWords = new Set(["add", "build", "change", "create", "debug", "fix", "implement", "refactor", "review", "test", "update"]);
@@ -77,7 +77,7 @@ export function generateContextPack(query, options = {}) {
     conflicts,
     openQuestions,
     sources,
-    agentPrompt: formatAgentPrompt(normalizedQuery, primaryFiles, relatedFiles, tests, commands)
+    agentPrompt: formatAgentPrompt(normalizedQuery, primaryFiles, relatedFiles, tests, commands),
   };
 
   data.tokenEstimate = {
@@ -88,8 +88,8 @@ export function generateContextPack(query, options = {}) {
       { name: "relatedFiles", value: data.relatedFiles },
       { name: "tests", value: data.tests },
       { name: "patterns", value: data.patterns },
-      { name: "commands", value: data.commands }
-    ])
+      { name: "commands", value: data.commands },
+    ]),
   };
   data.tokenEstimate.fullJson = estimateTokens(data);
 
@@ -99,7 +99,7 @@ export function generateContextPack(query, options = {}) {
 
   return {
     data,
-    markdown
+    markdown,
   };
 }
 
@@ -148,7 +148,7 @@ export function formatContextPackMarkdown(data) {
     "## Agent Prompt",
     "",
     data.agentPrompt,
-    ""
+    "",
   ];
   return lines.join("\n");
 }
@@ -291,7 +291,8 @@ function selectTests(maps, graphs, scoredFiles, primaryFiles, limit) {
     for (const file of map.files?.filter((entry) => entry.kind === "test") ?? []) {
       const imports = graph.importsByPath.get(file.path) ?? new Set();
       const importsContext = [...imports].some((target) => contextKeys.has(`${map.repo.root}:${target}`));
-      const matchesDomain = contextDomains.has(file.domain) || [...contextDomains].some((domain) => file.path.toLowerCase().includes(String(domain).toLowerCase()));
+      const matchesDomain =
+        contextDomains.has(file.domain) || [...contextDomains].some((domain) => file.path.toLowerCase().includes(String(domain).toLowerCase()));
       if (importsContext || matchesDomain) {
         selected.push(summarizeFile(map, file, importsContext ? 16 : 8, [importsContext ? "imports selected file" : "matches selected domain", "test"]));
       }
@@ -323,14 +324,16 @@ function inferCommands(repoPaths, query) {
   const commands = [];
   for (const repoPath of repoPaths) {
     const harness = generateHarness(repoPath).data;
-    commands.push(...harness.commands.validate.map((command) => ({
-      ...command,
-      repo: harness.repo.name
-    })));
+    commands.push(
+      ...harness.commands.validate.map((command) => ({
+        ...command,
+        repo: harness.repo.name,
+      })),
+    );
     commands.push({
       repo: harness.repo.name,
       command: `repoctx context ${JSON.stringify(query)} --path ${JSON.stringify(harness.repo.root)} --json`,
-      reason: "refresh this context packet before planning or review"
+      reason: "refresh this context packet before planning or review",
     });
   }
   return uniqueCommands(commands);
@@ -397,13 +400,16 @@ function inferSources(maps, commands) {
       repo: map.repo.name,
       path: map.cache?.path,
       cacheHit: Boolean(map.cache?.hit),
-      fingerprint: map.cache?.fingerprint
+      fingerprint: map.cache?.fingerprint,
     })),
-    ...uniqueBy(commands.filter((command) => command.repo), (command) => command.repo).map((command) => ({
+    ...uniqueBy(
+      commands.filter((command) => command.repo),
+      (command) => command.repo,
+    ).map((command) => ({
       type: "harness",
       repo: command.repo,
-      command: "repoctx harness <path> --json"
-    }))
+      command: "repoctx harness <path> --json",
+    })),
   ];
 }
 
@@ -420,20 +426,33 @@ function inferIntent(query, tokens) {
   return {
     action,
     topics: tokens.filter((token) => !actionWords.has(token)).slice(0, 8),
-    hints: [...new Set(hints)]
+    hints: [...new Set(hints)],
   };
 }
 
 function formatAgentPrompt(query, primaryFiles, relatedFiles, tests, commands) {
-  const fileList = [...primaryFiles, ...relatedFiles].slice(0, 12).map((file) => `${file.repo.name}:${file.path}`).join(", ") || "none";
-  const testList = tests.slice(0, 8).map((file) => `${file.repo.name}:${file.path}`).join(", ") || "none";
-  const validation = commands.filter((command) => command.script).slice(0, 5).map((command) => command.command).join(", ") || "none detected";
+  const fileList =
+    [...primaryFiles, ...relatedFiles]
+      .slice(0, 12)
+      .map((file) => `${file.repo.name}:${file.path}`)
+      .join(", ") || "none";
+  const testList =
+    tests
+      .slice(0, 8)
+      .map((file) => `${file.repo.name}:${file.path}`)
+      .join(", ") || "none";
+  const validation =
+    commands
+      .filter((command) => command.script)
+      .slice(0, 5)
+      .map((command) => command.command)
+      .join(", ") || "none detected";
   return [
     `Task: ${query}`,
     `Read these files first: ${fileList}.`,
     `Check these tests: ${testList}.`,
     `Use the selected patterns before adding new structure.`,
-    `Verify with: ${validation}.`
+    `Verify with: ${validation}.`,
   ].join("\n");
 }
 
@@ -483,7 +502,7 @@ function summarizeRepo(map) {
     git: map.repo.git,
     sourceFileCount: map.repo.sourceFileCount,
     summary: map.summary,
-    domains: map.domains.slice(0, 12)
+    domains: map.domains.slice(0, 12),
   };
 }
 
@@ -491,7 +510,7 @@ function summarizeFile(map, file, score, reasons) {
   return {
     repo: {
       name: map.repo.name,
-      root: map.repo.root
+      root: map.repo.root,
     },
     path: file.path,
     kind: file.kind,
@@ -503,7 +522,7 @@ function summarizeFile(map, file, score, reasons) {
     httpMethods: file.httpMethods ?? [],
     imports: file.imports?.slice(0, 12) ?? [],
     exports: file.exports?.slice(0, 12) ?? [],
-    symbols: file.symbols?.slice(0, 16) ?? []
+    symbols: file.symbols?.slice(0, 16) ?? [],
   };
 }
 

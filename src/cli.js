@@ -13,7 +13,7 @@ import {
   formatSearchResults,
   indexRepositories,
   listCatalog,
-  searchCatalog
+  searchCatalog,
 } from "./lib/catalog.js";
 import { formatInitSummary, initProject } from "./lib/init.js";
 import { formatInstallSummary, installDevContext } from "./lib/install.js";
@@ -48,7 +48,7 @@ const commandHandlers = {
   workspace: handleWorkspace,
   harness: handleHarness,
   "agent-tools": handleAgentTools,
-  help: handleHelp
+  help: handleHelp,
 };
 
 async function main(argv = process.argv.slice(2)) {
@@ -106,7 +106,7 @@ async function handleDiscover(parsed) {
   const roots = parsed.positionals.length ? parsed.positionals : ["."];
   const result = discoverRepositories(roots, {
     depth: parsed.flags.depth,
-    limit: parsed.flags.limit
+    limit: parsed.flags.limit,
   });
 
   if (parsed.flags.json) {
@@ -123,7 +123,7 @@ async function handleIndex(parsed) {
     catalog: parsed.flags.catalog,
     discover: parsed.flags.discover,
     depth: parsed.flags.depth,
-    limit: parsed.flags.limit
+    limit: parsed.flags.limit,
   });
 
   if (parsed.flags.json) {
@@ -142,7 +142,7 @@ async function handleIndex(parsed) {
 
 async function handleCatalog(parsed) {
   const result = listCatalog({
-    catalog: parsed.flags.catalog
+    catalog: parsed.flags.catalog,
   });
 
   if (parsed.flags.json) {
@@ -158,7 +158,7 @@ async function handleSearch(parsed) {
   const result = searchCatalog(query, {
     catalog: parsed.flags.catalog,
     limit: parsed.flags.limit,
-    offline: parsed.flags.offline
+    offline: parsed.flags.offline,
   });
 
   if (parsed.flags.json) {
@@ -173,7 +173,7 @@ async function handleContext(parsed) {
   const query = parsed.positionals.join(" ").trim();
   const result = generateContextPack(query, {
     path: parsed.flags.path,
-    limit: parsed.flags.limit
+    limit: parsed.flags.limit,
   });
 
   if (parsed.flags.json) {
@@ -193,7 +193,7 @@ async function handleContext(parsed) {
 async function handleInstall(parsed) {
   const result = installDevContext({
     global: parsed.flags.global,
-    link: parsed.flags.link
+    link: parsed.flags.link,
   });
 
   if (parsed.flags.json) {
@@ -213,7 +213,7 @@ async function handleInstall(parsed) {
 async function handleMap(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateCodeMap(repoPath, {
-    maxSymbols: parsed.flags.max_symbols
+    maxSymbols: parsed.flags.max_symbols,
   });
 
   if (parsed.flags.json) {
@@ -235,7 +235,7 @@ async function handleStructure(parsed) {
   const result = generateStructure(repoPath, {
     out: parsed.flags.out,
     pattern: parsed.flags.pattern,
-    exclude: parsed.flags.exclude
+    exclude: parsed.flags.exclude,
   });
 
   if (parsed.flags.json) {
@@ -247,11 +247,9 @@ async function handleStructure(parsed) {
   }
 
   if (!result.ok) {
-    const details = [
-      `Structure generation skipped: ${result.error}`,
-      result.command ? `Command: ${result.command}` : undefined,
-      result.installHint
-    ].filter(Boolean);
+    const details = [`Structure generation skipped: ${result.error}`, result.command ? `Command: ${result.command}` : undefined, result.installHint].filter(
+      Boolean,
+    );
     printText(details.join("\n"));
     process.exitCode = 1;
     return;
@@ -268,7 +266,7 @@ async function handleDeps(parsed) {
 
   const result = inspectDependency(packageName, {
     query: parsed.flags.query,
-    limit: Number(parsed.flags.limit ?? 25)
+    limit: Number(parsed.flags.limit ?? 25),
   });
 
   if (parsed.flags.json) {
@@ -307,7 +305,7 @@ async function handleMatrix(parsed) {
   const rows = [
     "| Tool | Role | Pilot Use | Notes |",
     "|---|---|---|---|",
-    ...matrix.tools.map((tool) => `| ${tool.name} | ${tool.role} | ${tool.pilotUse} | ${tool.notes} |`)
+    ...matrix.tools.map((tool) => `| ${tool.name} | ${tool.role} | ${tool.pilotUse} | ${tool.notes} |`),
   ];
   printText(["# Tool Evaluation Matrix", "", ...rows].join("\n"));
 }
@@ -318,7 +316,7 @@ async function handleInit(parsed) {
     force: parsed.flags.force,
     noWorkflow: parsed.flags.no_workflow,
     toolRepo: parsed.flags.tool_repo,
-    toolRef: parsed.flags.tool_ref
+    toolRef: parsed.flags.tool_ref,
   });
 
   if (parsed.flags.json) {
@@ -340,7 +338,7 @@ async function handlePr(parsed) {
     github: parsed.flags.github,
     comment: parsed.flags.comment,
     base: parsed.flags.base,
-    head: parsed.flags.head
+    head: parsed.flags.head,
   });
 
   if (parsed.flags.json) {
@@ -399,7 +397,7 @@ async function handleWorkspace(parsed) {
 async function handleHarness(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateHarness(repoPath, {
-    maxSymbols: parsed.flags.max_symbols
+    maxSymbols: parsed.flags.max_symbols,
   });
 
   if (parsed.flags.json) {
@@ -457,7 +455,7 @@ function formatRepoSummary(result) {
     ...Object.entries(result.scripts).map(([name, value]) => `- ${name}: ${value}`),
     "",
     "Important directories:",
-    ...result.importantDirectories.map((dir) => `- ${dir}`)
+    ...result.importantDirectories.map((dir) => `- ${dir}`),
   ].join("\n");
 }
 

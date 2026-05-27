@@ -1,6 +1,6 @@
 ---
 name: dev-context
-description: Use when working with the dev-context repository, CLI, or MCP server; generating repository harnesses, repo maps, workspace reports, PR review context, route/client/domain lookup, token estimates, or installing/restoring dev-context from github.com/nugehs/dev-context.
+description: Use when working with the repoctx repository, CLI, or MCP server; generating repository harnesses, repo maps, workspace reports, PR review context, route/client/domain lookup, token estimates, or installing/restoring repoctx from github.com/nugehs/repoctx.
 ---
 
 # repoctx
@@ -20,10 +20,10 @@ codex/skills/dev-context
 If the repo is missing, restore it from:
 
 ```bash
-git clone https://github.com/nugehs/dev-context /path/to/dev-context
+git clone https://github.com/nugehs/repoctx /path/to/repoctx
 ```
 
-If the installed skill is missing or stale, run this from a `dev-context` checkout:
+If the installed skill is missing or stale, run this from a `repoctx` checkout:
 
 ```bash
 codex/skills/dev-context/scripts/sync-installed.sh
@@ -36,7 +36,7 @@ codex/skills/dev-context/scripts/sync-installed.sh
 3. Use Markdown artifacts under `.dev-context/` when a human or long-running agent needs a durable report.
 4. For cross-repo product work, use `workspace` instead of inspecting each repo in isolation.
 5. For PR review, use `pr` with an explicit base when possible.
-6. If `repoctx` is unavailable as a command, run `node /path/to/dev-context/src/cli.js ...`.
+6. If `repoctx` is unavailable as a command, run `node /path/to/repoctx/src/cli.js ...`.
 
 ## CLI Commands
 
@@ -82,7 +82,7 @@ node src/cli.js structure /path/to/repo --pattern "app/**/*.tsx" --out .dev-cont
 Run:
 
 ```bash
-node /path/to/dev-context/src/cli.js mcp
+node /path/to/repoctx/src/cli.js mcp
 ```
 
 MCP tools exposed by the server:
@@ -110,11 +110,12 @@ MCP tools exposed by the server:
 - Use `.dev-context/` for generated reports in target repos; avoid mixing generated context into source directories.
 - For PR review, lead with bugs, risky behavior changes, missing tests, and unclear contracts.
 
-## Maintaining Dev Context
+## Maintaining repoctx
 
 When editing this repo, run:
 
 ```bash
+npm run ci
 npm test
 npm run smoke
 ```

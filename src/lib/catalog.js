@@ -20,19 +20,9 @@ const ignoredDirectories = new Set([
   "dist",
   "node_modules",
   "target",
-  "vendor"
+  "vendor",
 ]);
-const repoMarkers = new Set([
-  "package.json",
-  "pyproject.toml",
-  "go.mod",
-  "Cargo.toml",
-  "Package.swift",
-  "pom.xml",
-  "build.gradle",
-  "build.gradle.kts",
-  ".git"
-]);
+const repoMarkers = new Set(["package.json", "pyproject.toml", "go.mod", "Cargo.toml", "Package.swift", "pom.xml", "build.gradle", "build.gradle.kts", ".git"]);
 const stopWords = new Set([
   "a",
   "an",
@@ -57,11 +47,11 @@ const stopWords = new Set([
   "where",
   "which",
   "who",
-  "with"
+  "with",
 ]);
 
 export function defaultCatalogPath() {
-  return path.resolve(process.env.DEV_CONTEXT_CATALOG ?? path.join(os.homedir(), ".dev-context", "catalog.json"));
+  return path.resolve(process.env.REPOCTX_CATALOG ?? process.env.DEV_CONTEXT_CATALOG ?? path.join(os.homedir(), ".dev-context", "catalog.json"));
 }
 
 export function discoverRepositories(rootPaths = ["."], options = {}) {
@@ -80,7 +70,7 @@ export function discoverRepositories(rootPaths = ["."], options = {}) {
     roots,
     maxDepth,
     repositoryCount: repositories.length,
-    repositories: repositories.sort((a, b) => a.root.localeCompare(b.root))
+    repositories: repositories.sort((a, b) => a.root.localeCompare(b.root)),
   };
 
   function visit(current, depth) {
@@ -115,9 +105,7 @@ export function indexRepositories(repoPaths = ["."], options = {}) {
   const indexedAt = new Date().toISOString();
   const repositories = [];
   const errors = [];
-  const paths = options.discover
-    ? discoverRepositories(repoPaths, options).repositories.map((repo) => repo.root)
-    : normalizePathList(repoPaths);
+  const paths = options.discover ? discoverRepositories(repoPaths, options).repositories.map((repo) => repo.root) : normalizePathList(repoPaths);
 
   for (const repoPath of paths) {
     try {
@@ -128,7 +116,7 @@ export function indexRepositories(repoPaths = ["."], options = {}) {
     } catch (error) {
       errors.push({
         path: path.resolve(repoPath),
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   }
@@ -143,7 +131,7 @@ export function indexRepositories(repoPaths = ["."], options = {}) {
     repositoryCount: catalog.repositories.length,
     indexedCount: repositories.length,
     repositories,
-    errors
+    errors,
   };
 }
 
@@ -155,7 +143,7 @@ export function listCatalog(options = {}) {
     version: catalog.version,
     updatedAt: catalog.updatedAt,
     repositoryCount: catalog.repositories.length,
-    repositories: catalog.repositories
+    repositories: catalog.repositories,
   };
 }
 
@@ -177,7 +165,7 @@ export function searchCatalog(query, options = {}) {
     } catch (error) {
       errors.push({
         root: repository.root,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       continue;
     }
@@ -200,21 +188,18 @@ export function searchCatalog(query, options = {}) {
     repositoryCount: catalog.repositories.length,
     matchCount: matches.length,
     matches: matches.slice(0, limit),
-    errors
+    errors,
   };
   result.tokenEstimate = {
     fullJson: estimateTokens(result),
     estimated: true,
-    method: "ceil(characters / 4)"
+    method: "ceil(characters / 4)",
   };
   return result;
 }
 
 export function formatDiscoverSummary(result) {
-  const lines = [
-    `Repositories discovered: ${result.repositoryCount}`,
-    ""
-  ];
+  const lines = [`Repositories discovered: ${result.repositoryCount}`, ""];
 
   for (const repository of result.repositories) {
     lines.push(`- ${repository.root} (${repository.marker})`);
@@ -232,7 +217,7 @@ export function formatIndexSummary(result) {
     `Catalog indexed: ${result.catalogPath}`,
     `Indexed repositories: ${result.indexedCount}`,
     `Catalog repositories: ${result.repositoryCount}`,
-    ""
+    "",
   ];
 
   for (const repo of result.repositories) {
@@ -254,11 +239,14 @@ export function formatCatalogSummary(result) {
     `Catalog: ${result.catalogPath}`,
     `Repositories: ${result.repositoryCount}`,
     result.updatedAt ? `Updated: ${result.updatedAt}` : "Updated: never",
-    ""
+    "",
   ];
 
   for (const repo of result.repositories) {
-    const domains = repo.domains?.slice(0, 5).map((domain) => domain.name).join(", ");
+    const domains = repo.domains
+      ?.slice(0, 5)
+      .map((domain) => domain.name)
+      .join(", ");
     lines.push(`- ${repo.name}: ${repo.root}${domains ? ` (${domains})` : ""}`);
   }
 
@@ -270,11 +258,7 @@ export function formatCatalogSummary(result) {
 }
 
 export function formatSearchResults(result) {
-  const lines = [
-    `Search: ${result.query}`,
-    `Matches: ${result.matchCount}`,
-    ""
-  ];
+  const lines = [`Search: ${result.query}`, `Matches: ${result.matchCount}`, ""];
 
   for (const match of result.matches) {
     const reasons = match.reasons.length ? ` - ${match.reasons.join(", ")}` : "";
@@ -308,7 +292,7 @@ function loadCatalog(options = {}) {
     catalog = {
       version: catalogVersion,
       updatedAt: undefined,
-      repositories: []
+      repositories: [],
     };
   }
 
@@ -344,15 +328,14 @@ function catalogEntryFromMap(map, indexedAt) {
     indexPath: map.cache?.path ?? path.join(map.repo.root, ".dev-context", "index.json"),
     fingerprint: map.cache?.fingerprint,
     generatedAt: map.cache?.generatedAt ?? indexedAt,
-    indexedAt
+    indexedAt,
   };
 }
 
 function upsertRepository(catalog, entry) {
-  catalog.repositories = [
-    ...catalog.repositories.filter((repository) => repository.root !== entry.root),
-    entry
-  ].sort((a, b) => a.name.localeCompare(b.name) || a.root.localeCompare(b.root));
+  catalog.repositories = [...catalog.repositories.filter((repository) => repository.root !== entry.root), entry].sort(
+    (a, b) => a.name.localeCompare(b.name) || a.root.localeCompare(b.root),
+  );
 }
 
 function readIndexedMap(repository) {
@@ -390,7 +373,7 @@ function scoreFile(repository, file, tokens) {
     reasons: [...new Set(reasons)].slice(0, 6),
     repository: {
       name: repository.name,
-      root: repository.root
+      root: repository.root,
     },
     file: {
       path: file.path,
@@ -401,8 +384,8 @@ function scoreFile(repository, file, tokens) {
       httpMethods: file.httpMethods,
       imports: file.imports?.slice(0, 8) ?? [],
       exports: file.exports?.slice(0, 8) ?? [],
-      symbols: file.symbols?.slice(0, 12) ?? []
-    }
+      symbols: file.symbols?.slice(0, 12) ?? [],
+    },
   };
 }
 
@@ -470,9 +453,9 @@ function discoveredRepository(root, marker) {
           name: packageJson.name,
           version: packageJson.version,
           type: packageJson.type,
-          private: packageJson.private
+          private: packageJson.private,
         }
-      : undefined
+      : undefined,
   };
 }
 

@@ -3,12 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {
-  discoverRepositories,
-  indexRepositories,
-  listCatalog,
-  searchCatalog
-} from "../src/lib/catalog.js";
+import { defaultCatalogPath, discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "../src/lib/catalog.js";
 
 test("discoverRepositories finds local repository roots", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-discover-"));
@@ -56,4 +51,33 @@ test("searchCatalog searches indexed paths and symbols", () => {
   assert.equal(result.matches[0].repository.name, "search-api");
   assert.equal(result.matches[0].file.path, "src/services/events-service.ts");
   assert.ok(result.matches[0].reasons.includes("symbol"));
+});
+
+test("defaultCatalogPath prefers REPOCTX_CATALOG while keeping legacy fallback", () => {
+  const originalRepoctx = process.env.REPOCTX_CATALOG;
+  const originalLegacy = process.env.DEV_CONTEXT_CATALOG;
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-catalog-env-"));
+  const repoctxCatalog = path.join(root, "repoctx-catalog.json");
+  const legacyCatalog = path.join(root, "legacy-catalog.json");
+
+  try {
+    process.env.REPOCTX_CATALOG = repoctxCatalog;
+    process.env.DEV_CONTEXT_CATALOG = legacyCatalog;
+    assert.equal(defaultCatalogPath(), repoctxCatalog);
+
+    delete process.env.REPOCTX_CATALOG;
+    assert.equal(defaultCatalogPath(), legacyCatalog);
+  } finally {
+    if (originalRepoctx === undefined) {
+      delete process.env.REPOCTX_CATALOG;
+    } else {
+      process.env.REPOCTX_CATALOG = originalRepoctx;
+    }
+
+    if (originalLegacy === undefined) {
+      delete process.env.DEV_CONTEXT_CATALOG;
+    } else {
+      process.env.DEV_CONTEXT_CATALOG = originalLegacy;
+    }
+  }
 });

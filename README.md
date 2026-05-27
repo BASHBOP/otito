@@ -28,7 +28,7 @@ This build uses the TypeScript parser for JS/TS code maps. Optional external too
 Install from GitHub:
 
 ```bash
-npm install -g github:nugehs/dev-context
+npm install -g github:nugehs/repoctx
 repoctx doctor
 ```
 
@@ -36,6 +36,8 @@ From a local checkout:
 
 ```bash
 node src/cli.js install
+npm ci
+npm run ci
 npm install -g .
 repoctx doctor
 ```
@@ -71,6 +73,39 @@ Then:
 node src/cli.js deps zod --query parse
 node src/cli.js structure . --out .dev-context/structure.html
 ```
+
+## Usage Examples
+
+| Goal | Command | Output |
+| --- | --- | --- |
+| Inspect one repo | `repoctx repo . --json` | Repo facts, scripts, languages, entrypoints, and git state |
+| Build a code map | `repoctx map . --json` | Source files, domains, imports, exports, symbols, and routes |
+| Prepare task context | `repoctx context "add a new MCP tool" --path .` | Primary files, related files, tests, patterns, and validation commands |
+| Generate an agent harness | `repoctx harness . --out .dev-context/harness.md` | Setup, validation, runtime, and context commands |
+| Review local changes | `repoctx pr . --base origin/main --out .dev-context/pr-review.md` | Changed files, risk prompts, review targets, and test hints |
+| Index local projects | `repoctx index ~/projects --discover` | `.dev-context/index.json` files plus a local catalog |
+| Search indexed repos | `repoctx search "events controller"` | Ranked matches across paths, domains, routes, imports, exports, and symbols |
+| Run the MCP server | `repoctx mcp` | Stdio MCP server exposing repoctx tools |
+
+## Quality Gates
+
+Use the full gate before opening a pull request or publishing a release:
+
+```bash
+npm run ci
+```
+
+The gate runs:
+
+- `npm run format:check`
+- `npm run lint`
+- `npm run typecheck`
+- `npm test`
+- `npm run test:coverage`
+- `npm run audit`
+- `npm run smoke`
+
+Coverage currently gates source files at 70% lines, 60% branches, and 75% functions. Generated artifacts under `.dev-context/` are ignored by git, linting, and formatting; keep durable reports there instead of committing them.
 
 ## Common Workflows
 
@@ -191,10 +226,10 @@ Generates local `.dev-context/index.json` files and adds repositories to the loc
 ```bash
 node src/cli.js index .
 node src/cli.js index ~/projects --discover
-node src/cli.js index . --catalog /tmp/dev-context-catalog.json --json
+node src/cli.js index . --catalog /tmp/repoctx-catalog.json --json
 ```
 
-The default catalog path is `~/.dev-context/catalog.json`. Set `DEV_CONTEXT_CATALOG` or pass `--catalog` to use a different file.
+The default catalog path is `~/.dev-context/catalog.json`. Set `REPOCTX_CATALOG`, the legacy `DEV_CONTEXT_CATALOG`, or pass `--catalog` to use a different file.
 
 ### `catalog`
 
@@ -247,13 +282,13 @@ Scaffolds repoctx into another repository.
 node src/cli.js init /path/to/target-repo
 node src/cli.js init /path/to/target-repo --force
 node src/cli.js init /path/to/target-repo --no-workflow
-node src/cli.js init /path/to/target-repo --tool-repo nugehs/dev-context --tool-ref main
+node src/cli.js init /path/to/target-repo --tool-repo nugehs/repoctx --tool-ref main
 ```
 
 Generated files:
 
 - `.dev-context/README.md`
-- `.github/workflows/dev-context-pr.yml`
+- `.github/workflows/repoctx-ci.yml`
 
 The generated workflow runs on pull requests and commit pushes. Pull request runs generate the report, upload an artifact, and create or update a sticky PR comment. Push runs generate and upload the report artifact without commenting.
 
@@ -265,8 +300,7 @@ Runs `code-structure` against TypeScript files.
 node src/cli.js structure . --pattern "app/**/*.tsx" --out .dev-context/structure.html
 ```
 
-If `code-structure` is missing, the command returns an install hint instead of failing mysteriously.
-If it is not installed globally but `npx` is available, repoctx can run it through `npx --yes code-structure`.
+If `code-structure` is missing, the command returns an install hint instead of failing mysteriously. If it is not installed globally but `npx` is available, repoctx can run it through `npx --yes code-structure`.
 
 ### `deps <package>`
 
@@ -316,7 +350,7 @@ Useful flags:
 
 ### GitHub Actions
 
-This repo includes `.github/workflows/dev-context-pr.yml`. Use `node src/cli.js init /path/to/target-repo` to scaffold the workflow into another repository.
+This repo includes `.github/workflows/repoctx-ci.yml`. The workflow installs dependencies, runs `npm run ci`, then generates PR or push review context as an uploaded artifact. Use `node src/cli.js init /path/to/target-repo` to scaffold a repoctx review workflow into another repository.
 
 ### `mcp`
 
@@ -333,7 +367,7 @@ When wiring it into an MCP host, point the host at this repo's CLI:
   "mcpServers": {
     "repoctx": {
       "command": "node",
-      "args": ["/absolute/path/to/dev-context/src/cli.js", "mcp"]
+      "args": ["/absolute/path/to/repoctx/src/cli.js", "mcp"]
     }
   }
 }

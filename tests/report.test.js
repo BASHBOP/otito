@@ -11,9 +11,9 @@ test("generateReport returns markdown and structured data", () => {
 
   const result = generateReport(root);
   assert.equal(result.data.ok, true);
-  assert.match(result.markdown, /# Dev Context Report/);
+  assert.match(result.markdown, /# repoctx Report/);
   assert.match(result.markdown, /## Repo Overview/);
-  assert.match(result.terminal, /Dev Context Field Report/);
+  assert.match(result.terminal, /repoctx Field Report/);
   assert.equal(result.data.repo.root, root);
 });
 
@@ -24,7 +24,7 @@ test("formatReportTerminal returns a terminal-oriented report", () => {
   const result = generateReport(root);
   const terminal = formatReportTerminal(result.data, { columns: 60 });
 
-  assert.match(terminal, /Dev Context Field Report/);
+  assert.match(terminal, /repoctx Field Report/);
   assert.match(terminal, /At a Glance/);
   assert.match(terminal, /Ready Tools/);
   assert.match(terminal, /Next Moves/);

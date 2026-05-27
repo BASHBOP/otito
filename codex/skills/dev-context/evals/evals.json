@@ -5,11 +5,7 @@
       "id": "repo-harness-before-editing",
       "prompt": "Use $dev-context to prepare an agent harness for the sample Node API at evals/files/sample-node-api before editing. Do not modify application files.",
       "expected_output": "A repo harness workflow that inspects the sample Node API, writes or reports setup/validation/runtime/context commands, and avoids application code changes.",
-      "files": [
-        "evals/files/sample-node-api/package.json",
-        "evals/files/sample-node-api/src/server.js",
-        "evals/files/sample-node-api/tests/server.test.js"
-      ],
+      "files": ["evals/files/sample-node-api/package.json", "evals/files/sample-node-api/src/server.js", "evals/files/sample-node-api/tests/server.test.js"],
       "assertions": [
         "The output identifies evals/files/sample-node-api as the target repo.",
         "The output uses dev-context harness or the node src/cli.js harness fallback.",
@@ -40,10 +36,7 @@
       "id": "route-and-client-discovery",
       "prompt": "Use $dev-context to find the event RSVP backend route in evals/files/sample-api and matching web API client in evals/files/sample-web. Do not guess paths.",
       "expected_output": "A discovery workflow using backend route and frontend API-client lookup, with uncertainty clearly reported if no route or client is found.",
-      "files": [
-        "evals/files/sample-api/src/events/events.controller.ts",
-        "evals/files/sample-web/src/api/events.ts"
-      ],
+      "files": ["evals/files/sample-api/src/events/events.controller.ts", "evals/files/sample-web/src/api/events.ts"],
       "assertions": [
         "The output uses find_backend_route, find_frontend_api_client, repo_map filters, or equivalent CLI discovery.",
         "The output searches evals/files/sample-api for backend controller routes.",
@@ -92,6 +85,18 @@
         "The output includes risk flags, review targets, or targeted review prompts when changes exist.",
         "The output includes suggested verification commands.",
         "The output frames the report as review context, not a replacement for reading the diff."
+      ]
+    },
+    {
+      "id": "maintainer-quality-gates",
+      "prompt": "Use $dev-context to identify the current repo's maintainer quality gates before changing package scripts or CI.",
+      "expected_output": "A local maintainer workflow that inspects the repo harness or package scripts and reports the full npm run ci gate.",
+      "assertions": [
+        "The output uses dev-context harness, repoctx harness, node src/cli.js harness, or package script inspection.",
+        "The output includes npm run ci as the full gate for this repo.",
+        "The output includes at least one focused fallback such as npm test or npm run smoke.",
+        "The output keeps generated artifacts under .dev-context/ or reports inline.",
+        "The output does not modify source files."
       ]
     }
   ]

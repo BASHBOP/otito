@@ -20,7 +20,7 @@ test("generateWorkspaceReport aggregates multiple repos", () => {
   assert.equal(result.data.ok, true);
   assert.equal(result.data.repoCount, 2);
   assert.equal(result.data.totalFiles, 4);
-  assert.match(result.markdown, /# Dev Context Workspace Report/);
+  assert.match(result.markdown, /# repoctx Workspace Report/);
   assert.match(result.markdown, /web/);
   assert.match(result.markdown, /api/);
 });

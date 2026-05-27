@@ -14,7 +14,7 @@ const declarationPatterns = [
   { type: "const", pattern: /\bconst\s+([A-Za-z_$][\w$]*)\s*=/g },
   { type: "interface", pattern: /\bexport\s+interface\s+([A-Za-z_$][\w$]*)/g },
   { type: "type", pattern: /\bexport\s+type\s+([A-Za-z_$][\w$]*)/g },
-  { type: "enum", pattern: /\bexport\s+enum\s+([A-Za-z_$][\w$]*)/g }
+  { type: "enum", pattern: /\bexport\s+enum\s+([A-Za-z_$][\w$]*)/g },
 ];
 
 export function generateCodeMap(repoPath = ".", options = {}) {
@@ -34,7 +34,7 @@ export function generateCodeMap(repoPath = ".", options = {}) {
       fileCount: repo.fileCount,
       sourceFileCount: sourceFiles.length,
       languages: repo.languages,
-      entrypoints: repo.entrypoints
+      entrypoints: repo.entrypoints,
     },
     summary: {
       routes: sourceFiles.filter((file) => file.kind === "route").length,
@@ -48,10 +48,10 @@ export function generateCodeMap(repoPath = ".", options = {}) {
       dtos: sourceFiles.filter((file) => file.kind === "dto").length,
       schemas: sourceFiles.filter((file) => file.kind === "schema").length,
       tests: sourceFiles.filter((file) => file.kind === "test").length,
-      symbols: sourceFiles.reduce((total, file) => total + file.symbols.length, 0)
+      symbols: sourceFiles.reduce((total, file) => total + file.symbols.length, 0),
     },
     domains,
-    files: sourceFiles
+    files: sourceFiles,
   };
   map.tokenEstimate = {
     fullJson: estimateTokens(map),
@@ -59,8 +59,8 @@ export function generateCodeMap(repoPath = ".", options = {}) {
       { name: "repo", value: map.repo },
       { name: "summary", value: map.summary },
       { name: "domains", value: map.domains },
-      { name: "files", value: map.files }
-    ])
+      { name: "files", value: map.files },
+    ]),
   };
   return map;
 }
@@ -82,7 +82,7 @@ export function formatCodeMapMarkdown(map) {
     "## Domains",
     "",
     "| Domain | Files | Key Kinds |",
-    "|---|---:|---|"
+    "|---|---:|---|",
   ];
 
   for (const domain of map.domains.slice(0, 30)) {
@@ -114,7 +114,7 @@ function analyzeFile(root, relativePath, maxSymbols) {
     httpMethods: extractHttpMethods(text),
     imports: ast.imports,
     exports: ast.exports,
-    symbols: ast.symbols.slice(0, maxSymbols)
+    symbols: ast.symbols.slice(0, maxSymbols),
   };
 }
 
@@ -124,7 +124,7 @@ function extractAstFacts(relativePath, text) {
     const facts = {
       imports: new Set(),
       exports: new Set(),
-      symbols: []
+      symbols: [],
     };
     const seenSymbols = new Set();
 
@@ -132,7 +132,7 @@ function extractAstFacts(relativePath, text) {
     return {
       imports: [...facts.imports].slice(0, 100),
       exports: [...facts.exports].slice(0, 100),
-      symbols: facts.symbols
+      symbols: facts.symbols,
     };
 
     function visit(node) {
@@ -146,7 +146,7 @@ function extractAstFacts(relativePath, text) {
     return {
       imports: extractImports(text),
       exports: extractExports(codeText),
-      symbols: extractSymbols(codeText)
+      symbols: extractSymbols(codeText),
     };
   }
 }
@@ -243,15 +243,13 @@ function symbol(sourceFile, node, type, name) {
   return {
     type,
     name,
-    line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
+    line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
   };
 }
 
 function declarationNames(node) {
   if (ts.isVariableStatement(node)) {
-    return node.declarationList.declarations
-      .filter((declaration) => ts.isIdentifier(declaration.name))
-      .map((declaration) => declaration.name.text);
+    return node.declarationList.declarations.filter((declaration) => ts.isIdentifier(declaration.name)).map((declaration) => declaration.name.text);
   }
   return node.name?.text ? [node.name.text] : [];
 }
@@ -282,7 +280,17 @@ function classifyFile(file) {
   if (base.endsWith(".dto.ts")) return "dto";
   if (base.endsWith(".schema.ts") || file.includes("/schemas/")) return "schema";
   if (base.startsWith("use") && /\.(ts|tsx)$/.test(base)) return "hook";
-  if (file.startsWith("redux/apis/") || file.startsWith("src/redux/apis/") || file.startsWith("services/") || file.startsWith("src/services/") || file === "lib/api-client.ts" || file === "src/lib/api-client.ts" || file === "utils/api-client.ts" || file === "src/utils/api-client.ts") return "apiClient";
+  if (
+    file.startsWith("redux/apis/") ||
+    file.startsWith("src/redux/apis/") ||
+    file.startsWith("services/") ||
+    file.startsWith("src/services/") ||
+    file === "lib/api-client.ts" ||
+    file === "src/lib/api-client.ts" ||
+    file === "utils/api-client.ts" ||
+    file === "src/utils/api-client.ts"
+  )
+    return "apiClient";
   if (/^[A-Z]/.test(base) && /\.(tsx|jsx)$/.test(base)) return "component";
   return "source";
 }
@@ -314,14 +322,15 @@ function inferDomain(file) {
 }
 
 function cleanDomain(value) {
-  return value
-    .replace(/\.[cm]?[jt]sx?$/, "")
-    .replace(/-api$/, "")
-    .replace(/-apis$/, "")
-    .replace(/-service$/, "")
-    .replace(/[()[\]]/g, "")
-    .replace(/^\.+$/, "root")
-    || "root";
+  return (
+    value
+      .replace(/\.[cm]?[jt]sx?$/, "")
+      .replace(/-api$/, "")
+      .replace(/-apis$/, "")
+      .replace(/-service$/, "")
+      .replace(/[()[\]]/g, "")
+      .replace(/^\.+$/, "root") || "root"
+  );
 }
 
 function inferNextRoute(file) {
@@ -334,14 +343,15 @@ function inferNextRoute(file) {
     return undefined;
   }
 
-  return normalized
-    .replace(/^src\//, "")
-    .replace(/^app/, "")
-    .replace(/^pages/, "")
-    .replace(/\/(page|layout|route)\.[cm]?[jt]sx?$/, "")
-    .replace(/\([^/]+\)\//g, "")
-    .replace(/\[[^/]+\]/g, (segment) => `:${segment.slice(1, -1)}`)
-    || "/";
+  return (
+    normalized
+      .replace(/^src\//, "")
+      .replace(/^app/, "")
+      .replace(/^pages/, "")
+      .replace(/\/(page|layout|route)\.[cm]?[jt]sx?$/, "")
+      .replace(/\([^/]+\)\//g, "")
+      .replace(/\[[^/]+\]/g, (segment) => `:${segment.slice(1, -1)}`) || "/"
+  );
 }
 
 function inferControllerBasePath(text) {
@@ -349,11 +359,10 @@ function inferControllerBasePath(text) {
 }
 
 function extractHttpMethods(text) {
-  return readDecoratorCalls(text, ["Get", "Post", "Put", "Patch", "Delete", "Options", "Head"])
-    .map((call) => ({
-      method: call.name.toUpperCase(),
-      path: call.argument?.trim() || "/"
-    }));
+  return readDecoratorCalls(text, ["Get", "Post", "Put", "Patch", "Delete", "Options", "Head"]).map((call) => ({
+    method: call.name.toUpperCase(),
+    path: call.argument?.trim() || "/",
+  }));
 }
 
 function extractImports(text) {
@@ -378,13 +387,18 @@ function extractImports(text) {
 
 function extractExports(text) {
   const exports = new Set();
-  const patterns = [
-    /export\s+(?:default\s+)?(?:class|function|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g,
-    /export\s*{\s*([^}]+)\s*}/g
-  ];
+  const patterns = [/export\s+(?:default\s+)?(?:class|function|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g, /export\s*{\s*([^}]+)\s*}/g];
   for (const pattern of patterns) {
     for (const match of text.matchAll(pattern)) {
-      for (const name of match[1].split(",").map((item) => item.trim().split(/\s+as\s+/)[0].trim()).filter(Boolean)) {
+      for (const name of match[1]
+        .split(",")
+        .map((item) =>
+          item
+            .trim()
+            .split(/\s+as\s+/)[0]
+            .trim(),
+        )
+        .filter(Boolean)) {
         exports.add(name);
       }
     }
@@ -597,7 +611,7 @@ function skipWhitespace(text, index) {
 }
 
 function isQuote(char) {
-  return char === "'" || char === "\"" || char === "`";
+  return char === "'" || char === '"' || char === "`";
 }
 
 function isIdentifierChar(char) {
@@ -617,9 +631,7 @@ function summarizeDomains(files) {
     .map((domain) => ({
       name: domain.name,
       fileCount: domain.fileCount,
-      kinds: [...domain.kinds.entries()]
-        .map(([kind, count]) => ({ kind, count }))
-        .sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind))
+      kinds: [...domain.kinds.entries()].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count || a.kind.localeCompare(b.kind)),
     }))
     .sort((a, b) => b.fileCount - a.fileCount || a.name.localeCompare(b.name));
 }

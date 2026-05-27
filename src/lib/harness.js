@@ -5,6 +5,8 @@ import { inspectRepo } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
 const validationScripts = [
+  "ci",
+  "quality",
   "lint",
   "format:check",
   "typecheck",
@@ -15,7 +17,10 @@ const validationScripts = [
   "test:unit",
   "test:integration",
   "test:e2e",
-  "build"
+  "test:coverage",
+  "audit",
+  "smoke",
+  "build",
 ];
 
 const runtimeScripts = ["dev", "start", "preview"];
@@ -35,11 +40,11 @@ export function generateHarness(repoPath = ".", options = {}) {
       package: repo.package,
       packageManagers: repo.packageManagers,
       git: repo.git,
-      entrypoints: repo.entrypoints
+      entrypoints: repo.entrypoints,
     },
     commands,
     context,
-    focusAreas: inferFocusAreas(map, commands)
+    focusAreas: inferFocusAreas(map, commands),
   };
 
   data.tokenEstimate = {
@@ -47,8 +52,8 @@ export function generateHarness(repoPath = ".", options = {}) {
       { name: "repo", value: data.repo },
       { name: "commands", value: data.commands },
       { name: "context", value: data.context },
-      { name: "focusAreas", value: data.focusAreas }
-    ])
+      { name: "focusAreas", value: data.focusAreas },
+    ]),
   };
   data.tokenEstimate.fullJson = estimateTokens(data);
 
@@ -61,7 +66,7 @@ export function generateHarness(repoPath = ".", options = {}) {
 
 export function formatHarnessMarkdown(data) {
   const lines = [
-    `# Dev Context Harness: ${data.repo.name}`,
+    `# repoctx Harness: ${data.repo.name}`,
     "",
     `Generated: ${data.generatedAt}`,
     `Harness version: ${data.harnessVersion}`,
@@ -102,7 +107,7 @@ export function formatHarnessMarkdown(data) {
     "## Top Domains",
     "",
     ...(data.context.domains.length ? data.context.domains.map((domain) => `- ${domain.name}: ${domain.fileCount} file(s)`) : ["- none detected"]),
-    ""
+    "",
   ];
   return lines.join("\n");
 }
@@ -116,17 +121,17 @@ function inferCommands(repo) {
     context: [
       {
         command: "repoctx repo . --json",
-        reason: "inspect repository facts"
+        reason: "inspect repository facts",
       },
       {
         command: "repoctx map . --json",
-        reason: "generate agent-readable code map"
+        reason: "generate agent-readable code map",
       },
       {
         command: "repoctx harness . --json",
-        reason: "refresh harness commands and token estimates"
-      }
-    ]
+        reason: "refresh harness commands and token estimates",
+      },
+    ],
   };
 }
 
@@ -151,7 +156,7 @@ function inferScriptCommands(scripts = {}, runner, names) {
     .map((name) => ({
       script: name,
       command: commandForScript(runner, name),
-      reason: scriptReason(name)
+      reason: scriptReason(name),
     }));
 }
 
@@ -169,8 +174,8 @@ function summarizeContext(map) {
         kind: file.kind,
         domain: file.domain,
         route: file.route,
-        controllerBasePath: file.controllerBasePath
-      }))
+        controllerBasePath: file.controllerBasePath,
+      })),
   };
 }
 
@@ -203,8 +208,12 @@ function commandForScript(runner, script) {
 }
 
 function scriptReason(name) {
+  if (name === "ci" || name === "quality") return "full quality gate";
+  if (name === "audit") return "production dependency security audit";
+  if (name === "smoke") return "smoke verification";
   if (name.includes("lint")) return "static checks";
   if (name.includes("type") || name === "tsc") return "type contract checks";
+  if (name.includes("coverage")) return "coverage threshold verification";
   if (name.includes("test")) return "behavior verification";
   if (name === "build") return "integration and bundling verification";
   if (name === "dev") return "local development server";
