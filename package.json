@@ -41,11 +41,11 @@
   },
   "license": "MIT",
   "dependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "eslint": "^9.39.4",
+    "eslint": "^10.4.0",
     "prettier": "^3.8.3"
   }
 }
