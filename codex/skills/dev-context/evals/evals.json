@@ -71,6 +71,18 @@
       ]
     },
     {
+      "id": "task-aware-context-pack",
+      "prompt": "Use $dev-context to generate a task-aware context packet for adding an MCP tool to the current repo. Keep it local and do not edit application files.",
+      "expected_output": "A context-engine workflow using repoctx context or the context_pack MCP tool that reports primary files, related files, tests, patterns, and validation commands.",
+      "assertions": [
+        "The output uses dev-context context, repoctx context, node src/cli.js context, or the context_pack MCP tool.",
+        "The output includes primary files or explicitly says no strong primary files matched.",
+        "The output includes related files, matching tests, implementation patterns, or validation commands.",
+        "The output cites local source evidence such as code-map/index or harness data.",
+        "The output keeps the workflow local and does not require cloud storage or an LLM provider."
+      ]
+    },
+    {
       "id": "pr-review-context",
       "prompt": "Use $dev-context to generate PR review context for the current repo against HEAD. Summarize risks and verification commands.",
       "expected_output": "A diff-aware PR review context using dev-context pr with --base HEAD, focused on changed files, risks, and validation commands.",

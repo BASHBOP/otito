@@ -19,6 +19,7 @@ import { formatInitSummary, initProject } from "./lib/init.js";
 import { formatInstallSummary, installDevContext } from "./lib/install.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
+import { generateContextPack } from "./lib/context-engine.js";
 import { generatePrReview } from "./lib/pr-review.js";
 import { formatReportTerminal, generateReport } from "./lib/report.js";
 import { generateWorkspaceReport } from "./lib/workspace.js";
@@ -33,6 +34,7 @@ const commandHandlers = {
   index: handleIndex,
   catalog: handleCatalog,
   search: handleSearch,
+  context: handleContext,
   install: handleInstall,
   i: handleInstall,
   map: handleMap,
@@ -165,6 +167,27 @@ async function handleSearch(parsed) {
   }
 
   printText(formatSearchResults(result));
+}
+
+async function handleContext(parsed) {
+  const query = parsed.positionals.join(" ").trim();
+  const result = generateContextPack(query, {
+    path: parsed.flags.path,
+    limit: parsed.flags.limit
+  });
+
+  if (parsed.flags.json) {
+    printJson(result.data);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, result.markdown);
+    printText(`Context pack written: ${artifact.path}`);
+    return;
+  }
+
+  printText(result.markdown);
 }
 
 async function handleInstall(parsed) {

@@ -3,6 +3,7 @@ import path from "node:path";
 import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "./catalog.js";
+import { generateContextPack } from "./context-engine.js";
 import { generateHarness } from "./harness.js";
 import { getCachedCodeMap } from "./index-cache.js";
 import { inspectRepo } from "./repo.js";
@@ -91,6 +92,22 @@ const tools = [
         catalog: { type: "string", description: "Optional catalog JSON path." },
         limit: { type: "number", description: "Maximum matches. Defaults to 25." },
         offline: { type: "boolean", description: "Use stored index files without refreshing fingerprints." }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "context_pack",
+    title: "Context Pack",
+    description: "Generate a task-aware local context packet with primary files, related files, tests, patterns, validation commands, and source evidence.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Task or question to gather context for." },
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        paths: { type: "array", items: { type: "string" }, description: "Repository paths for a multi-repo context packet." },
+        limit: { type: "number", description: "Maximum primary, related, and test files per section. Defaults to 8." },
+        includeMarkdown: { type: "boolean", description: "Include the markdown context pack. Defaults to false." }
       },
       required: ["query"]
     }
@@ -323,6 +340,10 @@ function dispatchTool(name, args) {
       return listCatalog(args);
     case "repo_search":
       return searchCatalog(requiredString(args.query, "query"), args);
+    case "context_pack": {
+      const result = generateContextPack(requiredString(args.query, "query"), args);
+      return args.includeMarkdown ? result : result.data;
+    }
     case "workspace_report": {
       const paths = requirePaths(args);
       const result = generateWorkspaceReport(paths);

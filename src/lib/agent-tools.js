@@ -69,6 +69,16 @@ export function getAgentTools() {
         }
       },
       {
+        name: "context_pack",
+        command: "repoctx context <query> --path <repo> --json",
+        description: "Generate a task-aware context packet with primary files, related files, tests, patterns, validation commands, and source evidence.",
+        input: {
+          query: "string",
+          path: "string?",
+          limit: "number?"
+        }
+      },
+      {
         name: "repo_harness",
         command: "repoctx harness <path> --json",
         description: "Generate setup, validation, runtime, and context commands for an agent or CI harness, including estimated context tokens.",

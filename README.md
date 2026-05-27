@@ -9,6 +9,7 @@ It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. It g
 - inspect a repository
 - discover and index local repositories
 - maintain a local catalog and search across it
+- generate task-aware context packets before an agent plans or edits
 - check tool availability
 - generate a setup/validation/runtime harness for a repo
 - generate TypeScript structure HTML through `code-structure`
@@ -48,6 +49,7 @@ node src/cli.js discover ~/projects --depth 2 --json
 node src/cli.js index ~/projects --discover
 node src/cli.js catalog
 node src/cli.js search "events controller"
+node src/cli.js context "add a new MCP tool" --path .
 node src/cli.js map . --json
 node src/cli.js harness . --out .dev-context/harness.md
 node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
@@ -86,6 +88,13 @@ node src/cli.js discover ~/projects --depth 2
 node src/cli.js index ~/projects --discover
 node src/cli.js catalog
 node src/cli.js search "submit rsvp"
+```
+
+Task-aware agent context:
+
+```bash
+node src/cli.js context "add a new MCP tool" --path . --json
+node src/cli.js context "add a new MCP tool" --path . --out .dev-context/context-pack.md
 ```
 
 PR review harness:
@@ -208,6 +217,17 @@ node src/cli.js search "api client" --offline --json
 
 By default, search refreshes repo indexes when fingerprints change. Use `--offline` to read only the stored `.dev-context/index.json` files.
 
+### `context <query>`
+
+Generates a local context-engine packet for a task. The packet includes inferred intent, primary files, related files, matching tests, implementation patterns, validation commands, conflicts, source evidence, and token estimates.
+
+```bash
+node src/cli.js context "add a new MCP tool" --path . --json
+node src/cli.js context "add a new CLI command" --path . --out .dev-context/context-pack.md
+```
+
+Use this before handing work to a coding agent. It is deterministic and local-first: it relies on repo indexes, code maps, import relationships, tests, and harness commands rather than an external model.
+
 ### `harness <path>`
 
 Generates a repo harness with setup commands, validation scripts, runtime scripts, context commands, focus areas, and estimated context-token usage.
@@ -325,6 +345,7 @@ Useful tools exposed through MCP:
 
 - `repo_inspect`
 - `repo_map`
+- `context_pack`
 - `repo_harness`
 - `workspace_report`
 - `pr_review`

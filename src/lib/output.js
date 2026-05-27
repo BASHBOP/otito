@@ -19,6 +19,7 @@ Usage:
   repoctx index <repo...> [--discover] [--catalog file] [--json]
   repoctx catalog [--catalog file] [--json]
   repoctx search <query> [--catalog file] [--limit n] [--offline] [--json]
+  repoctx context <query> [--path repo] [--limit n] [--out file] [--json]
   repoctx install|i [--global|--link] [--json]
   repoctx map <path> [--out file] [--json]
   repoctx structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
@@ -42,6 +43,7 @@ Examples:
   node src/cli.js index ~/projects --discover
   node src/cli.js catalog
   node src/cli.js search "events controller"
+  node src/cli.js context "add a new MCP tool" --path .
   node src/cli.js install
   node src/cli.js map . --json
   node src/cli.js init ../my-repo

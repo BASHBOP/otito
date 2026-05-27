@@ -52,6 +52,7 @@ node src/cli.js discover /path/to/workspace --depth 2 --json
 node src/cli.js index /path/to/workspace --discover
 node src/cli.js catalog --json
 node src/cli.js search "events controller" --json
+node src/cli.js context "add a new MCP tool" --path /path/to/repo --json
 node src/cli.js map /path/to/repo --json
 node src/cli.js harness /path/to/repo --out /path/to/repo/.dev-context/harness.md
 node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace.md
@@ -92,6 +93,7 @@ MCP tools exposed by the server:
 - `repo_index`: local `.dev-context/index.json` generation and catalog registration
 - `repo_catalog`: local catalog listing
 - `repo_search`: local catalog search across paths, domains, routes, imports, exports, and symbols
+- `context_pack`: task-aware local context packet with primary files, related files, tests, patterns, validation commands, and source evidence
 - `repo_harness`: setup, validation, runtime, and context commands
 - `workspace_report`: product-level context across multiple repos
 - `pr_review`: diff-aware PR review context and optional GitHub comment support
