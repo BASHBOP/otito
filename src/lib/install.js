@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { designPrint } from "./brand.js";
 import { commandExists, runCommand } from "./tools.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -64,6 +65,8 @@ export function getInstallPlan() {
 
 export function formatInstallSummary(result) {
   const lines = [
+    designPrint,
+    "",
     `${result.productName} installer`,
     "",
     `Binary: ${result.binaryName}`,

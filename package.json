@@ -8,7 +8,9 @@
     "dev-context": "./src/cli.js"
   },
   "files": [
+    "assets",
     "src",
+    "scripts",
     "CHANGELOG.md",
     "LICENSE",
     "README.md",
@@ -22,11 +24,12 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
+    "version:check": "node scripts/check-version.js",
     "test": "node --test tests/*.test.js",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" --test-coverage-lines=70 --test-coverage-branches=60 --test-coverage-functions=75 tests/*.test.js",
     "audit": "npm audit --omit=dev",
     "smoke": "node src/cli.js doctor && node src/cli.js harness . --json",
-    "quality": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:coverage && npm run audit && npm run smoke",
+    "quality": "npm run format:check && npm run lint && npm run typecheck && npm run version:check && npm test && npm run test:coverage && npm run audit && npm run smoke",
     "ci": "npm run quality"
   },
   "engines": {

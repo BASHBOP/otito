@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible repoctx problem.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include commands, repository shape, and relevant output.
+      placeholder: |
+        1. Run ...
+        2. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: repoctx Version or Commit
+      placeholder: "0.2.0 or git SHA"
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, OS, package manager, and any optional tools involved.
+      placeholder: |
+        node --version
+        npm --version
+        uname -a
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed secrets and private repository content from logs or generated artifacts.
+          required: true
+        - label: I searched existing issues before opening this one.
+          required: true
