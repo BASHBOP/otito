@@ -23,6 +23,25 @@ It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. It g
 - run an MCP server for agent hosts with a persisted repo index cache
 - expose simple agent-friendly tool metadata
 
+## Documentation
+
+repoctx now includes a publishable MkDocs documentation site, shaped as a practical discovery and delivery pack:
+
+- [Home](docs/index.md)
+- [Executive Summary](docs/EXECUTIVE-SUMMARY.md)
+- [Context Foundation](docs/01-context-foundation/README.md)
+- [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md)
+- [Contributor Governance](docs/03-contributor-governance/README.md)
+- [Release Readiness](docs/04-release-readiness/README.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Glossary](docs/GLOSSARY.md)
+
+When GitHub Pages is enabled for the repository, the published site is configured for:
+
+```text
+https://nugehs.github.io/repoctx/
+```
+
 ## Quick Start
 
 This build uses the TypeScript parser for JS/TS code maps. Optional external tools are only needed for dependency-source lookup and HTML structure reports.
