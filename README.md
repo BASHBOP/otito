@@ -110,6 +110,8 @@ node src/cli.js structure . --out .dev-context/structure.html
 | Search indexed repos | `repoctx search "events controller"` | Ranked matches across paths, domains, routes, imports, exports, and symbols |
 | Run the MCP server | `repoctx mcp` | Stdio MCP server exposing repoctx tools |
 
+For Claude Desktop, VS Code, Cursor, and generic stdio client snippets, see [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md).
+
 ## Quality Gates
 
 Use the full gate before opening a pull request or publishing a release:

@@ -6,6 +6,13 @@ repoctx can run as a stdio MCP server so agent hosts can ask for repository cont
 
 ## Start The Server
 
+Install the CLI first:
+
+```bash
+npm install -g github:nugehs/repoctx
+repoctx doctor
+```
+
 ```bash
 repoctx mcp
 ```
@@ -15,6 +22,124 @@ From a local checkout:
 ```bash
 node src/cli.js mcp
 ```
+
+The MCP server uses stdio. The agent host starts `repoctx mcp` as a child process and speaks JSON-RPC over standard input and output.
+
+---
+
+## MCP Client Examples
+
+Use the installed binary when possible. If a host cannot find `repoctx`, replace `"repoctx"` with the full path from `command -v repoctx` on macOS/Linux or `where repoctx` on Windows.
+
+### Generic stdio client
+
+Many MCP clients use this shape:
+
+```json
+{
+  "mcpServers": {
+    "repoctx": {
+      "command": "repoctx",
+      "args": ["mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+For a local checkout instead of a global install:
+
+```json
+{
+  "mcpServers": {
+    "repoctx": {
+      "command": "node",
+      "args": ["/path/to/repoctx/src/cli.js", "mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+Keep `/path/to/repoctx` as a private local path. Do not commit machine-specific absolute paths to public documentation or shared repositories.
+
+### Claude Desktop
+
+Claude Desktop uses `claude_desktop_config.json` with a top-level `mcpServers` object.
+
+| OS | Config file |
+| --- | --- |
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+
+```json
+{
+  "mcpServers": {
+    "repoctx": {
+      "command": "repoctx",
+      "args": ["mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+After editing the config, fully restart Claude Desktop. If the server does not appear, run `repoctx doctor` and `repoctx mcp` manually in a terminal first, then check the MCP logs for the host.
+
+Reference: [Model Context Protocol local server guide](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
+
+### VS Code
+
+VS Code stores MCP server configuration in `mcp.json`. Workspace-level configuration lives at `.vscode/mcp.json`; user-level configuration is also supported by VS Code.
+
+VS Code uses a top-level `servers` object:
+
+```json
+{
+  "servers": {
+    "repoctx": {
+      "type": "stdio",
+      "command": "repoctx",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Useful commands from the Command Palette:
+
+- `MCP: Add Server`
+- `MCP: List Servers`
+- `MCP: Reset Cached Tools`
+- `MCP: Open Workspace Folder MCP Configuration`
+- `MCP: Open User Configuration`
+
+Reference: [VS Code MCP configuration reference](https://code.visualstudio.com/docs/copilot/reference/mcp-configuration).
+
+### Cursor
+
+Cursor uses `mcp.json` with a top-level `mcpServers` object.
+
+| Scope | Config file |
+| --- | --- |
+| Project | `.cursor/mcp.json` |
+| Global | `~/.cursor/mcp.json` |
+
+```json
+{
+  "mcpServers": {
+    "repoctx": {
+      "command": "repoctx",
+      "args": ["mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+Use a project config when repoctx should only be available for one workspace. Use a global config only when you want the server available across projects.
+
+Reference: [Cursor MCP docs](https://docs.cursor.com/context/model-context-protocol).
 
 ---
 
@@ -65,3 +190,6 @@ sequenceDiagram
 
 !!! warning "Boundary"
     repoctx does not approve or merge code. Pair it with tests, code review, branch protection, and PullPass.
+
+!!! warning "MCP safety"
+    MCP hosts can start local processes. Only add MCP servers from trusted repositories, review command paths before enabling them, avoid putting secrets directly in config files, and keep local absolute paths out of public docs.
