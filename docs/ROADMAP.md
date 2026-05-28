@@ -18,6 +18,7 @@
 | Public launch note           | Complete |
 | Company demo packet          | Complete |
 | Company pilot runbook        | Complete |
+| Sanitized proof index        | Complete |
 | Company pilot feedback loop  | Complete |
 
 ## Phase 1 - Public Adoption
@@ -26,6 +27,7 @@
 - Add install examples for agent hosts and MCP clients.
 - Add screenshots for common workflows; the first terminal proof run is captured.
 - Run one real repository and pull request through the company pilot runbook.
+- Keep the sanitized proof index current as public artifacts and private evidence boundaries evolve.
 - Capture company feedback against the demo packet and turn repeated questions into docs or gates.
 
 ## Phase 2 - Trust-Layer Integration
