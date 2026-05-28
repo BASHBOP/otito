@@ -32,9 +32,11 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Demo packet           | Company-facing packet that links the executive summary, case study, proof run, launch note, and pilot checklist |
 | Pilot runbook         | Step-by-step first repository and pull request pilot with roles, evidence, stop conditions, and triage          |
 | Proof index           | Sanitized public evidence map plus private/internal evidence boundaries for company reviewers                  |
+| Review policy         | Branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision snapshot           |
 | Feedback loop         | Structured company pilot intake that turns reviewer concerns into docs, gates, proof, or roadmap work          |
 | Company adoption      | Screenshot-style case study for evaluation, pilot rollout, and governance decision records                     |
 | Public launch note    | Short external-facing story for repoctx, PullPass, proof runs, and next trust-layer gates                      |
+| Operating loop        | Repeatable session rhythm for context, focused change, visible gates, human decisions, and durable evidence    |
 
 ---
 
@@ -63,7 +65,9 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 | Merge readiness hidden        | PullPass PR readiness runs on pull requests and records owner-decision warnings   |
 | Agent tool integration needed | `repoctx mcp` exposes repository context through MCP                              |
 | Contributor readiness         | CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
+| Review policy visibility      | Review-policy snapshot summarizes branch protection and owner/admin decision boundaries |
 | Trust-layer demo              | Public walkthrough for repoctx context, PR review context, PullPass, and human merge accountability |
+| Session continuity            | Builder-founder operating loop keeps proof, gates, and next actions outside chat memory |
 
 ---
 
@@ -85,3 +89,4 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 4. Run one real repository and pull request through the company pilot runbook.
 5. Keep the proof index current as public artifacts and private proof boundaries evolve.
 6. Capture feedback from real company reviewers through the pilot feedback loop and turn it into docs, gates, proof, or roadmap work.
+7. Use the builder-founder operating loop for long-running sessions so context, gates, decisions, and next actions remain inspectable.

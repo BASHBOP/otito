@@ -33,6 +33,8 @@ repoctx now includes a publishable MkDocs documentation site, shaped as a practi
 - [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md)
 - [Contributor Governance](docs/03-contributor-governance/README.md)
 - [Release Readiness](docs/04-release-readiness/README.md)
+- [Trust-Layer Demo](docs/05-trust-layer-demo/README.md)
+- [Builder-Founder Operating Loop](docs/06-builder-founder-operating-loop/README.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Glossary](docs/GLOSSARY.md)
 
@@ -130,6 +132,8 @@ The gate runs:
 Coverage currently gates source files at 70% lines, 60% branches, and 75% functions. Generated artifacts under `.dev-context/` are ignored by git, linting, and formatting; keep durable reports there instead of committing them.
 
 repoctx follows Semantic Versioning. Pull requests should identify whether they are no-version-impact, patch, minor, or major changes; maintainers apply the final package version during release.
+
+For longer trust-layer work, use the [Builder-Founder Operating Loop](docs/06-builder-founder-operating-loop/README.md) to keep every session tied to context, focused changes, visible gates, human decisions, and durable evidence.
 
 ## Contributing
 
