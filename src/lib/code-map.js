@@ -4,7 +4,7 @@ import ts from "typescript";
 import { inspectRepo, listRepoFiles } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
-const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
+const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go"]);
 const declarationPatterns = [
   { type: "class", pattern: /\bexport\s+(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
   { type: "class", pattern: /\b(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
@@ -119,6 +119,10 @@ function analyzeFile(root, relativePath, maxSymbols) {
 }
 
 function extractAstFacts(relativePath, text) {
+  if (path.extname(relativePath).toLowerCase() === ".go") {
+    return extractGoFacts(text);
+  }
+
   try {
     const sourceFile = ts.createSourceFile(relativePath, text, ts.ScriptTarget.Latest, true, scriptKindForFile(relativePath));
     const facts = {
@@ -271,7 +275,7 @@ function isTopLevelNode(node) {
 
 function classifyFile(file) {
   const base = path.basename(file);
-  if (file.includes("__tests__") || file.includes("/test/") || /\.(spec|test)\.[jt]sx?$/.test(file)) return "test";
+  if (isTestFilePath(file)) return "test";
   if (/(^|\/)app\/api\/.*\/route\.[cm]?[jt]s$/.test(file)) return "apiRoute";
   if (base === "page.tsx" || base === "page.ts" || base === "layout.tsx" || base === "layout.ts") return "route";
   if (base.endsWith(".controller.ts")) return "controller";
@@ -293,6 +297,11 @@ function classifyFile(file) {
     return "apiClient";
   if (/^[A-Z]/.test(base) && /\.(tsx|jsx)$/.test(base)) return "component";
   return "source";
+}
+
+function isTestFilePath(file) {
+  const normalized = file.replaceAll("\\", "/");
+  return /(^|\/)(__tests__|test|tests)(\/|$)/.test(normalized) || /\.(spec|test)\.[jt]sx?$/.test(normalized) || /(^|\/)[^/]+_test\.go$/.test(normalized);
 }
 
 function inferDomain(file) {
@@ -410,6 +419,53 @@ function extractSymbols(text) {
   const symbols = [];
   const seen = new Set();
   for (const definition of declarationPatterns) {
+    for (const match of text.matchAll(definition.pattern)) {
+      const key = `${definition.type}:${match[1]}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      symbols.push({ type: definition.type, name: match[1], line: lineNumberAt(text, match.index ?? 0) });
+    }
+  }
+  return symbols;
+}
+
+function extractGoFacts(text) {
+  const codeText = stripNonCode(text);
+  const symbols = extractGoSymbols(codeText);
+  return {
+    imports: extractGoImports(text),
+    exports: symbols.filter((symbol) => /^[A-Z]/.test(symbol.name)).map((symbol) => symbol.name),
+    symbols,
+  };
+}
+
+function extractGoImports(text) {
+  const imports = new Set();
+  for (const match of text.matchAll(/^\s*import\s+(?:"([^"]+)"|\(([\s\S]*?)\))/gm)) {
+    if (match[1]) {
+      imports.add(match[1]);
+      continue;
+    }
+    for (const item of (match[2] ?? "").matchAll(/"([^"]+)"/g)) {
+      imports.add(item[1]);
+    }
+  }
+  return [...imports].slice(0, 100);
+}
+
+function extractGoSymbols(text) {
+  const symbols = [];
+  const seen = new Set();
+  const definitions = [
+    { type: "function", pattern: /^\s*func\s+(?:\([^)]+\)\s*)?([A-Za-z_]\w*)\s*\(/gm },
+    { type: "type", pattern: /^\s*type\s+([A-Za-z_]\w*)\b/gm },
+    { type: "const", pattern: /^\s*const\s+([A-Za-z_]\w*)\b/gm },
+    { type: "var", pattern: /^\s*var\s+([A-Za-z_]\w*)\b/gm },
+  ];
+
+  for (const definition of definitions) {
     for (const match of text.matchAll(definition.pattern)) {
       const key = `${definition.type}:${match[1]}`;
       if (seen.has(key)) {
