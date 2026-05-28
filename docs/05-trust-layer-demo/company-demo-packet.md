@@ -23,6 +23,7 @@ Use these pages together when introducing the trust layer to a team.
 | [Executive summary](../EXECUTIVE-SUMMARY.md) | The one-page product and governance overview |
 | [Trust-layer walkthrough](./README.md) | The review rhythm: context, gate, human decision |
 | [Company adoption case study](./company-adoption-case-study.md) | The screenshot-style story for managers and governance reviewers |
+| [Company pilot feedback](./company-pilot-feedback.md) | The structured feedback loop for turning reviewer concerns into work |
 | [Proof run](./proof-run-2026-05-28.md) | Dated evidence for repoctx, PullPass, release discipline, and Bashbop pilot proof |
 | [Public launch note](./public-launch-note-2026-05-28.md) | The public release story and install path |
 | [Roadmap](../ROADMAP.md) | What is complete, what is next, and where adoption work continues |
@@ -59,6 +60,8 @@ Start with one repository and one real pull request.
 | 4 | Publish a proof run | Linked PR, CI result, PullPass verdict, human decision, release note |
 
 The aim is not to slow teams down. The aim is to make the work easier to trust when agents, maintainers, and company policy all meet in the same repository.
+
+After a reviewer reads this packet, capture their response through the [company pilot feedback loop](./company-pilot-feedback.md). The feedback should produce a docs update, repoctx improvement, PullPass gate, proof artifact, pilot follow-up, or an explicit not-now decision.
 
 ## Governance Modes
 

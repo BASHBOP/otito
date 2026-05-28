@@ -17,6 +17,7 @@
 | Public trust-layer demo      | Complete |
 | Public launch note           | Complete |
 | Company demo packet          | Complete |
+| Company pilot feedback loop  | Complete |
 
 ## Phase 1 - Public Adoption
 

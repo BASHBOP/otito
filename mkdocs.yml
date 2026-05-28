@@ -90,6 +90,7 @@ nav:
   - Trust-Layer Demo:
       - Overview: 05-trust-layer-demo/README.md
       - Company Demo Packet: 05-trust-layer-demo/company-demo-packet.md
+      - Company Pilot Feedback: 05-trust-layer-demo/company-pilot-feedback.md
       - Proof Run 2026-05-28: 05-trust-layer-demo/proof-run-2026-05-28.md
       - Company Adoption Case Study: 05-trust-layer-demo/company-adoption-case-study.md
       - Public Launch Note 2026-05-28: 05-trust-layer-demo/public-launch-note-2026-05-28.md

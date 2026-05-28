@@ -121,6 +121,9 @@ Use this checklist when publishing a demo, release note, or case study.
 !!! quote "Company demo packet"
     See the [company demo packet](./company-demo-packet.md) for the short sendable version that ties the executive summary, proof run, case study, launch note, and pilot checklist together.
 
+!!! question "Company pilot feedback"
+    See the [company pilot feedback loop](./company-pilot-feedback.md) for the structured intake that turns reviewer concerns into docs, repoctx improvements, PullPass gates, proof artifacts, or pilot follow-up.
+
 !!! abstract "Public launch note"
     See the [2026-05-28 public launch note](./public-launch-note-2026-05-28.md) for the short public story: what is released, what is review-gated, why it matters, and how teams can try the trust-layer workflow.
 
