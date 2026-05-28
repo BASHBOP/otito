@@ -88,6 +88,7 @@ body:
         - label: PullPass policy expectations are unclear
         - label: Evidence retention expectations are unclear
         - label: CODEOWNERS or branch protection requirements are unclear
+        - label: CI cannot start or account/tooling setup is blocked
         - label: Security or privacy posture needs more detail
         - label: Public/private evidence boundary is unclear
         - label: Needs integration with existing CI or review tooling
