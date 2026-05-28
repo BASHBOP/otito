@@ -20,6 +20,26 @@ repoctx gives the context foundation. PullPass gives the merge-safety gate. The 
 
 ---
 
+## Tool Boundaries
+
+repoctx is the product surface. It should stay the command and MCP server that users install first when they need repository context, PR review context, workspace reports, and agent-facing evidence.
+
+PullPass is the merge-safety gate. It should stay focused on review readiness, governance mode, policy checks, CI state, CODEOWNERS, conversations, and the final human decision before merge.
+
+impact-map is currently the analyzer and proving ground. Use it when scope is unclear, when import-neighbor evidence matters, or when a diff needs validation against the original change request. If the same impact-map behavior becomes part of the normal user workflow, graduate that behavior into repoctx instead of asking users to choose between two overlapping context tools.
+
+The rule is simple:
+
+| Question | Use |
+| --- | --- |
+| What should an agent or reviewer know before changing this repo? | repoctx |
+| Is this PR ready to merge under the repo's governance rules? | PullPass |
+| What files, import neighbors, tests, or missed diff areas might this change affect? | impact-map |
+
+This keeps the public story clear while leaving room for impact-map to experiment with analysis that can later strengthen repoctx context packs and PR review output.
+
+---
+
 ## Every Session Loop
 
 Use this loop at the start of every meaningful coding-agent session.
