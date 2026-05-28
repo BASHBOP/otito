@@ -2,7 +2,7 @@
 
 **Purpose:** Context foundation for AI-assisted software teams<br>
 **Maintainer:** Oluwasegun Olumbe<br>
-**Current Version:** 0.3.0 published documentation
+**Current Version:** 0.3.1 trust-layer demo documentation
 
 ---
 
