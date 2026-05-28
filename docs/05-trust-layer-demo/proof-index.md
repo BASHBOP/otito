@@ -14,6 +14,8 @@ Use it with the [company demo packet](./company-demo-packet.md) and [company pil
 | PullPass documentation | Merge gate behavior, governance modes, policy profiles, dependency-audit signals, and PR checks | [PullPass docs](https://nugehs.github.io/pullpass/) |
 | repoctx release proof | SemVer release discipline and published package state | [repoctx v0.3.2](https://github.com/nugehs/repoctx/releases/tag/v0.3.2) |
 | PullPass release proof | Company and high-risk policy profiles plus dependency-audit signals | [PullPass v0.8.0](https://github.com/nugehs/pullpass/releases/tag/v0.8.0) |
+| PullPass context evidence | PullPass reports now include repoctx context and PR review commands as review evidence | [PullPass PR #9](https://github.com/nugehs/pullpass/pull/9) |
+| PullPass contributor intake | Issue forms and PR checklist capture bugs, features, governance questions, release readiness, tests, PullPass output, and public-safe evidence | [PullPass PR #11](https://github.com/nugehs/pullpass/pull/11) |
 | Trust-layer proof run | End-to-end repoctx context, PullPass gate, CI, owner decision, and release evidence | [Proof run 2026-05-28](./proof-run-2026-05-28.md) |
 | Company adoption case study | Screenshot-style explanation for engineering leaders and governance reviewers | [Company adoption case study](./company-adoption-case-study.md) |
 | Company demo packet | Short sendable packet that ties the proof, runbook, feedback loop, and roadmap together | [Company demo packet](./company-demo-packet.md) |
