@@ -52,3 +52,40 @@ test("generateCodeMap ignores code-like strings in fixtures", () => {
   assert.ok(result.files[0].symbols.some((symbol) => symbol.name === "realFixture"));
   assert.ok(!result.files[0].symbols.some((symbol) => symbol.name === "FakeController"));
 });
+
+test("generateCodeMap classifies Go source and test files", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-go-"));
+  fs.mkdirSync(path.join(root, "internal", "githubpr"), { recursive: true });
+  fs.writeFileSync(path.join(root, "go.mod"), "module example.com/pullpass\n\ngo 1.22\n");
+  fs.writeFileSync(
+    path.join(root, "internal", "githubpr", "evaluate.go"),
+    [
+      "package githubpr",
+      "",
+      'import "context"',
+      "",
+      "type Report struct{}",
+      "",
+      "func Evaluate(ctx context.Context) Report {",
+      "  return Report{}",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "internal", "githubpr", "evaluate_test.go"),
+    ["package githubpr", "", 'import "testing"', "", "func TestEvaluate(t *testing.T) {", "  _ = Evaluate", "}", ""].join("\n"),
+  );
+
+  const result = generateCodeMap(root);
+  const sourceFile = result.files.find((file) => file.path === "internal/githubpr/evaluate.go");
+  const testFile = result.files.find((file) => file.path === "internal/githubpr/evaluate_test.go");
+
+  assert.equal(result.summary.tests, 1);
+  assert.ok(sourceFile);
+  assert.ok(testFile);
+  assert.equal(sourceFile.kind, "source");
+  assert.equal(testFile.kind, "test");
+  assert.deepEqual(testFile.imports, ["testing"]);
+  assert.ok(testFile.symbols.some((symbol) => symbol.name === "TestEvaluate"));
+});
