@@ -37,7 +37,7 @@ Use this scorecard when reviewing company feedback.
 | Review context | Does repoctx expose the files, tests, risk, and prompts reviewers need? | Improve context ranking or PR review output |
 | Merge gate | Does PullPass make review, CODEOWNERS, CI, conversations, and policy state clear? | Add policy checks or clearer verdict language |
 | Governance | Does the team understand solo, small-team, company, and high-risk modes? | Add examples and decision records |
-| Evidence | Is the proof run strong enough for audit, incident review, or security review? | Add screenshots, dated proof runs, or retention guidance |
+| Evidence | Is the proof run strong enough for audit, incident review, or security review? | Add screenshots, dated proof runs, retention guidance, or proof-index links |
 | Pilot shape | Can the reviewer name one repo and one PR to try first? | Narrow the pilot plan or use the pilot runbook |
 
 ## Triage Rule
