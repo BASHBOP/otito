@@ -1,6 +1,6 @@
 {
   "name": "repoctx",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "repoctx: local repo discovery, indexing, catalog search, and agent harnesses.",
   "type": "module",
   "bin": {
