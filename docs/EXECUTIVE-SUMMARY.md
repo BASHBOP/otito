@@ -56,6 +56,7 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 | PR review surface hidden      | `repoctx pr` summarizes changed files, risks, prompts, and comments               |
 | Agent tool integration needed | `repoctx mcp` exposes repository context through MCP                              |
 | Contributor readiness         | CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
+| Trust-layer demo              | Public walkthrough for repoctx context, PR review context, PullPass, and human merge accountability |
 
 ---
 
@@ -63,17 +64,15 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 
 | Priority | Item                 | Action Required                                                       |
 | -------- | -------------------- | --------------------------------------------------------------------- |
-| High     | Public docs          | Publish GitHub Pages documentation from `main`                        |
 | Medium   | Package distribution | Decide npm registry publication path or continue GitHub install first |
 | Medium   | PullPass integration | Add direct links between repoctx PR context and PullPass reports      |
-| Medium   | Demo workflow        | Publish a short repoctx -> change -> PullPass walkthrough             |
+| Medium   | Demo assets          | Add screenshots or terminal captures for the repoctx + PullPass flow  |
 
 ---
 
 ## Next Steps
 
-1. Merge and publish this documentation site.
-2. Verify GitHub Pages at `https://nugehs.github.io/repoctx/`.
-3. Open a real PR and attach repoctx PR context as a review artifact/comment.
-4. Use PullPass to gate the PR before merge.
-5. Prepare the first public demo note for the repoctx + PullPass trust layer.
+1. Add install examples for common agent hosts and MCP clients.
+2. Link repoctx PR context output directly to PullPass reports.
+3. Add terminal captures for the repoctx + PullPass trust-layer walkthrough.
+4. Verify the flow on Bashbop-style API, web, and mobile repositories.
