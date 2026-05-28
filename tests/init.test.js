@@ -24,6 +24,7 @@ test("initProject scaffolds repoctx files without overwriting by default", () =>
   assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
   assert.match(workflow, /Install repoctx dependencies/);
   assert.match(workflow, /working-directory: \.dev-context\/tool/);
+  assert.match(workflow, /git fetch origin "\+\$\{\{ github\.base_ref \}\}:refs\/remotes\/origin\/\$\{\{ github\.base_ref \}\}"/);
   assert.match(workflow, /Generate commit review context/);
   assert.match(workflow, /node \.dev-context\/tool\/src\/cli\.js pr \./);
 
