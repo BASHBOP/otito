@@ -3,7 +3,7 @@
 ## Local repo intelligence for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v0.3.1 trust-layer demo documentation<br>
+**Status:** v0.3.2 Go-aware PR context<br>
 **Category:** Practical AI governance for developers
 
 > Built and maintained by **Oluwasegun Olumbe** for teams that want context before code changes, review prompts before merge, and less guessing in agent workflows.
@@ -33,10 +33,11 @@
 
 !!! success "Current Capabilities"
     - Repository inspection with languages, scripts, entrypoints, and git state
-    - AST-backed JSON-first code maps for JavaScript and TypeScript projects
+    - AST-backed JSON-first code maps for JavaScript, TypeScript, and Go projects
     - Local discovery, indexing, catalog search, and workspace reports
     - Task-aware context packs before agents plan or edit
     - PR review context from git diffs and optional GitHub comments
+    - Go test-file detection for PullPass-style repositories
     - MCP tools for repository context, search, maps, and review workflows
     - Contributor-ready governance: CI, CODEOWNERS, templates, security, and release guidance
 
