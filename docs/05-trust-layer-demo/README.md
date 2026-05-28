@@ -111,6 +111,7 @@ Use this checklist when publishing a demo, release note, or case study.
 - Branch protection is enabled on the base branch
 - Release notes or changelog entry explain what shipped
 - Solo-maintainer admin merges, if used, are recorded as explicit owner decisions
+- Public evidence uses sanitized links or repo-relative paths, not local absolute paths or sensitive output
 
 !!! tip "Dated proof run"
     See the [2026-05-28 trust-layer proof run](./proof-run-2026-05-28.md) for a concrete terminal-capture record covering repoctx context, PullPass release discipline, CI, solo-maintainer merge visibility, and release publication.
@@ -120,6 +121,9 @@ Use this checklist when publishing a demo, release note, or case study.
 
 !!! quote "Company demo packet"
     See the [company demo packet](./company-demo-packet.md) for the short sendable version that ties the executive summary, proof run, case study, launch note, and pilot checklist together.
+
+!!! example "Company pilot runbook"
+    See the [company pilot runbook](./company-pilot-runbook.md) for the step-by-step first repository and PR pilot, including roles, preflight checks, evidence capture, stop conditions, and post-pilot triage.
 
 !!! question "Company pilot feedback"
     See the [company pilot feedback loop](./company-pilot-feedback.md) for the structured intake that turns reviewer concerns into docs, repoctx improvements, PullPass gates, proof artifacts, or pilot follow-up.
