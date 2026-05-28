@@ -6,7 +6,7 @@ This project follows SemVer.
 
 ## Unreleased
 
-- No changes yet.
+- Add a public trust-layer demo walkthrough for repoctx plus PullPass.
 
 ## v0.3.0 - 2026-05-28
 

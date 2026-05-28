@@ -25,6 +25,7 @@
 | 02 | [:material-lan-connect: MCP and Agents](./02-mcp-agent-workflows/README.md) | MCP tools and agent-facing workflows | :material-check-circle: Active |
 | 03 | [:material-account-check: Contributor Governance](./03-contributor-governance/README.md) | Reviews, branch protection, CODEOWNERS, and contributor flow | :material-check-circle: Active |
 | 04 | [:material-tag-check: Release Readiness](./04-release-readiness/README.md) | SemVer, changelog discipline, CI, and release gates | :material-check-circle: Active |
+| 05 | [:material-play-circle: Trust-Layer Demo](./05-trust-layer-demo/README.md) | repoctx plus PullPass as a repeatable review workflow | :material-check-circle: Active |
 
 ---
 
@@ -106,5 +107,11 @@ flowchart LR
     ---
 
     Pair repoctx with PullPass for a repeatable trust layer: context before change, validation before merge.
+
+-   :material-play-circle:{ .lg .middle } **Public Demo Path**
+
+    ---
+
+    Show the workflow end to end: context pack, focused change, PR review context, PullPass gate, human merge.
 
 </div>
