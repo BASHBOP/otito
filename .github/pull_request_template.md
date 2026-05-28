@@ -13,6 +13,7 @@
 ## Validation
 
 - [ ] `npm run ci`
+- [ ] PullPass readiness passed or its `WARN`/`FAIL` state is explained.
 - [ ] Focused tests or manual checks:
 
 ## Version Impact
