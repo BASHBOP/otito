@@ -43,3 +43,60 @@
 .md-typeset .grid.cards > ol > li {
   border-color: var(--repoctx-line);
 }
+
+.md-typeset .evidence-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  margin: 1rem 0;
+}
+
+.md-typeset .evidence-shot {
+  border: 1px solid var(--repoctx-line);
+  border-radius: 0.35rem;
+  box-shadow: 0 0.45rem 1.4rem rgba(19, 32, 41, 0.08);
+  overflow: hidden;
+}
+
+.md-typeset .evidence-title {
+  background: var(--repoctx-ink);
+  color: #fff;
+  font-weight: 700;
+  padding: 0.55rem 0.75rem;
+}
+
+.md-typeset .evidence-shot .highlight,
+.md-typeset .evidence-shot pre {
+  margin: 0;
+}
+
+.md-typeset .evidence-shot > p:last-child {
+  margin: 0;
+  padding: 0.65rem 0.75rem 0.75rem;
+}
+
+.md-typeset .signal-pass,
+.md-typeset .signal-warn,
+.md-typeset .signal-fail {
+  border-radius: 0.2rem;
+  color: #fff;
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+  margin-right: 0.35rem;
+  padding: 0.25rem 0.35rem;
+}
+
+.md-typeset .signal-pass {
+  background: var(--repoctx-green);
+}
+
+.md-typeset .signal-warn {
+  background: var(--repoctx-amber);
+}
+
+.md-typeset .signal-fail {
+  background: #b42318;
+}
