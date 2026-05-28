@@ -20,7 +20,7 @@
 
 - Publish release notes for the GitHub Pages documentation milestone.
 - Add install examples for agent hosts and MCP clients.
-- Add screenshots or terminal captures for common workflows.
+- Add screenshots for common workflows; the first terminal proof run is captured.
 
 ## Phase 2 - Trust-Layer Integration
 

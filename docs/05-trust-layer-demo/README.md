@@ -26,6 +26,9 @@ The goal is not to replace review. The goal is to make review easier to trust.
 | Maintainer | Reviews the PR context, risk areas, and test evidence |
 | PullPass | Checks merge readiness, review state, CODEOWNERS, CI, conversations, and branch protection |
 
+!!! note "Solo now, company-ready later"
+    A solo maintainer can use the same rhythm by recording owner decisions when an admin merge is needed. As the repo is shared with companies, that owner decision becomes a team review path with CODEOWNERS, required approvals, resolved conversations, and release evidence.
+
 ---
 
 ## Walkthrough
@@ -107,6 +110,10 @@ Use this checklist when publishing a demo, release note, or case study.
 - CODEOWNERS approval is present when required
 - Branch protection is enabled on the base branch
 - Release notes or changelog entry explain what shipped
+- Solo-maintainer admin merges, if used, are recorded as explicit owner decisions
+
+!!! tip "Dated proof run"
+    See the [2026-05-28 trust-layer proof run](./proof-run-2026-05-28.md) for a concrete terminal-capture record covering repoctx context, PullPass release discipline, CI, solo-maintainer merge visibility, and release publication.
 
 ---
 

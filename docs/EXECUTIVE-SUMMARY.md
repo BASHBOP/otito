@@ -66,7 +66,7 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 | -------- | -------------------- | --------------------------------------------------------------------- |
 | Medium   | Package distribution | Decide npm registry publication path or continue GitHub install first |
 | Medium   | PullPass integration | Add direct links between repoctx PR context and PullPass reports      |
-| Medium   | Demo assets          | Add screenshots or terminal captures for the repoctx + PullPass flow  |
+| Medium   | Demo assets          | Keep dated proof runs current as repoctx and PullPass evolve          |
 
 ---
 
@@ -74,5 +74,5 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 
 1. Add install examples for common agent hosts and MCP clients.
 2. Link repoctx PR context output directly to PullPass reports.
-3. Add terminal captures for the repoctx + PullPass trust-layer walkthrough.
+3. Extend the dated proof run with screenshots when the public docs need a visual case study.
 4. Verify the flow on Bashbop-style API, web, and mobile repositories.
