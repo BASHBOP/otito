@@ -16,12 +16,14 @@
 | Published documentation site | Complete |
 | Public trust-layer demo      | Complete |
 | Public launch note           | Complete |
+| Company demo packet          | Complete |
 
 ## Phase 1 - Public Adoption
 
 - Keep launch notes and release notes current as the trust-layer workflow evolves.
 - Add install examples for agent hosts and MCP clients.
 - Add screenshots for common workflows; the first terminal proof run is captured.
+- Capture company feedback against the demo packet and turn repeated questions into docs or gates.
 
 ## Phase 2 - Trust-Layer Integration
 

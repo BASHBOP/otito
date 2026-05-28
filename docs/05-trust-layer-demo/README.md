@@ -118,6 +118,9 @@ Use this checklist when publishing a demo, release note, or case study.
 !!! success "Company-facing case study"
     See the [company adoption case study](./company-adoption-case-study.md) for a screenshot-style walkthrough that frames repoctx and PullPass for engineering leaders, platform teams, and AI governance reviewers.
 
+!!! quote "Company demo packet"
+    See the [company demo packet](./company-demo-packet.md) for the short sendable version that ties the executive summary, proof run, case study, launch note, and pilot checklist together.
+
 !!! abstract "Public launch note"
     See the [2026-05-28 public launch note](./public-launch-note-2026-05-28.md) for the short public story: what is released, what is review-gated, why it matters, and how teams can try the trust-layer workflow.
 

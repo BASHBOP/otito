@@ -126,7 +126,7 @@ pullpass pr 123 --governance team --policy high-risk
 
 ## What Is Next
 
-1. Finish authenticated Bashbop-style API, web, and mobile proof runs.
+1. Share the company demo packet with engineering and AI governance reviewers.
 2. Capture company feedback against the adoption case study.
 3. Turn repeated proof runs into a small, public AI governance toolkit.
 4. Keep repoctx and PullPass releases small, SemVer-tagged, and backed by proof artifacts.
