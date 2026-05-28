@@ -128,11 +128,17 @@ Use this checklist when publishing a demo, release note, or case study.
 !!! info "Proof index"
     See the [proof index](./proof-index.md) for the sanitized public evidence map and the private/internal evidence boundary.
 
+!!! check "Review policy snapshot"
+    See the [review policy snapshot](./review-policy-snapshot.md) for the current branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision posture for repoctx and PullPass.
+
 !!! question "Company pilot feedback"
     See the [company pilot feedback loop](./company-pilot-feedback.md) for the structured intake that turns reviewer concerns into docs, repoctx improvements, PullPass gates, proof artifacts, or pilot follow-up.
 
 !!! abstract "Public launch note"
     See the [2026-05-28 public launch note](./public-launch-note-2026-05-28.md) for the short public story: what is released, what is review-gated, why it matters, and how teams can try the trust-layer workflow.
+
+!!! note "Builder-founder operating loop"
+    See the [builder-founder operating loop](../06-builder-founder-operating-loop/README.md) for the session rhythm that keeps context, focused changes, visible gates, human decisions, and durable evidence moving together.
 
 ---
 

@@ -25,9 +25,11 @@ Use these pages together when introducing the trust layer to a team.
 | [Company adoption case study](./company-adoption-case-study.md) | The screenshot-style story for managers and governance reviewers |
 | [Company pilot runbook](./company-pilot-runbook.md) | The step-by-step checklist for running the first real repo and PR pilot |
 | [Proof index](./proof-index.md) | The public/private evidence map for company review |
+| [Review policy snapshot](./review-policy-snapshot.md) | The branch protection, required checks, CODEOWNERS, and review-rule evidence |
 | [Company pilot feedback](./company-pilot-feedback.md) | The structured feedback loop for turning reviewer concerns into work |
 | [Proof run](./proof-run-2026-05-28.md) | Dated evidence for repoctx, PullPass, release discipline, and Bashbop pilot proof |
 | [Public launch note](./public-launch-note-2026-05-28.md) | The public release story and install path |
+| [Builder-founder operating loop](../06-builder-founder-operating-loop/README.md) | The repeatable session rhythm for context, gates, decisions, evidence, and next actions |
 | [Roadmap](../ROADMAP.md) | What is complete, what is next, and where adoption work continues |
 
 ## Five-Minute Narrative
@@ -48,6 +50,7 @@ repoctx handles the context side. PullPass handles the merge-safety side. The hu
 | Contributor readiness | Contributor docs, CODEOWNERS, security policy, templates, and maintainer review policy are in place |
 | Release discipline | SemVer guidance, changelog discipline, CI, docs builds, and tagged release proof are documented |
 | PullPass gate | PullPass supports local and PR review gates, governance modes, policy profiles, dependency-audit signals, and release checks |
+| Review policy snapshot | repoctx and PullPass branch protection, CODEOWNERS, required checks, conversation-resolution, and admin-decision boundaries are summarized |
 | Proof index | Public proof links and private evidence boundaries are mapped for company review |
 | Bashbop pilot | API/mobile proof captured real auth, profile, R2 media, AI create-event, guided create-event, logout, and Android UI evidence |
 
@@ -75,6 +78,8 @@ The aim is not to slow teams down. The aim is to make the work easier to trust w
 
 After a reviewer reads this packet, run the first pilot with the [company pilot runbook](./company-pilot-runbook.md) and capture their response through the [company pilot feedback loop](./company-pilot-feedback.md). The feedback should produce a docs update, repoctx improvement, PullPass gate, proof artifact, pilot follow-up, or an explicit not-now decision.
 
+Use the [builder-founder operating loop](../06-builder-founder-operating-loop/README.md) when the work spans multiple sessions. It keeps the handoff concrete: what context was gathered, what changed, what gate ran, who decided, and what remains.
+
 ## Governance Modes
 
 | Mode | Merge expectation |
@@ -95,6 +100,7 @@ A repository is ready for a company pilot when it has:
 - A PullPass local or PR gate report
 - Branch protection and required status checks
 - CODEOWNERS or an explicit owner policy
+- A review policy snapshot or equivalent branch-protection record
 - Contributor and security guidance
 - A pilot runbook for the first real repository and PR
 - A proof index that separates public artifacts from private operator evidence

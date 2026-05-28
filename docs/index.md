@@ -26,6 +26,7 @@
 | 03 | [:material-account-check: Contributor Governance](./03-contributor-governance/README.md) | Reviews, branch protection, CODEOWNERS, and contributor flow | :material-check-circle: Active |
 | 04 | [:material-tag-check: Release Readiness](./04-release-readiness/README.md) | SemVer, changelog discipline, CI, and release gates | :material-check-circle: Active |
 | 05 | [:material-play-circle: Trust-Layer Demo](./05-trust-layer-demo/README.md) | repoctx plus PullPass as a repeatable review workflow | :material-check-circle: Active |
+| 06 | [:material-repeat: Builder-Founder Loop](./06-builder-founder-operating-loop/README.md) | Session rhythm, evidence ledger, governance ladder, and next-action rule | :material-check-circle: Active |
 
 ---
 
@@ -120,5 +121,11 @@ flowchart LR
     ---
 
     Package the trust layer for engineering leaders, platform teams, and AI governance reviewers.
+
+-   :material-repeat:{ .lg .middle } **Builder-Founder Operating Loop**
+
+    ---
+
+    Keep every coding-agent session tied to context, focused change, visible gates, human decisions, and durable evidence.
 
 </div>
