@@ -39,6 +39,18 @@ body:
         - Not sure yet
     validations:
       required: true
+  - type: input
+    id: pilot_repository
+    attributes:
+      label: Pilot repository
+      description: Which repository should we pilot first, if you already know it?
+      placeholder: "org/repository or a short local name"
+  - type: input
+    id: pilot_pull_request
+    attributes:
+      label: Pilot pull request
+      description: Which PR would you use for the first pilot, if one already exists?
+      placeholder: "PR number or branch name"
   - type: dropdown
     id: governance_mode
     attributes:
