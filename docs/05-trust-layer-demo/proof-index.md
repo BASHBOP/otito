@@ -18,6 +18,7 @@ Use it with the [company demo packet](./company-demo-packet.md) and [company pil
 | Company adoption case study | Screenshot-style explanation for engineering leaders and governance reviewers | [Company adoption case study](./company-adoption-case-study.md) |
 | Company demo packet | Short sendable packet that ties the proof, runbook, feedback loop, and roadmap together | [Company demo packet](./company-demo-packet.md) |
 | Company pilot runbook | Step-by-step first repository and pull request pilot | [Company pilot runbook](./company-pilot-runbook.md) |
+| Review policy snapshot | Branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision boundaries | [Review policy snapshot](./review-policy-snapshot.md) |
 | Company pilot feedback loop | Structured intake that turns reviewer concerns into docs, gates, proof, or roadmap work | [Company pilot feedback](./company-pilot-feedback.md) |
 
 ## Private Or Internal Proof
@@ -38,6 +39,7 @@ A proof artifact is company-ready when it has:
 - A date, version, PR, release, or check run that identifies the evidence.
 - A clear owner decision when review or admin merge matters.
 - Validation commands or CI checks that match the risk of the change.
+- Branch protection and review policy evidence for the base branch.
 - PullPass verdicts with `WARN` and `FAIL` states explained, not hidden.
 - Public links, repo-relative paths, or redacted screenshots instead of local absolute paths.
 - No secrets, tokens, cookies, raw credentials, customer data, private source code, or confidential output.
