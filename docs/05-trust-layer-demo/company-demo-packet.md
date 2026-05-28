@@ -23,6 +23,7 @@ Use these pages together when introducing the trust layer to a team.
 | [Executive summary](../EXECUTIVE-SUMMARY.md) | The one-page product and governance overview |
 | [Trust-layer walkthrough](./README.md) | The review rhythm: context, gate, human decision |
 | [Company adoption case study](./company-adoption-case-study.md) | The screenshot-style story for managers and governance reviewers |
+| [Company pilot runbook](./company-pilot-runbook.md) | The step-by-step checklist for running the first real repo and PR pilot |
 | [Company pilot feedback](./company-pilot-feedback.md) | The structured feedback loop for turning reviewer concerns into work |
 | [Proof run](./proof-run-2026-05-28.md) | Dated evidence for repoctx, PullPass, release discipline, and Bashbop pilot proof |
 | [Public launch note](./public-launch-note-2026-05-28.md) | The public release story and install path |
@@ -48,20 +49,29 @@ repoctx handles the context side. PullPass handles the merge-safety side. The hu
 | PullPass gate | PullPass supports local and PR review gates, governance modes, policy profiles, dependency-audit signals, and release checks |
 | Bashbop pilot | API/mobile proof captured real auth, profile, R2 media, AI create-event, guided create-event, logout, and Android UI evidence |
 
+## Evidence Hygiene
+
+Company-facing proof must be useful without leaking private machine state.
+
+- Public docs should link to GitHub URLs, release pages, PRs, screenshots, or repo-relative paths.
+- Local absolute paths belong only in ignored internal artifacts such as `.dev-context/` or private operator notes.
+- Evidence must not include secrets, tokens, cookies, raw credentials, customer data, private source code, or confidential repository output.
+- Screenshots, terminal output, XML, JSON, and logs should be redacted before they become part of a public packet.
+
 ## Pilot Offer
 
 Start with one repository and one real pull request.
 
 | Week | Outcome | Evidence |
 | --- | --- | --- |
-| 1 | Install repoctx and PullPass | `repoctx doctor`, repo harness, PullPass local report |
+| 1 | Install repoctx and PullPass | [Pilot runbook](./company-pilot-runbook.md), `repoctx doctor`, repo harness, PullPass local report |
 | 2 | Add repoctx PR context to review | `.dev-context/pr-review.md` or a GitHub PR comment |
 | 3 | Turn on review gates | Branch protection, CODEOWNERS, required checks, resolved conversations |
 | 4 | Publish a proof run | Linked PR, CI result, PullPass verdict, human decision, release note |
 
 The aim is not to slow teams down. The aim is to make the work easier to trust when agents, maintainers, and company policy all meet in the same repository.
 
-After a reviewer reads this packet, capture their response through the [company pilot feedback loop](./company-pilot-feedback.md). The feedback should produce a docs update, repoctx improvement, PullPass gate, proof artifact, pilot follow-up, or an explicit not-now decision.
+After a reviewer reads this packet, run the first pilot with the [company pilot runbook](./company-pilot-runbook.md) and capture their response through the [company pilot feedback loop](./company-pilot-feedback.md). The feedback should produce a docs update, repoctx improvement, PullPass gate, proof artifact, pilot follow-up, or an explicit not-now decision.
 
 ## Governance Modes
 
@@ -84,8 +94,10 @@ A repository is ready for a company pilot when it has:
 - Branch protection and required status checks
 - CODEOWNERS or an explicit owner policy
 - Contributor and security guidance
+- A pilot runbook for the first real repository and PR
 - A dated proof run with sanitized evidence
 - A visible human merge decision
+- A public/private evidence boundary that keeps local paths and sensitive output out of company-facing docs
 
 ## Decision Record
 

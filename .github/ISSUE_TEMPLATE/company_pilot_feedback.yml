@@ -1,5 +1,5 @@
 name: Company pilot feedback
-description: Share structured feedback after reviewing the repoctx + PullPass trust-layer packet.
+description: Share structured feedback after reviewing the repoctx + PullPass packet or running the pilot runbook.
 title: "pilot: "
 labels:
   - enhancement
@@ -9,7 +9,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reviewing the trust-layer packet. Please keep feedback sanitized: do not include secrets, private source code, customer data, tokens, cookies, or confidential repository output.
+        Thanks for reviewing the trust-layer packet. Please keep feedback sanitized: do not include secrets, private source code, customer data, tokens, cookies, confidential repository output, or local absolute paths from your machine.
   - type: dropdown
     id: reviewer_role
     attributes:
@@ -77,6 +77,7 @@ body:
         - label: Evidence retention expectations are unclear
         - label: CODEOWNERS or branch protection requirements are unclear
         - label: Security or privacy posture needs more detail
+        - label: Public/private evidence boundary is unclear
         - label: Needs integration with existing CI or review tooling
         - label: Needs a stronger example from a similar repository
   - type: textarea
@@ -84,7 +85,7 @@ body:
     attributes:
       label: Missing evidence
       description: What proof, screenshot, command output, or policy example would make this easier to trust?
-      placeholder: "Example: show how PullPass behaves when a required reviewer approves but CODEOWNERS is missing."
+      placeholder: "Example: show how PullPass behaves when a required reviewer approves but CODEOWNERS is missing. Use public links, repo-relative paths, or sanitized summaries."
   - type: textarea
     id: pilot_shape
     attributes:
@@ -122,7 +123,7 @@ body:
     attributes:
       label: Safety checks
       options:
-        - label: I removed secrets, private source code, customer data, tokens, cookies, and confidential output.
+        - label: I removed secrets, private source code, customer data, tokens, cookies, confidential output, and local absolute paths.
           required: true
-        - label: I reviewed the company demo packet before submitting this feedback.
+        - label: I reviewed the company demo packet or used the company pilot runbook before submitting this feedback.
           required: true
