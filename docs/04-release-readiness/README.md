@@ -38,7 +38,7 @@ Maintainers should keep these aligned:
 
 repoctx runs PullPass on pull requests so merge-readiness evidence is visible before an owner or reviewer merges.
 
-The workflow installs PullPass `v0.8.0` and runs:
+The workflow installs PullPass `v0.9.0` and runs:
 
 ```bash
 pullpass pr "$PR_NUMBER" --repo . --governance solo
