@@ -15,10 +15,11 @@
 | Contributor governance       | Complete |
 | Published documentation site | Complete |
 | Public trust-layer demo      | Complete |
+| Public launch note           | Complete |
 
 ## Phase 1 - Public Adoption
 
-- Publish release notes for the GitHub Pages documentation milestone.
+- Keep launch notes and release notes current as the trust-layer workflow evolves.
 - Add install examples for agent hosts and MCP clients.
 - Add screenshots for common workflows; the first terminal proof run is captured.
 
