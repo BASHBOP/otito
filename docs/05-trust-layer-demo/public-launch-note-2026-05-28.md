@@ -20,7 +20,8 @@ AI can help teams move faster, but speed only matters if the work remains review
 |-------|---------------|----------|
 | repoctx | `v0.3.2` released | [repoctx v0.3.2](https://github.com/nugehs/repoctx/releases/tag/v0.3.2) |
 | PullPass | `v0.7.0` released | [PullPass v0.7.0](https://github.com/nugehs/pullpass/releases/tag/v0.7.0) |
-| PullPass policy profiles | Review-gated for `v0.8.0` | [PullPass PR #7](https://github.com/nugehs/pullpass/pull/7) |
+| PullPass policy profiles | Merged, release pending for `v0.8.0` | [PullPass PR #7](https://github.com/nugehs/pullpass/pull/7) |
+| PullPass dependency-audit signals | Review-gated follow-up | [PullPass PR #8](https://github.com/nugehs/pullpass/pull/8) |
 | Proof run | Published | [2026-05-28 proof run](./proof-run-2026-05-28.md) |
 | Company adoption case study | Published | [Company adoption case study](./company-adoption-case-study.md) |
 
@@ -114,7 +115,7 @@ pullpass local . --base origin/main
 pullpass pr 123
 ```
 
-For the policy-profile work in review:
+For policy-profile work on PullPass `main` and the next release:
 
 ```bash
 pullpass pr 123 --governance team --policy company
@@ -125,9 +126,9 @@ pullpass pr 123 --governance team --policy high-risk
 
 ## What Is Next
 
-1. Merge PullPass policy profiles after the explicit owner/admin decision.
-2. Tag and publish PullPass `v0.8.0`.
-3. Verify the flow on Bashbop-style API, web, and mobile repositories.
+1. Merge the PullPass dependency-audit follow-up if it belongs in `v0.8.0`.
+2. Tag and publish PullPass `v0.8.0` from `main`.
+3. Finish authenticated Bashbop-style API, web, and mobile proof runs.
 4. Capture company feedback against the adoption case study.
 5. Turn repeated proof runs into a small, public AI governance toolkit.
 
