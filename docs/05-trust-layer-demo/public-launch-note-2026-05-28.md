@@ -19,9 +19,11 @@ AI can help teams move faster, but speed only matters if the work remains review
 | Piece | Current State | Evidence |
 |-------|---------------|----------|
 | repoctx | `v0.3.2` released | [repoctx v0.3.2](https://github.com/nugehs/repoctx/releases/tag/v0.3.2) |
-| PullPass | `v0.8.0` released | [PullPass v0.8.0](https://github.com/nugehs/pullpass/releases/tag/v0.8.0) |
+| PullPass | `v0.9.0` released | [PullPass v0.9.0](https://github.com/nugehs/pullpass/releases/tag/v0.9.0) |
 | PullPass policy profiles | Released in `v0.8.0` | [PullPass PR #7](https://github.com/nugehs/pullpass/pull/7) |
 | PullPass dependency-audit signals | Released in `v0.8.0` | [PullPass PR #8](https://github.com/nugehs/pullpass/pull/8) |
+| PullPass context evidence | Released in `v0.9.0` | [PullPass PR #9](https://github.com/nugehs/pullpass/pull/9) |
+| PullPass contributor intake | Released in `v0.9.0` | [PullPass PR #11](https://github.com/nugehs/pullpass/pull/11) |
 | Proof run | Published | [2026-05-28 proof run](./proof-run-2026-05-28.md) |
 | Company adoption case study | Published | [Company adoption case study](./company-adoption-case-study.md) |
 
@@ -110,7 +112,7 @@ repoctx pr . --base origin/main --out .dev-context/pr-review.md
 Run PullPass from a checkout:
 
 ```bash
-go install github.com/nugehs/pullpass/cmd/pullpass@v0.8.0
+go install github.com/nugehs/pullpass/cmd/pullpass@v0.9.0
 pullpass local . --base origin/main
 pullpass pr 123
 ```
