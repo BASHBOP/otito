@@ -697,7 +697,7 @@ function enrichChangedFiles(files, numstat, codeMap) {
 function inferBasicKind(file) {
   const base = path.basename(file);
   const extension = path.extname(file).toLowerCase();
-  if (/\.(spec|test)\.[jt]sx?$/.test(file) || file.includes("__tests__")) return "test";
+  if (isTestFilePath(file)) return "test";
   if (file.includes("/app/api/") && base === "route.ts") return "apiRoute";
   if (base === "page.tsx" || base === "page.ts" || base === "layout.tsx" || base === "layout.ts") return "route";
   if (base.endsWith(".controller.ts")) return "controller";
@@ -711,6 +711,11 @@ function inferBasicKind(file) {
   if (["package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"].includes(base)) return "dependency";
   if ([".toml", ".yml", ".yaml"].includes(extension) || base.includes("config") || file.startsWith(".codex/")) return "config";
   return "source";
+}
+
+function isTestFilePath(file) {
+  const normalized = file.replaceAll("\\", "/");
+  return /(^|\/)(__tests__|test|tests)(\/|$)/.test(normalized) || /\.(spec|test)\.[jt]sx?$/.test(normalized) || /(^|\/)[^/]+_test\.go$/.test(normalized);
 }
 
 function inferBasicDomain(file) {
@@ -895,6 +900,13 @@ function inferTestHints(repo, files, risk) {
       script: name,
       command: commandForScript(runner, name),
       reason,
+    });
+  }
+
+  if (repo.packageManagers?.includes("go") && files.some((file) => file.path.endsWith(".go"))) {
+    hints.push({
+      command: "go test ./...",
+      reason: "verify Go packages touched by the diff",
     });
   }
 
