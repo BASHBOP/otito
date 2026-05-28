@@ -49,7 +49,7 @@ repoctx handles the context side. PullPass handles the merge-safety side. The hu
 | MCP readiness | repoctx exposes repository inspection, maps, context packs, workspace reports, and PR review through an MCP server |
 | Contributor readiness | Contributor docs, CODEOWNERS, security policy, templates, and maintainer review policy are in place |
 | Release discipline | SemVer guidance, changelog discipline, CI, docs builds, and tagged release proof are documented |
-| PullPass gate | PullPass supports local and PR review gates, governance modes, policy profiles, dependency-audit signals, and release checks |
+| PullPass gate | PullPass supports local and PR review gates, context evidence, governance modes, policy profiles, dependency-audit signals, contributor intake, and release checks |
 | Review policy snapshot | repoctx and PullPass branch protection, CODEOWNERS, required checks, conversation-resolution, and admin-decision boundaries are summarized |
 | Proof index | Public proof links and private evidence boundaries are mapped for company review |
 | Bashbop pilot | API/mobile proof captured real auth, profile, R2 media, AI create-event, guided create-event, logout, and Android UI evidence |
