@@ -6,7 +6,7 @@ This project follows SemVer.
 
 ## Unreleased
 
-- No changes yet.
+- Add a dated trust-layer proof run with terminal captures for repoctx plus PullPass.
 
 ## v0.3.1 - 2026-05-28
 

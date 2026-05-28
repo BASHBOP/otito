@@ -89,6 +89,7 @@ nav:
       - Overview: 04-release-readiness/README.md
   - Trust-Layer Demo:
       - Overview: 05-trust-layer-demo/README.md
+      - Proof Run 2026-05-28: 05-trust-layer-demo/proof-run-2026-05-28.md
   - Roadmap: ROADMAP.md
   - Glossary: GLOSSARY.md
 
