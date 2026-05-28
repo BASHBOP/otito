@@ -125,6 +125,9 @@ Use this checklist when publishing a demo, release note, or case study.
 !!! example "Company pilot runbook"
     See the [company pilot runbook](./company-pilot-runbook.md) for the step-by-step first repository and PR pilot, including roles, preflight checks, evidence capture, stop conditions, and post-pilot triage.
 
+!!! info "Proof index"
+    See the [proof index](./proof-index.md) for the sanitized public evidence map and the private/internal evidence boundary.
+
 !!! question "Company pilot feedback"
     See the [company pilot feedback loop](./company-pilot-feedback.md) for the structured intake that turns reviewer concerns into docs, repoctx improvements, PullPass gates, proof artifacts, or pilot follow-up.
 

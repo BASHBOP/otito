@@ -62,6 +62,7 @@ Do not include secrets, tokens, cookies, raw credentials, customer data, private
 | Merge gate | Repository maintainer | PullPass local or PR report | Verdict is `PASS`, or `WARN`/`FAIL` is explained before merge |
 | Human decision | Owner or reviewer | PR review, merge note, or decision record | Decision maker and rationale are visible |
 | Release evidence | Pilot owner | Changelog, tag, release note, or proof run | Shipped behavior and validation are dated |
+| Proof index | Governance reviewer | [Proof index](./proof-index.md) | Public artifacts and private evidence boundaries are clear |
 
 ## Decision Record
 
@@ -107,6 +108,7 @@ A first pilot is successful when:
 - PullPass verdict is captured before merge.
 - CI status is visible.
 - The human decision is visible.
+- Public and private evidence are separated in the proof index.
 - Evidence is sanitized before being shared publicly.
 - The team can name the next improvement or decide not to continue.
 
