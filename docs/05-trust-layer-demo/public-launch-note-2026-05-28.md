@@ -19,9 +19,9 @@ AI can help teams move faster, but speed only matters if the work remains review
 | Piece | Current State | Evidence |
 |-------|---------------|----------|
 | repoctx | `v0.3.2` released | [repoctx v0.3.2](https://github.com/nugehs/repoctx/releases/tag/v0.3.2) |
-| PullPass | `v0.7.0` released | [PullPass v0.7.0](https://github.com/nugehs/pullpass/releases/tag/v0.7.0) |
-| PullPass policy profiles | Merged, release pending for `v0.8.0` | [PullPass PR #7](https://github.com/nugehs/pullpass/pull/7) |
-| PullPass dependency-audit signals | Review-gated follow-up | [PullPass PR #8](https://github.com/nugehs/pullpass/pull/8) |
+| PullPass | `v0.8.0` released | [PullPass v0.8.0](https://github.com/nugehs/pullpass/releases/tag/v0.8.0) |
+| PullPass policy profiles | Released in `v0.8.0` | [PullPass PR #7](https://github.com/nugehs/pullpass/pull/7) |
+| PullPass dependency-audit signals | Released in `v0.8.0` | [PullPass PR #8](https://github.com/nugehs/pullpass/pull/8) |
 | Proof run | Published | [2026-05-28 proof run](./proof-run-2026-05-28.md) |
 | Company adoption case study | Published | [Company adoption case study](./company-adoption-case-study.md) |
 
@@ -110,12 +110,12 @@ repoctx pr . --base origin/main --out .dev-context/pr-review.md
 Run PullPass from a checkout:
 
 ```bash
-go install github.com/nugehs/pullpass/cmd/pullpass@v0.7.0
+go install github.com/nugehs/pullpass/cmd/pullpass@v0.8.0
 pullpass local . --base origin/main
 pullpass pr 123
 ```
 
-For policy-profile work on PullPass `main` and the next release:
+For company or high-risk review gates:
 
 ```bash
 pullpass pr 123 --governance team --policy company
@@ -126,11 +126,10 @@ pullpass pr 123 --governance team --policy high-risk
 
 ## What Is Next
 
-1. Merge the PullPass dependency-audit follow-up if it belongs in `v0.8.0`.
-2. Tag and publish PullPass `v0.8.0` from `main`.
-3. Finish authenticated Bashbop-style API, web, and mobile proof runs.
-4. Capture company feedback against the adoption case study.
-5. Turn repeated proof runs into a small, public AI governance toolkit.
+1. Finish authenticated Bashbop-style API, web, and mobile proof runs.
+2. Capture company feedback against the adoption case study.
+3. Turn repeated proof runs into a small, public AI governance toolkit.
+4. Keep repoctx and PullPass releases small, SemVer-tagged, and backed by proof artifacts.
 
 This is the builder-founder path for the project: convert useful instincts into repos, tests, docs, releases, review gates, and evidence that another team can trust.
 
