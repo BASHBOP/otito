@@ -115,4 +115,10 @@ flowchart LR
 
     Show the workflow end to end: context pack, focused change, PR review context, PullPass gate, human merge.
 
+-   :material-briefcase-check:{ .lg .middle } **Company Adoption Case Study**
+
+    ---
+
+    Package the trust layer for engineering leaders, platform teams, and AI governance reviewers.
+
 </div>

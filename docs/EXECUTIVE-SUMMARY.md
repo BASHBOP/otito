@@ -29,6 +29,7 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | PR review context     | Diff-aware review prompts, changed domains, risk flags, Go test-file detection, and optional GitHub comments   |
 | MCP support           | Agent-callable tools for repo inspection, maps, search, harnesses, workspaces, and PR review                   |
 | Governance            | CI gates, CODEOWNERS, SemVer guidance, security reporting, contributor templates, and maintainer review policy |
+| Company adoption      | Screenshot-style case study for evaluation, pilot rollout, and governance decision records                     |
 
 ---
 
@@ -66,7 +67,7 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 | -------- | -------------------- | --------------------------------------------------------------------- |
 | Medium   | Package distribution | Decide npm registry publication path or continue GitHub install first |
 | Medium   | PullPass integration | Add direct links between repoctx PR context and PullPass reports      |
-| Medium   | Demo assets          | Keep dated proof runs current as repoctx and PullPass evolve          |
+| Medium   | Demo assets          | Keep dated proof runs and company adoption evidence current           |
 
 ---
 
@@ -74,5 +75,5 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 
 1. Add install examples for common agent hosts and MCP clients.
 2. Link repoctx PR context output directly to PullPass reports.
-3. Extend the dated proof run with screenshots when the public docs need a visual case study.
+3. Keep the company adoption case study current as repoctx and PullPass evolve.
 4. Verify the flow on Bashbop-style API, web, and mobile repositories.
