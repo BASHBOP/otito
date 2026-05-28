@@ -115,6 +115,9 @@ Use this checklist when publishing a demo, release note, or case study.
 !!! tip "Dated proof run"
     See the [2026-05-28 trust-layer proof run](./proof-run-2026-05-28.md) for a concrete terminal-capture record covering repoctx context, PullPass release discipline, CI, solo-maintainer merge visibility, and release publication.
 
+!!! success "Company-facing case study"
+    See the [company adoption case study](./company-adoption-case-study.md) for a screenshot-style walkthrough that frames repoctx and PullPass for engineering leaders, platform teams, and AI governance reviewers.
+
 ---
 
 ## Flow
