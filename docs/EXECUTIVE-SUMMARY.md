@@ -63,6 +63,7 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 | Multi-repo context missing    | `repoctx workspace` builds a product-level context report                         |
 | PR review surface hidden      | `repoctx pr` summarizes changed files, risks, prompts, and comments               |
 | Merge readiness hidden        | PullPass PR readiness runs on pull requests and records owner-decision warnings   |
+| Context evidence disconnected | PullPass reports include repoctx `Context Evidence` commands for context packs and PR review reports |
 | Agent tool integration needed | `repoctx mcp` exposes repository context through MCP                              |
 | MCP setup unclear             | MCP workflow docs include generic stdio, Claude Desktop, VS Code, and Cursor examples |
 | Contributor readiness         | CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
@@ -77,17 +78,16 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 | Priority | Item                 | Action Required                                                       |
 | -------- | -------------------- | --------------------------------------------------------------------- |
 | Medium   | Package distribution | Decide npm registry publication path or continue GitHub install first |
-| Medium   | PullPass integration | Add direct links between repoctx PR context and PullPass reports      |
 | Medium   | Demo assets          | Keep dated proof runs, launch notes, and company adoption evidence current |
+| Medium   | Company pilot        | Run the workflow with a real external reviewer and record feedback    |
 
 ---
 
 ## Next Steps
 
-1. Link repoctx PR context output directly to PullPass reports.
-2. Keep the company adoption packet current as repoctx and PullPass evolve.
-3. Run one real repository and pull request through the company pilot runbook.
-4. Keep the proof index current as public artifacts and private proof boundaries evolve.
-5. Capture feedback from real company reviewers through the pilot feedback loop and turn it into docs, gates, proof, or roadmap work.
-6. Use the builder-founder operating loop for long-running sessions so context, gates, decisions, and next actions remain inspectable.
-7. Keep MCP client examples current as Claude Desktop, VS Code, Cursor, and other hosts evolve.
+1. Keep the company adoption packet current as repoctx and PullPass evolve.
+2. Run one real repository and pull request through the company pilot runbook.
+3. Keep the proof index current as public artifacts and private proof boundaries evolve.
+4. Capture feedback from real company reviewers through the pilot feedback loop and turn it into docs, gates, proof, or roadmap work.
+5. Use the builder-founder operating loop for long-running sessions so context, gates, decisions, and next actions remain inspectable.
+6. Keep MCP client examples current as Claude Desktop, VS Code, Cursor, and other hosts evolve.
