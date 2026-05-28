@@ -1,0 +1,93 @@
+site_name: repoctx
+site_url: https://nugehs.github.io/repoctx/
+site_description: Local-first repository context for agents and reviewers.
+site_author: Oluwasegun Olumbe
+use_directory_urls: true
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    logo: material/source-branch
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+
+plugins:
+  - search
+  - mermaid2
+
+extra:
+  generator: false
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - tables
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.mark
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Executive Summary: EXECUTIVE-SUMMARY.md
+  - Context Foundation:
+      - Overview: 01-context-foundation/README.md
+  - MCP and Agents:
+      - Overview: 02-mcp-agent-workflows/README.md
+  - Contributor Governance:
+      - Overview: 03-contributor-governance/README.md
+  - Release Readiness:
+      - Overview: 04-release-readiness/README.md
+  - Roadmap: ROADMAP.md
+  - Glossary: GLOSSARY.md
+
+copyright: "(c) 2026 Oluwasegun Olumbe. MIT licensed."

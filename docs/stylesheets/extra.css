@@ -1,0 +1,45 @@
+:root {
+  --repoctx-ink: #132029;
+  --repoctx-teal: #14746f;
+  --repoctx-cyan: #168aad;
+  --repoctx-green: #2d7d56;
+  --repoctx-amber: #b7791f;
+  --repoctx-line: rgba(19, 32, 41, 0.14);
+}
+
+.md-typeset h1 {
+  font-weight: 720;
+}
+
+.md-typeset h2 {
+  font-weight: 680;
+}
+
+.md-typeset a {
+  color: var(--repoctx-cyan);
+}
+
+.md-typeset .admonition.info,
+.md-typeset details.info {
+  border-color: var(--repoctx-cyan);
+}
+
+.md-typeset .admonition.success,
+.md-typeset details.success {
+  border-color: var(--repoctx-green);
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-color: var(--repoctx-amber);
+}
+
+.md-typeset table:not([class]) th {
+  background: var(--repoctx-ink);
+  color: #fff;
+}
+
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid.cards > ol > li {
+  border-color: var(--repoctx-line);
+}

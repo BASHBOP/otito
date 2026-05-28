@@ -6,6 +6,9 @@ This project follows SemVer.
 
 ## Unreleased
 
+- Add a MkDocs Material documentation site for repoctx.
+- Add GitHub Pages deployment workflow for published docs.
+- Add documentation sections for context foundation, MCP agent workflows, contributor governance, release readiness, roadmap, and glossary.
 - Add CI quality gates for format, lint, type/module validation, tests, coverage, audit, and smoke checks.
 - Add governance docs for contributing, security reporting, code ownership, dependency updates, and releases.
 - Add contributor issue/PR templates and document maintainer review before merge.
