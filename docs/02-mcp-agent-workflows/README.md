@@ -47,6 +47,8 @@ Many MCP clients use this shape:
 }
 ```
 
+Some hosts also require an explicit `"type": "stdio"` field. Check the host's current MCP schema before copying a config into a shared repository.
+
 For a local checkout instead of a global install:
 
 ```json
@@ -76,6 +78,7 @@ Claude Desktop uses `claude_desktop_config.json` with a top-level `mcpServers` o
 {
   "mcpServers": {
     "repoctx": {
+      "type": "stdio",
       "command": "repoctx",
       "args": ["mcp"],
       "env": {}
@@ -139,7 +142,7 @@ Cursor uses `mcp.json` with a top-level `mcpServers` object.
 
 Use a project config when repoctx should only be available for one workspace. Use a global config only when you want the server available across projects.
 
-Reference: [Cursor MCP docs](https://docs.cursor.com/context/model-context-protocol).
+Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 
 ---
 
