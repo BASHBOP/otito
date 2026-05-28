@@ -6,11 +6,19 @@ This project follows SemVer.
 
 ## Unreleased
 
-- Add a dated trust-layer proof run with terminal captures for repoctx plus PullPass.
+- No changes yet.
+
+## v0.3.2 - 2026-05-28
+
+- Add Go source files to repoctx code maps.
+- Classify Go `*_test.go` files as tests in code maps and PR review context.
+- Keep deleted Go test files classified as tests through the PR fallback path.
+- Suggest `go test ./...` for Go diffs in PR review context.
 
 ## v0.3.1 - 2026-05-28
 
 - Add a public trust-layer demo walkthrough for repoctx plus PullPass.
+- Add a dated trust-layer proof run with terminal captures for repoctx plus PullPass.
 
 ## v0.3.0 - 2026-05-28
 
