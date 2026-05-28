@@ -12,7 +12,7 @@ The goal is to capture three things:
 
 ## Feedback Intake
 
-Open a **Company pilot feedback** issue after a reviewer has read the [company demo packet](./company-demo-packet.md). New issues from that form are labeled `pilot-feedback`, `trust-layer`, and `enhancement` automatically.
+Open a **Company pilot feedback** issue after a reviewer has read the [company demo packet](./company-demo-packet.md) or completed the [company pilot runbook](./company-pilot-runbook.md). New issues from that form are labeled `pilot-feedback`, `trust-layer`, and `enhancement` automatically.
 
 Good feedback is structured and sanitized:
 
@@ -21,7 +21,10 @@ Good feedback is structured and sanitized:
 - No private source code
 - No tokens, cookies, or credentials
 - No confidential repository output
+- No local absolute paths from a reviewer's machine
 - Clear role, repository type, governance mode, blockers, and readiness score
+
+Use public links, repo-relative paths, or short summaries when referencing evidence. Keep raw logs, generated context folders, and machine-specific paths in private internal notes unless they have been sanitized for sharing.
 
 ## Review Scorecard
 
@@ -35,7 +38,7 @@ Use this scorecard when reviewing company feedback.
 | Merge gate | Does PullPass make review, CODEOWNERS, CI, conversations, and policy state clear? | Add policy checks or clearer verdict language |
 | Governance | Does the team understand solo, small-team, company, and high-risk modes? | Add examples and decision records |
 | Evidence | Is the proof run strong enough for audit, incident review, or security review? | Add screenshots, dated proof runs, or retention guidance |
-| Pilot shape | Can the reviewer name one repo and one PR to try first? | Narrow the pilot plan |
+| Pilot shape | Can the reviewer name one repo and one PR to try first? | Narrow the pilot plan or use the pilot runbook |
 
 ## Triage Rule
 
@@ -55,12 +58,13 @@ Every feedback issue should produce one of these outcomes:
 Use this loop while the project is moving from founder-led proof into company adoption:
 
 1. Send the company demo packet.
-2. Capture structured feedback as an issue.
-3. Label the issue by outcome: `outcome:docs`, `outcome:repoctx`, `outcome:pullpass`, `outcome:proof`, `outcome:pilot`, or `outcome:not-now`.
-4. Convert the highest-signal issue into one small PR.
-5. Run repoctx context before editing.
-6. Run PullPass before merge where a PR exists.
-7. Update release notes or proof artifacts when behavior changes.
+2. Run the first repo and PR pilot with the company pilot runbook.
+3. Capture structured feedback as an issue.
+4. Label the issue by outcome: `outcome:docs`, `outcome:repoctx`, `outcome:pullpass`, `outcome:proof`, `outcome:pilot`, or `outcome:not-now`.
+5. Convert the highest-signal issue into one small PR.
+6. Run repoctx context before editing.
+7. Run PullPass before merge where a PR exists.
+8. Update release notes or proof artifacts when behavior changes.
 
 This keeps the work from becoming a pile of opinions. Feedback becomes a queue of small, reviewable improvements.
 

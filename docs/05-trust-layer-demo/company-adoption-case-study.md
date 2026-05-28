@@ -156,7 +156,7 @@ PullPass `team` mode keeps missing review and CODEOWNERS approval as `FAIL`. Pul
 | 4 | Publish a dated proof run | Linked PRs, CI results, PullPass output, release notes |
 
 !!! info "Pilot scope"
-    Start with one non-critical repo and one real PR. The goal is to prove the rhythm, not to boil the engineering ocean in week one.
+    Start with one non-critical repo and one real PR. Use the [company pilot runbook](./company-pilot-runbook.md) to prove the rhythm before expanding it across teams.
 
 ---
 
