@@ -42,7 +42,8 @@
 - Promote PullPass from solo owner-decision visibility to team/company required checks when separate reviewers are available.
 - Add policy profiles for auth, payments, database, deployment, and secret-adjacent changes.
 - Add cross-repo workspace examples using Bashbop-style API/web/mobile repos.
-- Improve context-pack ranking with historical review and impact-map signals.
+- Decide which impact-map behaviors graduate into repoctx, starting with diff validation, import-neighbor evidence, missed-file detection, and risk-aware test suggestions.
+- Keep impact-map as a separate analyzer only while it is proving ideas that are not ready for the repoctx product surface.
 
 ## Phase 3 - Distribution
 
