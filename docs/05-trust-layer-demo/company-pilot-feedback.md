@@ -38,6 +38,7 @@ Use this scorecard when reviewing company feedback.
 | MCP readiness | Can an agent host connect to repoctx cleanly? | Add MCP client examples or troubleshooting |
 | Review context | Does repoctx expose the files, tests, risk, and prompts reviewers need? | Improve context ranking or PR review output |
 | Merge gate | Does PullPass make review, CODEOWNERS, CI, conversations, and policy state clear? | Add policy checks or clearer verdict language |
+| CI readiness | Can required checks start and report a real result? | Add setup notes, account/tooling preflight, or a CI-blocker decision record |
 | Governance | Does the team understand solo, small-team, company, and high-risk modes? | Add examples and decision records |
 | Evidence | Is the proof run strong enough for audit, incident review, or security review? | Add screenshots, dated proof runs, retention guidance, or proof-index links |
 | Pilot shape | Can the reviewer name one repo and one PR to try first? | Narrow the pilot plan or use the pilot runbook |
@@ -78,7 +79,7 @@ A first company pilot is successful when:
 - One real pull request goes through the workflow
 - repoctx context or PR review output is attached
 - PullPass verdict is recorded
-- CI status is visible
+- CI status is visible, or a CI-not-started blocker is recorded as a pilot outcome
 - The human decision is visible
 - A reviewer can name what they would change before wider rollout
 

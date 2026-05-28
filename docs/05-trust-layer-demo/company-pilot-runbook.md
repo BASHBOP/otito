@@ -27,7 +27,7 @@ For a solo-maintainer pilot, one person can hold several roles. The important pa
 Before the pilot starts:
 
 - Pick one non-critical repository and one focused change.
-- Confirm CI is available and visible on pull requests.
+- Confirm CI is available, funded or enabled, and visible on pull requests.
 - Confirm the base branch has branch protection or an explicit owner policy.
 - Confirm CODEOWNERS exists for sensitive paths, or record why the pilot is using a solo-maintainer policy.
 - Install repoctx and PullPass in the operator environment.
@@ -60,6 +60,7 @@ Do not include secrets, tokens, cookies, raw credentials, customer data, private
 | Task context | Reviewer | `repoctx context` | Primary files, related files, tests, and risks are visible before editing |
 | PR context | Reviewer | `repoctx pr` | Diff, changed domains, prompts, and test hints are attached or summarized |
 | Merge gate | Repository maintainer | PullPass local or PR report | Verdict is `PASS`, or `WARN`/`FAIL` is explained before merge |
+| CI readiness | Repository maintainer | Pull request checks, Actions run, or CI dashboard | Jobs either ran to a clear result or the account/tooling blocker is recorded before merge |
 | Review policy | Repository maintainer | [Review policy snapshot](./review-policy-snapshot.md) or target-repo branch settings | Branch protection, required checks, CODEOWNERS, and conversation resolution are understood |
 | Human decision | Owner or reviewer | PR review, merge note, or decision record | Decision maker and rationale are visible |
 | Release evidence | Pilot owner | Changelog, tag, release note, or proof run | Shipped behavior and validation are dated |
@@ -96,6 +97,7 @@ Human decision:
 
 Release evidence:
 - CI result:
+- CI blocker, if jobs did not start:
 - Version or release note:
 - Proof artifact:
 ```
@@ -118,11 +120,13 @@ A first pilot is successful when:
 Pause the pilot if:
 
 - The repository contains sensitive data that cannot be safely summarized.
-- CI is missing and the team cannot inspect behavior another way.
+- CI is missing, disabled, unfunded, or blocked by account/tooling configuration and the team cannot inspect behavior another way.
 - Branch protection or owner policy is unclear for the base branch.
 - PullPass reports a blocker the team cannot explain.
 - The reviewer cannot identify who is accountable for the merge decision.
 - Evidence includes secrets, private source, customer data, or local absolute paths.
+
+If CI jobs do not start, record that separately from a failing test. A job that never runs is an environment or account-readiness blocker; it should keep PullPass in a non-passing state until the team fixes the CI setup, reruns the checks, or records an explicit owner decision with the risk accepted.
 
 ## Post-Pilot Triage
 
