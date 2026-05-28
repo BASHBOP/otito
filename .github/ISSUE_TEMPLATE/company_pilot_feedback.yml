@@ -1,0 +1,126 @@
+name: Company pilot feedback
+description: Share structured feedback after reviewing the repoctx + PullPass trust-layer packet.
+title: "pilot: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reviewing the trust-layer packet. Please keep feedback sanitized: do not include secrets, private source code, customer data, tokens, cookies, or confidential repository output.
+  - type: dropdown
+    id: reviewer_role
+    attributes:
+      label: Reviewer role
+      description: Which viewpoint does this feedback represent?
+      options:
+        - Engineering leadership
+        - Platform or developer experience
+        - Security or AI governance
+        - Maintainer or staff engineer
+        - Founder or solo owner
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: repository_context
+    attributes:
+      label: Repository context
+      description: What kind of repository would you pilot this on first?
+      options:
+        - CLI or developer tool
+        - Backend service
+        - Frontend application
+        - Mobile application
+        - Multi-repo product
+        - High-risk auth, payments, data, or deployment workflow
+        - Not sure yet
+    validations:
+      required: true
+  - type: dropdown
+    id: governance_mode
+    attributes:
+      label: Expected governance mode
+      description: Which approval model best matches your team?
+      options:
+        - Solo maintainer
+        - Small team
+        - Company team
+        - High-risk team
+        - Not sure yet
+    validations:
+      required: true
+  - type: checkboxes
+    id: useful_parts
+    attributes:
+      label: Most useful parts
+      description: Which parts of the packet were strongest?
+      options:
+        - label: repoctx context before change
+        - label: repoctx PR review context
+        - label: PullPass merge gate
+        - label: Governance modes
+        - label: Bashbop pilot proof
+        - label: Decision record template
+        - label: Release and proof-run discipline
+  - type: checkboxes
+    id: blockers
+    attributes:
+      label: Adoption blockers
+      description: What would block a pilot?
+      options:
+        - label: Install path is unclear
+        - label: MCP setup is unclear
+        - label: PullPass policy expectations are unclear
+        - label: Evidence retention expectations are unclear
+        - label: CODEOWNERS or branch protection requirements are unclear
+        - label: Security or privacy posture needs more detail
+        - label: Needs integration with existing CI or review tooling
+        - label: Needs a stronger example from a similar repository
+  - type: textarea
+    id: missing_evidence
+    attributes:
+      label: Missing evidence
+      description: What proof, screenshot, command output, or policy example would make this easier to trust?
+      placeholder: "Example: show how PullPass behaves when a required reviewer approves but CODEOWNERS is missing."
+  - type: textarea
+    id: pilot_shape
+    attributes:
+      label: Suggested pilot shape
+      description: What one-repo or one-PR pilot would you actually run?
+      placeholder: |
+        Repository type:
+        First workflow:
+        Required reviewers:
+        Required checks:
+        Success criteria:
+  - type: dropdown
+    id: readiness_score
+    attributes:
+      label: Pilot readiness score
+      description: How ready does this feel for a first pilot?
+      options:
+        - "5 - ready to pilot"
+        - "4 - close, minor docs or setup questions"
+        - "3 - promising, needs clearer adoption path"
+        - "2 - interesting, but key risks are unresolved"
+        - "1 - not ready for our team"
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision or next step
+      description: What should happen next?
+      placeholder: "Pilot on one backend repo; add CI integration notes first; schedule governance review; not a fit yet because..."
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed secrets, private source code, customer data, tokens, cookies, and confidential output.
+          required: true
+        - label: I reviewed the company demo packet before submitting this feedback.
+          required: true

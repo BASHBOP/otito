@@ -30,6 +30,7 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | MCP support           | Agent-callable tools for repo inspection, maps, search, harnesses, workspaces, and PR review                   |
 | Governance            | CI gates, CODEOWNERS, SemVer guidance, security reporting, contributor templates, and maintainer review policy |
 | Demo packet           | Company-facing packet that links the executive summary, case study, proof run, launch note, and pilot checklist |
+| Feedback loop         | Structured company pilot intake that turns reviewer concerns into docs, gates, proof, or roadmap work          |
 | Company adoption      | Screenshot-style case study for evaluation, pilot rollout, and governance decision records                     |
 | Public launch note    | Short external-facing story for repoctx, PullPass, proof runs, and next trust-layer gates                      |
 
@@ -78,4 +79,4 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 1. Add install examples for common agent hosts and MCP clients.
 2. Link repoctx PR context output directly to PullPass reports.
 3. Keep the company adoption packet current as repoctx and PullPass evolve.
-4. Capture feedback from real company reviewers and turn it into the next roadmap entry.
+4. Capture feedback from real company reviewers through the pilot feedback loop and turn it into docs, gates, proof, or roadmap work.
