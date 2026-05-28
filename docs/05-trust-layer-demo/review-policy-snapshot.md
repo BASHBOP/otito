@@ -30,8 +30,9 @@ Source: GitHub branch protection API for the `main` branches of `nugehs/repoctx`
 | --- | --- | --- |
 | repoctx PullPass gate | repoctx now runs PullPass readiness inside CI | [repoctx PR #20](https://github.com/nugehs/repoctx/pull/20) |
 | repoctx docs deployment | The docs site deployed from the protected `main` branch after the gate landed | [repoctx docs](https://nugehs.github.io/repoctx/) |
-| PullPass context evidence PR | PullPass is adding direct repoctx context evidence to reports, and the PR is review-gated | [PullPass PR #9](https://github.com/nugehs/pullpass/pull/9) |
-| PullPass quality gate | PullPass PR #9 has a passing `Quality gates` check while still requiring human review | [PullPass CI](https://github.com/nugehs/pullpass/actions) |
+| PullPass context evidence | PullPass reports include repoctx context and PR review commands after a green gated merge | [PullPass PR #9](https://github.com/nugehs/pullpass/pull/9) |
+| PullPass contributor intake | PullPass now has issue forms and a PR checklist for bugs, features, governance questions, release readiness, tests, PullPass output, and public-safe evidence | [PullPass PR #11](https://github.com/nugehs/pullpass/pull/11) |
+| PullPass quality gates | PullPass `main` CI and docs deploy passed after the context-evidence and contributor-intake merges | [PullPass Actions](https://github.com/nugehs/pullpass/actions) |
 
 ## What This Proves
 
