@@ -3,7 +3,7 @@
 ## Local repo intelligence for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v0.2.0 contributor-ready documentation<br>
+**Status:** v0.3.0 published documentation<br>
 **Category:** Practical AI governance for developers
 
 > Built and maintained by **Oluwasegun Olumbe** for teams that want context before code changes, review prompts before merge, and less guessing in agent workflows.
@@ -56,7 +56,7 @@ flowchart LR
 
 ---
 
-## :material-terminal: Quick Start
+## Quick Start
 
 === "Install"
 
@@ -83,28 +83,28 @@ flowchart LR
 
 <div class="grid cards" markdown>
 
-- :material-map:{ .lg .middle } **Context Before Change**
+-   :material-map:{ .lg .middle } **Context Before Change**
 
-  ---
+    ---
 
-  Generate the map an agent or reviewer needs before touching the code.
+    Generate the map an agent or reviewer needs before touching the code.
 
-- :material-magnify-scan:{ .lg .middle } **Search Across Local Repos**
+-   :material-magnify-scan:{ .lg .middle } **Search Across Local Repos**
 
-  ---
+    ---
 
-  Discover, index, catalog, and search local repositories without sending code to a hosted model.
+    Discover, index, catalog, and search local repositories without sending code to a hosted model.
 
-- :material-source-pull:{ .lg .middle } **PR Review Harness**
+-   :material-source-pull:{ .lg .middle } **PR Review Harness**
 
-  ---
+    ---
 
-  Turn diffs into review prompts, risk flags, changed domains, and test hints.
+    Turn diffs into review prompts, risk flags, changed domains, and test hints.
 
-- :material-shield-check:{ .lg .middle } **Governance Ready**
+-   :material-shield-check:{ .lg .middle } **Governance Ready**
 
-  ---
+    ---
 
-  Pair repoctx with PullPass for a repeatable trust layer: context before change, validation before merge.
+    Pair repoctx with PullPass for a repeatable trust layer: context before change, validation before merge.
 
 </div>

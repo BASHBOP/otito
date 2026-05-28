@@ -13,11 +13,11 @@
 | PR review context            | Complete |
 | MCP server                   | Complete |
 | Contributor governance       | Complete |
-| Published documentation site |  Active  |
+| Published documentation site | Complete |
 
 ## Phase 1 - Public Adoption
 
-- Publish GitHub Pages documentation.
+- Publish release notes for the GitHub Pages documentation milestone.
 - Add a public walkthrough using repoctx and PullPass together.
 - Add install examples for agent hosts and MCP clients.
 - Add screenshots or terminal captures for common workflows.
