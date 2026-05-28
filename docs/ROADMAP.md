@@ -14,11 +14,11 @@
 | MCP server                   | Complete |
 | Contributor governance       | Complete |
 | Published documentation site | Complete |
+| Public trust-layer demo      | Complete |
 
 ## Phase 1 - Public Adoption
 
 - Publish release notes for the GitHub Pages documentation milestone.
-- Add a public walkthrough using repoctx and PullPass together.
 - Add install examples for agent hosts and MCP clients.
 - Add screenshots or terminal captures for common workflows.
 
