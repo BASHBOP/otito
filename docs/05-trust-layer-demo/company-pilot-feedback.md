@@ -14,6 +14,8 @@ The goal is to capture three things:
 
 Open a **Company pilot feedback** issue after a reviewer has read the [company demo packet](./company-demo-packet.md) or completed the [company pilot runbook](./company-pilot-runbook.md). New issues from that form are labeled `pilot-feedback`, `trust-layer`, and `enhancement` automatically.
 
+If the reviewer already knows the first target, name the repository and pull request in the issue. That makes the pilot easier to track and turns the feedback into something the next session can act on directly.
+
 Good feedback is structured and sanitized:
 
 - No secrets
