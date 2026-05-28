@@ -2,7 +2,7 @@
 
 **Purpose:** Context foundation for AI-assisted software teams<br>
 **Maintainer:** Oluwasegun Olumbe<br>
-**Current Version:** 0.3.1 trust-layer demo documentation
+**Current Version:** 0.3.2 Go-aware PR context
 
 ---
 
@@ -23,10 +23,10 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Area                  | Summary                                                                                                        |
 | --------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Repository inspection | Files, package metadata, languages, package managers, scripts, entrypoints, and git state                      |
-| Code maps             | JSON-first source maps with domains, imports, exports, symbols, and routes                                     |
+| Code maps             | JSON-first source maps with domains, imports, exports, symbols, routes, and Go source/test awareness           |
 | Context packs         | Task-aware file suggestions, related files, patterns, tests, and validation commands                           |
 | Local catalog         | Discovery, indexing, and search across local repositories                                                      |
-| PR review context     | Diff-aware review prompts, changed domains, risk flags, and optional GitHub comments                           |
+| PR review context     | Diff-aware review prompts, changed domains, risk flags, Go test-file detection, and optional GitHub comments   |
 | MCP support           | Agent-callable tools for repo inspection, maps, search, harnesses, workspaces, and PR review                   |
 | Governance            | CI gates, CODEOWNERS, SemVer guidance, security reporting, contributor templates, and maintainer review policy |
 
