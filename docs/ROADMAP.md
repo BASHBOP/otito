@@ -12,6 +12,7 @@
 | Context packs                | Complete |
 | PR review context            | Complete |
 | MCP server                   | Complete |
+| MCP client install examples  | Complete |
 | Contributor governance       | Complete |
 | PullPass PR readiness gate   | Complete |
 | Published documentation site | Complete |
@@ -27,7 +28,7 @@
 ## Phase 1 - Public Adoption
 
 - Keep launch notes and release notes current as the trust-layer workflow evolves.
-- Add install examples for agent hosts and MCP clients.
+- Keep MCP client install examples current as host configuration formats evolve.
 - Add screenshots for common workflows; the first terminal proof run is captured.
 - Use the builder-founder operating loop to keep long-running agent sessions tied to context, gates, decisions, and next actions.
 - Run one real repository and pull request through the company pilot runbook.

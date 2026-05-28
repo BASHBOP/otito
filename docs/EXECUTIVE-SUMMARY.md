@@ -64,6 +64,7 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 | PR review surface hidden      | `repoctx pr` summarizes changed files, risks, prompts, and comments               |
 | Merge readiness hidden        | PullPass PR readiness runs on pull requests and records owner-decision warnings   |
 | Agent tool integration needed | `repoctx mcp` exposes repository context through MCP                              |
+| MCP setup unclear             | MCP workflow docs include generic stdio, Claude Desktop, VS Code, and Cursor examples |
 | Contributor readiness         | CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
 | Review policy visibility      | Review-policy snapshot summarizes branch protection and owner/admin decision boundaries |
 | Trust-layer demo              | Public walkthrough for repoctx context, PR review context, PullPass, and human merge accountability |
@@ -83,10 +84,10 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 
 ## Next Steps
 
-1. Add install examples for common agent hosts and MCP clients.
-2. Link repoctx PR context output directly to PullPass reports.
-3. Keep the company adoption packet current as repoctx and PullPass evolve.
-4. Run one real repository and pull request through the company pilot runbook.
-5. Keep the proof index current as public artifacts and private proof boundaries evolve.
-6. Capture feedback from real company reviewers through the pilot feedback loop and turn it into docs, gates, proof, or roadmap work.
-7. Use the builder-founder operating loop for long-running sessions so context, gates, decisions, and next actions remain inspectable.
+1. Link repoctx PR context output directly to PullPass reports.
+2. Keep the company adoption packet current as repoctx and PullPass evolve.
+3. Run one real repository and pull request through the company pilot runbook.
+4. Keep the proof index current as public artifacts and private proof boundaries evolve.
+5. Capture feedback from real company reviewers through the pilot feedback loop and turn it into docs, gates, proof, or roadmap work.
+6. Use the builder-founder operating loop for long-running sessions so context, gates, decisions, and next actions remain inspectable.
+7. Keep MCP client examples current as Claude Desktop, VS Code, Cursor, and other hosts evolve.
