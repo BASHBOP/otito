@@ -60,6 +60,7 @@ Do not include secrets, tokens, cookies, raw credentials, customer data, private
 | Task context | Reviewer | `repoctx context` | Primary files, related files, tests, and risks are visible before editing |
 | PR context | Reviewer | `repoctx pr` | Diff, changed domains, prompts, and test hints are attached or summarized |
 | Merge gate | Repository maintainer | PullPass local or PR report | Verdict is `PASS`, or `WARN`/`FAIL` is explained before merge |
+| Review policy | Repository maintainer | [Review policy snapshot](./review-policy-snapshot.md) or target-repo branch settings | Branch protection, required checks, CODEOWNERS, and conversation resolution are understood |
 | Human decision | Owner or reviewer | PR review, merge note, or decision record | Decision maker and rationale are visible |
 | Release evidence | Pilot owner | Changelog, tag, release note, or proof run | Shipped behavior and validation are dated |
 | Proof index | Governance reviewer | [Proof index](./proof-index.md) | Public artifacts and private evidence boundaries are clear |
