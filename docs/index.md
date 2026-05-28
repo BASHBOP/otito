@@ -3,7 +3,7 @@
 ## Local repo intelligence for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v0.3.0 published documentation<br>
+**Status:** v0.3.1 trust-layer demo documentation<br>
 **Category:** Practical AI governance for developers
 
 > Built and maintained by **Oluwasegun Olumbe** for teams that want context before code changes, review prompts before merge, and less guessing in agent workflows.
