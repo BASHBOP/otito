@@ -13,6 +13,7 @@
 | PR review context            | Complete |
 | MCP server                   | Complete |
 | Contributor governance       | Complete |
+| PullPass PR readiness gate   | Complete |
 | Published documentation site | Complete |
 | Public trust-layer demo      | Complete |
 | Public launch note           | Complete |
@@ -33,6 +34,7 @@
 ## Phase 2 - Trust-Layer Integration
 
 - Link repoctx PR context output to PullPass reports.
+- Promote PullPass from solo owner-decision visibility to team/company required checks when separate reviewers are available.
 - Add policy profiles for auth, payments, database, deployment, and secret-adjacent changes.
 - Add cross-repo workspace examples using Bashbop-style API/web/mobile repos.
 - Improve context-pack ranking with historical review and impact-map signals.
