@@ -28,7 +28,7 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Local catalog         | Discovery, indexing, and search across local repositories                                                      |
 | PR review context     | Diff-aware review prompts, changed domains, risk flags, Go test-file detection, and optional GitHub comments   |
 | MCP support           | Agent-callable tools for repo inspection, maps, search, harnesses, workspaces, and PR review                   |
-| Governance            | CI gates, CODEOWNERS, SemVer guidance, security reporting, contributor templates, and maintainer review policy |
+| Governance            | CI gates, PullPass readiness, CODEOWNERS, SemVer guidance, security reporting, templates, and review policy    |
 | Demo packet           | Company-facing packet that links the executive summary, case study, proof run, launch note, and pilot checklist |
 | Pilot runbook         | Step-by-step first repository and pull request pilot with roles, evidence, stop conditions, and triage          |
 | Proof index           | Sanitized public evidence map plus private/internal evidence boundaries for company reviewers                  |
@@ -60,6 +60,7 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 | Unclear task scope            | `repoctx context` generates task-aware primary and related files                  |
 | Multi-repo context missing    | `repoctx workspace` builds a product-level context report                         |
 | PR review surface hidden      | `repoctx pr` summarizes changed files, risks, prompts, and comments               |
+| Merge readiness hidden        | PullPass PR readiness runs on pull requests and records owner-decision warnings   |
 | Agent tool integration needed | `repoctx mcp` exposes repository context through MCP                              |
 | Contributor readiness         | CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
 | Trust-layer demo              | Public walkthrough for repoctx context, PR review context, PullPass, and human merge accountability |
