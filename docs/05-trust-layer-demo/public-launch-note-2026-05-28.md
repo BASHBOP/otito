@@ -128,9 +128,10 @@ pullpass pr 123 --governance team --policy high-risk
 
 1. Share the company demo packet with engineering and AI governance reviewers.
 2. Run one real repository and pull request through the company pilot runbook.
-3. Capture company feedback against the adoption case study.
-4. Turn repeated proof runs into a small, public AI governance toolkit.
-5. Keep repoctx and PullPass releases small, SemVer-tagged, and backed by proof artifacts.
+3. Use the proof index to separate public artifacts from private operator evidence.
+4. Capture company feedback against the adoption case study.
+5. Turn repeated proof runs into a small, public AI governance toolkit.
+6. Keep repoctx and PullPass releases small, SemVer-tagged, and backed by proof artifacts.
 
 This is the builder-founder path for the project: convert useful instincts into repos, tests, docs, releases, review gates, and evidence that another team can trust.
 
