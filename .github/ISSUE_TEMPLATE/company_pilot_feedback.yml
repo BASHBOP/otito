@@ -3,6 +3,8 @@ description: Share structured feedback after reviewing the repoctx + PullPass tr
 title: "pilot: "
 labels:
   - enhancement
+  - pilot-feedback
+  - trust-layer
 body:
   - type: markdown
     attributes:

@@ -12,7 +12,7 @@ The goal is to capture three things:
 
 ## Feedback Intake
 
-Open a **Company pilot feedback** issue after a reviewer has read the [company demo packet](./company-demo-packet.md).
+Open a **Company pilot feedback** issue after a reviewer has read the [company demo packet](./company-demo-packet.md). New issues from that form are labeled `pilot-feedback`, `trust-layer`, and `enhancement` automatically.
 
 Good feedback is structured and sanitized:
 
@@ -41,14 +41,14 @@ Use this scorecard when reviewing company feedback.
 
 Every feedback issue should produce one of these outcomes:
 
-| Outcome | Use when |
-| --- | --- |
-| Docs update | The workflow exists, but the explanation is unclear |
-| repoctx improvement | Context, ranking, maps, MCP tools, or PR review output are missing useful information |
-| PullPass gate | Review, policy, CODEOWNERS, dependency, release, or branch-protection behavior needs a stronger signal |
-| Proof artifact | The reviewer needs stronger dated evidence before trusting adoption |
-| Pilot follow-up | The reviewer is ready to test the flow on one repository |
-| Not now | The use case is outside the trust-layer scope for the current phase |
+| Outcome | Label | Use when |
+| --- | --- | --- |
+| Docs update | `outcome:docs` | The workflow exists, but the explanation is unclear |
+| repoctx improvement | `outcome:repoctx` | Context, ranking, maps, MCP tools, or PR review output are missing useful information |
+| PullPass gate | `outcome:pullpass` | Review, policy, CODEOWNERS, dependency, release, or branch-protection behavior needs a stronger signal |
+| Proof artifact | `outcome:proof` | The reviewer needs stronger dated evidence before trusting adoption |
+| Pilot follow-up | `outcome:pilot` | The reviewer is ready to test the flow on one repository |
+| Not now | `outcome:not-now` | The use case is outside the trust-layer scope for the current phase |
 
 ## Weekly Builder-Founder Rhythm
 
@@ -56,7 +56,7 @@ Use this loop while the project is moving from founder-led proof into company ad
 
 1. Send the company demo packet.
 2. Capture structured feedback as an issue.
-3. Label the issue by outcome: docs, repoctx, PullPass, proof, pilot, or not now.
+3. Label the issue by outcome: `outcome:docs`, `outcome:repoctx`, `outcome:pullpass`, `outcome:proof`, `outcome:pilot`, or `outcome:not-now`.
 4. Convert the highest-signal issue into one small PR.
 5. Run repoctx context before editing.
 6. Run PullPass before merge where a PR exists.
