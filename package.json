@@ -4,8 +4,8 @@
   "description": "repoctx: local repo discovery, indexing, catalog search, and agent harnesses.",
   "type": "module",
   "bin": {
-    "repoctx": "./src/cli.js",
-    "dev-context": "./src/cli.js"
+    "repoctx": "src/cli.js",
+    "dev-context": "src/cli.js"
   },
   "files": [
     "assets",
@@ -40,7 +40,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nugehs/repoctx.git"
+    "url": "git+https://github.com/nugehs/repoctx.git"
   },
   "homepage": "https://nugehs.github.io/repoctx/",
   "bugs": {
