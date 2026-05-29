@@ -1,0 +1,26 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.nugehs/repoctx",
+  "description": "Local-first repository context for agents and reviewers. Inspects repos, builds AST code maps, ranks impact files for plain-English change requests, runs PASS/WARN/FAIL merge-readiness gates (local + GitHub PR), and ships a composite review verdict with confidence score.",
+  "repository": {
+    "url": "https://github.com/nugehs/repoctx",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@nugehs/repoctx",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}
