@@ -418,6 +418,8 @@ Useful tools exposed through MCP:
 - `context_pack`
 - `change_impact`
 - `merge_readiness`
+- `pr_merge_readiness`
+- `review_pr`
 - `repo_harness`
 - `workspace_report`
 - `pr_review`

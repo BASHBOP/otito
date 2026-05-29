@@ -6,6 +6,8 @@ import { discoverRepositories, indexRepositories, listCatalog, searchCatalog } f
 import { generateContextPack } from "./context-engine.js";
 import { generateImpact } from "./impact.js";
 import { evaluateLocal } from "./pass-local.js";
+import { evaluatePR } from "./pass-pr.js";
+import { generateReview } from "./review.js";
 import { generateHarness } from "./harness.js";
 import { getCachedCodeMap } from "./index-cache.js";
 import { inspectRepo } from "./repo.js";
@@ -129,6 +131,40 @@ const tools = [
         includeMarkdown: { type: "boolean", description: "Include the markdown impact report. Defaults to false." },
       },
       required: ["query"],
+    },
+  },
+  {
+    name: "pr_merge_readiness",
+    title: "PR Merge Readiness",
+    description:
+      "GitHub PR merge-readiness gate. Uses `gh` to inspect PR state, review decision, CODEOWNERS approvals (with team-membership), unresolved conversations, branch protection, and status checks, then rolls up into a PASS / WARN / FAIL verdict.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        selector: { type: "string", description: "PR selector (number, URL, or branch). Defaults to the current branch's PR." },
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
+        governance: { type: "string", description: "Governance: team (default) or solo." },
+        request: { type: "string", description: "Optional change request for context evidence output." },
+      },
+    },
+  },
+  {
+    name: "review_pr",
+    title: "Review PR",
+    description:
+      "Composite review: runs impact + pr-review + pass in one call and returns a unified verdict with a derived confidence score. Use this when an agent needs the full picture in one shot.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        request: { type: "string", description: "Plain-English change request for impact scoring." },
+        base: { type: "string", description: "Base ref for local diff. Defaults to origin/main, then HEAD." },
+        pr: { type: "string", description: "Optional PR selector. When set, pass-pr runs against GitHub instead of local mode." },
+        policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
+        governance: { type: "string", description: "Governance: team (default) or solo." },
+        impactTop: { type: "number", description: "Number of impact files. Defaults to 8." },
+      },
     },
   },
   {
@@ -308,7 +344,7 @@ async function handleMessage(message) {
       case "tools/list":
         return successResponse(message.id, { tools });
       case "tools/call":
-        return successResponse(message.id, callTool(message.params));
+        return successResponse(message.id, await callTool(message.params));
       default:
         return errorResponse(message.id, -32601, `Method not found: ${message.method}`);
     }
@@ -318,7 +354,7 @@ async function handleMessage(message) {
   }
 }
 
-function callTool(params = {}) {
+async function callTool(params = {}) {
   if (!params || typeof params !== "object") {
     throw new McpProtocolError(-32602, "Tool call params must be an object");
   }
@@ -335,7 +371,7 @@ function callTool(params = {}) {
 
   let result;
   try {
-    result = dispatchTool(name, args);
+    result = await dispatchTool(name, args);
   } catch (error) {
     if (error instanceof McpProtocolError) {
       throw error;
@@ -364,7 +400,7 @@ function callTool(params = {}) {
   };
 }
 
-function dispatchTool(name, args) {
+async function dispatchTool(name, args) {
   switch (name) {
     case "repo_inspect":
       return inspectRepo(args.path ?? ".");
@@ -397,6 +433,24 @@ function dispatchTool(name, args) {
         governance: args.governance,
         request: args.request,
       });
+    }
+    case "pr_merge_readiness": {
+      return evaluatePR(args.path ?? ".", args.selector ?? "", {
+        policy: args.policy,
+        governance: args.governance,
+        request: args.request,
+      });
+    }
+    case "review_pr": {
+      const { data } = await generateReview(args.path ?? ".", {
+        request: args.request,
+        base: args.base,
+        prSelector: args.pr,
+        policy: args.policy,
+        governance: args.governance,
+        impactTop: args.impactTop,
+      });
+      return data;
     }
     case "workspace_report": {
       const paths = requirePaths(args);
