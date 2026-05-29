@@ -6,7 +6,8 @@ This project follows SemVer.
 
 ## Unreleased
 
-- No changes yet.
+- Add `server.json` manifest at the repo root for publishing to the official MCP Registry at `https://registry.modelcontextprotocol.io/`. Lets `mcp-publisher publish` advertise `io.github.nugehs/repoctx` so any MCP host can discover and install repoctx as `npx -y @nugehs/repoctx mcp`.
+- Track npm's normalization tweaks to `package.json` (relative `bin` paths, `git+`-prefixed `repository.url`) introduced by the v1.0.0 publish.
 
 ## v1.0.0 - 2026-05-29
 
