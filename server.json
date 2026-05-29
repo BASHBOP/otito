@@ -1,17 +1,20 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.nugehs/repoctx",
+  "title": "repoctx",
   "description": "Local-first code context, impact analysis, and merge-readiness verdicts for AI agents.",
+  "websiteUrl": "https://nugehs.github.io/repoctx/",
   "repository": {
     "url": "https://github.com/nugehs/repoctx",
-    "source": "github"
+    "source": "github",
+    "id": "1242199320"
   },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@nugehs/repoctx",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "transport": {
         "type": "stdio"
       },
