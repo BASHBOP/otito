@@ -1,5 +1,5 @@
 {
-  "name": "repoctx",
+  "name": "@nugehs/repoctx",
   "version": "1.0.0",
   "description": "repoctx: local repo discovery, indexing, catalog search, and agent harnesses.",
   "type": "module",
@@ -35,10 +35,29 @@
   "engines": {
     "node": ">=18.18"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/nugehs/repoctx.git"
   },
+  "homepage": "https://nugehs.github.io/repoctx/",
+  "bugs": {
+    "url": "https://github.com/nugehs/repoctx/issues"
+  },
+  "keywords": [
+    "cli",
+    "mcp",
+    "mcp-server",
+    "code-context",
+    "code-map",
+    "agent",
+    "pr-review",
+    "merge-gate",
+    "repository-analysis",
+    "developer-tools"
+  ],
   "license": "MIT",
   "dependencies": {
     "typescript": "^6.0.3"
