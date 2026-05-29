@@ -157,9 +157,13 @@ Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 | `repo_catalog`     | List cataloged local repositories                                                     |
 | `repo_search`      | Search cataloged repositories by path, route, import, export, symbol, or domain       |
 | `context_pack`     | Build a task-aware context packet                                                     |
+| `change_impact`    | Rank files most likely to own a plain-English change request (v1.0+)                  |
 | `repo_harness`     | Generate setup, validation, runtime, and context commands                             |
 | `workspace_report` | Build product-level context across multiple repos                                     |
 | `pr_review`        | Generate diff-aware PR review context                                                 |
+| `merge_readiness`  | Local PASS/WARN/FAIL merge gate against a base ref (v1.0+)                            |
+| `pr_merge_readiness` | GitHub PR merge gate using `gh` (review decision, CODEOWNERS, branch protection, status checks) (v1.0+) |
+| `review_pr`        | Composite: impact + pr_review + pass in one call, with derived confidence score (v1.0+) |
 | `find_domain`      | Find domain files across one or more repos                                            |
 | `find_file_kind`   | Locate routes, controllers, services, hooks, clients, schemas, tests, or source files |
 
