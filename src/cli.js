@@ -20,6 +20,8 @@ import { formatInstallSummary, installDevContext } from "./lib/install.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
 import { generateContextPack } from "./lib/context-engine.js";
+import { formatImpactTerminal, generateImpact } from "./lib/impact.js";
+import { createRenderer } from "./lib/render/fancy.js";
 import { generatePrReview } from "./lib/pr-review.js";
 import { formatReportTerminal, generateReport } from "./lib/report.js";
 import { generateWorkspaceReport } from "./lib/workspace.js";
@@ -35,6 +37,7 @@ const commandHandlers = {
   catalog: handleCatalog,
   search: handleSearch,
   context: handleContext,
+  impact: handleImpact,
   install: handleInstall,
   i: handleInstall,
   map: handleMap,
@@ -188,6 +191,39 @@ async function handleContext(parsed) {
   }
 
   printText(result.markdown);
+}
+
+async function handleImpact(parsed) {
+  let repoPath;
+  let query;
+  if (parsed.flags.path) {
+    repoPath = parsed.flags.path;
+    query = parsed.positionals.join(" ").trim();
+  } else {
+    repoPath = parsed.positionals[0] ?? ".";
+    query = parsed.positionals.slice(1).join(" ").trim();
+  }
+  if (!query) {
+    throw new Error('impact requires a change request, e.g. `repoctx impact . "add Stripe refunds"`');
+  }
+  const result = generateImpact(query, {
+    path: repoPath,
+    top: parsed.flags.top,
+    diffBase: parsed.flags.diff_base,
+  });
+
+  if (parsed.flags.json) {
+    printJson(result.data);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, result.markdown);
+    printText(`Change impact written: ${artifact.path}`);
+    return;
+  }
+
+  printText(formatImpactTerminal(result.data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
 }
 
 async function handleInstall(parsed) {
