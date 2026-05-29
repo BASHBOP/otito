@@ -2,7 +2,7 @@
 
 **Purpose:** Context foundation for AI-assisted software teams<br>
 **Maintainer:** Oluwasegun Olumbe<br>
-**Current Version:** 0.3.2 Go-aware PR context
+**Current Version:** 1.0.0 — impact-map and pullpass absorbed; ships `impact`, `pass`, `pass-pr`, and `review`
 
 ---
 
