@@ -22,6 +22,8 @@ import { startMcpServer } from "./lib/mcp.js";
 import { generateContextPack } from "./lib/context-engine.js";
 import { formatImpactTerminal, generateImpact } from "./lib/impact.js";
 import { evaluateLocal, formatPassMarkdown, formatPassTerminal } from "./lib/pass-local.js";
+import { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } from "./lib/pass-pr.js";
+import { formatReviewTerminal, generateReview } from "./lib/review.js";
 import { createRenderer } from "./lib/render/fancy.js";
 import { generatePrReview } from "./lib/pr-review.js";
 import { formatReportTerminal, generateReport } from "./lib/report.js";
@@ -40,6 +42,8 @@ const commandHandlers = {
   context: handleContext,
   impact: handleImpact,
   pass: handlePass,
+  "pass-pr": handlePassPr,
+  review: handleReview,
   install: handleInstall,
   i: handleInstall,
   map: handleMap,
@@ -251,6 +255,54 @@ async function handlePass(parsed) {
   }
 
   printText(formatPassTerminal(data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  if (data.verdict === "FAIL") process.exitCode = 1;
+}
+
+async function handlePassPr(parsed) {
+  const selector = parsed.positionals[0] ?? "";
+  const data = await evaluatePR(parsed.flags.path ?? ".", selector, {
+    policy: parsed.flags.policy,
+    governance: parsed.flags.governance,
+    request: parsed.flags.request,
+  });
+
+  if (parsed.flags.json) {
+    printJson(data);
+    if (data.verdict === "FAIL") process.exitCode = 1;
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, formatPassPrMarkdown(data));
+    printText(`PR pass report written: ${artifact.path}`);
+    if (data.verdict === "FAIL") process.exitCode = 1;
+    return;
+  }
+
+  printText(formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  if (data.verdict === "FAIL") process.exitCode = 1;
+}
+
+async function handleReview(parsed) {
+  const repoPath = parsed.positionals[0] ?? ".";
+  const trailingRequest = parsed.positionals.slice(1).join(" ").trim();
+  const { data } = await generateReview(repoPath, {
+    request: parsed.flags.request ?? (trailingRequest || undefined),
+    base: parsed.flags.base,
+    head: parsed.flags.head,
+    prSelector: parsed.flags.pr,
+    policy: parsed.flags.policy,
+    governance: parsed.flags.governance,
+    impactTop: parsed.flags.top,
+  });
+
+  if (parsed.flags.json) {
+    printJson(data);
+    if (data.verdict === "FAIL") process.exitCode = 1;
+    return;
+  }
+
+  printText(formatReviewTerminal(data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
 
