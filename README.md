@@ -56,11 +56,17 @@ https://nugehs.github.io/repoctx/
 
 This build uses the TypeScript parser for JS/TS code maps. Optional external tools are only needed for dependency-source lookup and HTML structure reports.
 
-Install from GitHub:
+Install from npm:
 
 ```bash
-npm install -g github:nugehs/repoctx
+npm install -g @nugehs/repoctx
 repoctx doctor
+```
+
+Or run without installing:
+
+```bash
+npx -y @nugehs/repoctx doctor
 ```
 
 From a local checkout:
@@ -404,14 +410,27 @@ Starts a stdio MCP server exposing repoctx as agent-callable tools. MCP repo-map
 node src/cli.js mcp
 ```
 
-When wiring it into an MCP host, point the host at this repo's CLI:
+When wiring it into an MCP host (Claude Desktop, Claude Code, Codex CLI, Cursor, etc.):
 
 ```json
 {
   "mcpServers": {
     "repoctx": {
-      "command": "node",
-      "args": ["/absolute/path/to/repoctx/src/cli.js", "mcp"]
+      "command": "npx",
+      "args": ["-y", "@nugehs/repoctx", "mcp"]
+    }
+  }
+}
+```
+
+If you prefer a globally installed binary:
+
+```json
+{
+  "mcpServers": {
+    "repoctx": {
+      "command": "repoctx",
+      "args": ["mcp"]
     }
   }
 }

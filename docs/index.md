@@ -64,7 +64,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g github:nugehs/repoctx
+    npm install -g @nugehs/repoctx
     repoctx doctor
     ```
 
