@@ -20,6 +20,7 @@ Usage:
   repoctx catalog [--catalog file] [--json]
   repoctx search <query> [--catalog file] [--limit n] [--offline] [--json]
   repoctx context <query> [--path repo] [--limit n] [--out file] [--json]
+  repoctx impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--no-emoji]
   repoctx install|i [--global|--link] [--json]
   repoctx map <path> [--out file] [--json]
   repoctx structure <path> [--pattern glob] [--out file] [--exclude file] [--json]

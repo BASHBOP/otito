@@ -4,6 +4,7 @@ import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 import { discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "./catalog.js";
 import { generateContextPack } from "./context-engine.js";
+import { generateImpact } from "./impact.js";
 import { generateHarness } from "./harness.js";
 import { getCachedCodeMap } from "./index-cache.js";
 import { inspectRepo } from "./repo.js";
@@ -108,6 +109,23 @@ const tools = [
         paths: { type: "array", items: { type: "string" }, description: "Repository paths for a multi-repo context packet." },
         limit: { type: "number", description: "Maximum primary, related, and test files per section. Defaults to 8." },
         includeMarkdown: { type: "boolean", description: "Include the markdown context pack. Defaults to false." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "change_impact",
+    title: "Change Impact",
+    description:
+      "Given a plain-English change request, rank the files most likely to own the change, with risk flags, suggested tests, and an implementation plan. Optional diff base validates predictions against actual changed files.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Plain-English change request." },
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        top: { type: "number", description: "Number of files to return. Defaults to 10." },
+        diffBase: { type: "string", description: "Optional git ref to validate predictions against (e.g. origin/main, HEAD)." },
+        includeMarkdown: { type: "boolean", description: "Include the markdown impact report. Defaults to false." },
       },
       required: ["query"],
     },
@@ -345,6 +363,14 @@ function dispatchTool(name, args) {
       return searchCatalog(requiredString(args.query, "query"), args);
     case "context_pack": {
       const result = generateContextPack(requiredString(args.query, "query"), args);
+      return args.includeMarkdown ? result : result.data;
+    }
+    case "change_impact": {
+      const result = generateImpact(requiredString(args.query, "query"), {
+        path: args.path ?? ".",
+        top: args.top,
+        diffBase: args.diffBase,
+      });
       return args.includeMarkdown ? result : result.data;
     }
     case "workspace_report": {
