@@ -416,6 +416,7 @@ Useful tools exposed through MCP:
 - `repo_inspect`
 - `repo_map`
 - `context_pack`
+- `change_impact`
 - `repo_harness`
 - `workspace_report`
 - `pr_review`

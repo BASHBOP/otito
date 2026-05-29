@@ -113,6 +113,7 @@ export function glyphFor(flag) {
 // task-context scoring and PR review.
 export function classifyPath(filePath, options = {}) {
   const path = String(filePath ?? "").toLowerCase();
+  const tokens = new Set(path.split(/[^a-z0-9]+/).filter(Boolean));
   const kind = options.kind ?? "";
   const additions = options.additions ?? 0;
   const deletions = options.deletions ?? 0;
@@ -123,7 +124,7 @@ export function classifyPath(filePath, options = {}) {
       flags.add(pattern.flag);
       continue;
     }
-    if (pattern.pathParts.some((part) => path.includes(part))) {
+    if (pattern.pathParts.some((part) => matchesPathPart(part, tokens, path))) {
       flags.add(pattern.flag);
     }
   }
@@ -133,6 +134,18 @@ export function classifyPath(filePath, options = {}) {
   }
 
   return [...flags];
+}
+
+// Match a path-part either as a whole path-component token (when the part is
+// a pure word, so "sso" cannot match inside "processors") or as a literal
+// substring (when the part contains punctuation, e.g. "package.json" or
+// ".github/workflows"). Avoids substring false positives observed in
+// field-test: "processors" → "sso" → auth/security.
+function matchesPathPart(part, tokens, path) {
+  if (/^[a-z0-9]+$/.test(part)) {
+    return tokens.has(part);
+  }
+  return path.includes(part);
 }
 
 export function isSecretPath(filePath) {
