@@ -1,4 +1,5 @@
 import { commandExists, commandVersion } from "./tools.js";
+import { createRenderer } from "./render/fancy.js";
 
 const toolDefinitions = [
   {
@@ -54,4 +55,20 @@ export function getDoctorReport() {
       };
     }),
   };
+}
+
+export function formatDoctorReport(report, options = {}) {
+  const renderer = createRenderer(options);
+  const lines = [];
+  lines.push(renderer.header({ text: "repoctx doctor", glyph: "📋" }, [{ text: "local runtime + optional tools", glyph: "🩺" }]));
+  lines.push("");
+  for (const tool of report.tools) {
+    const status = tool.available ? "pass" : "warn";
+    const summary = tool.available ? (tool.version ?? "available") : "not installed";
+    const details = tool.available ? [] : [tool.installHint];
+    lines.push(renderer.statusLine(status, tool.name, summary, details));
+  }
+  lines.push("");
+  lines.push(renderer.tip("rg, opensrc, and code-structure are optional accelerators."));
+  return lines.join("\n");
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { parseArgv } from "./lib/args.js";
-import { getDoctorReport } from "./lib/doctor.js";
+import { formatDoctorReport, getDoctorReport } from "./lib/doctor.js";
 import { inspectRepo } from "./lib/repo.js";
 import { formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { generateStructure } from "./lib/structure.js";
@@ -82,13 +82,13 @@ async function handleDoctor(parsed) {
     return;
   }
 
-  const rows = report.tools.map((tool) => {
-    const marker = tool.available ? "ok" : "missing";
-    const version = tool.version ? ` (${tool.version})` : "";
-    const hint = tool.available ? "" : ` - ${tool.installHint}`;
-    return `- ${marker}: ${tool.name}${version}${hint}`;
-  });
-  printText(["# repoctx doctor", "", ...rows].join("\n"));
+  printText(formatDoctorReport(report, { emoji: emojiPreference(parsed) }));
+}
+
+function emojiPreference(parsed) {
+  if (parsed.flags.no_emoji) return false;
+  if (parsed.flags.emoji) return true;
+  return undefined;
 }
 
 async function handleRepo(parsed) {
