@@ -59,7 +59,7 @@ Then require the `PullPass readiness` check alongside CI, docs build, required r
 ## Current Install Path
 
 ```bash
-npm install -g github:nugehs/repoctx
+npm install -g @nugehs/repoctx
 repoctx doctor
 ```
 
