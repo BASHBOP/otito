@@ -31,7 +31,7 @@ export const RISK_PATTERNS = [
   {
     flag: RISK_FLAGS.dataModel,
     kinds: ["schema"],
-    pathParts: ["prisma", "migration", "schema.sql", ".sql"],
+    pathParts: ["prisma", "migration", "schema", "schema.sql", ".sql"],
   },
   {
     flag: RISK_FLAGS.authSecurity,
@@ -46,7 +46,7 @@ export const RISK_PATTERNS = [
   {
     flag: RISK_FLAGS.configuration,
     kinds: ["config"],
-    pathParts: ["package.json", "lock", "docker", "next.config", "vite.config", "tsconfig", "env", ".github/workflows"],
+    pathParts: ["package.json", "lock", "docker", "next.config", "vite.config", "tsconfig", "env", ".github/workflows", "config", "dockerfile", "go.sum"],
   },
 ];
 

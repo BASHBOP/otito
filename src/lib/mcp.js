@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "./catalog.js";
 import { generateContextPack } from "./context-engine.js";
 import { generateImpact } from "./impact.js";
+import { evaluateLocal } from "./pass-local.js";
 import { generateHarness } from "./harness.js";
 import { getCachedCodeMap } from "./index-cache.js";
 import { inspectRepo } from "./repo.js";
@@ -128,6 +129,22 @@ const tools = [
         includeMarkdown: { type: "boolean", description: "Include the markdown impact report. Defaults to false." },
       },
       required: ["query"],
+    },
+  },
+  {
+    name: "merge_readiness",
+    title: "Merge Readiness",
+    description:
+      "Local merge-readiness gate. Runs deterministic checks (changed files, secret safety, risk-sensitive paths, release discipline, validation commands, dependency audit, policy profile) against a base ref and returns a PASS / WARN / FAIL verdict.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        base: { type: "string", description: "Base ref to diff against. Defaults to origin/main, then HEAD." },
+        policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
+        governance: { type: "string", description: "Governance: team (default) or solo." },
+        request: { type: "string", description: "Optional change request, for context evidence output." },
+      },
     },
   },
   {
@@ -372,6 +389,14 @@ function dispatchTool(name, args) {
         diffBase: args.diffBase,
       });
       return args.includeMarkdown ? result : result.data;
+    }
+    case "merge_readiness": {
+      return evaluateLocal(args.path ?? ".", {
+        base: args.base,
+        policy: args.policy,
+        governance: args.governance,
+        request: args.request,
+      });
     }
     case "workspace_report": {
       const paths = requirePaths(args);
