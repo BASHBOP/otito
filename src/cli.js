@@ -21,6 +21,7 @@ import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
 import { generateContextPack } from "./lib/context-engine.js";
 import { formatImpactTerminal, generateImpact } from "./lib/impact.js";
+import { evaluateLocal, formatPassMarkdown, formatPassTerminal } from "./lib/pass-local.js";
 import { createRenderer } from "./lib/render/fancy.js";
 import { generatePrReview } from "./lib/pr-review.js";
 import { formatReportTerminal, generateReport } from "./lib/report.js";
@@ -38,6 +39,7 @@ const commandHandlers = {
   search: handleSearch,
   context: handleContext,
   impact: handleImpact,
+  pass: handlePass,
   install: handleInstall,
   i: handleInstall,
   map: handleMap,
@@ -224,6 +226,32 @@ async function handleImpact(parsed) {
   }
 
   printText(formatImpactTerminal(result.data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+}
+
+async function handlePass(parsed) {
+  const repoPath = parsed.positionals[0] ?? ".";
+  const data = evaluateLocal(repoPath, {
+    base: parsed.flags.base,
+    policy: parsed.flags.policy,
+    governance: parsed.flags.governance,
+    request: parsed.flags.request,
+  });
+
+  if (parsed.flags.json) {
+    printJson(data);
+    if (data.verdict === "FAIL") process.exitCode = 1;
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, formatPassMarkdown(data));
+    printText(`Pass report written: ${artifact.path}`);
+    if (data.verdict === "FAIL") process.exitCode = 1;
+    return;
+  }
+
+  printText(formatPassTerminal(data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  if (data.verdict === "FAIL") process.exitCode = 1;
 }
 
 async function handleInstall(parsed) {
