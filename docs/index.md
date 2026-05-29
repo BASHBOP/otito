@@ -3,7 +3,7 @@
 ## Local repo intelligence for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v0.3.2 Go-aware PR context<br>
+**Status:** v1.0.0 — impact-map and pullpass absorbed; ships `impact`, `pass`, `pass-pr`, and `review`<br>
 **Category:** Practical AI governance for developers
 
 > Built and maintained by **Oluwasegun Olumbe** for teams that want context before code changes, review prompts before merge, and less guessing in agent workflows.
