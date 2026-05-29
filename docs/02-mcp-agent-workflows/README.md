@@ -9,8 +9,14 @@ repoctx can run as a stdio MCP server so agent hosts can ask for repository cont
 Install the CLI first:
 
 ```bash
-npm install -g github:nugehs/repoctx
+npm install -g @nugehs/repoctx
 repoctx doctor
+```
+
+Or run via `npx` without installing — recommended for MCP host configs:
+
+```bash
+npx -y @nugehs/repoctx mcp
 ```
 
 ```bash

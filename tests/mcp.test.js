@@ -53,7 +53,7 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
     messages.push(JSON.parse(buffer));
   }
   assert.equal(exitCode, 0);
-  assert.equal(messages[0].result.serverInfo.name, "repoctx");
+  assert.equal(messages[0].result.serverInfo.name, "@nugehs/repoctx");
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_map"));
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_discover"));
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_index"));
