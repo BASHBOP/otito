@@ -22,6 +22,8 @@ Usage:
   repoctx context <query> [--path repo] [--limit n] [--out file] [--json]
   repoctx impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--no-emoji]
   repoctx pass <repo> [--base ref] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--out file] [--json] [--no-emoji]
+  repoctx pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--out file] [--json] [--no-emoji]
+  repoctx review <repo> [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--json] [--no-emoji]
   repoctx install|i [--global|--link] [--json]
   repoctx map <path> [--out file] [--json]
   repoctx structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
