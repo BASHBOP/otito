@@ -89,3 +89,49 @@ test("generateCodeMap classifies Go source and test files", () => {
   assert.deepEqual(testFile.imports, ["testing"]);
   assert.ok(testFile.symbols.some((symbol) => symbol.name === "TestEvaluate"));
 });
+
+test("generateCodeMap extracts C# namespace, class, interface, enum, methods, and using-directives", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-cs-"));
+  fs.writeFileSync(
+    path.join(root, "booking.aspx.cs"),
+    [
+      "using System;",
+      "using System.Data;",
+      "using System.Data.SqlClient;",
+      "",
+      "namespace WebProject",
+      "{",
+      "    public partial class booking : System.Web.UI.Page",
+      "    {",
+      "        protected void Page_Load(object sender, EventArgs e)",
+      "        {",
+      "            if (!IsPostBack) { LoadOwner(); }",
+      "        }",
+      "",
+      "        protected void bookBtn_Click(object sender, EventArgs e) { }",
+      "",
+      "        private void LoadOwner() { }",
+      "    }",
+      "",
+      "    internal interface IBookingService { void Book(int ownerId); }",
+      "",
+      "    public enum BookingStatus { InProgress, Completed, Cancelled }",
+      "}",
+      "",
+    ].join("\n"),
+  );
+
+  const result = generateCodeMap(root);
+  const file = result.files.find((f) => f.path === "booking.aspx.cs");
+  assert.ok(file, "C# code-behind should be in the map");
+  assert.ok(file.imports.includes("System.Data.SqlClient"), "should extract using directives");
+  assert.ok(file.exports.includes("booking"), "public class is exported");
+  assert.ok(file.exports.includes("BookingStatus"), "public enum is exported");
+  assert.ok(!file.exports.includes("IBookingService"), "internal interface is not exported");
+  assert.ok(file.symbols.some((s) => s.type === "namespace" && s.name === "WebProject"));
+  assert.ok(file.symbols.some((s) => s.type === "class" && s.name === "booking"));
+  assert.ok(file.symbols.some((s) => s.type === "interface" && s.name === "IBookingService"));
+  assert.ok(file.symbols.some((s) => s.type === "enum" && s.name === "BookingStatus"));
+  assert.ok(file.symbols.some((s) => s.type === "method" && s.name === "bookBtn_Click"));
+  assert.ok(file.symbols.some((s) => s.type === "method" && s.name === "LoadOwner"));
+});
