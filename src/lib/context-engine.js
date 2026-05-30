@@ -171,6 +171,10 @@ function scoreFile(map, file, tokens, intent) {
   const reasons = [];
   let score = 0;
 
+  if (file.isVendor) {
+    return summarizeFile(map, file, 0, []);
+  }
+
   score += scoreField(file.path, tokens, 8, "path", reasons);
   score += scoreField(file.kind, tokens, 4, "kind", reasons);
   score += scoreField(file.domain, tokens, 5, "domain", reasons);

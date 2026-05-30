@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { generateCodeMap } from "../src/lib/code-map.js";
+import { generateCodeMap, isVendorFile } from "../src/lib/code-map.js";
 
 test("generateCodeMap classifies Next routes and symbols", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-web-"));
@@ -202,4 +202,41 @@ test("generateCodeMap extracts Python classes, functions, imports, with comments
   assert.ok(!file.exports.includes("_Private"), "underscore-prefixed names excluded from exports");
   assert.ok(!file.exports.includes("_private_helper"));
   assert.ok(!file.exports.includes("__init__"));
+});
+
+test("isVendorFile detects minified, library-named, and vendor-pathed files", () => {
+  assert.equal(isVendorFile("js/jquery.min.js", ""), true, ".min.js suffix");
+  assert.equal(isVendorFile("js/app.bundle.js", ""), true, ".bundle.js suffix");
+  assert.equal(isVendorFile("vendor/anything.js", ""), true, "vendor/ path");
+  assert.equal(isVendorFile("node_modules/foo/index.js", ""), true, "node_modules/ path");
+  assert.equal(isVendorFile("bower_components/foo.js", ""), true, "bower_components/ path");
+  assert.equal(isVendorFile("dist/bundle.js", ""), true, "dist/ path");
+  assert.equal(isVendorFile("js/Bootstrap.js", ""), true, "library prefix (bootstrap, case-insensitive)");
+  assert.equal(isVendorFile("js/jqueryv2.1.4.min.js", ""), true, "jquery prefix");
+  assert.equal(isVendorFile("js/angular.min.js", ""), true, "angular prefix");
+
+  assert.equal(isVendorFile("js/app.js", ""), false, "app.js is not vendor");
+  assert.equal(isVendorFile("js/autocomplete.js", ""), false, "autocomplete.js is not vendor");
+  assert.equal(isVendorFile("src/lib/foo.ts", ""), false, "normal source file");
+  assert.equal(isVendorFile("src/components/Button.tsx", ""), false, "component file");
+
+  const longLineBlob = "x".repeat(2000) + "\n" + "y\n".repeat(30000);
+  assert.equal(isVendorFile("js/something.js", longLineBlob), true, "large file with very long lines (minified heuristic)");
+});
+
+test("generateCodeMap flags vendor files via isVendor and downstream filters them in context_pack", async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-vendor-"));
+  fs.mkdirSync(path.join(root, "js"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src"), { recursive: true });
+  fs.writeFileSync(path.join(root, "js", "jquery.min.js"), "// fake jquery\n");
+  fs.writeFileSync(path.join(root, "js", "Bootstrap.js"), "// fake bootstrap\n");
+  fs.writeFileSync(path.join(root, "js", "app.js"), "const x = 1;\n");
+  fs.writeFileSync(path.join(root, "src", "main.ts"), "export function bookingHandler() { return 42; }\n");
+
+  const result = generateCodeMap(root);
+  const byPath = Object.fromEntries(result.files.map((f) => [f.path, f]));
+  assert.equal(byPath["js/jquery.min.js"].isVendor, true);
+  assert.equal(byPath["js/Bootstrap.js"].isVendor, true);
+  assert.equal(byPath["js/app.js"].isVendor, false);
+  assert.equal(byPath["src/main.ts"].isVendor, false);
 });
