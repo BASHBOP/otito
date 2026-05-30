@@ -224,6 +224,143 @@ test("isVendorFile detects minified, library-named, and vendor-pathed files", ()
   assert.equal(isVendorFile("js/something.js", longLineBlob), true, "large file with very long lines (minified heuristic)");
 });
 
+test("generateCodeMap extracts Java package, classes, interfaces, enums, records, and imports", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-java-"));
+  fs.writeFileSync(
+    path.join(root, "BookingService.java"),
+    [
+      "package com.example.bookings;",
+      "",
+      "import java.util.List;",
+      "import java.util.Optional;",
+      "import static java.util.stream.Collectors.toList;",
+      "",
+      "public class BookingService {",
+      "    public BookingService(Db db) {}",
+      "    public Optional<Booking> findById(long id) { return Optional.empty(); }",
+      "    private void log(String msg) {}",
+      "}",
+      "",
+      "interface IBookingRepo {}",
+      "",
+      "public enum Status { ACTIVE, CANCELLED }",
+      "public record CreateBooking(String carModel, int points) {}",
+      "",
+    ].join("\n"),
+  );
+  const result = generateCodeMap(root);
+  const file = result.files[0];
+  assert.ok(file);
+  assert.ok(file.imports.includes("java.util.List"));
+  assert.ok(file.imports.includes("java.util.stream.Collectors.toList"), "static imports captured");
+  assert.ok(file.exports.includes("BookingService"));
+  assert.ok(file.exports.includes("Status"));
+  assert.ok(file.exports.includes("CreateBooking"));
+  assert.ok(!file.exports.includes("IBookingRepo"), "package-private interface not exported");
+  assert.ok(file.symbols.some((s) => s.type === "package" && s.name === "com.example.bookings"));
+  assert.ok(file.symbols.some((s) => s.type === "class" && s.name === "BookingService"));
+  assert.ok(file.symbols.some((s) => s.type === "interface" && s.name === "IBookingRepo"));
+  assert.ok(file.symbols.some((s) => s.type === "enum" && s.name === "Status"));
+  assert.ok(file.symbols.some((s) => s.type === "record" && s.name === "CreateBooking"));
+  assert.ok(file.symbols.some((s) => s.type === "method" && s.name === "findById"));
+});
+
+test("generateCodeMap extracts Ruby modules, classes, methods, and require directives", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-rb-"));
+  fs.writeFileSync(
+    path.join(root, "service.rb"),
+    [
+      "require 'json'",
+      "require_relative './lib/db'",
+      "",
+      "# A comment with class FakeClass should be ignored",
+      "module Bookings",
+      "  class Service",
+      "    def initialize(db); @db = db; end",
+      "    def create(body); @db.bookings.create(body); end",
+      "    def self.factory(db); new(db); end",
+      "    def safe?; true; end",
+      "  end",
+      "",
+      "  module Errors",
+      "    class NotFound < StandardError; end",
+      "  end",
+      "end",
+      "",
+    ].join("\n"),
+  );
+  const result = generateCodeMap(root);
+  const file = result.files[0];
+  assert.ok(file);
+  assert.deepEqual(file.imports.sort(), ["./lib/db", "json"].sort(), "require and require_relative both captured");
+  assert.ok(file.symbols.some((s) => s.type === "module" && s.name === "Bookings"));
+  assert.ok(file.symbols.some((s) => s.type === "module" && s.name === "Errors"));
+  assert.ok(file.symbols.some((s) => s.type === "class" && s.name === "Service"));
+  assert.ok(file.symbols.some((s) => s.type === "class" && s.name === "NotFound"));
+  assert.ok(
+    file.symbols.some((s) => s.type === "method" && s.name === "factory"),
+    "class method (def self.x) captured",
+  );
+  assert.ok(
+    file.symbols.some((s) => s.type === "method" && s.name === "safe?"),
+    "predicate methods captured",
+  );
+  assert.ok(!file.symbols.some((s) => s.name === "FakeClass"), "comment-only class not matched");
+  assert.ok(file.exports.includes("Bookings"));
+  assert.ok(file.exports.includes("Service"));
+});
+
+test("generateCodeMap extracts Rust use, mod, struct, enum, trait, fn with pub visibility", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-rs-"));
+  fs.writeFileSync(
+    path.join(root, "lib.rs"),
+    [
+      "use std::collections::HashMap;",
+      "use crate::db::{Booking, Pool};",
+      "",
+      "pub mod auth;",
+      "mod internal;",
+      "",
+      "pub struct BookingService { pool: Pool }",
+      "",
+      "pub trait Repo {",
+      "    fn save(&self, b: Booking) -> Result<(), String>;",
+      "}",
+      "",
+      "pub enum Status { Active, Cancelled }",
+      "pub type Cents = u64;",
+      "",
+      "pub async fn create_booking(svc: &BookingService, b: Booking) -> Result<(), String> {",
+      "    Ok(())",
+      "}",
+      "",
+      "fn private_helper(x: u32) -> u32 { x + 1 }",
+      "pub(crate) fn crate_visible() {}",
+      "",
+    ].join("\n"),
+  );
+  const result = generateCodeMap(root);
+  const file = result.files[0];
+  assert.ok(file);
+  assert.ok(file.imports.some((i) => i.startsWith("std::collections::HashMap")));
+  assert.ok(file.imports.some((i) => i.startsWith("crate::db::")));
+  assert.ok(file.symbols.some((s) => s.type === "mod" && s.name === "auth"));
+  assert.ok(file.symbols.some((s) => s.type === "mod" && s.name === "internal"));
+  assert.ok(file.symbols.some((s) => s.type === "struct" && s.name === "BookingService"));
+  assert.ok(file.symbols.some((s) => s.type === "trait" && s.name === "Repo"));
+  assert.ok(file.symbols.some((s) => s.type === "enum" && s.name === "Status"));
+  assert.ok(file.symbols.some((s) => s.type === "type" && s.name === "Cents"));
+  assert.ok(file.symbols.some((s) => s.type === "function" && s.name === "create_booking"));
+  assert.ok(file.symbols.some((s) => s.type === "function" && s.name === "private_helper"));
+
+  assert.ok(file.exports.includes("auth"), "pub mod is exported");
+  assert.ok(file.exports.includes("BookingService"));
+  assert.ok(file.exports.includes("create_booking"), "pub async fn is exported");
+  assert.ok(file.exports.includes("crate_visible"), "pub(crate) counts as pub");
+  assert.ok(!file.exports.includes("internal"), "private mod is not exported");
+  assert.ok(!file.exports.includes("private_helper"), "private fn is not exported");
+});
+
 test("generateCodeMap flags vendor files via isVendor and downstream filters them in context_pack", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-vendor-"));
   fs.mkdirSync(path.join(root, "js"), { recursive: true });
