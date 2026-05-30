@@ -135,3 +135,71 @@ test("generateCodeMap extracts C# namespace, class, interface, enum, methods, an
   assert.ok(file.symbols.some((s) => s.type === "method" && s.name === "bookBtn_Click"));
   assert.ok(file.symbols.some((s) => s.type === "method" && s.name === "LoadOwner"));
 });
+
+test("generateCodeMap extracts Python classes, functions, imports, with comments/strings ignored", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-py-"));
+  fs.writeFileSync(
+    path.join(root, "service.py"),
+    [
+      '"""Module docstring with class Foo and def bar inside that should not match."""',
+      "import os",
+      "import sys as system",
+      "import json, csv",
+      "from fastapi import APIRouter, Depends",
+      "from .auth import current_user",
+      "from ..db import get_db",
+      "",
+      "# A comment with class FakeClass should be ignored",
+      'COMMENT_LIKE = "class NotAClass:"',
+      "",
+      "class BookingService:",
+      '    """def inside_string is not a function."""',
+      "    def __init__(self, db):",
+      "        self._db = db",
+      "    async def create(self, body):",
+      "        return await self._db.booking.create(data=body)",
+      "    def _private_helper(self):",
+      "        return None",
+      "",
+      "def helper_function(x):",
+      "    return x * 2",
+      "",
+      "async def background_job():",
+      "    pass",
+      "",
+      "class _Private:",
+      "    pass",
+      "",
+    ].join("\n"),
+  );
+
+  const result = generateCodeMap(root);
+  const file = result.files.find((f) => f.path === "service.py");
+  assert.ok(file, "Python file should be in the map");
+
+  assert.ok(file.imports.includes("os"));
+  assert.ok(file.imports.includes("sys"), "alias should be stripped (sys as system → sys)");
+  assert.ok(file.imports.includes("json") && file.imports.includes("csv"), "comma-separated imports both captured");
+  assert.ok(file.imports.includes("fastapi"));
+  assert.ok(file.imports.includes(".auth"), "relative imports preserved");
+  assert.ok(file.imports.includes("..db"));
+
+  assert.ok(file.symbols.some((s) => s.type === "class" && s.name === "BookingService"));
+  assert.ok(file.symbols.some((s) => s.type === "class" && s.name === "_Private"));
+  assert.ok(file.symbols.some((s) => s.type === "function" && s.name === "helper_function"));
+  assert.ok(
+    file.symbols.some((s) => s.type === "function" && s.name === "background_job"),
+    "async def captured",
+  );
+
+  assert.ok(!file.symbols.some((s) => s.name === "Foo"), "class in docstring not matched");
+  assert.ok(!file.symbols.some((s) => s.name === "FakeClass"), "class in comment not matched");
+  assert.ok(!file.symbols.some((s) => s.name === "NotAClass"), "class in string literal not matched");
+  assert.ok(!file.symbols.some((s) => s.type === "function" && s.name === "bar"), "def in docstring not matched");
+
+  assert.ok(file.exports.includes("BookingService"));
+  assert.ok(file.exports.includes("helper_function"));
+  assert.ok(!file.exports.includes("_Private"), "underscore-prefixed names excluded from exports");
+  assert.ok(!file.exports.includes("_private_helper"));
+  assert.ok(!file.exports.includes("__init__"));
+});

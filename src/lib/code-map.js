@@ -4,7 +4,7 @@ import ts from "typescript";
 import { inspectRepo, listRepoFiles } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
-const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go", ".cs"]);
+const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go", ".cs", ".py"]);
 const declarationPatterns = [
   { type: "class", pattern: /\bexport\s+(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
   { type: "class", pattern: /\b(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
@@ -125,6 +125,9 @@ function extractAstFacts(relativePath, text) {
   }
   if (ext === ".cs") {
     return extractCsharpFacts(text);
+  }
+  if (ext === ".py") {
+    return extractPythonFacts(text);
   }
 
   try {
@@ -564,6 +567,103 @@ function extractCsharpSymbols(text) {
     symbols.push({ type: "method", name, line: lineNumberAt(text, match.index ?? 0), isPublic });
   }
 
+  return symbols;
+}
+
+function extractPythonFacts(text) {
+  const codeText = stripPythonComments(text);
+  const symbols = extractPythonSymbols(codeText);
+  return {
+    imports: extractPythonImports(codeText),
+    exports: symbols.filter((s) => !s.name.startsWith("_")).map((s) => s.name),
+    symbols,
+  };
+}
+
+function stripPythonComments(text) {
+  const chars = [];
+  let index = 0;
+  let inString = false;
+  let stringQuote = "";
+  let stringIsTriple = false;
+  while (index < text.length) {
+    const ch = text[index];
+    const next2 = text.slice(index, index + 3);
+    if (!inString && ch === "#") {
+      while (index < text.length && text[index] !== "\n") {
+        chars.push(" ");
+        index += 1;
+      }
+      continue;
+    }
+    if (!inString && (next2 === '"""' || next2 === "'''")) {
+      stringQuote = ch;
+      stringIsTriple = true;
+      inString = true;
+      chars.push(" ", " ", " ");
+      index += 3;
+      continue;
+    }
+    if (inString && stringIsTriple && next2 === `${stringQuote}${stringQuote}${stringQuote}`) {
+      chars.push(" ", " ", " ");
+      index += 3;
+      inString = false;
+      stringIsTriple = false;
+      stringQuote = "";
+      continue;
+    }
+    if (!inString && (ch === '"' || ch === "'")) {
+      stringQuote = ch;
+      stringIsTriple = false;
+      inString = true;
+      chars.push(ch);
+      index += 1;
+      continue;
+    }
+    if (inString && !stringIsTriple && ch === stringQuote && text[index - 1] !== "\\") {
+      inString = false;
+      stringQuote = "";
+      chars.push(ch);
+      index += 1;
+      continue;
+    }
+    chars.push(inString && ch !== "\n" ? " " : ch);
+    index += 1;
+  }
+  return chars.join("");
+}
+
+function extractPythonImports(text) {
+  const imports = new Set();
+  for (const match of text.matchAll(/^\s*import\s+([A-Za-z_][\w.]*(?:\s*,\s*[A-Za-z_][\w.]*)*)/gm)) {
+    for (const name of match[1].split(",")) {
+      const cleaned = name.trim().split(/\s+as\s+/)[0];
+      if (cleaned) imports.add(cleaned);
+    }
+  }
+  for (const match of text.matchAll(/^\s*from\s+(\.*[A-Za-z_][\w.]*|\.+)\s+import\s+/gm)) {
+    imports.add(match[1]);
+  }
+  return [...imports].slice(0, 100);
+}
+
+function extractPythonSymbols(text) {
+  const symbols = [];
+  const seen = new Set();
+  const definitions = [
+    { type: "class", pattern: /^[ \t]*class\s+([A-Za-z_]\w*)/gm },
+    { type: "function", pattern: /^[ \t]*(?:async\s+)?def\s+([A-Za-z_]\w*)/gm },
+  ];
+  for (const definition of definitions) {
+    for (const match of text.matchAll(definition.pattern)) {
+      const name = match[1];
+      if (!name) continue;
+      const key = `${definition.type}:${name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      symbols.push({ type: definition.type, name, line: lineNumberAt(text, match.index ?? 0) });
+    }
+  }
   return symbols;
 }
 
