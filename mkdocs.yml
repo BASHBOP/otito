@@ -83,6 +83,7 @@ nav:
       - Overview: 01-context-foundation/README.md
   - MCP and Agents:
       - Overview: 02-mcp-agent-workflows/README.md
+      - Publishing to npm + MCP Registry: 02-mcp-agent-workflows/publishing.md
   - Contributor Governance:
       - Overview: 03-contributor-governance/README.md
   - Release Readiness:
