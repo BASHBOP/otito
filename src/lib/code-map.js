@@ -4,7 +4,7 @@ import ts from "typescript";
 import { inspectRepo, listRepoFiles } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
-const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go", ".cs", ".py"]);
+const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go", ".cs", ".py", ".java", ".rb", ".rs"]);
 const declarationPatterns = [
   { type: "class", pattern: /\bexport\s+(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
   { type: "class", pattern: /\b(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
@@ -174,6 +174,15 @@ function extractAstFacts(relativePath, text) {
   }
   if (ext === ".py") {
     return extractPythonFacts(text);
+  }
+  if (ext === ".java") {
+    return extractJavaFacts(text);
+  }
+  if (ext === ".rb") {
+    return extractRubyFacts(text);
+  }
+  if (ext === ".rs") {
+    return extractRustFacts(text);
   }
 
   try {
@@ -708,6 +717,181 @@ function extractPythonSymbols(text) {
       if (seen.has(key)) continue;
       seen.add(key);
       symbols.push({ type: definition.type, name, line: lineNumberAt(text, match.index ?? 0) });
+    }
+  }
+  return symbols;
+}
+
+function extractJavaFacts(text) {
+  const codeText = stripNonCode(text);
+  const symbols = extractJavaSymbols(codeText);
+  const exportable = new Set(["class", "interface", "enum", "record"]);
+  return {
+    imports: extractJavaImports(codeText),
+    exports: symbols.filter((s) => exportable.has(s.type) && s.isPublic).map((s) => s.name),
+    symbols: symbols.map(({ isPublic: _isPublic, ...rest }) => rest),
+  };
+}
+
+function extractJavaImports(text) {
+  const imports = new Set();
+  for (const match of text.matchAll(/^\s*import\s+(?:static\s+)?([A-Za-z_][\w.]*(?:\.\*)?)\s*;/gm)) {
+    imports.add(match[1]);
+  }
+  return [...imports].slice(0, 100);
+}
+
+function extractJavaSymbols(text) {
+  const symbols = [];
+  const seen = new Set();
+  const accessModifiers = "(?:public|private|protected)";
+  const otherModifiers = "(?:static|final|abstract|sealed|non-sealed|strictfp|default)";
+  const modifierGroup = `(?:(?:${accessModifiers}|${otherModifiers})\\s+)*`;
+  const definitions = [
+    { type: "package", pattern: /^\s*package\s+([A-Za-z_][\w.]*)\s*;/gm, alwaysPublic: true },
+    { type: "class", pattern: new RegExp(`\\b(${accessModifiers}\\s+)?${modifierGroup}class\\s+([A-Za-z_]\\w*)`, "g") },
+    { type: "interface", pattern: new RegExp(`\\b(${accessModifiers}\\s+)?${modifierGroup}interface\\s+([A-Za-z_]\\w*)`, "g") },
+    { type: "enum", pattern: new RegExp(`\\b(${accessModifiers}\\s+)?${modifierGroup}enum\\s+([A-Za-z_]\\w*)`, "g") },
+    { type: "record", pattern: new RegExp(`\\b(${accessModifiers}\\s+)?${modifierGroup}record\\s+([A-Za-z_]\\w*)`, "g") },
+  ];
+  for (const definition of definitions) {
+    for (const match of text.matchAll(definition.pattern)) {
+      const name = match[match.length - 1];
+      if (!name) continue;
+      const key = `${definition.type}:${name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const isPublic = definition.alwaysPublic ? true : Boolean(match[1] && /\bpublic\b/.test(match[1]));
+      symbols.push({ type: definition.type, name, line: lineNumberAt(text, match.index ?? 0), isPublic });
+    }
+  }
+
+  const methodPattern = new RegExp(
+    `^[ \\t]*(?:@[A-Za-z_][\\w.]*(?:\\([^)]*\\))?[ \\t]*\\r?\\n[ \\t]*)*` +
+      `(?:(${accessModifiers})\\s+)?(?:${otherModifiers}\\s+)*` +
+      `(?:<[^>]+>\\s+)?[A-Za-z_][\\w<>?\\[\\],\\.\\s]*?\\s+([A-Za-z_]\\w*)\\s*\\([^;{}=]*?\\)\\s*(?:throws\\s+[A-Za-z_][\\w.,\\s]*)?\\{`,
+    "gm",
+  );
+  const methodKeywords = new Set(["if", "for", "while", "switch", "catch", "try", "synchronized", "return", "new"]);
+  for (const match of text.matchAll(methodPattern)) {
+    const name = match[2];
+    if (!name || methodKeywords.has(name)) continue;
+    const key = `method:${name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const isPublic = Boolean(match[1] && /\bpublic\b/.test(match[1]));
+    symbols.push({ type: "method", name, line: lineNumberAt(text, match.index ?? 0), isPublic });
+  }
+  return symbols;
+}
+
+function extractRubyFacts(text) {
+  const codeText = stripRubyComments(text);
+  const symbols = extractRubySymbols(codeText);
+  return {
+    imports: extractRubyImports(codeText),
+    exports: symbols.filter((s) => s.type === "class" || s.type === "module").map((s) => s.name),
+    symbols,
+  };
+}
+
+function stripRubyComments(text) {
+  const lines = text.split("\n");
+  const out = [];
+  let inHeredoc = false;
+  let inBlockComment = false;
+  for (const line of lines) {
+    if (inBlockComment) {
+      if (/^=end\b/.test(line)) inBlockComment = false;
+      out.push("");
+      continue;
+    }
+    if (/^=begin\b/.test(line)) {
+      inBlockComment = true;
+      out.push("");
+      continue;
+    }
+    if (inHeredoc) {
+      out.push("");
+      continue;
+    }
+    out.push(line.replace(/(^|[^$])#.*$/, "$1"));
+  }
+  return out.join("\n");
+}
+
+function extractRubyImports(text) {
+  const imports = new Set();
+  for (const match of text.matchAll(/^\s*require(?:_relative)?\s+["']([^"']+)["']/gm)) {
+    imports.add(match[1]);
+  }
+  return [...imports].slice(0, 100);
+}
+
+function extractRubySymbols(text) {
+  const symbols = [];
+  const seen = new Set();
+  const definitions = [
+    { type: "module", pattern: /^[ \t]*module\s+([A-Z][\w:]*)/gm },
+    { type: "class", pattern: /^[ \t]*class\s+([A-Z][\w:]*)/gm },
+    { type: "method", pattern: /^[ \t]*def\s+(?:self\.)?([A-Za-z_]\w*[!?=]?)/gm },
+  ];
+  for (const definition of definitions) {
+    for (const match of text.matchAll(definition.pattern)) {
+      const name = match[1];
+      if (!name) continue;
+      const key = `${definition.type}:${name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      symbols.push({ type: definition.type, name, line: lineNumberAt(text, match.index ?? 0) });
+    }
+  }
+  return symbols;
+}
+
+function extractRustFacts(text) {
+  const codeText = stripNonCode(text);
+  const symbols = extractRustSymbols(codeText);
+  return {
+    imports: extractRustImports(codeText),
+    exports: symbols.filter((s) => s.isPublic).map((s) => s.name),
+    symbols: symbols.map(({ isPublic: _isPublic, ...rest }) => rest),
+  };
+}
+
+function extractRustImports(text) {
+  const imports = new Set();
+  for (const match of text.matchAll(/^\s*use\s+([A-Za-z_][\w:]*(?:::[\w:{}*,\s]+)?)\s*;/gm)) {
+    const cleaned = match[1].replace(/\s+/g, "");
+    imports.add(cleaned);
+  }
+  return [...imports].slice(0, 100);
+}
+
+function extractRustSymbols(text) {
+  const symbols = [];
+  const seen = new Set();
+  const visibility = "(?:pub(?:\\s*\\([^)]*\\))?)";
+  const definitions = [
+    { type: "mod", pattern: new RegExp(`^[ \\t]*(${visibility}\\s+)?mod\\s+([A-Za-z_]\\w*)`, "gm") },
+    { type: "struct", pattern: new RegExp(`^[ \\t]*(${visibility}\\s+)?struct\\s+([A-Za-z_]\\w*)`, "gm") },
+    { type: "enum", pattern: new RegExp(`^[ \\t]*(${visibility}\\s+)?enum\\s+([A-Za-z_]\\w*)`, "gm") },
+    { type: "trait", pattern: new RegExp(`^[ \\t]*(${visibility}\\s+)?(?:unsafe\\s+)?trait\\s+([A-Za-z_]\\w*)`, "gm") },
+    {
+      type: "function",
+      pattern: new RegExp(`^[ \\t]*(${visibility}\\s+)?(?:async\\s+|unsafe\\s+|const\\s+|extern\\s+(?:"[^"]+"\\s+)?)*fn\\s+([A-Za-z_]\\w*)`, "gm"),
+    },
+    { type: "type", pattern: new RegExp(`^[ \\t]*(${visibility}\\s+)?type\\s+([A-Za-z_]\\w*)`, "gm") },
+  ];
+  for (const definition of definitions) {
+    for (const match of text.matchAll(definition.pattern)) {
+      const name = match[2];
+      if (!name) continue;
+      const key = `${definition.type}:${name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const isPublic = Boolean(match[1]);
+      symbols.push({ type: definition.type, name, line: lineNumberAt(text, match.index ?? 0), isPublic });
     }
   }
   return symbols;
