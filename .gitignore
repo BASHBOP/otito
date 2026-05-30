@@ -4,3 +4,5 @@ dist/
 coverage/
 site/
 .DS_Store
+.claude/
+~$*
