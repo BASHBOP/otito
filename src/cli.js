@@ -30,6 +30,7 @@ import { formatReportTerminal, generateReport } from "./lib/report.js";
 import { generateWorkspaceReport } from "./lib/workspace.js";
 import { generateHarness } from "./lib/harness.js";
 import { runEval } from "./lib/eval.js";
+import { generateDataAccessReport } from "./lib/data-access.js";
 import { getAgentTools } from "./lib/agent-tools.js";
 import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
 
@@ -58,6 +59,7 @@ const commandHandlers = {
   workspace: handleWorkspace,
   harness: handleHarness,
   eval: handleEval,
+  "data-access": handleDataAccess,
   "agent-tools": handleAgentTools,
   help: handleHelp,
 };
@@ -546,6 +548,21 @@ async function handleEval(parsed) {
   if (parsed.flags.out) {
     const artifact = writeArtifact(parsed.flags.out, result.markdown);
     printText(`Eval written: ${artifact.path}`);
+    return;
+  }
+  printText(result.markdown);
+}
+
+async function handleDataAccess(parsed) {
+  const repoPath = parsed.positionals[0] ?? ".";
+  const result = generateDataAccessReport(repoPath);
+  if (parsed.flags.json) {
+    printJson(result.data);
+    return;
+  }
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, result.markdown);
+    printText(`Data-access report written: ${artifact.path}`);
     return;
   }
   printText(result.markdown);
