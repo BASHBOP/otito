@@ -35,6 +35,7 @@ Usage:
   repoctx report <path> [--out file] [--json]
   repoctx workspace <repo...> [--out file] [--json]
   repoctx harness <path> [--out file] [--json]
+  repoctx eval <path> [--query text] [--naive-cap n] [--out file] [--json]
   repoctx agent-tools [--json|--markdown]
 
 Legacy alias:
@@ -58,6 +59,7 @@ Examples:
   node src/cli.js report . --out .dev-context/report.md
   node src/cli.js workspace ../web ../api --out .dev-context/workspace.md
   node src/cli.js structure ../web --pattern 'app/**/*.tsx' --out .dev-context/app.html
+  node src/cli.js eval . --out .dev-context/eval.md
 `);
 }
 
