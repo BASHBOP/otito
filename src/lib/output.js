@@ -36,6 +36,7 @@ Usage:
   repoctx workspace <repo...> [--out file] [--json]
   repoctx harness <path> [--out file] [--json]
   repoctx eval <path> [--query text] [--naive-cap n] [--out file] [--json]
+  repoctx data-access <path> [--out file] [--json]
   repoctx agent-tools [--json|--markdown]
 
 Legacy alias:
