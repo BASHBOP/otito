@@ -4,7 +4,7 @@ import ts from "typescript";
 import { inspectRepo, listRepoFiles } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
-const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go"]);
+const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go", ".cs"]);
 const declarationPatterns = [
   { type: "class", pattern: /\bexport\s+(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
   { type: "class", pattern: /\b(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
@@ -119,8 +119,12 @@ function analyzeFile(root, relativePath, maxSymbols) {
 }
 
 function extractAstFacts(relativePath, text) {
-  if (path.extname(relativePath).toLowerCase() === ".go") {
+  const ext = path.extname(relativePath).toLowerCase();
+  if (ext === ".go") {
     return extractGoFacts(text);
+  }
+  if (ext === ".cs") {
+    return extractCsharpFacts(text);
   }
 
   try {
@@ -475,6 +479,91 @@ function extractGoSymbols(text) {
       symbols.push({ type: definition.type, name: match[1], line: lineNumberAt(text, match.index ?? 0) });
     }
   }
+  return symbols;
+}
+
+function extractCsharpFacts(text) {
+  const codeText = stripNonCode(text);
+  const symbols = extractCsharpSymbols(codeText);
+  const exportable = new Set(["class", "interface", "struct", "enum", "record"]);
+  return {
+    imports: extractCsharpImports(codeText),
+    exports: symbols.filter((s) => exportable.has(s.type) && s.isPublic).map((s) => s.name),
+    symbols: symbols.map(({ isPublic: _isPublic, ...rest }) => rest),
+  };
+}
+
+function extractCsharpImports(text) {
+  const imports = new Set();
+  for (const match of text.matchAll(/^\s*using\s+(?:static\s+)?([A-Za-z_][\w.]*)\s*;/gm)) {
+    imports.add(match[1]);
+  }
+  return [...imports].slice(0, 100);
+}
+
+function extractCsharpSymbols(text) {
+  const symbols = [];
+  const seen = new Set();
+  const accessModifiers = "(?:public|private|protected|internal|protected\\s+internal|private\\s+protected)";
+  const otherModifiers = "(?:static|sealed|abstract|partial|virtual|override|async|readonly|extern|unsafe|new)";
+  const modifierGroup = `(?:(?:${accessModifiers}|${otherModifiers})\\s+)*`;
+  const definitions = [
+    { type: "namespace", pattern: /\bnamespace\s+([A-Za-z_][\w.]*)/g, alwaysPublic: true },
+    { type: "class", pattern: new RegExp(`\\b(${accessModifiers}\\s+)?${modifierGroup}class\\s+([A-Za-z_]\\w*)`, "g") },
+    { type: "interface", pattern: new RegExp(`\\b(${accessModifiers}\\s+)?${modifierGroup}interface\\s+([A-Za-z_]\\w*)`, "g") },
+    { type: "struct", pattern: new RegExp(`\\b(${accessModifiers}\\s+)?${modifierGroup}struct\\s+([A-Za-z_]\\w*)`, "g") },
+    { type: "enum", pattern: new RegExp(`\\b(${accessModifiers}\\s+)?${modifierGroup}enum\\s+([A-Za-z_]\\w*)`, "g") },
+    { type: "record", pattern: new RegExp(`\\b(${accessModifiers}\\s+)?${modifierGroup}record\\s+([A-Za-z_]\\w*)`, "g") },
+  ];
+
+  for (const definition of definitions) {
+    for (const match of text.matchAll(definition.pattern)) {
+      const name = match[match.length - 1];
+      if (!name) continue;
+      const key = `${definition.type}:${name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const isPublic = definition.alwaysPublic ? true : Boolean(match[1] && /\bpublic\b/.test(match[1]));
+      symbols.push({ type: definition.type, name, line: lineNumberAt(text, match.index ?? 0), isPublic });
+    }
+  }
+
+  const methodPattern = new RegExp(
+    `^[ \\t]*(?:\\[[^\\]]*\\][ \\t]*\\r?\\n[ \\t]*)*` +
+      `(?:(${accessModifiers})\\s+)?(?:${otherModifiers}\\s+)*` +
+      `[A-Za-z_][\\w<>?\\[\\],\\.\\s]*?\\s+([A-Za-z_]\\w*)\\s*\\([^;{}=>]*?\\)\\s*(?:where[^{;]*)?\\{`,
+    "gm",
+  );
+  const methodKeywords = new Set([
+    "if",
+    "for",
+    "foreach",
+    "while",
+    "switch",
+    "using",
+    "lock",
+    "catch",
+    "try",
+    "finally",
+    "fixed",
+    "do",
+    "else",
+    "return",
+    "throw",
+    "new",
+    "checked",
+    "unchecked",
+  ]);
+  for (const match of text.matchAll(methodPattern)) {
+    const name = match[2];
+    if (!name || methodKeywords.has(name)) continue;
+    const key = `method:${name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const isPublic = Boolean(match[1] && /\bpublic\b/.test(match[1]));
+    symbols.push({ type: "method", name, line: lineNumberAt(text, match.index ?? 0), isPublic });
+  }
+
   return symbols;
 }
 
