@@ -29,6 +29,7 @@ import { generatePrReview } from "./lib/pr-review.js";
 import { formatReportTerminal, generateReport } from "./lib/report.js";
 import { generateWorkspaceReport } from "./lib/workspace.js";
 import { generateHarness } from "./lib/harness.js";
+import { runEval } from "./lib/eval.js";
 import { getAgentTools } from "./lib/agent-tools.js";
 import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
 
@@ -56,6 +57,7 @@ const commandHandlers = {
   report: handleReport,
   workspace: handleWorkspace,
   harness: handleHarness,
+  eval: handleEval,
   "agent-tools": handleAgentTools,
   help: handleHelp,
 };
@@ -527,6 +529,25 @@ async function handleHarness(parsed) {
     return;
   }
 
+  printText(result.markdown);
+}
+
+async function handleEval(parsed) {
+  const repoPath = parsed.positionals[0] ?? ".";
+  const options = {};
+  if (parsed.flags.query) options.query = parsed.flags.query;
+  if (parsed.flags.naive_cap) options.naiveFileCap = Number(parsed.flags.naive_cap);
+  const result = runEval(repoPath, options);
+
+  if (parsed.flags.json) {
+    printJson(result.data);
+    return;
+  }
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, result.markdown);
+    printText(`Eval written: ${artifact.path}`);
+    return;
+  }
   printText(result.markdown);
 }
 
