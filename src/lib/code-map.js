@@ -523,9 +523,7 @@ function extractCsharpSymbols(text) {
       const key = `${definition.type}:${name}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      const isPublic = definition.alwaysPublic
-        ? true
-        : Boolean(match[1] && /\bpublic\b/.test(match[1]));
+      const isPublic = definition.alwaysPublic ? true : Boolean(match[1] && /\bpublic\b/.test(match[1]));
       symbols.push({ type: definition.type, name, line: lineNumberAt(text, match.index ?? 0), isPublic });
     }
   }
@@ -537,8 +535,24 @@ function extractCsharpSymbols(text) {
     "gm",
   );
   const methodKeywords = new Set([
-    "if", "for", "foreach", "while", "switch", "using", "lock", "catch", "try",
-    "finally", "fixed", "do", "else", "return", "throw", "new", "checked", "unchecked",
+    "if",
+    "for",
+    "foreach",
+    "while",
+    "switch",
+    "using",
+    "lock",
+    "catch",
+    "try",
+    "finally",
+    "fixed",
+    "do",
+    "else",
+    "return",
+    "throw",
+    "new",
+    "checked",
+    "unchecked",
   ]);
   for (const match of text.matchAll(methodPattern)) {
     const name = match[2];
