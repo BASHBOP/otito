@@ -196,6 +196,11 @@ function scoreFile(map, file, tokens, intent) {
     score += scoreField(`${symbol.type} ${symbol.name}`, tokens, 9, "symbol", reasons);
   }
 
+  if ((file.dataAccess?.length ?? 0) > 0) {
+    score += Math.min(15, 3 + file.dataAccess.length);
+    reasons.push("data access");
+  }
+
   score += scoreIntentHints(file, intent, reasons);
 
   if (file.kind === "test" && score > 0) {
