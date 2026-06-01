@@ -3,7 +3,7 @@
 ## Local repo intelligence for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.0.0 — impact-map and pullpass absorbed; ships `impact`, `pass`, `pass-pr`, and `review`<br>
+**Status:** v1.2.0 — multi-domain discoverability; ships `eval`, `data-access`, and code maps for C#, Python, Java, Ruby, and Rust on top of the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`)<br>
 **Category:** Practical AI governance for developers
 
 > Built and maintained by **Oluwasegun Olumbe** for teams that want context before code changes, review prompts before merge, and less guessing in agent workflows.
@@ -14,6 +14,21 @@
     repoctx is a local-first context system. It inspects repositories, builds code maps, creates task-aware context packs, prepares PR review harnesses, and exposes the same workflow through an MCP server.
 
     It keeps the legacy `dev-context` command as an alias while making `repoctx` the canonical product name.
+
+---
+
+## :material-sparkles: What's New
+
+!!! tip "v1.2.0 — multi-domain discoverability (2026-06-01)"
+    Files in feature subdirs are now tagged under both their root domain *and* the feature name. `components/livestream/RecordingsPanel.tsx` matches both `find_domain('components')` and `find_domain('livestream')`. File records gain a `domains: string[]` field; `find_domain`, `filterFiles`, `findFrontendApiClient`, and `context_pack` scoring all read from the full set. Cache version bumped 3 → 4; existing `.dev-context/index.json` caches will rebuild on next access.
+
+!!! tip "v1.1.0 — eval, data-access, and five new languages (2026-05-30)"
+    - **`repoctx eval`** runs a fixed task suite (`repo_overview`, `code_map`, `harness`, `context_pack`) on any target repo and reports tokens of repoctx output vs a deterministic naive-agent approximation. `--json` output is CI-friendly for regression gating.
+    - **`repoctx data-access`** detects inline SQL strings (any language) and Prisma ORM calls; aggregates by source, operation, table, and file. New `dataAccess` field on file records; `context_pack` scoring boosts files that touch the DB by up to +15.
+    - **C#, Python, Java, Ruby, Rust** code-map extractors join the existing TS/JS/Go support.
+    - **Vendor-bundle filter** drops `*.min.js`, `Bootstrap.js`, `jquery.js`, etc. from `context_pack` scoring so they no longer surface as primary files.
+
+See [CHANGELOG.md](https://github.com/nugehs/repoctx/blob/main/CHANGELOG.md) for the full history.
 
 ---
 
@@ -34,9 +49,12 @@
 
 !!! success "Current Capabilities"
     - Repository inspection with languages, scripts, entrypoints, and git state
-    - AST-backed JSON-first code maps for JavaScript, TypeScript, and Go projects
+    - AST-backed JSON-first code maps for TypeScript, JavaScript, Go, C#, Python, Java, Ruby, and Rust
+    - Multi-domain file tagging so feature subdirs surface under both root and feature names
     - Local discovery, indexing, catalog search, and workspace reports
-    - Task-aware context packs before agents plan or edit
+    - Task-aware context packs before agents plan or edit, with vendor-bundle filtering
+    - Data-access surface reports (inline SQL and Prisma) with per-file boosts in context-pack scoring
+    - Local-vs-naïve eval suite for measuring repoctx's token savings
     - PR review context from git diffs and optional GitHub comments
     - Go test-file detection for PullPass-style repositories
     - MCP tools for repository context, search, maps, and review workflows
