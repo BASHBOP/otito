@@ -361,6 +361,37 @@ test("generateCodeMap extracts Rust use, mod, struct, enum, trait, fn with pub v
   assert.ok(!file.exports.includes("private_helper"), "private fn is not exported");
 });
 
+test("generateCodeMap tags files with feature subdir as a secondary domain", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-domains-"));
+  fs.mkdirSync(path.join(root, "components", "livestream"), { recursive: true });
+  fs.mkdirSync(path.join(root, "app", "dashboard", "livestream"), { recursive: true });
+  fs.mkdirSync(path.join(root, "components"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fixture" }));
+  fs.writeFileSync(path.join(root, "components", "livestream", "Player.tsx"), "export function Player() { return null; }\n");
+  fs.writeFileSync(path.join(root, "components", "Button.tsx"), "export function Button() { return null; }\n");
+  fs.writeFileSync(path.join(root, "app", "dashboard", "livestream", "page.tsx"), "export default function Page() { return null; }\n");
+
+  const result = generateCodeMap(root);
+  const byPath = Object.fromEntries(result.files.map((f) => [f.path, f]));
+
+  const player = byPath["components/livestream/Player.tsx"];
+  assert.equal(player.domain, "components", "primary domain preserved for backwards compat");
+  assert.ok(player.domains.includes("livestream"), "feature subdir surfaces as a secondary domain tag");
+  assert.ok(player.domains.includes("components"));
+
+  const button = byPath["components/Button.tsx"];
+  assert.deepEqual(button.domains, ["components"], "top-level component has no feature subdir");
+
+  const page = byPath["app/dashboard/livestream/page.tsx"];
+  assert.equal(page.domain, "dashboard");
+  assert.ok(page.domains.includes("livestream"), "nested route surfaces feature segment too");
+
+  const summary = Object.fromEntries(result.domains.map((d) => [d.name, d.fileCount]));
+  assert.ok(summary.livestream >= 2, "summarizeDomains counts every tag a file carries");
+  assert.ok(summary.components >= 2);
+  assert.ok(summary.dashboard >= 1);
+});
+
 test("generateCodeMap flags vendor files via isVendor and downstream filters them in context_pack", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-vendor-"));
   fs.mkdirSync(path.join(root, "js"), { recursive: true });

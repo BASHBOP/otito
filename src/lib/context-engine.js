@@ -177,7 +177,7 @@ function scoreFile(map, file, tokens, intent) {
 
   score += scoreField(file.path, tokens, 8, "path", reasons);
   score += scoreField(file.kind, tokens, 4, "kind", reasons);
-  score += scoreField(file.domain, tokens, 5, "domain", reasons);
+  score += scoreField(file.domains?.length ? file.domains.join(" ") : file.domain, tokens, 5, "domain", reasons);
   score += scoreField(file.route, tokens, 7, "route", reasons);
   score += scoreField(file.controllerBasePath, tokens, 7, "controller", reasons);
   score += scoreField(map.repo.name, tokens, 3, "repo", reasons);

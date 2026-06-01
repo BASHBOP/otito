@@ -109,10 +109,12 @@ function analyzeFile(root, relativePath, maxSymbols) {
   const ast = extractAstFacts(relativePath, text);
   const vendor = isVendorFile(relativePath, text);
   const dataAccess = vendor ? [] : extractDataAccess(text);
+  const domainInfo = inferDomainInfo(relativePath);
   const record = {
     path: relativePath,
     kind: classifyFile(relativePath),
-    domain: inferDomain(relativePath),
+    domain: domainInfo.primary,
+    domains: domainInfo.all,
     route: inferNextRoute(relativePath),
     controllerBasePath: inferControllerBasePath(text),
     httpMethods: extractHttpMethods(text),
@@ -453,29 +455,56 @@ function isTestFilePath(file) {
 }
 
 function inferDomain(file) {
+  return inferDomainInfo(file).primary;
+}
+
+// Returns both the primary domain (existing behavior, used for display/scoring)
+// and the full set of domain tags this file should be discoverable under.
+// Feature subdirs (components/livestream/*) get both "components" and "livestream"
+// so domain searches don't miss them.
+function inferDomainInfo(file) {
   const normalized = file.replaceAll("\\", "/").replace(/^src\//, "");
   const parts = normalized.split("/");
+  const all = new Set();
+  const add = (value) => {
+    const cleaned = cleanDomain(value);
+    if (cleaned) all.add(cleaned);
+  };
+
+  // Treat parts[i] as a feature directory only if a deeper segment exists —
+  // otherwise it's actually the file (e.g. components/Button.tsx → parts[1]
+  // is the file, not a feature).
+  const isDir = (i) => i < parts.length - 1;
+
+  let primary;
   if (normalized.startsWith("app/api/") && parts[2]) {
-    return cleanDomain(parts[2]);
+    primary = cleanDomain(parts[2]);
+    if (isDir(3)) add(parts[3]);
+  } else if ((parts[0] === "app" || parts[0] === "pages") && parts[1]) {
+    primary = cleanDomain(parts[1]);
+    if (isDir(2)) add(parts[2]);
+  } else if (normalized.startsWith("redux/apis/") && parts[2]) {
+    primary = cleanDomain(parts[2].replace(/-api\.[jt]s$/, "").replace(/-apis\.[jt]s$/, ""));
+  } else if (normalized.startsWith("services/") && parts[1]) {
+    primary = cleanDomain(parts[1].replace(/-service\.[jt]s$/, ""));
+  } else {
+    const sharedRoots = new Set(["components", "lib", "utils", "schemas", "hooks", "types"]);
+    if (sharedRoots.has(parts[0])) {
+      primary = cleanDomain(parts[0]);
+      if (isDir(1)) add(parts[1]);
+    } else {
+      const interestingRoots = new Set(["app", "src", "redux", "services"]);
+      if (interestingRoots.has(parts[0]) && parts[1]) {
+        primary = cleanDomain(parts[1]);
+        if (isDir(2)) add(parts[2]);
+      } else {
+        primary = cleanDomain(parts[0] ?? "root");
+      }
+    }
   }
-  if ((parts[0] === "app" || parts[0] === "pages") && parts[1]) {
-    return cleanDomain(parts[1]);
-  }
-  if (normalized.startsWith("redux/apis/") && parts[2]) {
-    return cleanDomain(parts[2].replace(/-api\.[jt]s$/, "").replace(/-apis\.[jt]s$/, ""));
-  }
-  if (normalized.startsWith("services/") && parts[1]) {
-    return cleanDomain(parts[1].replace(/-service\.[jt]s$/, ""));
-  }
-  const sharedRoots = new Set(["components", "lib", "utils", "schemas", "hooks", "types"]);
-  if (sharedRoots.has(parts[0])) {
-    return cleanDomain(parts[0]);
-  }
-  const interestingRoots = new Set(["app", "src", "redux", "services"]);
-  if (interestingRoots.has(parts[0]) && parts[1]) {
-    return cleanDomain(parts[1]);
-  }
-  return cleanDomain(parts[0] ?? "root");
+
+  add(primary);
+  return { primary, all: [...all] };
 }
 
 function cleanDomain(value) {
@@ -1182,10 +1211,13 @@ function isIdentifierChar(char) {
 function summarizeDomains(files) {
   const domains = new Map();
   for (const file of files) {
-    const domain = domains.get(file.domain) ?? { name: file.domain, fileCount: 0, kinds: new Map() };
-    domain.fileCount += 1;
-    domain.kinds.set(file.kind, (domain.kinds.get(file.kind) ?? 0) + 1);
-    domains.set(file.domain, domain);
+    const tags = file.domains?.length ? file.domains : [file.domain];
+    for (const name of tags) {
+      const domain = domains.get(name) ?? { name, fileCount: 0, kinds: new Map() };
+      domain.fileCount += 1;
+      domain.kinds.set(file.kind, (domain.kinds.get(file.kind) ?? 0) + 1);
+      domains.set(name, domain);
+    }
   }
 
   return [...domains.values()]

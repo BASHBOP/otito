@@ -503,7 +503,7 @@ function findDomain(args) {
       return {
         repo: map.repo,
         files: map.files
-          .filter((file) => matches(file.domain, domain))
+          .filter((file) => matches(domainSearchText(file), domain))
           .slice(0, limit)
           .map(summarizeFile),
       };
@@ -567,7 +567,7 @@ function findFrontendApiClient(args) {
         repo: map.repo,
         files: map.files
           .filter((file) => file.kind === "apiClient")
-          .filter((file) => !query || matches(`${file.path} ${file.domain} ${file.imports.join(" ")} ${file.exports.join(" ")}`, query))
+          .filter((file) => !query || matches(`${file.path} ${domainSearchText(file)} ${file.imports.join(" ")} ${file.exports.join(" ")}`, query))
           .slice(0, limit)
           .map(summarizeFile),
       };
@@ -576,7 +576,12 @@ function findFrontendApiClient(args) {
 }
 
 function filterFiles(files, args = {}) {
-  return files.filter((file) => !args.domain || matches(file.domain, args.domain)).filter((file) => !args.kind || file.kind === args.kind);
+  return files.filter((file) => !args.domain || matches(domainSearchText(file), args.domain)).filter((file) => !args.kind || file.kind === args.kind);
+}
+
+function domainSearchText(file) {
+  const tags = file.domains?.length ? file.domains : [file.domain];
+  return tags.filter(Boolean).join(" ");
 }
 
 function summarizeFile(file) {
@@ -584,6 +589,7 @@ function summarizeFile(file) {
     path: file.path,
     kind: file.kind,
     domain: file.domain,
+    domains: file.domains ?? (file.domain ? [file.domain] : []),
     route: file.route,
     controllerBasePath: file.controllerBasePath,
     httpMethods: file.httpMethods,
