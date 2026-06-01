@@ -349,7 +349,7 @@ function scoreFile(repository, file, tokens) {
 
   score += scoreField(file.path, tokens, 8, "path", reasons);
   score += scoreField(file.kind, tokens, 4, "kind", reasons);
-  score += scoreField(file.domain, tokens, 5, "domain", reasons);
+  score += scoreField(file.domains?.length ? file.domains.join(" ") : file.domain, tokens, 5, "domain", reasons);
   score += scoreField(repository.name, tokens, 3, "repo", reasons);
   score += scoreField(repository.package?.name, tokens, 3, "package", reasons);
   score += scoreField(file.route, tokens, 6, "route", reasons);
@@ -379,6 +379,7 @@ function scoreFile(repository, file, tokens) {
       path: file.path,
       kind: file.kind,
       domain: file.domain,
+      domains: file.domains ?? (file.domain ? [file.domain] : []),
       route: file.route,
       controllerBasePath: file.controllerBasePath,
       httpMethods: file.httpMethods,

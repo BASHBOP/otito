@@ -3,7 +3,7 @@ import path from "node:path";
 import { generateCodeMap } from "./code-map.js";
 import { listRepoFiles } from "./repo.js";
 
-const cacheVersion = 3;
+const cacheVersion = 4;
 
 export function getCachedCodeMap(repoPath = ".") {
   const root = path.resolve(repoPath);
