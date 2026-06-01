@@ -4,7 +4,7 @@ theme: default
 paginate: true
 size: 16:9
 header: "**repoctx** · context before change"
-footer: "github.com/nugehs/repoctx · npm @nugehs/repoctx · v1.0.1"
+footer: "github.com/nugehs/repoctx · npm @nugehs/repoctx · v1.2.0"
 style: |
   section {
     font-family: -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
@@ -95,7 +95,7 @@ style: |
 
 <br>
 
-<span class="pill">v1.0.1</span> <span class="pill">Node ≥ 18.18</span> <span class="pill">MCP Registry</span> <span class="pill">MIT</span>
+<span class="pill">v1.2.0</span> <span class="pill">Node ≥ 18.18</span> <span class="pill">MCP Registry</span> <span class="pill">MIT</span>
 
 ```
  ____   _____   ____    ___    ____   _____  __  __
@@ -323,18 +323,19 @@ repoctx workspace ../web ../api --out .dev-context/workspace.md
 
 ---
 
-## What ships in v1.0
+## What ships in v1.0 → v1.2
 
 <div class="cols">
 
 **Built in**
 
-- AST code maps (TS/JS/Go)
-- Risk vocabulary + concept inference
-- 8-check merge gate, 3 policy profiles
-- GitHub PR mode (state, reviews, CODEOWNERS, conversations, checks)
-- MCP server + Registry listing
-- MkDocs documentation site
+- AST code maps (TS/JS/Go, plus C#/Python/Java/Ruby/Rust in v1.1)
+- Multi-domain tagging (`domains: string[]`) so feature subdirs surface under both roots and feature names (v1.2)
+- `repoctx eval` token-savings suite + `repoctx data-access` inline SQL / Prisma surface (v1.1)
+- Vendor-bundle filter so `*.min.js`, `Bootstrap.js`, jQuery etc. drop out of context scoring (v1.1)
+- Risk vocabulary + concept inference, 8-check merge gate, 3 policy profiles (v1.0)
+- GitHub PR mode (state, reviews, CODEOWNERS, conversations, checks) (v1.0)
+- MCP server + Registry listing, MkDocs documentation site
 
 **Quality gates**
 

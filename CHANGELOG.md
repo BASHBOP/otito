@@ -8,6 +8,13 @@ This project follows SemVer.
 
 - No changes yet.
 
+## v1.3.0 - 2026-06-02
+
+- **Documentation site brought current with v1.1 and v1.2.** Headline version stamps on `docs/index.md`, `docs/EXECUTIVE-SUMMARY.md`, and `docs/presentation.md` now reflect v1.2.0. Capability tables surface the `repoctx eval` token-savings suite, the `repoctx data-access` inline-SQL / Prisma surface, C# / Python / Java / Ruby / Rust code-map extractors, the vendor-bundle filter, and multi-domain file tagging (`domains: string[]`).
+- **ROADMAP** gains Phase 2.6 (v1.1.0 — eval, data-access, broader languages) and Phase 2.7 (v1.2.0 — multi-domain discoverability), both marked complete.
+- **MCP tool surface table** annotates `repo_map` with all eight supported languages, annotates `find_domain` with the multi-domain tag set, and adds two tools that were shipping but undocumented: `find_backend_route` and `find_frontend_api_client`.
+- **`deploy-docs.yml` now triggers on `CHANGELOG.md`** so release commits redeploy the published site automatically, not just commits that touch `docs/**` or `mkdocs.yml`.
+
 ## v1.2.0 - 2026-06-01
 
 - **Multi-domain discoverability.** Files in feature subdirs are now tagged under both their root domain *and* the feature name. Previously `components/livestream/RecordingsPanel.tsx` lived only under `components`, so `find_domain('livestream')` returned zero. Now the same file matches both `components` and `livestream`. File records gain a `domains: string[]` field carrying the full tag set; the existing `domain` field keeps the primary classification for display and scoring. `find_domain`, `filterFiles` (kind/domain filter), `findFrontendApiClient`, and `context_pack` scoring (in both `catalog.js` and `context-engine.js`) all read from the full set. `summarizeDomains` now counts a file under each of its tags, so the per-repo domain summary on `repo_catalog` surfaces feature-level domains as first-class entries with their actual file counts.

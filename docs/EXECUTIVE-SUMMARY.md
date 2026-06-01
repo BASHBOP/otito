@@ -2,7 +2,7 @@
 
 **Purpose:** Context foundation for AI-assisted software teams<br>
 **Maintainer:** Oluwasegun Olumbe<br>
-**Current Version:** 1.0.0 — impact-map and pullpass absorbed; ships `impact`, `pass`, `pass-pr`, and `review`
+**Current Version:** 1.2.0 — multi-domain discoverability; eval + data-access subcommands; code maps for C#, Python, Java, Ruby, and Rust on top of the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`)
 
 ---
 
@@ -23,8 +23,10 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Area                  | Summary                                                                                                        |
 | --------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Repository inspection | Files, package metadata, languages, package managers, scripts, entrypoints, and git state                      |
-| Code maps             | JSON-first source maps with domains, imports, exports, symbols, routes, and Go source/test awareness           |
-| Context packs         | Task-aware file suggestions, related files, patterns, tests, and validation commands                           |
+| Code maps             | JSON-first source maps with multi-domain tagging, imports, exports, symbols, routes, and language extractors for TS/JS, Go, C#, Python, Java, Ruby, Rust |
+| Context packs         | Task-aware file suggestions, related files, patterns, tests, validation commands, vendor-bundle filtering, and data-access boosts |
+| Data-access surface   | Detects inline SQL and Prisma ORM calls, aggregated by source / operation / table / file                       |
+| Eval suite            | `repoctx eval` measures token savings of repoctx output vs a deterministic naive-agent approximation           |
 | Local catalog         | Discovery, indexing, and search across local repositories                                                      |
 | PR review context     | Diff-aware review prompts, changed domains, risk flags, Go test-file detection, and optional GitHub comments   |
 | MCP support           | Agent-callable tools for repo inspection, maps, search, harnesses, workspaces, and PR review                   |
