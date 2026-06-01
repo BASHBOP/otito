@@ -157,7 +157,7 @@ Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 | Tool               | Purpose                                                                               |
 | ------------------ | ------------------------------------------------------------------------------------- |
 | `repo_inspect`     | Inspect repository shape, scripts, package managers, entrypoints, and git state       |
-| `repo_map`         | Build a compact JSON code map with optional domain and kind filters                   |
+| `repo_map`         | Build a compact JSON code map with optional domain and kind filters (TS/JS, Go, C#, Python, Java, Ruby, Rust) |
 | `repo_discover`    | Discover local repositories under workspace roots                                     |
 | `repo_index`       | Generate local `.dev-context/index.json` files and catalog entries                    |
 | `repo_catalog`     | List cataloged local repositories                                                     |
@@ -170,8 +170,10 @@ Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 | `merge_readiness`  | Local PASS/WARN/FAIL merge gate against a base ref (v1.0+)                            |
 | `pr_merge_readiness` | GitHub PR merge gate using `gh` (review decision, CODEOWNERS, branch protection, status checks) (v1.0+) |
 | `review_pr`        | Composite: impact + pr_review + pass in one call, with derived confidence score (v1.0+) |
-| `find_domain`      | Find domain files across one or more repos                                            |
+| `find_domain`      | Find domain files across one or more repos (reads the multi-domain tag set; v1.2+)    |
 | `find_file_kind`   | Locate routes, controllers, services, hooks, clients, schemas, tests, or source files |
+| `find_backend_route` | Locate backend route definitions by method + path                                   |
+| `find_frontend_api_client` | Locate frontend HTTP client calls that target a backend route                 |
 
 ---
 

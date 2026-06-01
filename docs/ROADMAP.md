@@ -53,6 +53,20 @@
 - Composite `repoctx review` ships impact + pr_review + pass in one call with a derived confidence score.
 - Four new MCP tools: `change_impact`, `merge_readiness`, `pr_merge_readiness`, `review_pr`.
 
+## Phase 2.6 - Eval, data-access, and broader languages (Complete in v1.1.0)
+
+- `repoctx eval` ships a fixed task suite (`repo_overview`, `code_map`, `harness`, `context_pack`) with a `coverage` column so high savings% with low file coverage cannot mask a language-adapter gap. `--json` output is CI-friendly for regression gating.
+- `repoctx data-access` detects inline SQL strings (any language) and Prisma ORM calls; aggregates by source, operation, table, and file. File records gain a `dataAccess` field; `context_pack` scoring boosts files that touch the DB by up to +15.
+- Code-map extractors land for C#, Python, Java, Ruby, and Rust, joining TS/JS/Go.
+- Vendor-bundle filter drops `*.min.js`, `Bootstrap.js`, jQuery and similar from `context_pack` scoring so they no longer surface as primary files.
+
+## Phase 2.7 - Multi-domain discoverability (Complete in v1.2.0)
+
+- Files in feature subdirs are tagged under both their root domain *and* the feature name. `components/livestream/RecordingsPanel.tsx` now matches both `find_domain('components')` and `find_domain('livestream')`.
+- File records gain a `domains: string[]` field carrying the full tag set; the existing `domain` field keeps the primary classification for display and scoring.
+- `find_domain`, `filterFiles`, `findFrontendApiClient`, and `context_pack` scoring all read from the full set. `summarizeDomains` counts a file under each of its tags, so per-repo summaries on `repo_catalog` surface feature-level domains as first-class entries.
+- Cache version bumped 3 → 4; existing `.dev-context/index.json` caches rebuild on next access.
+
 ## Phase 3 - Distribution
 
 - Decide npm registry publication path.
