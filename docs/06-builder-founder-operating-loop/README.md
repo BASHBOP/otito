@@ -26,7 +26,7 @@ repoctx is the product surface. It should stay the command and MCP server that u
 
 PullPass is the merge-safety gate. It should stay focused on review readiness, governance mode, policy checks, CI state, CODEOWNERS, conversations, and the final human decision before merge.
 
-impact-map is currently the analyzer and proving ground. Use it when scope is unclear, when import-neighbor evidence matters, or when a diff needs validation against the original change request. If the same impact-map behavior becomes part of the normal user workflow, graduate that behavior into repoctx instead of asking users to choose between two overlapping context tools.
+`repoctx impact` is the canonical change-impact analyzer. Use it when scope is unclear, when import-neighbor evidence matters, or when a diff needs validation against the original change request. The standalone `impact-map` work has been absorbed into repoctx for normal product and agent workflows.
 
 The rule is simple:
 
@@ -34,9 +34,9 @@ The rule is simple:
 | --- | --- |
 | What should an agent or reviewer know before changing this repo? | repoctx |
 | Is this PR ready to merge under the repo's governance rules? | PullPass |
-| What files, import neighbors, tests, or missed diff areas might this change affect? | impact-map |
+| What files, import neighbors, tests, or missed diff areas might this change affect? | `repoctx impact` |
 
-This keeps the public story clear while leaving room for impact-map to experiment with analysis that can later strengthen repoctx context packs and PR review output.
+This keeps the public story clear: repoctx owns context and impact analysis; PullPass owns the final merge-safety gate.
 
 ---
 
@@ -47,7 +47,7 @@ Use this loop at the start of every meaningful coding-agent session.
 | Step | Action | Evidence |
 | --- | --- | --- |
 | 1. Orient | Check git state, current branch, open PRs, and latest roadmap item | Clean or explained worktree, known base branch, no hidden conflict |
-| 2. Map | Run repoctx context for the task and impact-map when scope or risk is unclear | Primary files, related files, tests, risks, and validation commands |
+| 2. Map | Run repoctx context for the task and `repoctx impact` when scope or risk is unclear | Primary files, related files, tests, risks, and validation commands |
 | 3. Choose | Pick one deliverable that moves the trust layer forward | A branch, issue, PR, docs page, release task, or proof artifact |
 | 4. Change | Make the smallest complete change that satisfies the deliverable | Focused diff with no unrelated cleanup |
 | 5. Prove | Run the relevant local checks and record any skipped checks | CI command output, docs build, PullPass result, or explicit no-test rationale |
@@ -69,7 +69,7 @@ A trust-layer task is ready to start when these are known:
 - The validation command or reason validation is not applicable.
 - The review path: solo owner decision, maintainer review, team review, company review, or high-risk review.
 
-If these are not known, the first deliverable is context: a repoctx report, impact map, issue note, or pilot preflight record.
+If these are not known, the first deliverable is context: a repoctx report, `repoctx impact` output, issue note, or pilot preflight record.
 
 ## Definition Of Done
 
@@ -113,7 +113,7 @@ Version impact:
 
 Context:
 - repoctx artifact:
-- impact-map artifact:
+- repoctx impact artifact:
 - related repos:
 
 Change:
