@@ -3,7 +3,7 @@
 ## Local repo intelligence for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.2.0 — multi-domain discoverability; ships `eval`, `data-access`, and code maps for C#, Python, Java, Ruby, and Rust on top of the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`)<br>
+**Status:** v1.3.1 — npm and MCP manifest versions are aligned; documentation and MCP surface are current with the v1.1/v1.2 capability set; ships `eval`, `data-access`, multi-domain code maps, and the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`)<br>
 **Category:** Practical AI governance for developers
 
 > Built and maintained by **Oluwasegun Olumbe** for teams that want context before code changes, review prompts before merge, and less guessing in agent workflows.
@@ -18,6 +18,12 @@
 ---
 
 ## :material-sparkles: What's New
+
+!!! tip "v1.3.1 — release-readiness cleanup (2026-06-02)"
+    npm package metadata, `package-lock.json`, MCP registry manifest versions, and public docs are aligned. The operating loop now treats `repoctx impact` as the canonical analyzer after absorbing the standalone `impact-map` work.
+
+!!! tip "v1.3.0 — docs and MCP surface alignment (2026-06-02)"
+    Documentation reflects the current `repoctx eval`, `repoctx data-access`, multi-language code maps, multi-domain tagging, and MCP tool surface, including `find_backend_route` and `find_frontend_api_client`.
 
 !!! tip "v1.2.0 — multi-domain discoverability (2026-06-01)"
     Files in feature subdirs are now tagged under both their root domain *and* the feature name. `components/livestream/RecordingsPanel.tsx` matches both `find_domain('components')` and `find_domain('livestream')`. File records gain a `domains: string[]` field; `find_domain`, `filterFiles`, `findFrontendApiClient`, and `context_pack` scoring all read from the full set. Cache version bumped 3 → 4; existing `.dev-context/index.json` caches will rebuild on next access.
