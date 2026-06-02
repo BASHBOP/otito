@@ -454,10 +454,6 @@ function isTestFilePath(file) {
   return /(^|\/)(__tests__|test|tests)(\/|$)/.test(normalized) || /\.(spec|test)\.[jt]sx?$/.test(normalized) || /(^|\/)[^/]+_test\.go$/.test(normalized);
 }
 
-function inferDomain(file) {
-  return inferDomainInfo(file).primary;
-}
-
 // Returns both the primary domain (existing behavior, used for display/scoring)
 // and the full set of domain tags this file should be discoverable under.
 // Feature subdirs (components/livestream/*) get both "components" and "livestream"

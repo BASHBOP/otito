@@ -4,7 +4,7 @@ theme: default
 paginate: true
 size: 16:9
 header: "**repoctx** · context before change"
-footer: "github.com/nugehs/repoctx · npm @nugehs/repoctx · v1.2.0"
+footer: "github.com/nugehs/repoctx · npm @nugehs/repoctx · v1.3.1"
 style: |
   section {
     font-family: -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
@@ -95,7 +95,7 @@ style: |
 
 <br>
 
-<span class="pill">v1.2.0</span> <span class="pill">Node ≥ 18.18</span> <span class="pill">MCP Registry</span> <span class="pill">MIT</span>
+<span class="pill">v1.3.1</span> <span class="pill">Node ≥ 18.18</span> <span class="pill">MCP Registry</span> <span class="pill">MIT</span>
 
 ```
  ____   _____   ____    ___    ____   _____  __  __
@@ -323,7 +323,7 @@ repoctx workspace ../web ../api --out .dev-context/workspace.md
 
 ---
 
-## What ships in v1.0 → v1.2
+## What ships in v1.0 → v1.3
 
 <div class="cols">
 
@@ -336,6 +336,7 @@ repoctx workspace ../web ../api --out .dev-context/workspace.md
 - Risk vocabulary + concept inference, 8-check merge gate, 3 policy profiles (v1.0)
 - GitHub PR mode (state, reviews, CODEOWNERS, conversations, checks) (v1.0)
 - MCP server + Registry listing, MkDocs documentation site
+- Documentation and MCP tool tables aligned with the current shipped surface (v1.3)
 
 **Quality gates**
 

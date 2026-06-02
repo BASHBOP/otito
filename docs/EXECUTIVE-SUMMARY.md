@@ -2,7 +2,7 @@
 
 **Purpose:** Context foundation for AI-assisted software teams<br>
 **Maintainer:** Oluwasegun Olumbe<br>
-**Current Version:** 1.2.0 — multi-domain discoverability; eval + data-access subcommands; code maps for C#, Python, Java, Ruby, and Rust on top of the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`)
+**Current Version:** 1.3.1 — npm and MCP manifest versions are aligned; docs and MCP surface are current with multi-domain discoverability, eval + data-access subcommands, code maps for C#, Python, Java, Ruby, and Rust, and the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`)
 
 ---
 
