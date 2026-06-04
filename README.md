@@ -1,5 +1,7 @@
 # repoctx
 
+![repoctx](assets/repoctx-design-print.svg)
+
 ```text
  ____   _____   ____    ___    ____   _____  __  __
 |  _ \ | ____| |  _ \  / _ \  / ___| |_   _| \ \/ /
@@ -7,8 +9,6 @@
 |  _ < | |___  |  __/ | |_| || |___    | |    /  \
 |_| \_\|_____| |_|     \___/  \____|   |_|   /_/\_\
 ```
-
-![repoctx design print](assets/repoctx-design-print.svg)
 
 `repoctx` is a local-first code context system. It discovers repositories, builds local indexes, maintains a catalog, searches code context, and generates lightweight harnesses for coding agents and reviewers.
 
