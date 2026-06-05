@@ -300,21 +300,24 @@ take a minute or two to refresh.
 
 ## 🔁 Publishing updates
 
-For every future version:
+In this repo, npm and the MCP Registry publish automatically when you push a
+`vX.Y.Z` tag (see `.github/workflows/release.yml`). For every future version:
 
 1. Bump `package.json` and `package-lock.json` versions
 2. Bump `server.json.version` and `packages[0].version` to match
-3. `npm run ci` (or your equivalent gate)
-4. `npm publish`
-5. `mcp-publisher publish`
-
-Tag the release on GitHub afterwards:
+3. `npm run ci` — `version:check` fails the build if `server.json` is out of
+   sync, so the npm package and the MCP manifest can never drift apart
+4. Commit, then tag and push:
 
 ```bash
 git tag v1.0.1
 git push origin v1.0.1
-gh release create v1.0.1 --generate-notes
 ```
+
+Pushing the tag runs the `Release` workflow: it publishes to npm with
+provenance, then logs in to the MCP Registry via GitHub OIDC and runs
+`mcp-publisher publish`. To publish manually instead, run `npm publish`
+followed by `mcp-publisher publish` from a clean checkout.
 
 ---
 
