@@ -21,7 +21,12 @@ export const STATUS = {
   fail: "FAIL",
 };
 
-export function checkRelease(root, files) {
+// `options.baseContent(file)` may return the content of a version file at the
+// comparison base (or null/undefined when unavailable). When supplied, the
+// changelog requirement only applies if the project version actually changed —
+// dependency or lockfile bumps that leave the version untouched are not a
+// release and must not be blocked.
+export function checkRelease(root, files, options = {}) {
   const versionFiles = pickVersionFiles(files);
   if (versionFiles.length === 0) {
     return check("Release discipline", STATUS.pass, "No version metadata changes found.");
@@ -45,11 +50,46 @@ export function checkRelease(root, files) {
     return check("Release discipline", STATUS.fail, "Version metadata files do not agree.", mismatches);
   }
 
+  if (typeof options.baseContent === "function") {
+    const baseVersion = readBaseVersion(versionFiles, options.baseContent);
+    if (baseVersion !== null && baseVersion === values[0].version) {
+      return check(
+        "Release discipline",
+        STATUS.pass,
+        "Version metadata changed but the project version is unchanged (dependency or lockfile update).",
+        formatValues(values),
+      );
+    }
+  }
+
   if (!changedChangelog(files)) {
     return check("Release discipline", STATUS.fail, "Version metadata changed without a changelog update.", versionFiles);
   }
 
   return check("Release discipline", STATUS.pass, "Version metadata is SemVer and changelog was updated.", formatValues(values));
+}
+
+// Resolve the project version at the base ref, preferring the manifest over the
+// lockfile. Returns null when no base version can be determined.
+function readBaseVersion(versionFiles, baseContent) {
+  const priority = ["package.json", "package-lock.json", "npm-shrinkwrap.json", "pyproject.toml", "cargo.toml"];
+  const ordered = [...versionFiles].sort((a, b) => priority.indexOf(normalize(a)) - priority.indexOf(normalize(b)));
+  for (const file of ordered) {
+    let content;
+    try {
+      content = baseContent(file);
+    } catch {
+      content = null;
+    }
+    if (content == null) continue;
+    try {
+      const parsed = parseVersionFile(file, content);
+      if (parsed.length > 0) return parsed[0].version;
+    } catch {
+      // Unparseable base content — try the next file.
+    }
+  }
+  return null;
 }
 
 function pickVersionFiles(files) {

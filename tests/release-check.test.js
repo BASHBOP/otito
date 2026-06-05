@@ -58,3 +58,26 @@ test("checkRelease warns when a version file cannot be read", () => {
   const result = checkRelease(root, ["package.json"]);
   assert.equal(result.status, "WARN");
 });
+
+test("checkRelease passes a dependency bump that leaves the project version unchanged", () => {
+  const root = fixture("dep-bump", {
+    "package.json": JSON.stringify({ version: "1.3.2", devDependencies: { eslint: "10.4.1" } }),
+    "package-lock.json": JSON.stringify({ version: "1.3.2", packages: { "": { version: "1.3.2" } } }),
+  });
+  const baseContent = (file) => {
+    if (file === "package.json") return JSON.stringify({ version: "1.3.2", devDependencies: { eslint: "10.4.0" } });
+    if (file === "package-lock.json") return JSON.stringify({ version: "1.3.2", packages: { "": { version: "1.3.2" } } });
+    return null;
+  };
+  const result = checkRelease(root, ["package.json", "package-lock.json"], { baseContent });
+  assert.equal(result.status, "PASS");
+  assert.match(result.summary, /project version is unchanged/);
+});
+
+test("checkRelease still fails a real version bump with no changelog even with baseContent", () => {
+  const root = fixture("real-bump", { "package.json": JSON.stringify({ version: "1.3.3" }) });
+  const baseContent = (file) => (file === "package.json" ? JSON.stringify({ version: "1.3.2" }) : null);
+  const result = checkRelease(root, ["package.json"], { baseContent });
+  assert.equal(result.status, "FAIL");
+  assert.match(result.summary, /without a changelog/);
+});
