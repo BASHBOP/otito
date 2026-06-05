@@ -12,6 +12,7 @@ This project follows SemVer.
 
 - **Automated release pipeline.** Pushing a `vX.Y.Z` tag now publishes to npm with provenance, then publishes `server.json` to the MCP Registry via GitHub OIDC (`.github/workflows/release.yml`). A `prepublishOnly` gate runs the full quality suite before any publish.
 - **Version drift guard.** `version:check` now fails the build unless `server.json` (manifest and package versions) matches `package.json`, so the npm package and the MCP manifest can never desync.
+- **Real merge-readiness gate.** The required `PullPass readiness` status check is now produced by CI running repoctx's own `review` command (impact + PR review + local pass) on the diff, exiting non-zero only on a blocking `FAIL`. repoctx now dogfoods its own merge gate.
 - **Trust signals.** Add `CODE_OF_CONDUCT.md`, README status badges (npm, CI, license, Node), and npm publish provenance.
 - **Docs slimmed for the public site.** Remove internal go-to-market and historical pages (company demo/pilot material, dated proof/launch notes, the absorption study, the standalone roadmap, and the slide deck); the trust-layer section keeps a single conceptual overview.
 - **Dependency hygiene.** Group Dependabot updates (GitHub Actions into one PR, npm minor/patch into another) and auto-merge low-risk patch/minor bumps once checks pass. Bump CI actions to current majors.
