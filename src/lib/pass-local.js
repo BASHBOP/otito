@@ -22,7 +22,8 @@ export function evaluateLocal(repoPath, options = {}) {
   const base = options.base ?? defaultBase(root);
   const files = changedFiles(root, base);
 
-  const checks = [changedFilesCheck(files), secretCheck(files), riskCheck(files), checkRelease(root, files), validationCommandsCheck(root)];
+  const baseContent = (file) => gitShowContent(root, base, file);
+  const checks = [changedFilesCheck(files), secretCheck(files), riskCheck(files), checkRelease(root, files, { baseContent }), validationCommandsCheck(root)];
   const audit = dependencyAuditCheck(root);
   if (audit) checks.push(audit);
   checks.push(localReviewCheck());
@@ -75,6 +76,13 @@ function runGit(cwd, args) {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+// Content of `file` at the `base` ref, or null when the ref or path is absent.
+// Non-throwing so release discipline can fall back to head-only inspection.
+export function gitShowContent(cwd, base, file) {
+  const result = runCommand("git", ["show", `${base}:${file}`], { cwd });
+  return result.ok ? result.stdout : null;
 }
 
 function defaultBase(root) {
