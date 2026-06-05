@@ -120,3 +120,55 @@ jobs:
         with:
           name: repoctx-pr-review
           path: .dev-context/pr-review.md
+
+  pullpass-readiness:
+    name: PullPass readiness
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR head
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Checkout pushed commit
+        if: github.event_name == 'push'
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch origin "+${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}" --depth=1
+
+      # repoctx's own merge-readiness gate (impact + PR review + local pass).
+      # Exits non-zero only on a blocking FAIL verdict; WARN does not block.
+      - name: Evaluate merge readiness
+        if: github.event_name == 'pull_request'
+        run: node src/cli.js review . --base "origin/${{ github.base_ref }}" --head HEAD
+
+      - name: Evaluate merge readiness (push)
+        if: github.event_name == 'push'
+        run: |
+          BASE="${{ github.event.before }}"
+          if ! git rev-parse --verify "$BASE^{commit}" >/dev/null 2>&1; then
+            if git rev-parse --verify "HEAD~1^{commit}" >/dev/null 2>&1; then
+              BASE="HEAD~1"
+            else
+              BASE="HEAD"
+            fi
+          fi
+
+          node src/cli.js review . --base "$BASE" --head HEAD
