@@ -18,8 +18,8 @@ While repoctx is pre-1.0, preserve the same discipline: use patch releases for c
 6. Bump `package.json` and `package-lock.json` together with `npm version <patch|minor|major> --no-git-tag-version`.
 7. Run `npm run version:check`.
 8. Commit the release changes.
-9. Tag the release as `vX.Y.Z`.
-10. Publish from a clean checkout with `npm publish`.
+9. Tag the release as `vX.Y.Z` and push the tag.
+10. Pushing the tag triggers the `Release` workflow, which runs the quality gate and publishes to npm with provenance. (Requires the `NPM_TOKEN` repository secret.)
 11. Verify the installed binary:
 
 ```bash

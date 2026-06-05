@@ -1,5 +1,7 @@
 # repoctx
 
+[![npm](https://img.shields.io/npm/v/@nugehs/repoctx)](https://www.npmjs.com/package/@nugehs/repoctx) [![CI](https://github.com/nugehs/repoctx/actions/workflows/repoctx-ci.yml/badge.svg)](https://github.com/nugehs/repoctx/actions/workflows/repoctx-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Node.js](https://img.shields.io/node/v/@nugehs/repoctx)](https://www.npmjs.com/package/@nugehs/repoctx)
+
 ![repoctx](assets/repoctx-design-print.svg)
 
 ```text
@@ -43,7 +45,6 @@ repoctx now includes a publishable MkDocs documentation site, shaped as a practi
 - [Release Readiness](docs/04-release-readiness/README.md)
 - [Trust-Layer Demo](docs/05-trust-layer-demo/README.md)
 - [Builder-Founder Operating Loop](docs/06-builder-founder-operating-loop/README.md)
-- [Roadmap](docs/ROADMAP.md)
 - [Glossary](docs/GLOSSARY.md)
 
 When GitHub Pages is enabled for the repository, the published site is configured for:
@@ -72,11 +73,10 @@ npx -y @nugehs/repoctx doctor
 From a local checkout:
 
 ```bash
-node src/cli.js install
-npm ci
-npm run ci
-npm install -g .
-repoctx doctor
+npm ci             # install dependencies
+npm run ci         # run the full quality gate
+npm install -g .   # install the repoctx CLI globally
+repoctx doctor     # verify the install
 ```
 
 ```bash
