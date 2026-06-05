@@ -31,13 +31,15 @@
     "audit": "npm audit --omit=dev",
     "smoke": "node src/cli.js doctor && node src/cli.js harness . --json",
     "quality": "npm run format:check && npm run lint && npm run typecheck && npm run version:check && npm test && npm run test:coverage && npm run audit && npm run smoke",
-    "ci": "npm run quality"
+    "ci": "npm run quality",
+    "prepublishOnly": "npm run ci"
   },
   "engines": {
     "node": ">=18.18"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   },
   "repository": {
     "type": "git",

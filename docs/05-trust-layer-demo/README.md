@@ -113,30 +113,6 @@ Use this checklist when publishing a demo, release note, or case study.
 - Solo-maintainer admin merges, if used, are recorded as explicit owner decisions
 - Public evidence uses sanitized links or repo-relative paths, not local absolute paths or sensitive output
 
-!!! tip "Dated proof run"
-    See the [2026-05-28 trust-layer proof run](./proof-run-2026-05-28.md) for a concrete terminal-capture record covering repoctx context, PullPass release discipline, CI, solo-maintainer merge visibility, and release publication.
-
-!!! success "Company-facing case study"
-    See the [company adoption case study](./company-adoption-case-study.md) for a screenshot-style walkthrough that frames repoctx and PullPass for engineering leaders, platform teams, and AI governance reviewers.
-
-!!! quote "Company demo packet"
-    See the [company demo packet](./company-demo-packet.md) for the short sendable version that ties the executive summary, proof run, case study, launch note, and pilot checklist together.
-
-!!! example "Company pilot runbook"
-    See the [company pilot runbook](./company-pilot-runbook.md) for the step-by-step first repository and PR pilot, including roles, preflight checks, evidence capture, stop conditions, and post-pilot triage.
-
-!!! info "Proof index"
-    See the [proof index](./proof-index.md) for the sanitized public evidence map and the private/internal evidence boundary.
-
-!!! check "Review policy snapshot"
-    See the [review policy snapshot](./review-policy-snapshot.md) for the current branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision posture for repoctx and PullPass.
-
-!!! question "Company pilot feedback"
-    See the [company pilot feedback loop](./company-pilot-feedback.md) for the structured intake that turns reviewer concerns into docs, repoctx improvements, PullPass gates, proof artifacts, or pilot follow-up.
-
-!!! abstract "Public launch note"
-    See the [2026-05-28 public launch note](./public-launch-note-2026-05-28.md) for the short public story: what is released, what is review-gated, why it matters, and how teams can try the trust-layer workflow.
-
 !!! note "Builder-founder operating loop"
     See the [builder-founder operating loop](../06-builder-founder-operating-loop/README.md) for the session rhythm that keeps context, focused changes, visible gates, human decisions, and durable evidence moving together.
 
