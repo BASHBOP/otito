@@ -8,6 +8,10 @@ This project follows SemVer.
 
 - No changes yet.
 
+## v1.3.3 - 2026-06-05
+
+- **Fix release-discipline false positive on dependency bumps.** `repoctx review`/`pass` no longer reports `FAIL` when a dependency or lockfile update touches `package.json`/`package-lock.json` without a changelog entry. Release discipline now compares the project version against the base ref and only requires a changelog when the version actually changes. This unblocks the `PullPass readiness` gate for Dependabot and other dependency PRs.
+
 ## v1.3.2 - 2026-06-05
 
 - **Automated release pipeline.** Pushing a `vX.Y.Z` tag now publishes to npm with provenance, then publishes `server.json` to the MCP Registry via GitHub OIDC (`.github/workflows/release.yml`). A `prepublishOnly` gate runs the full quality suite before any publish.

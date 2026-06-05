@@ -5,7 +5,7 @@
 import path from "node:path";
 import * as codeowners from "./codeowners.js";
 import { defaultGhRunner } from "./gh.js";
-import { gitRoot } from "./pass-local.js";
+import { gitRoot, gitShowContent } from "./pass-local.js";
 import { aggregateVerdict, normalizeGovernance, normalizeProfile, policyCheck, STATUS } from "./policy.js";
 import { checkRelease } from "./release-check.js";
 import { matchRiskPaths, matchSecretPaths } from "./risk-paths.js";
@@ -30,7 +30,7 @@ export async function evaluatePR(repoPath, selector, options = {}) {
     changedFilesCheck(files),
     secretCheck(files),
     riskCheck(files),
-    checkRelease(root, files),
+    checkRelease(root, files, { baseContent: prBaseContent(root, pr.baseRefName) }),
     reviewDecisionCheck(pr.reviewDecision, governance),
     codeownersCheckPR(root, files, pr.reviews ?? [], runner, governance),
     unresolvedConversationsCheck(root, pr.number, runner),
@@ -65,6 +65,20 @@ export async function evaluatePR(repoPath, selector, options = {}) {
   };
   data.tokenEstimate = { fullJson: estimateTokens(data) };
   return data;
+}
+
+// Resolve version-file content at the PR base for release-discipline scoping.
+// Tries the remote-tracking ref first, then the local branch; null when the
+// base isn't fetched locally, in which case release discipline stays strict.
+function prBaseContent(root, baseRefName) {
+  if (!baseRefName) return undefined;
+  return (file) => {
+    for (const ref of [`origin/${baseRefName}`, baseRefName]) {
+      const content = gitShowContent(root, ref, file);
+      if (content != null) return content;
+    }
+    return null;
+  };
 }
 
 function viewPR(root, selector, runner) {
