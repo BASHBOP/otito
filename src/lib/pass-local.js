@@ -26,6 +26,8 @@ export function evaluateLocal(repoPath, options = {}) {
   const checks = [changedFilesCheck(files), secretCheck(files), riskCheck(files), checkRelease(root, files, { baseContent }), validationCommandsCheck(root)];
   const audit = dependencyAuditCheck(root);
   if (audit) checks.push(audit);
+  const drift = contractDriftCheck(root);
+  if (drift) checks.push(drift);
   checks.push(localReviewCheck());
   checks.push(policyCheck({ profile, governance, files, checks, remote: false }));
 
@@ -154,6 +156,69 @@ function localReviewCheck() {
     status: STATUS.warn,
     summary: "Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.",
   };
+}
+
+// Optional FE↔BE contract-drift gate, powered by tieline
+// (https://github.com/nugehs/tieline). Runs only when a tieline config is
+// discoverable AND the binary resolves; otherwise it skips silently so the gate
+// never hard-depends on tieline being installed.
+function contractDriftCheck(root) {
+  const cfg = findTielineConfig(root);
+  if (!cfg) return null;
+  const cwd = path.dirname(cfg);
+  const bin = resolveTielineBin(cwd, root);
+  if (!bin) {
+    return {
+      name: "Contract drift",
+      status: STATUS.warn,
+      summary: "tieline config found but the tieline binary could not be resolved — install @nugehs/tieline to enable this gate.",
+      details: [cfg],
+    };
+  }
+  const res = runCommand(bin, ["check", "--json", "--no-fail", "--config", cfg], { cwd, timeout: 60000 });
+  let parsed;
+  try {
+    parsed = JSON.parse(res.stdout);
+  } catch {
+    return null; // tieline unavailable or output unparseable — skip, never break the gate
+  }
+  const drift = parsed?.totals?.drift ?? 0;
+  if (drift === 0) {
+    return { name: "Contract drift", status: STATUS.pass, summary: "No frontend↔backend contract drift (tieline)." };
+  }
+  const details = (parsed.drift ?? [])
+    .slice(0, 10)
+    .map((d) => `${d.method} ${d.path} (${d.name}) — ${d.hint ?? "no matching backend route"}`);
+  return {
+    name: "Contract drift",
+    status: STATUS.warn,
+    summary: `${drift} frontend call(s) hit a backend route that does not exist (tieline).`,
+    details,
+  };
+}
+
+function findTielineConfig(root) {
+  const envCfg = process.env.REPOCTX_TIELINE_CONFIG;
+  if (envCfg && exists(envCfg)) return path.resolve(envCfg);
+  let dir = root;
+  for (let i = 0; i < 3; i++) {
+    const candidate = path.join(dir, "tieline.config.json");
+    if (exists(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+function resolveTielineBin(cwd, root) {
+  for (const base of [cwd, root]) {
+    const local = path.join(base, "node_modules", ".bin", "tieline");
+    if (exists(local)) return local;
+  }
+  const probe = runCommand("tieline", ["--help"], { cwd, timeout: 10000 });
+  if (probe.ok || /tieline/i.test(`${probe.stdout}${probe.stderr}`)) return "tieline";
+  return null;
 }
 
 function dependencyAuditCommands(root) {
