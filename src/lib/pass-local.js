@@ -186,9 +186,7 @@ function contractDriftCheck(root) {
   if (drift === 0) {
     return { name: "Contract drift", status: STATUS.pass, summary: "No frontend↔backend contract drift (tieline)." };
   }
-  const details = (parsed.drift ?? [])
-    .slice(0, 10)
-    .map((d) => `${d.method} ${d.path} (${d.name}) — ${d.hint ?? "no matching backend route"}`);
+  const details = (parsed.drift ?? []).slice(0, 10).map((d) => `${d.method} ${d.path} (${d.name}) — ${d.hint ?? "no matching backend route"}`);
   return {
     name: "Contract drift",
     status: STATUS.warn,
