@@ -490,4 +490,4 @@ This keeps the project useful quickly while leaving room to replace weak adapter
 - [bouncer](https://www.npmjs.com/package/@nugehs/bouncer) — compliance: could you defend this to Ofcom?
 - [aiglare](https://www.npmjs.com/package/@nugehs/aiglare) — governance: where can the model do something you can't undo?
 
-More at [segunolumbe.com](https://segunolumbe.com). *static analysis, never the model.*
+More at [segunolumbe.com](https://segunolumbe.com). _static analysis, never the model._
