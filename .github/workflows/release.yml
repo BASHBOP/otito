@@ -42,8 +42,41 @@ jobs:
             exit 1
           fi
 
+      # prepublishOnly runs the full quality gate (npm run ci) before publish.
       - name: Publish
         run: npm publish
+
+  github-release:
+    name: Create GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to create the release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="$VERSION" '
+            /^## / { if (found) exit; if ($2 == "v" ver) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+          if [ ! -s "$RUNNER_TEMP/release-notes.md" ]; then
+            echo "No CHANGELOG.md section found for v$VERSION; using fallback notes." >&2
+            echo "Release $GITHUB_REF_NAME. See CHANGELOG.md for details." > "$RUNNER_TEMP/release-notes.md"
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --verify-tag
 
   publish-mcp:
     name: Publish to MCP Registry
