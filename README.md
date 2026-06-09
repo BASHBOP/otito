@@ -1,6 +1,8 @@
 # repoctx
 
-[![npm](https://img.shields.io/npm/v/@nugehs/repoctx)](https://www.npmjs.com/package/@nugehs/repoctx) [![CI](https://github.com/nugehs/repoctx/actions/workflows/repoctx-ci.yml/badge.svg)](https://github.com/nugehs/repoctx/actions/workflows/repoctx-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE) [![Node.js](https://img.shields.io/node/v/@nugehs/repoctx)](https://www.npmjs.com/package/@nugehs/repoctx)
+**Local-first code context for agents and reviewers — what does this change actually touch?**
+
+[![npm](https://img.shields.io/npm/v/@nugehs/repoctx?style=flat-square&color=dc0000)](https://www.npmjs.com/package/@nugehs/repoctx) [![CI](https://img.shields.io/github/actions/workflow/status/nugehs/repoctx/repoctx-ci.yml?style=flat-square&label=CI)](https://github.com/nugehs/repoctx/actions/workflows/repoctx-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-dc0000?style=flat-square)](LICENSE) [![node](https://img.shields.io/node/v/@nugehs/repoctx?style=flat-square)](https://www.npmjs.com/package/@nugehs/repoctx)
 
 ![repoctx](assets/repoctx-design-print.svg)
 
@@ -125,6 +127,14 @@ node src/cli.js structure . --out .dev-context/structure.html
 | Run the MCP server | `repoctx mcp` | Stdio MCP server exposing repoctx tools |
 
 For Claude Desktop, VS Code, Cursor, and generic stdio client snippets, see [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md).
+
+## repoctx vs alternatives
+
+| Approach | Strengths | Where repoctx differs |
+| --- | --- | --- |
+| Sourcegraph / Cody context | Powerful hosted code search and embedding-based context across an org | repoctx is local-first and deterministic: no server, no account, no code leaves the machine, and the same query always yields the same packet |
+| Hand-written `CLAUDE.md` / rules files | Curated, intent-rich guidance | Hand-written context goes stale; repoctx regenerates context from the actual code (symbols, imports, routes, tests) on every run and complements a short `CLAUDE.md` |
+| `grep` / `ripgrep` | Fast, universal text matching | repoctx ranks whole files by task intent across paths, symbols, exports, and tests, then adds patterns and validation commands — a context packet, not a list of matching lines |
 
 ## Quality Gates
 
@@ -468,3 +478,16 @@ Prints JSON metadata for agent integrations. This is intentionally lightweight s
 Wrap first. Measure pain. Build only the missing pieces.
 
 This keeps the project useful quickly while leaving room to replace weak adapters with owned implementations later.
+
+---
+
+## Part of the toolchain
+
+**repoctx** is one of four tools that form a deterministic trust layer for AI-assisted development. Each answers a question people keep handing to an LLM — with static analysis instead.
+
+- **repoctx** (this tool) — context: what does this change actually touch?
+- [tieline](https://www.npmjs.com/package/@nugehs/tieline) — contracts: did the front end and back end quietly stop agreeing?
+- [bouncer](https://www.npmjs.com/package/@nugehs/bouncer) — compliance: could you defend this to Ofcom?
+- [aiglare](https://www.npmjs.com/package/@nugehs/aiglare) — governance: where can the model do something you can't undo?
+
+More at [segunolumbe.com](https://segunolumbe.com). _static analysis, never the model._
