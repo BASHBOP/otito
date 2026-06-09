@@ -53,13 +53,15 @@ export function generateContextPack(query, options = {}) {
   const tokens = tokenize(normalizedQuery);
   const intent = inferIntent(normalizedQuery, tokens);
   const scoredFiles = scoreMaps(maps, tokens, intent);
-  const primaryFiles = selectPrimaryFiles(scoredFiles, limit);
+  const matchedPrimaryFiles = selectPrimaryFiles(scoredFiles, limit);
+  const usedFallback = matchedPrimaryFiles.length === 0;
+  const primaryFiles = usedFallback ? selectFallbackPrimaryFiles(maps, limit) : matchedPrimaryFiles;
   const relatedFiles = selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, limit);
   const tests = selectTests(maps, graphs, scoredFiles, primaryFiles, limit);
   const commands = inferCommands(repoPaths, normalizedQuery);
   const patterns = inferPatterns(primaryFiles, relatedFiles, tests, intent);
   const conflicts = inferConflicts(maps);
-  const openQuestions = inferOpenQuestions(primaryFiles, commands, intent);
+  const openQuestions = inferOpenQuestions(primaryFiles, commands, intent, usedFallback);
   const sources = inferSources(maps, commands);
 
   const data = {
@@ -248,6 +250,65 @@ function selectPrimaryFiles(scoredFiles, limit) {
   return (strong.length ? strong : files.slice(0, Math.min(limit, 3))).slice(0, limit);
 }
 
+const fallbackEntryStems = new Map([
+  ["main", 24],
+  ["app", 20],
+  ["index", 18],
+  ["server", 16],
+]);
+const fallbackConfigPattern = /^(?:vite|webpack|rollup|next|nuxt|astro|svelte|remix|metro|babel|postcss|tailwind|esbuild|rsbuild)\.config\.[a-z]+$/;
+
+// When task tokens match nothing (common on small repos or broad queries such
+// as "improve SEO and performance"), fall back to a deterministic ranking of
+// entrypoints, app/main/index files, and build configuration so primaryFiles
+// is never empty while the repo has source files.
+function selectFallbackPrimaryFiles(maps, limit) {
+  const candidates = [];
+  const everything = [];
+
+  for (const map of maps) {
+    const entrypoints = new Set(map.repo.entrypoints ?? []);
+    for (const file of map.files ?? []) {
+      if (file.isVendor || file.kind === "test") {
+        continue;
+      }
+
+      const reasons = ["fallback: no task keywords matched indexed files"];
+      let score = 0;
+      const normalizedPath = normalizeRepoPath(file.path);
+      const baseName = path.posix.basename(normalizedPath).toLowerCase();
+      const stem = baseName.replace(/\..*$/, "");
+
+      if (entrypoints.has(file.path)) {
+        score += 30;
+        reasons.push("repo entrypoint");
+      }
+      if (fallbackEntryStems.has(stem)) {
+        score += fallbackEntryStems.get(stem);
+        reasons.push(`${stem} entry file`);
+      }
+      if (fallbackConfigPattern.test(baseName)) {
+        score += 14;
+        reasons.push("build configuration");
+      }
+
+      const depth = normalizedPath.split("/").length - 1;
+      score += Math.max(0, 6 - depth * 2);
+
+      const summarized = summarizeFile(map, file, score, reasons);
+      everything.push(summarized);
+      if (score > 0) {
+        candidates.push(summarized);
+      }
+    }
+  }
+
+  const pool = candidates.length ? candidates : everything;
+  return uniqueFiles(pool)
+    .sort((a, b) => b.score - a.score || a.repo.name.localeCompare(b.repo.name) || a.path.localeCompare(b.path))
+    .slice(0, limit);
+}
+
 function selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, limit) {
   const primaryKeys = new Set(primaryFiles.map(fileKey));
   const related = [];
@@ -388,10 +449,14 @@ function inferConflicts(maps) {
   return conflicts;
 }
 
-function inferOpenQuestions(primaryFiles, commands, intent) {
+function inferOpenQuestions(primaryFiles, commands, intent, usedFallback) {
   const questions = [];
   if (!primaryFiles.length) {
     questions.push("No strong primary files matched the task; refine the query or index more repositories.");
+  } else if (usedFallback) {
+    questions.push(
+      "No task keywords matched indexed files; primary files fall back to repo entrypoints and build configuration — refine the query for tighter context.",
+    );
   }
   if (!commands.some((command) => command.script && /test|lint|type|build|tsc/.test(command.script))) {
     questions.push("No validation script was detected; decide how the change should be verified.");

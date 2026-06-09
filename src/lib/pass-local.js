@@ -23,7 +23,13 @@ export function evaluateLocal(repoPath, options = {}) {
   const files = changedFiles(root, base);
 
   const baseContent = (file) => gitShowContent(root, base, file);
-  const checks = [changedFilesCheck(files), secretCheck(files), riskCheck(files), checkRelease(root, files, { baseContent }), validationCommandsCheck(root)];
+  const checks = [
+    changedFilesCheck(files),
+    secretCheck(files),
+    riskCheck(files),
+    checkRelease(root, files, { baseContent, governance }),
+    validationCommandsCheck(root),
+  ];
   const audit = dependencyAuditCheck(root);
   if (audit) checks.push(audit);
   const drift = contractDriftCheck(root);

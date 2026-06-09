@@ -26,6 +26,12 @@ export const STATUS = {
 // changelog requirement only applies if the project version actually changed —
 // dependency or lockfile bumps that leave the version untouched are not a
 // release and must not be blocked.
+//
+// `options.governance` ("team" or "solo") relaxes only the missing-changelog
+// rule: a private (`"private": true`) package under solo governance is not
+// publishing releases, so a version bump without a changelog entry is a WARN
+// instead of a FAIL. SemVer violations and version-file mismatches stay FAIL
+// in every configuration.
 export function checkRelease(root, files, options = {}) {
   const versionFiles = pickVersionFiles(files);
   if (versionFiles.length === 0) {
@@ -63,10 +69,28 @@ export function checkRelease(root, files, options = {}) {
   }
 
   if (!changedChangelog(files)) {
+    if (isPrivateSoloRepo(root, options.governance)) {
+      return check("Release discipline", STATUS.warn, "Version metadata changed without a changelog update (private package, solo governance).", versionFiles);
+    }
     return check("Release discipline", STATUS.fail, "Version metadata changed without a changelog update.", versionFiles);
   }
 
   return check("Release discipline", STATUS.pass, "Version metadata is SemVer and changelog was updated.", formatValues(values));
+}
+
+// A private package under solo governance bumping its version without a
+// changelog entry is sloppy, not a release-discipline failure: nothing is
+// published and no team relies on the changelog. Anything else (public or
+// publishable package, team governance, unreadable package.json) keeps the
+// strict behavior.
+function isPrivateSoloRepo(root, governance) {
+  if (governance !== "solo") return false;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+    return parsed?.private === true;
+  } catch {
+    return false;
+  }
 }
 
 // Resolve the project version at the base ref, preferring the manifest over the

@@ -59,6 +59,37 @@ test("checkRelease warns when a version file cannot be read", () => {
   assert.equal(result.status, "WARN");
 });
 
+test("checkRelease downgrades missing changelog to WARN for a private package under solo governance", () => {
+  const root = fixture("private-solo", { "package.json": JSON.stringify({ version: "1.0.0", private: true }) });
+  const result = checkRelease(root, ["package.json"], { governance: "solo" });
+  assert.equal(result.status, "WARN");
+  assert.match(result.summary, /without a changelog update \(private package, solo governance\)/);
+});
+
+test("checkRelease keeps missing changelog FAIL for a private package under team governance", () => {
+  const root = fixture("private-team", { "package.json": JSON.stringify({ version: "1.0.0", private: true }) });
+  const result = checkRelease(root, ["package.json"], { governance: "team" });
+  assert.equal(result.status, "FAIL");
+  assert.match(result.summary, /without a changelog/);
+});
+
+test("checkRelease keeps missing changelog FAIL for a public package under solo governance", () => {
+  const root = fixture("public-solo", { "package.json": JSON.stringify({ version: "1.0.0" }) });
+  const result = checkRelease(root, ["package.json"], { governance: "solo" });
+  assert.equal(result.status, "FAIL");
+  assert.match(result.summary, /without a changelog/);
+});
+
+test("checkRelease keeps version-file mismatch FAIL even for a private package under solo governance", () => {
+  const root = fixture("mismatch-private-solo", {
+    "package.json": JSON.stringify({ version: "1.0.0", private: true }),
+    "package-lock.json": JSON.stringify({ packages: { "": { version: "1.0.1" } } }),
+  });
+  const result = checkRelease(root, ["package.json", "package-lock.json"], { governance: "solo" });
+  assert.equal(result.status, "FAIL");
+  assert.match(result.summary, /do not agree/);
+});
+
 test("checkRelease passes a dependency bump that leaves the project version unchanged", () => {
   const root = fixture("dep-bump", {
     "package.json": JSON.stringify({ version: "1.3.2", devDependencies: { eslint: "10.4.1" } }),
