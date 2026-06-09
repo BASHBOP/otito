@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { pathToFileURL } from "node:url";
 import { parseArgv } from "./lib/args.js";
 import { formatDoctorReport, getDoctorReport } from "./lib/doctor.js";
 import { inspectRepo } from "./lib/repo.js";
@@ -613,4 +614,9 @@ function formatRepoSummary(result) {
   ].join("\n");
 }
 
-main();
+export { main };
+
+const invokedAsScript = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedAsScript) {
+  main();
+}
