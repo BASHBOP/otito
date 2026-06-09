@@ -6,7 +6,9 @@ This project follows SemVer.
 
 ## Unreleased
 
-- No changes yet.
+- Brand alignment: toolchain footer/badges.
+- **GitHub Releases now cut automatically.** `.github/workflows/release.yml` gains a `github-release` job: after the npm publish succeeds, it extracts the matching version section from `CHANGELOG.md` and creates a GitHub Release for the pushed `v*` tag, so the Releases page stays in sync with npm.
+- **README comparison section.** Add a factual "repoctx vs alternatives" table (Sourcegraph/Cody context, hand-written `CLAUDE.md` rules files, `grep`/`ripgrep`) so newcomers can place the tool quickly.
 
 ## v1.3.3 - 2026-06-05
 
