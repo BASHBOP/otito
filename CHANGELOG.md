@@ -4,8 +4,10 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
-## Unreleased
+## [1.4.0] - 2026-06-09
 
+- **Fix `context_pack` returning zero primary files on small repos.** When task keywords match nothing in the index (common for broad queries like "improve SEO and performance" against a small Vite/React repo), `repoctx context` now falls back to a deterministic ranking of repo entrypoints, `main`/`app`/`index` files, and build configuration (`vite.config.*`, `webpack.config.*`, etc.), so `primaryFiles` is never empty while the repo has source files. An open question notes when the fallback was used; behavior for queries that do match the index is unchanged.
+- **Soften release discipline for private repos under solo governance.** "Version metadata changed without a changelog update" is now `WARN` instead of `FAIL` when the repo's `package.json` has `"private": true` and `--governance solo` is active — a private site repo bumping its version is not a release. Public or publishable packages and team governance keep the hard `FAIL`, and version-file mismatches ("Version metadata files do not agree") remain `FAIL` in every configuration.
 - Brand alignment: toolchain footer/badges.
 - **GitHub Releases now cut automatically.** `.github/workflows/release.yml` gains a `github-release` job: after the npm publish succeeds, it extracts the matching version section from `CHANGELOG.md` and creates a GitHub Release for the pushed `v*` tag, so the Releases page stays in sync with npm.
 - **README comparison section.** Add a factual "repoctx vs alternatives" table (Sourcegraph/Cody context, hand-written `CLAUDE.md` rules files, `grep`/`ripgrep`) so newcomers can place the tool quickly.

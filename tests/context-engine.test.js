@@ -57,6 +57,45 @@ test("generateContextPack returns task-aware files, tests, patterns, and command
   assert.match(result.markdown, /# Context Pack: add a new MCP tool/);
 });
 
+test("generateContextPack falls back to entrypoints and configs when no task keywords match", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-fallback-"));
+  fs.mkdirSync(path.join(root, "src", "components"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fallback-fixture", scripts: { build: "vite build" } }));
+  fs.writeFileSync(path.join(root, "vite.config.ts"), "export default { plugins: [] };\n");
+  fs.writeFileSync(path.join(root, "src", "main.tsx"), "import { Layout } from './components/Layout';\nexport function bootstrap() { return Layout; }\n");
+  fs.writeFileSync(path.join(root, "src", "App.tsx"), "export function Root() { return null; }\n");
+  fs.writeFileSync(path.join(root, "src", "components", "Layout.tsx"), "export function Layout() { return null; }\n");
+
+  const result = generateContextPack("improve SEO, performance, accessibility and content of the portfolio site", { path: root });
+
+  assert.equal(result.data.ok, true);
+  assert.ok(result.data.primaryFiles.length > 0, "fallback must produce primary files on a small repo");
+  const primaryPaths = result.data.primaryFiles.map((file) => file.path);
+  assert.ok(primaryPaths.includes("src/main.tsx"));
+  assert.ok(primaryPaths.includes("src/App.tsx"));
+  assert.ok(primaryPaths.includes("vite.config.ts"));
+  assert.ok(result.data.primaryFiles.every((file) => file.reasons.some((reason) => reason.startsWith("fallback"))));
+  assert.ok(result.data.openQuestions.some((question) => question.includes("fall back to repo entrypoints")));
+  assert.ok(!result.data.openQuestions.some((question) => question.includes("No strong primary files matched")));
+});
+
+test("generateContextPack fallback ranking is deterministic across runs", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-fallback-det-"));
+  fs.mkdirSync(path.join(root, "src"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fallback-det-fixture" }));
+  fs.writeFileSync(path.join(root, "src", "main.ts"), "export function bootstrap() { return 1; }\n");
+  fs.writeFileSync(path.join(root, "src", "helpers.ts"), "export function helper() { return 2; }\n");
+
+  const first = generateContextPack("polish visual styling", { path: root });
+  const second = generateContextPack("polish visual styling", { path: root });
+
+  assert.deepEqual(
+    first.data.primaryFiles.map((file) => file.path),
+    second.data.primaryFiles.map((file) => file.path),
+  );
+  assert.equal(first.data.primaryFiles[0].path, "src/main.ts");
+});
+
 test("generateContextPack falls back to low-scored matches for narrow symbol queries", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-symbol-"));
   fs.mkdirSync(path.join(root, "src", "services"), { recursive: true });

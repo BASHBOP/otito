@@ -30,7 +30,7 @@ export async function evaluatePR(repoPath, selector, options = {}) {
     changedFilesCheck(files),
     secretCheck(files),
     riskCheck(files),
-    checkRelease(root, files, { baseContent: prBaseContent(root, pr.baseRefName) }),
+    checkRelease(root, files, { baseContent: prBaseContent(root, pr.baseRefName), governance }),
     reviewDecisionCheck(pr.reviewDecision, governance),
     codeownersCheckPR(root, files, pr.reviews ?? [], runner, governance),
     unresolvedConversationsCheck(root, pr.number, runner),
