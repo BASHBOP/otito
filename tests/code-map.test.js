@@ -392,6 +392,54 @@ test("generateCodeMap tags files with feature subdir as a secondary domain", () 
   assert.ok(summary.dashboard >= 1);
 });
 
+test("generateCodeMap summary counts every kind, symbol, and data-access hit in one pass", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-summary-"));
+  fs.mkdirSync(path.join(root, "app", "events"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { next: "15.0.0" } }));
+  // Next route -> kind "route" maps to summary.routes (kind key differs from counter key).
+  fs.writeFileSync(path.join(root, "app", "events", "page.tsx"), "export default function EventsPage() { return null; }\n");
+  // Nest service with a Prisma call -> service kind + symbol + data-access hit, all on one file.
+  fs.writeFileSync(
+    path.join(root, "src", "events", "events.service.ts"),
+    ["export class EventsService {", "  constructor(private readonly db) {}", "  findAll() {", "    return this.db.event.findMany();", "  }", "}", ""].join(
+      "\n",
+    ),
+  );
+
+  const result = generateCodeMap(root);
+  const summary = result.summary;
+
+  assert.equal(summary.routes, 1, "Next page counts as a route");
+  assert.equal(summary.services, 1, "service.ts counts as a service");
+  assert.equal(summary.controllers, 0);
+  assert.equal(summary.apiClients, 0);
+  assert.ok(summary.symbols >= 1, "symbols are summed across files");
+  assert.equal(summary.dataAccessFiles, 1, "only the service file has data access");
+  assert.ok(summary.dataAccessHits >= 1, "prisma findMany counted as a data-access hit");
+
+  // Summary shape is stable: exactly the documented counters, no extras.
+  assert.deepEqual(
+    Object.keys(summary).sort(),
+    [
+      "apiClients",
+      "apiRoutes",
+      "components",
+      "controllers",
+      "dataAccessFiles",
+      "dataAccessHits",
+      "dtos",
+      "hooks",
+      "modules",
+      "routes",
+      "schemas",
+      "services",
+      "symbols",
+      "tests",
+    ].sort(),
+  );
+});
+
 test("generateCodeMap flags vendor files via isVendor and downstream filters them in context_pack", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-vendor-"));
   fs.mkdirSync(path.join(root, "js"), { recursive: true });

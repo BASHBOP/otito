@@ -52,6 +52,8 @@ const languageByExtension = new Map([
   [".toml", "TOML"],
 ]);
 
+const maxInspectedFiles = 200;
+
 export function inspectRepo(repoPath = ".") {
   const root = path.resolve(repoPath);
   if (!fs.existsSync(root)) {
@@ -61,6 +63,7 @@ export function inspectRepo(repoPath = ".") {
   const files = listRepoFiles(root);
   const packageJson = readJsonIfExists(path.join(root, "package.json"));
   const languageCounts = countLanguages(files);
+  const scripts = packageJson?.scripts ?? {};
 
   return {
     ok: true,
@@ -71,13 +74,26 @@ export function inspectRepo(repoPath = ".") {
       .map(([language, count]) => ({ language, count }))
       .sort((a, b) => b.count - a.count || languagePriority(a.language) - languagePriority(b.language) || a.language.localeCompare(b.language)),
     packageManagers: detectPackageManagers(root, packageJson),
-    scripts: packageJson?.scripts ?? {},
+    scripts,
+    scriptNames: Object.keys(scripts),
     entrypoints: detectEntrypoints(root, files, packageJson),
     importantDirectories: detectImportantDirectories(root),
     git: getGitInfo(root),
-    files: files.slice(0, 250),
-    filesTruncated: files.length > 250,
+    files: files.slice(0, maxInspectedFiles),
+    filesTruncated: files.length > maxInspectedFiles,
   };
+}
+
+// The full scripts map can be the single heaviest part of an inspection on a
+// large monorepo (long build/test command bodies). Drop the bodies by default
+// so an agent still sees the script NAMES (via scriptNames) but pays no byte
+// cost for command text, and only keep the full map when explicitly asked.
+export function gateInspectScripts(result, includeScripts) {
+  if (includeScripts || !result || typeof result !== "object") {
+    return result;
+  }
+  const { scripts: _scripts, ...rest } = result;
+  return rest;
 }
 
 function languagePriority(language) {

@@ -107,6 +107,85 @@ test("generatePrReview falls back to Go test classification when files are not i
   assert.equal(fixtureTest.kind, "test");
 });
 
+// --- Finding #6: shared classifier; a tokens.js util is not flagged auth/security ---
+
+test("generatePrReview does not flag a tokens.js utility as auth/security", () => {
+  const fixture = createSubstringRiskFixture();
+
+  const result = generatePrReview(fixture, { base: "main" });
+  const tokensFile = result.data.changedFiles.find((file) => file.path === "src/lib/tokens.js");
+
+  assert.ok(tokensFile, `tokens.js missing from changed files: ${result.data.changedFiles.map((f) => f.path).join(", ")}`);
+  assert.ok(!tokensFile.riskFlags.includes("auth/security"), `tokens.js should not be auth/security, got ${tokensFile.riskFlags.join(", ")}`);
+  assert.ok(!result.data.risk.flags.includes("auth/security"), `PR risk should not include auth/security, got ${result.data.risk.flags.join(", ")}`);
+});
+
+test("generatePrReview still flags a genuine token.service.ts change as auth/security via the shared classifier", () => {
+  const fixture = createAuthRiskFixture();
+
+  const result = generatePrReview(fixture, { base: "main" });
+  const authFile = result.data.changedFiles.find((file) => file.path === "src/auth/token.service.ts");
+
+  assert.ok(authFile);
+  assert.ok(authFile.riskFlags.includes("auth/security"), `token.service.ts should be auth/security, got ${authFile.riskFlags.join(", ")}`);
+});
+
+// --- Finding #7: raw package.json scripts map is dropped from the payload ---
+
+test("generatePrReview omits the raw package.json scripts map from the result payload", () => {
+  const fixture = createSubstringRiskFixture();
+
+  const result = generatePrReview(fixture, { base: "main" });
+  assert.equal(result.data.repo.scripts, undefined, "raw scripts map must not be embedded in the payload");
+  // testHints still carries the relevant commands derived from those scripts.
+  assert.ok(Array.isArray(result.data.testHints));
+  assert.ok(
+    result.data.testHints.some((hint) => hint.command === "npm test" || hint.command === "npm run lint"),
+    `expected derived test hints, got ${JSON.stringify(result.data.testHints)}`,
+  );
+});
+
+function createSubstringRiskFixture() {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-pr-tokens-"));
+  fs.mkdirSync(path.join(fixture, "src", "lib"), { recursive: true });
+  fs.writeFileSync(
+    path.join(fixture, "package.json"),
+    JSON.stringify({ scripts: { lint: "eslint .", test: "node --test", build: "tsc", deploy: "echo deploy" } }),
+  );
+  fs.writeFileSync(
+    path.join(fixture, "src", "lib", "tokens.js"),
+    ["export function estimateTokens(text) {", "  return Math.ceil(String(text).length / 4);", "}", ""].join("\n"),
+  );
+
+  git(fixture, "init", "-b", "main");
+  git(fixture, "add", ".");
+  git(fixture, "-c", "user.name=Test User", "-c", "user.email=test@example.com", "commit", "-m", "base");
+  git(fixture, "checkout", "-b", "feature/tokens");
+  fs.appendFileSync(path.join(fixture, "src", "lib", "tokens.js"), ["", "export const TOKENS_VERSION = 2;", ""].join("\n"));
+  git(fixture, "add", ".");
+  git(fixture, "-c", "user.name=Test User", "-c", "user.email=test@example.com", "commit", "-m", "bump tokens util");
+  return fixture;
+}
+
+function createAuthRiskFixture() {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-pr-auth-"));
+  fs.mkdirSync(path.join(fixture, "src", "auth"), { recursive: true });
+  fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
+  fs.writeFileSync(
+    path.join(fixture, "src", "auth", "token.service.ts"),
+    ["export class TokenService {", "  sign(payload) { return payload; }", "}", ""].join("\n"),
+  );
+
+  git(fixture, "init", "-b", "main");
+  git(fixture, "add", ".");
+  git(fixture, "-c", "user.name=Test User", "-c", "user.email=test@example.com", "commit", "-m", "base");
+  git(fixture, "checkout", "-b", "feature/token");
+  fs.appendFileSync(path.join(fixture, "src", "auth", "token.service.ts"), ["", "export const TOKEN_TTL = 3600;", ""].join("\n"));
+  git(fixture, "add", ".");
+  git(fixture, "-c", "user.name=Test User", "-c", "user.email=test@example.com", "commit", "-m", "change token service");
+  return fixture;
+}
+
 function createPrFixture() {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-pr-"));
   fs.mkdirSync(path.join(fixture, "src", "booking"), { recursive: true });

@@ -22,20 +22,28 @@ The legacy `dev-context` command remains available as an alias.
 
 It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. It gives developers and coding agents a single CLI that can:
 
+Deterministic merge gates — the differentiated core:
+
+- score merge readiness for local changes (`merge_readiness`) and pull requests (`pr_merge_readiness`)
+- resolve CODEOWNERS to required reviewers and surface owner-decision warnings
+- check branch-protection expectations and required checks before merge
+- generate actionable PR review context from git diffs and optional GitHub comments
+
+Local-first context — feeds the gates:
+
 - inspect a repository
 - discover and index local repositories
 - maintain a local catalog and search across it
 - generate task-aware context packets before an agent plans or edits
-- check tool availability
-- generate a setup/validation/runtime harness for a repo
-- generate TypeScript structure HTML through `code-structure`
-- search dependency source through `opensrc`
-- produce Markdown or JSON reports
 - generate AST-backed JSON-first code maps for agents
+- generate a setup/validation/runtime harness for a repo
+- produce Markdown or JSON reports
 - estimate context-token size for generated artifacts
-- generate actionable PR review context from git diffs and optional GitHub comments
 - run an MCP server for agent hosts with a persisted repo index cache
 - expose simple agent-friendly tool metadata
+- check tool availability
+- generate TypeScript structure HTML through `code-structure`
+- search dependency source through `opensrc`
 
 ## Documentation
 
@@ -59,7 +67,7 @@ https://nugehs.github.io/repoctx/
 
 ## Quick Start
 
-This build uses the TypeScript parser for JS/TS code maps. Optional external tools are only needed for dependency-source lookup and HTML structure reports.
+Code maps use the TypeScript compiler for JS/TS and dedicated language extractors for Go, C#, Python, Java, Ruby, and Rust (see `src/lib/code-map/ast-languages.js`). Optional external tools are only needed for dependency-source lookup and HTML structure reports.
 
 Install from npm:
 

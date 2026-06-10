@@ -62,6 +62,11 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "context_pack"));
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "pr_review"));
   assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_harness"));
-  assert.equal(messages[2].result.structuredContent.root, fixture);
-  assert.ok(messages[3].result.structuredContent.primaryFiles.some((file) => file.path === "src/lib/mcp.js"));
+
+  // The transport ships a single compact-JSON text payload and no structuredContent.
+  assert.equal(messages[2].result.structuredContent, undefined);
+  const inspect = JSON.parse(messages[2].result.content[0].text);
+  assert.equal(inspect.root, fixture);
+  const contextPack = JSON.parse(messages[3].result.content[0].text);
+  assert.ok(contextPack.primaryFiles.some((file) => file.path === "src/lib/mcp.js"));
 });

@@ -57,6 +57,38 @@ test("generateContextPack returns task-aware files, tests, patterns, and command
   assert.match(result.markdown, /# Context Pack: add a new MCP tool/);
 });
 
+test("generateContextPack gates imports/exports/symbols evidence behind includeEvidence", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-evidence-"));
+  fs.mkdirSync(path.join(root, "src", "lib"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "evidence-fixture", scripts: { test: "node --test" } }));
+  fs.writeFileSync(
+    path.join(root, "src", "lib", "mcp.js"),
+    ["import { helper } from './helper.js';", "export function startMcpServer() { return helper(); }", ""].join("\n"),
+  );
+  fs.writeFileSync(path.join(root, "src", "lib", "helper.js"), ["export function helper() { return 1; }", ""].join("\n"));
+
+  const without = generateContextPack("add a new MCP tool", { path: root });
+  for (const file of without.data.primaryFiles) {
+    assert.equal(file.imports, undefined, "imports omitted by default");
+    assert.equal(file.exports, undefined, "exports omitted by default");
+    assert.equal(file.symbols, undefined, "symbols omitted by default");
+    // The always-on fields survive.
+    assert.ok(typeof file.path === "string");
+    assert.ok(typeof file.kind === "string");
+    assert.ok(typeof file.score === "number");
+    assert.ok(Array.isArray(file.reasons));
+  }
+
+  const withEvidence = generateContextPack("add a new MCP tool", { path: root, includeEvidence: true });
+  assert.ok(
+    withEvidence.data.primaryFiles.some((file) => Array.isArray(file.imports) || Array.isArray(file.exports) || Array.isArray(file.symbols)),
+    "includeEvidence:true attaches evidence slices",
+  );
+
+  // The default packet's token estimate must reflect the stripped (smaller) payload.
+  assert.ok(without.data.tokenEstimate.fullJson < withEvidence.data.tokenEstimate.fullJson);
+});
+
 test("generateContextPack falls back to entrypoints and configs when no task keywords match", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-fallback-"));
   fs.mkdirSync(path.join(root, "src", "components"), { recursive: true });

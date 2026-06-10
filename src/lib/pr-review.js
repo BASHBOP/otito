@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { generateCodeMap } from "./code-map.js";
 import { inspectRepo } from "./repo.js";
+import { classifyPath } from "./risk-paths.js";
 import { runCommand } from "./tools.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
@@ -51,7 +52,10 @@ export function generatePrReview(repoPath = ".", options = {}) {
       name: path.basename(root),
       git: repo.git,
       packageManagers: repo.packageManagers,
-      scripts: repo.scripts,
+      // The full package.json scripts map is intentionally omitted from the
+      // payload: `testHints` already extracts the relevant commands, and
+      // embedding every script bloated every PR-review result. Internal test
+      // inference still reads scripts from the live `repo` object below.
     },
     pr,
     comparison: {
@@ -739,31 +743,16 @@ function cleanDomain(value) {
   );
 }
 
+// Risk classification is delegated to the shared classifier in risk-paths.js
+// so PR review and the merge gates agree on the same diff. This also removes
+// the old raw-substring regexes here, which produced false positives such as
+// `tokens.js` → auth/security (via the bare substring "token").
 function inferFileRiskFlags(file) {
-  const flags = [];
-  const searchable = `${file.path} ${file.domain} ${file.kind}`.toLowerCase();
-  if (["route", "apiRoute", "controller"].includes(file.kind)) {
-    flags.push("request surface");
-  }
-  if (file.kind === "apiClient") {
-    flags.push("frontend/backend contract");
-  }
-  if (file.kind === "schema" || searchable.includes("prisma") || searchable.includes("migration")) {
-    flags.push("data model");
-  }
-  if (/(auth|session|jwt|permission|role|password|token)/.test(searchable)) {
-    flags.push("auth/security");
-  }
-  if (/(payment|billing|checkout|webhook|stripe|refund)/.test(searchable)) {
-    flags.push("money flow");
-  }
-  if (file.kind === "config" || /(package\.json|lock|docker|next\.config|vite\.config|tsconfig|env)/.test(searchable)) {
-    flags.push("configuration");
-  }
-  if (file.additions + file.deletions >= 300) {
-    flags.push("large file diff");
-  }
-  return flags;
+  return classifyPath(file.path, {
+    kind: file.kind,
+    additions: file.additions,
+    deletions: file.deletions,
+  });
 }
 
 function summarizeDomains(files) {

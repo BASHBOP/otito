@@ -22,6 +22,25 @@ test("getDoctorReport returns a normalized shape", () => {
   }
 });
 
+test("getDoctorReport checks the gh CLI used by pr_merge_readiness", () => {
+  const report = getDoctorReport();
+  const gh = report.tools.find((tool) => tool.name === "gh");
+  assert.ok(gh, "doctor must include a gh check");
+  assert.equal(gh.command, "gh");
+  assert.match(gh.installHint, /pr_merge_readiness/);
+});
+
+test("formatDoctorReport renders a missing gh as a warn line", () => {
+  const report = {
+    ok: true,
+    tools: [{ name: "gh", command: "gh", available: false, version: undefined, installHint: "Install the GitHub CLI; required by pr_merge_readiness." }],
+  };
+  const output = formatDoctorReport(report, { emoji: false });
+  assert.match(output, /\[WARN\]/);
+  assert.match(output, /gh/);
+  assert.match(output, /pr_merge_readiness/);
+});
+
 test("formatDoctorReport renders fancy header and status lines", () => {
   const output = formatDoctorReport(sampleReport, { emoji: true });
   assert.match(output, /repoctx doctor/);

@@ -5,7 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { PassThrough } from "node:stream";
-import { startMcpServer } from "../src/lib/mcp.js";
+import { startMcpServer, tools } from "../src/lib/mcp.js";
+import { getAgentTools } from "../src/lib/agent-tools.js";
 
 function git(cwd, ...args) {
   const result = spawnSync("git", args, {
@@ -99,6 +100,20 @@ function byId(messages, id) {
   const match = messages.find((m) => m.id === id);
   if (!match) throw new Error(`no response for id ${id}: ${JSON.stringify(messages)}`);
   return match;
+}
+
+// The transport now ships a single text payload — compact JSON for data
+// results, raw markdown for includeMarkdown:true — and no structuredContent.
+// These helpers decode that single payload for assertions.
+function rawText(message, id) {
+  const result = byId(message, id).result;
+  assert.equal(result.structuredContent, undefined, `id ${id} must not ship structuredContent`);
+  assert.equal(result.content[0].type, "text");
+  return result.content[0].text;
+}
+
+function structured(messages, id) {
+  return JSON.parse(rawText(messages, id));
 }
 
 test("startMcpServer handles initialize, ping, tools/list, and skips notifications", async () => {
@@ -199,36 +214,45 @@ test("repo_inspect, repo_map, and repo_harness produce structured results", asyn
     { jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "repo_map", arguments: { path: fixture, domain: "events", limit: -3 } } },
     { jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "repo_harness", arguments: { path: fixture } } },
     { jsonrpc: "2.0", id: 7, method: "tools/call", params: { name: "repo_harness", arguments: { path: fixture, includeMarkdown: true } } },
+    { jsonrpc: "2.0", id: 8, method: "tools/call", params: { name: "repo_inspect", arguments: { path: fixture, includeScripts: true } } },
   ]);
 
-  const inspect = byId(messages, 1).result.structuredContent;
+  const inspect = structured(messages, 1);
   assert.equal(inspect.root, fixture);
   assert.equal(inspect.ok, true);
+  assert.ok(Array.isArray(inspect.scriptNames), "inspect must always report script names");
+  assert.equal(inspect.scripts, undefined, "script bodies are gated off by default");
 
-  const notable = byId(messages, 2).result.structuredContent;
+  const notable = structured(messages, 2);
   assert.equal(notable.ok, true);
   assert.equal(notable.files, undefined);
   assert.ok(Array.isArray(notable.notableFiles));
 
-  const withFiles = byId(messages, 3).result.structuredContent;
+  const withFiles = structured(messages, 3);
   assert.equal(withFiles.notableFiles, undefined);
   assert.ok(Array.isArray(withFiles.files));
   assert.ok(withFiles.files.length <= 5);
 
-  const byKind = byId(messages, 4).result.structuredContent;
+  const byKind = structured(messages, 4);
   assert.ok(byKind.files.every((file) => file.kind === "controller"));
   assert.ok(byKind.files.some((file) => file.path.endsWith("events.controller.ts")));
 
-  const byDomain = byId(messages, 5).result.structuredContent;
+  const byDomain = structured(messages, 5);
   assert.ok(byDomain.files.every((file) => (file.domains ?? [file.domain]).some((d) => d?.includes("events"))));
 
-  const harnessOnly = byId(messages, 6).result.structuredContent;
+  const harnessOnly = structured(messages, 6);
   assert.ok(harnessOnly.commands, "harness data must include commands");
   assert.equal(harnessOnly.markdown, undefined);
 
-  const harnessWithMarkdown = byId(messages, 7).result.structuredContent;
-  assert.ok(typeof harnessWithMarkdown.markdown === "string");
-  assert.ok(harnessWithMarkdown.data?.commands || harnessWithMarkdown.commands);
+  // includeMarkdown:true returns the markdown report AS the text payload.
+  const harnessMarkdown = rawText(messages, 7);
+  assert.match(harnessMarkdown, /^#/m, "harness markdown should read as a markdown document");
+  assert.throws(() => JSON.parse(harnessMarkdown), "markdown payload must not be JSON");
+
+  const inspectWithScripts = structured(messages, 8);
+  assert.ok(inspectWithScripts.scripts, "includeScripts:true must include script command bodies");
+  assert.equal(inspectWithScripts.scripts.test, "node --test");
+  assert.ok(Array.isArray(inspectWithScripts.scriptNames));
 });
 
 test("repo_discover, repo_index, repo_catalog, and repo_search round-trip a fixture", async () => {
@@ -247,21 +271,36 @@ test("repo_discover, repo_index, repo_catalog, and repo_search round-trip a fixt
     { jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "repo_search", arguments: {} } },
   ]);
 
-  const discover = byId(messages, 1).result.structuredContent;
+  const discover = structured(messages, 1);
   assert.ok(discover, "discover must return a structured result");
 
-  const index = byId(messages, 2).result.structuredContent;
+  const index = structured(messages, 2);
   assert.equal(index.ok, true);
 
-  const catalog = byId(messages, 3).result.structuredContent;
+  const catalog = structured(messages, 3);
   assert.ok(catalog && typeof catalog === "object");
 
-  const search = byId(messages, 4).result.structuredContent;
+  const search = structured(messages, 4);
   assert.ok(search && typeof search === "object");
+  assert.ok(search.repositoryCount >= 1, "search against a populated catalog reports repositories");
+  assert.equal(search.remediation, undefined, "no remediation hint when the catalog has repositories");
 
   assert.equal(byId(messages, 5).error?.code, -32602);
 
   if (fs.existsSync(catalogPath)) fs.unlinkSync(catalogPath);
+});
+
+test("repo_search on an empty catalog returns a remediation hint pointing at repo_index", async () => {
+  // A non-existent catalog path loads as an empty catalog (no repositories).
+  const emptyCatalog = path.join(os.tmpdir(), `repoctx-mcp-empty-cat-${Date.now()}-${Math.random().toString(16).slice(2)}.json`);
+  const messages = await runRequests([
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_search", arguments: { query: "events", catalog: emptyCatalog } } },
+  ]);
+
+  const search = structured(messages, 1);
+  assert.equal(search.repositoryCount, 0);
+  assert.equal(search.matchCount, 0);
+  assert.match(search.remediation, /repo_index/);
 });
 
 test("context_pack and change_impact require a query and respect includeMarkdown", async () => {
@@ -285,23 +324,78 @@ test("context_pack and change_impact require a query and respect includeMarkdown
     { jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "change_impact", arguments: { path: fixture } } },
   ]);
 
-  const dataOnly = byId(messages, 1).result.structuredContent;
+  const dataText = rawText(messages, 1);
+  const dataOnly = JSON.parse(dataText);
   assert.equal(dataOnly.markdown, undefined);
   assert.ok(dataOnly.primaryFiles || dataOnly.repositories || dataOnly.intent);
+  // Evidence slices are off by default; path/kind/score/reasons are always kept.
+  for (const file of dataOnly.primaryFiles ?? []) {
+    assert.equal(file.imports, undefined, "imports evidence must be omitted by default");
+    assert.equal(file.exports, undefined, "exports evidence must be omitted by default");
+    assert.equal(file.symbols, undefined, "symbols evidence must be omitted by default");
+    assert.ok(typeof file.path === "string");
+    assert.ok(typeof file.kind === "string");
+    assert.ok(typeof file.score === "number");
+    assert.ok(Array.isArray(file.reasons));
+  }
 
-  const withMarkdown = byId(messages, 2).result.structuredContent;
-  assert.ok(typeof withMarkdown.markdown === "string");
+  const withMarkdownText = rawText(messages, 2);
+  assert.match(withMarkdownText, /# Context Pack:/, "includeMarkdown returns the markdown report as text");
+  assert.throws(() => JSON.parse(withMarkdownText), "markdown payload must not be JSON");
+  // The human-readable markdown report is dramatically smaller than the full
+  // JSON packet it summarizes — the whole point of the transport change.
+  assert.ok(withMarkdownText.length < dataText.length, `markdown (${withMarkdownText.length}) should be smaller than JSON (${dataText.length})`);
 
   assert.equal(byId(messages, 3).error?.code, -32602);
 
-  const impact = byId(messages, 4).result.structuredContent;
+  const impact = structured(messages, 4);
   assert.equal(impact.markdown, undefined);
   assert.ok(Array.isArray(impact.topFiles));
 
-  const impactWithMarkdown = byId(messages, 5).result.structuredContent;
-  assert.ok(typeof impactWithMarkdown.markdown === "string");
+  const impactMarkdown = rawText(messages, 5);
+  assert.throws(() => JSON.parse(impactMarkdown), "impact markdown payload must not be JSON");
+  assert.ok(impactMarkdown.length > 0);
 
   assert.equal(byId(messages, 6).error?.code, -32602);
+});
+
+test("context_pack default response is compact: no structuredContent, no pretty-print, evidence gated", async () => {
+  const fixture = makeRepoFixture();
+  const messages = await runRequests([
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "context_pack", arguments: { query: "add events tool", path: fixture } } },
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: { name: "context_pack", arguments: { query: "add events tool", path: fixture, includeEvidence: true } },
+    },
+    {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "context_pack", arguments: { query: "add events tool", path: fixture, includeMarkdown: true } },
+    },
+  ]);
+
+  const defaultText = rawText(messages, 1);
+  // No structuredContent (asserted inside rawText) and no pretty-print: the
+  // compact JSON has no newline-plus-indentation sequences.
+  assert.ok(!/\n {2}/.test(defaultText), "default JSON payload must not be pretty-printed");
+  assert.equal(byId(messages, 1).result.structuredContent, undefined);
+
+  const evidenceText = rawText(messages, 2);
+  const withEvidence = JSON.parse(evidenceText);
+  const evidenceFile = (withEvidence.primaryFiles ?? []).find(
+    (file) => Array.isArray(file.exports) || Array.isArray(file.imports) || Array.isArray(file.symbols),
+  );
+  assert.ok(evidenceFile, "includeEvidence:true must attach imports/exports/symbols to at least one file");
+
+  // Evidence adds bytes; the default packet must be smaller than the evidence one.
+  assert.ok(defaultText.length < evidenceText.length, `default (${defaultText.length}) should be smaller than evidence (${evidenceText.length})`);
+
+  // The markdown report is dramatically smaller than the JSON packet.
+  const markdownText = rawText(messages, 3);
+  assert.ok(markdownText.length < defaultText.length, `markdown (${markdownText.length}) should be far smaller than JSON (${defaultText.length})`);
 });
 
 test("merge_readiness and pr_review work against a real git fixture", async () => {
@@ -313,18 +407,19 @@ test("merge_readiness and pr_review work against a real git fixture", async () =
     { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "review_pr", arguments: { path: fixture, base: "HEAD~1", request: "tweak greeting" } } },
   ]);
 
-  const merge = byId(messages, 1).result.structuredContent;
+  const merge = structured(messages, 1);
   assert.ok(["PASS", "WARN", "FAIL"].includes(merge.verdict));
   assert.ok(Array.isArray(merge.checks));
 
-  const pr = byId(messages, 2).result.structuredContent;
+  const pr = structured(messages, 2);
   assert.equal(pr.markdown, undefined);
   assert.ok(pr.changedFiles || pr.comparison);
 
-  const prMd = byId(messages, 3).result.structuredContent;
-  assert.ok(typeof prMd.markdown === "string");
+  const prMd = rawText(messages, 3);
+  assert.throws(() => JSON.parse(prMd), "pr_review markdown payload must not be JSON");
+  assert.ok(prMd.length > 0);
 
-  const review = byId(messages, 4).result.structuredContent;
+  const review = structured(messages, 4);
   assert.ok(review.verdict || review.summary || review.impact);
 });
 
@@ -337,11 +432,12 @@ test("workspace_report requires two paths and accepts includeMarkdown", async ()
     { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "workspace_report", arguments: { paths: [fixtureA, fixtureB], includeMarkdown: true } } },
   ]);
   assert.equal(byId(messages, 1).error?.code, -32602);
-  const summary = byId(messages, 2).result.structuredContent;
+  const summary = structured(messages, 2);
   assert.equal(summary.markdown, undefined);
   assert.ok(summary.repositories || summary.repos || summary.summary);
-  const withMarkdown = byId(messages, 3).result.structuredContent;
-  assert.ok(typeof withMarkdown.markdown === "string");
+  const withMarkdown = rawText(messages, 3);
+  assert.throws(() => JSON.parse(withMarkdown), "workspace markdown payload must not be JSON");
+  assert.ok(withMarkdown.length > 0);
 });
 
 test("find_domain, find_file_kind, find_backend_route, find_frontend_api_client cover their helpers", async () => {
@@ -357,7 +453,7 @@ test("find_domain, find_file_kind, find_backend_route, find_frontend_api_client 
     { jsonrpc: "2.0", id: 8, method: "tools/call", params: { name: "find_frontend_api_client", arguments: { path: fixture, query: "events" } } },
   ]);
 
-  const domain = byId(messages, 1).result.structuredContent;
+  const domain = structured(messages, 1);
   assert.equal(domain.domain, "events");
   assert.ok(Array.isArray(domain.repos));
   assert.equal(domain.repos.length, 1);
@@ -365,25 +461,25 @@ test("find_domain, find_file_kind, find_backend_route, find_frontend_api_client 
 
   assert.equal(byId(messages, 2).error?.code, -32602);
 
-  const kind = byId(messages, 3).result.structuredContent;
+  const kind = structured(messages, 3);
   assert.equal(kind.kind, "controller");
   assert.ok(kind.repos[0].files.every((file) => file.kind === "controller"));
 
   assert.equal(byId(messages, 4).error?.code, -32602);
 
-  const routes = byId(messages, 5).result.structuredContent;
+  const routes = structured(messages, 5);
   assert.equal(routes.ok, true);
   assert.ok(Array.isArray(routes.routes));
   assert.ok(routes.routes.some((route) => route.route.startsWith("/events")));
 
-  const filteredRoutes = byId(messages, 6).result.structuredContent;
+  const filteredRoutes = structured(messages, 6);
   assert.ok(filteredRoutes.routes.every((route) => `${route.file} ${route.route} ${route.method}`.toLowerCase().includes("events")));
 
-  const apiClient = byId(messages, 7).result.structuredContent;
+  const apiClient = structured(messages, 7);
   assert.equal(apiClient.ok, true);
   assert.ok(Array.isArray(apiClient.repos));
 
-  const apiClientFiltered = byId(messages, 8).result.structuredContent;
+  const apiClientFiltered = structured(messages, 8);
   assert.equal(apiClientFiltered.query, "events");
 });
 
@@ -411,4 +507,57 @@ test("initialize negotiates the protocol version against supported revisions", a
   assert.equal(byId(messages, 1).result.protocolVersion, "2025-03-26");
   assert.equal(byId(messages, 2).result.protocolVersion, "2025-06-18");
   assert.equal(byId(messages, 3).result.protocolVersion, "2025-06-18");
+});
+
+test("agent-tools catalog stays in parity with the MCP tools array", () => {
+  const catalog = getAgentTools();
+  const catalogByName = new Map(catalog.tools.map((tool) => [tool.name, tool]));
+
+  assert.equal(catalog.tools.length, tools.length, "agent-tools must expose exactly the MCP tool set");
+
+  for (const tool of tools) {
+    const derived = catalogByName.get(tool.name);
+    assert.ok(derived, `agent-tools is missing MCP tool: ${tool.name}`);
+    assert.equal(derived.description, tool.description, `description drift for ${tool.name}`);
+
+    const schemaProps = Object.keys(tool.inputSchema?.properties ?? {}).sort();
+    const inputProps = Object.keys(derived.input ?? {}).sort();
+    assert.deepEqual(inputProps, schemaProps, `option drift for ${tool.name}`);
+
+    const required = new Set(tool.inputSchema?.required ?? []);
+    for (const [name, value] of Object.entries(derived.input ?? {})) {
+      const optional = value.endsWith("?");
+      assert.equal(optional, !required.has(name), `required flag drift for ${tool.name}.${name}`);
+    }
+  }
+});
+
+test("every MCP tool declares an explicit readOnlyHint annotation", () => {
+  for (const tool of tools) {
+    assert.ok(tool.annotations, `tool ${tool.name} must declare annotations`);
+    assert.equal(typeof tool.annotations.readOnlyHint, "boolean", `tool ${tool.name} must declare a boolean readOnlyHint`);
+  }
+
+  // Tools that mutate persistent state are honestly flagged non-read-only.
+  const byName = new Map(tools.map((tool) => [tool.name, tool]));
+  assert.equal(byName.get("repo_index").annotations.readOnlyHint, false, "repo_index mutates the catalog");
+  assert.equal(byName.get("pr_review").annotations.readOnlyHint, false, "pr_review can post a GitHub comment");
+  assert.equal(byName.get("repo_inspect").annotations.readOnlyHint, true);
+  assert.equal(byName.get("context_pack").annotations.readOnlyHint, true);
+});
+
+test("the review/merge tool descriptions are verb-first and cross-reference each other", () => {
+  const byName = new Map(tools.map((tool) => [tool.name, tool]));
+  const family = ["pr_review", "review_pr", "merge_readiness", "pr_merge_readiness"];
+
+  for (const name of family) {
+    const description = byName.get(name).description;
+    // Verb-first: first word is a capitalized imperative verb, no leading noun phrase.
+    assert.match(description, /^[A-Z][a-z]+ /, `${name} description should start with a verb`);
+    assert.match(description, /Not to be confused with/, `${name} should disambiguate from siblings`);
+  }
+
+  // Each description leads with a distinct verb so the four cannot be confused.
+  const firstWords = family.map((name) => byName.get(name).description.split(" ")[0]);
+  assert.equal(new Set(firstWords).size, firstWords.length, `review/merge descriptions must open with distinct verbs: ${firstWords.join(", ")}`);
 });

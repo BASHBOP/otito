@@ -4,7 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { evaluatePR } from "../src/lib/pass-pr.js";
+import { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } from "../src/lib/pass-pr.js";
+import { createRenderer } from "../src/lib/render/fancy.js";
 
 function gitInit(prefix, files = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), `pass-pr-${prefix}-`));
@@ -175,4 +176,325 @@ test("evaluatePR FAILs under high-risk policy when sensitive paths change withou
   const data = await evaluatePR(root, "42", { policy: "high-risk", runner: fakeRunner(canned) });
   const policy = data.checks.find((c) => c.name === "Policy profile");
   assert.notEqual(policy.status, "PASS", `expected non-PASS policy under high-risk, got ${policy.status}`);
+});
+
+// --- Finding #3 (gate kind-awareness): test/doc-only PR changes do not warn Risk review ---
+
+test("evaluatePR does not warn Risk review when only a test file and a doc change", async () => {
+  const root = gitInit("gate-test-doc", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }) });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({
+      ...JSON.parse(baselineCanned["pr view"]),
+      files: [{ path: "tests/checkout.spec.ts" }, { path: "docs/git-checkout-guide.md" }],
+    }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const risk = data.checks.find((c) => c.name === "Risk review");
+  assert.equal(risk.status, "PASS", `test/doc-only PR should not trip risk gate, got ${risk.status}: ${JSON.stringify(risk.details)}`);
+});
+
+test("evaluatePR does not FAIL Secret safety for an env-substring source path", async () => {
+  const root = gitInit("gate-secret-fp", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({
+      ...JSON.parse(baselineCanned["pr view"]),
+      files: [{ path: "src/config/dev.environments.ts" }],
+    }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const secret = data.checks.find((c) => c.name === "Secret safety");
+  assert.equal(secret.status, "PASS", `env-substring source should not fail secret gate, got ${secret.status}`);
+});
+
+// --- Finding #8: branch-protection "present but incomplete" path ---
+
+test("evaluatePR WARNs when branch protection exists but is missing recommended safeguards", async () => {
+  const root = gitInit("protection-incomplete", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "api repos/org/repo/branches/main/protection": JSON.stringify({
+      required_pull_request_reviews: { required_approving_review_count: 0, require_code_owner_reviews: false },
+      required_status_checks: { contexts: [], checks: [] },
+      required_conversation_resolution: { enabled: false },
+      allow_force_pushes: { enabled: true },
+      allow_deletions: { enabled: true },
+    }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const protection = data.checks.find((c) => c.name === "Branch protection");
+  assert.equal(protection.status, "WARN");
+  assert.match(protection.summary, /missing recommended safeguards/);
+  // Every individual safeguard gap should be reported.
+  assert.ok(protection.details.some((d) => /approving review/i.test(d)));
+  assert.ok(protection.details.some((d) => /CODEOWNERS review/i.test(d)));
+  assert.ok(protection.details.some((d) => /status checks/i.test(d)));
+  assert.ok(protection.details.some((d) => /Conversation resolution/i.test(d)));
+  assert.ok(protection.details.some((d) => /Force pushes/i.test(d)));
+  assert.ok(protection.details.some((d) => /deletion/i.test(d)));
+});
+
+test("evaluatePR WARNs when required_pull_request_reviews is entirely absent", async () => {
+  const root = gitInit("protection-no-reviews", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "api repos/org/repo/branches/main/protection": JSON.stringify({
+      required_status_checks: { contexts: ["tests"] },
+      required_conversation_resolution: { enabled: true },
+      allow_force_pushes: { enabled: false },
+      allow_deletions: { enabled: false },
+    }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const protection = data.checks.find((c) => c.name === "Branch protection");
+  assert.equal(protection.status, "WARN");
+  assert.ok(protection.details.some((d) => /Pull request reviews are not required/i.test(d)));
+});
+
+test("evaluatePR WARNs Branch protection when the protection API errors unexpectedly", async () => {
+  const root = gitInit("protection-error", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "api repos/org/repo/branches/main/protection": new Error("HTTP 500: server exploded"),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const protection = data.checks.find((c) => c.name === "Branch protection");
+  assert.equal(protection.status, "WARN");
+  assert.match(protection.summary, /Could not inspect branch protection/);
+});
+
+// --- Finding #8: unresolved review conversations ---
+
+test("evaluatePR FAILS when there are unresolved review conversations", async () => {
+  const root = gitInit("unresolved", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "api graphql": JSON.stringify({
+      data: {
+        repository: {
+          pullRequest: {
+            reviewThreads: {
+              nodes: [
+                { isResolved: false, path: "src/payment.ts", line: 12, comments: { nodes: [{ author: { login: "bob" }, url: "https://gh/c/1" }] } },
+                { isResolved: true, path: "src/other.ts", line: 3, comments: { nodes: [] } },
+              ],
+              pageInfo: { hasNextPage: false },
+            },
+          },
+        },
+      },
+    }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const conv = data.checks.find((c) => c.name === "Review conversations");
+  assert.equal(conv.status, "FAIL");
+  assert.ok(conv.details.some((d) => d.includes("src/payment.ts:12")));
+  assert.ok(conv.details.some((d) => d.includes("@bob")));
+  assert.equal(data.verdict, "FAIL");
+});
+
+test("evaluatePR paginates review threads across multiple pages", async () => {
+  const root = gitInit("unresolved-paged", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const page1 = JSON.stringify({
+    data: {
+      repository: {
+        pullRequest: {
+          reviewThreads: {
+            nodes: [{ isResolved: true, path: "a.ts", line: 1, comments: { nodes: [] } }],
+            pageInfo: { hasNextPage: true, endCursor: "CUR1" },
+          },
+        },
+      },
+    },
+  });
+  const page2 = JSON.stringify({
+    data: {
+      repository: {
+        pullRequest: {
+          reviewThreads: {
+            nodes: [{ isResolved: false, startLine: 7, path: "b.ts", comments: { nodes: [] } }],
+            pageInfo: { hasNextPage: false },
+          },
+        },
+      },
+    },
+  });
+  // Route page 2 by matching the cursor argument in the graphql call.
+  const runner = {
+    run(_cwd, args) {
+      const joined = args.join(" ");
+      if (joined.startsWith("api graphql")) {
+        return joined.includes("cursor=CUR1") ? page2 : page1;
+      }
+      for (const [prefix, response] of Object.entries(baselineCanned)) {
+        if (joined === prefix || joined.startsWith(`${prefix} `)) {
+          if (response instanceof Error) throw response;
+          return response;
+        }
+      }
+      throw new Error(`missing canned response for "${joined}"`);
+    },
+  };
+  const data = await evaluatePR(root, "42", { runner });
+  const conv = data.checks.find((c) => c.name === "Review conversations");
+  assert.equal(conv.status, "FAIL");
+  assert.ok(
+    conv.details.some((d) => d.includes("b.ts:7")),
+    `expected paged unresolved thread, got ${JSON.stringify(conv.details)}`,
+  );
+});
+
+test("evaluatePR WARNs Review conversations when the threads API errors", async () => {
+  const root = gitInit("unresolved-error", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "api graphql": new Error("HTTP 502: bad gateway"),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const conv = data.checks.find((c) => c.name === "Review conversations");
+  assert.equal(conv.status, "WARN");
+  assert.match(conv.summary, /Could not inspect review conversations/);
+});
+
+// --- Finding #8: status-check fallback paths (pending, status-only, enrichment) ---
+
+test("evaluatePR WARNs Status checks when a check is still pending", async () => {
+  const root = gitInit("pending-ci", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({
+      ...JSON.parse(baselineCanned["pr view"]),
+      statusCheckRollup: [
+        { name: "tests", conclusion: "SUCCESS" },
+        { name: "build", conclusion: "", status: "IN_PROGRESS" },
+      ],
+    }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const checks = data.checks.find((c) => c.name === "Status checks");
+  assert.equal(checks.status, "WARN");
+  assert.ok(checks.details.some((d) => d.includes("build")));
+});
+
+test("evaluatePR WARNs Status checks when no status checks are reported", async () => {
+  const root = gitInit("no-ci", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({ ...JSON.parse(baselineCanned["pr view"]), statusCheckRollup: [] }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const checks = data.checks.find((c) => c.name === "Status checks");
+  assert.equal(checks.status, "WARN");
+  assert.match(checks.summary, /No status checks/);
+});
+
+test("evaluatePR treats NEUTRAL/SKIPPED conclusions as passing and ignores legacy state field", async () => {
+  const root = gitInit("neutral-ci", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({
+      ...JSON.parse(baselineCanned["pr view"]),
+      statusCheckRollup: [
+        { name: "lint", conclusion: "NEUTRAL" },
+        { name: "optional", conclusion: "SKIPPED" },
+        { context: "legacy", state: "COMPLETED" },
+      ],
+    }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const checks = data.checks.find((c) => c.name === "Status checks");
+  assert.equal(checks.status, "PASS");
+});
+
+test("evaluatePR enriches a failed check with CI-readiness annotations from the check-runs API", async () => {
+  const root = gitInit("ci-annotations", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({
+      ...JSON.parse(baselineCanned["pr view"]),
+      statusCheckRollup: [
+        {
+          name: "ci",
+          workflowName: "CI",
+          conclusion: "FAILURE",
+          detailsUrl: "https://github.com/org/repo/actions/runs/1/job/99",
+        },
+      ],
+    }),
+    "api repos/org/repo/check-runs/99/annotations": JSON.stringify([{ message: "The job was not started because your spending limit was reached." }]),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const checks = data.checks.find((c) => c.name === "Status checks");
+  assert.equal(checks.status, "FAIL");
+  assert.ok(
+    checks.details.some((d) => /ci readiness/i.test(d)),
+    `expected ci-readiness annotation, got ${JSON.stringify(checks.details)}`,
+  );
+});
+
+// --- Finding #8: review-decision and PR-state edge cases (uncovered branches) ---
+
+test("evaluatePR WARNs Review decision in solo governance when review is required", async () => {
+  const root = gitInit("solo-review", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({ ...JSON.parse(baselineCanned["pr view"]), reviewDecision: "REVIEW_REQUIRED" }),
+  };
+  const data = await evaluatePR(root, "42", { governance: "solo", runner: fakeRunner(canned) });
+  const decision = data.checks.find((c) => c.name === "Review decision");
+  assert.equal(decision.status, "WARN");
+  assert.match(decision.summary, /Solo-maintainer/);
+});
+
+test("evaluatePR WARNs PR state when GitHub mergeability is unsettled", async () => {
+  const root = gitInit("unsettled", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({ ...JSON.parse(baselineCanned["pr view"]), mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const state = data.checks.find((c) => c.name === "PR state");
+  assert.equal(state.status, "WARN");
+  assert.match(state.summary, /not settled/);
+});
+
+test("evaluatePR FAILS PR state on merge conflicts", async () => {
+  const root = gitInit("conflict", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({ ...JSON.parse(baselineCanned["pr view"]), mergeable: "CONFLICTING", mergeStateStatus: "DIRTY" }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+  const state = data.checks.find((c) => c.name === "PR state");
+  assert.equal(state.status, "FAIL");
+  assert.match(state.summary, /merge conflicts/);
+});
+
+// --- Finding #8: renderers (terminal + markdown) exercised end-to-end ---
+
+test("formatPassPrTerminal and formatPassPrMarkdown render the verdict and checks", async () => {
+  const root = gitInit("render", {
+    "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+    "src/utils/format.ts": "export const fmt = 1;\n",
+    ".github/CODEOWNERS": "src/utils/format.ts @alice\n",
+  });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({ ...JSON.parse(baselineCanned["pr view"]), files: [{ path: "src/utils/format.ts" }] }),
+  };
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
+
+  const plain = formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: false, width: 80 }));
+  assert.match(plain, /repoctx pass-pr/);
+  assert.match(plain, /Context evidence/);
+
+  const fancy = formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: true, width: 80 }));
+  assert.match(fancy, /merge readiness/);
+
+  const markdown = formatPassPrMarkdown(data);
+  assert.match(markdown, /# repoctx pass-pr/);
+  assert.match(markdown, /Verdict:/);
+  assert.match(markdown, /## Checks/);
+  assert.match(markdown, /Branch protection/);
 });
