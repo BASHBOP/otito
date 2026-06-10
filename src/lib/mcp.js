@@ -14,7 +14,15 @@ import { inspectRepo } from "./repo.js";
 import { generatePrReview } from "./pr-review.js";
 import { generateWorkspaceReport } from "./workspace.js";
 
-const protocolVersion = "2025-06-18";
+const latestProtocolVersion = "2025-06-18";
+// This server's surface (initialize, ping, tools/list, tools/call) is
+// identical across these protocol revisions, so we can echo whichever the
+// client asks for instead of forcing our latest and triggering a disconnect.
+const supportedProtocolVersions = new Set(["2024-11-05", "2025-03-26", latestProtocolVersion]);
+
+function negotiateProtocolVersion(requested) {
+  return supportedProtocolVersions.has(requested) ? requested : latestProtocolVersion;
+}
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"));
 
@@ -318,15 +326,25 @@ export async function startMcpServer({ input = process.stdin, output = process.s
 }
 
 async function handleMessage(message) {
+  // JSON-RPC notifications (no id member) must never receive a response —
+  // not even an error for unknown methods. Real MCP clients routinely send
+  // notifications/cancelled and notifications/roots/list_changed.
+  const isNotification = message !== null && typeof message === "object" && !Array.isArray(message) && !("id" in message);
   if (!message || message.jsonrpc !== "2.0" || typeof message.method !== "string") {
+    if (isNotification) {
+      return undefined;
+    }
     return errorResponse(message?.id ?? null, -32600, "Invalid JSON-RPC request");
+  }
+  if (isNotification) {
+    return undefined;
   }
 
   try {
     switch (message.method) {
       case "initialize":
         return successResponse(message.id, {
-          protocolVersion,
+          protocolVersion: negotiateProtocolVersion(message.params?.protocolVersion),
           capabilities: {
             tools: {
               listChanged: false,
@@ -337,8 +355,6 @@ async function handleMessage(message) {
             version: packageJson.version,
           },
         });
-      case "notifications/initialized":
-        return undefined;
       case "ping":
         return successResponse(message.id, {});
       case "tools/list":
