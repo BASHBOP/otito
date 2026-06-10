@@ -10,7 +10,7 @@ import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
 import { generateHarness } from "./harness.js";
 import { getCachedCodeMap } from "./index-cache.js";
-import { inspectRepo } from "./repo.js";
+import { inspectRepo, gateInspectScripts } from "./repo.js";
 import { generatePrReview } from "./pr-review.js";
 import { generateWorkspaceReport } from "./workspace.js";
 
@@ -26,22 +26,27 @@ function negotiateProtocolVersion(requested) {
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"));
 
-const tools = [
+export const tools = [
   {
     name: "repo_inspect",
     title: "Inspect Repository",
-    description: "Inspect repository shape, languages, package managers, scripts, entrypoints, and git metadata.",
+    description:
+      "Inspect repository shape, languages, package managers, script names, entrypoints, and git metadata. Returns up to 200 representative file paths; pass includeScripts:true to get full script command bodies instead of just names.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        includeScripts: { type: "boolean", description: "Include full package.json script command bodies, not just their names. Defaults to false." },
       },
     },
   },
   {
     name: "repo_map",
     title: "Map Repository",
-    description: "Generate a compact JSON code map for a repository.",
+    description:
+      "Generate a compact JSON code map for a repository. Writes a local .dev-context/index.json cache into the target repo; the call is idempotent and does not change source files.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -57,6 +62,7 @@ const tools = [
     name: "repo_discover",
     title: "Discover Repositories",
     description: "Discover repository roots under one or more local directories.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -69,7 +75,9 @@ const tools = [
   {
     name: "repo_index",
     title: "Index Repositories",
-    description: "Generate local .dev-context indexes and add repositories to the local catalog.",
+    description:
+      "Generate local .dev-context indexes and add repositories to the local catalog. Mutates the persistent local catalog, so it is not a pure read.",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object",
       properties: {
@@ -86,6 +94,7 @@ const tools = [
     name: "repo_catalog",
     title: "List Catalog",
     description: "List the local repoctx repository catalog.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -96,7 +105,9 @@ const tools = [
   {
     name: "repo_search",
     title: "Search Repository Catalog",
-    description: "Search indexed local repositories by path, domain, kind, route, imports, exports, and symbols.",
+    description:
+      "Search indexed local repositories by path, domain, kind, route, imports, exports, and symbols. Only searches repositories already in the local catalog — if the catalog is empty this returns no matches, so call repo_index on the target repositories first.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -111,7 +122,9 @@ const tools = [
   {
     name: "context_pack",
     title: "Context Pack",
-    description: "Generate a task-aware local context packet with primary files, related files, tests, patterns, validation commands, and source evidence.",
+    description:
+      "Generate a task-aware local context packet with primary files, related files, tests, patterns, and validation commands. Writes a local .dev-context/index.json cache into the target repo; the call is idempotent and does not change source files.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -119,7 +132,14 @@ const tools = [
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         paths: { type: "array", items: { type: "string" }, description: "Repository paths for a multi-repo context packet." },
         limit: { type: "number", description: "Maximum primary, related, and test files per section. Defaults to 8." },
-        includeMarkdown: { type: "boolean", description: "Include the markdown context pack. Defaults to false." },
+        includeEvidence: {
+          type: "boolean",
+          description: "Include per-file imports, exports, and symbol slices as source evidence. Defaults to false to keep the packet compact.",
+        },
+        includeMarkdown: {
+          type: "boolean",
+          description: "Return a compact human-readable markdown report instead of the full JSON packet. Defaults to false.",
+        },
       },
       required: ["query"],
     },
@@ -128,7 +148,8 @@ const tools = [
     name: "change_impact",
     title: "Change Impact",
     description:
-      "Given a plain-English change request, rank the files most likely to own the change, with risk flags, suggested tests, and an implementation plan. Optional diff base validates predictions against actual changed files.",
+      "Given a plain-English change request, rank the files most likely to own the change, with risk flags, suggested tests, and an implementation plan. Optional diff base validates predictions against actual changed files. Writes a local .dev-context/index.json cache into the target repo; the call is idempotent and does not change source files.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -136,7 +157,7 @@ const tools = [
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         top: { type: "number", description: "Number of files to return. Defaults to 10." },
         diffBase: { type: "string", description: "Optional git ref to validate predictions against (e.g. origin/main, HEAD)." },
-        includeMarkdown: { type: "boolean", description: "Include the markdown impact report. Defaults to false." },
+        includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
       },
       required: ["query"],
     },
@@ -145,7 +166,8 @@ const tools = [
     name: "pr_merge_readiness",
     title: "PR Merge Readiness",
     description:
-      "GitHub PR merge-readiness gate. Uses `gh` to inspect PR state, review decision, CODEOWNERS approvals (with team-membership), unresolved conversations, branch protection, and status checks, then rolls up into a PASS / WARN / FAIL verdict.",
+      "Gate an open GitHub pull request for merge. Uses `gh` to inspect PR state, review decision, CODEOWNERS approvals (with team-membership), unresolved conversations, branch protection, and status checks, then rolls up into a PASS / WARN / FAIL verdict. Use this when you have a PR on GitHub and need the remote merge-gate verdict. Not to be confused with merge_readiness (the local, no-GitHub gate) or review_pr (the full impact + review + gate composite).",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -161,7 +183,8 @@ const tools = [
     name: "review_pr",
     title: "Review PR",
     description:
-      "Composite review: runs impact + pr-review + pass in one call and returns a unified verdict with a derived confidence score. Use this when an agent needs the full picture in one shot.",
+      "Run the full review pipeline in one shot: change_impact plus pr_review plus the merge gate, returning a unified verdict with a derived confidence score. Use this when you want the complete picture of a change in a single call. Not to be confused with pr_review (diff metadata only, no verdict) or merge_readiness / pr_merge_readiness (the gate verdicts alone).",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -179,7 +202,8 @@ const tools = [
     name: "merge_readiness",
     title: "Merge Readiness",
     description:
-      "Local merge-readiness gate. Runs deterministic checks (changed files, secret safety, risk-sensitive paths, release discipline, validation commands, dependency audit, policy profile) against a base ref and returns a PASS / WARN / FAIL verdict.",
+      "Check a local working tree for merge readiness without GitHub. Runs deterministic checks (changed files, secret safety, risk-sensitive paths, release discipline, validation commands, dependency audit, policy profile) against a base ref and returns a PASS / WARN / FAIL verdict. Use this when there is no PR yet or no GitHub access. Not to be confused with pr_merge_readiness (the GitHub PR gate) or review_pr (the full impact + review + gate composite).",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -195,6 +219,7 @@ const tools = [
     name: "workspace_report",
     title: "Workspace Report",
     description: "Generate a product-level report across multiple related repositories.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -203,7 +228,7 @@ const tools = [
           items: { type: "string" },
           description: "Repository paths to inspect together.",
         },
-        includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." },
+        includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
       },
       required: ["paths"],
     },
@@ -211,17 +236,19 @@ const tools = [
   {
     name: "pr_review",
     title: "PR Review",
-    description: "Generate PR review context from local git diff metadata and optional GitHub PR comments.",
+    description:
+      "Produce PR review context from local git diff metadata, optionally enriched with GitHub PR comments. Use this when you want the raw diff/comment context for a change, not a verdict. Not to be confused with review_pr (the full impact + review + gate composite) or pr_merge_readiness / merge_readiness (the gate verdicts).",
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object",
       properties: {
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         number: { type: "number", description: "Optional GitHub PR number for gh enrichment." },
         github: { type: "boolean", description: "Ask gh to infer the current branch PR." },
-        comment: { type: "boolean", description: "Create or update a sticky GitHub PR comment using gh." },
+        comment: { type: "boolean", description: "Create or update a sticky GitHub PR comment using gh. This writes to GitHub." },
         base: { type: "string", description: "Base ref. Defaults to PR base, upstream, origin/main, or main." },
         head: { type: "string", description: "Head ref. Defaults to HEAD." },
-        includeMarkdown: { type: "boolean", description: "Include the markdown report. Defaults to false." },
+        includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
       },
     },
   },
@@ -229,18 +256,21 @@ const tools = [
     name: "repo_harness",
     title: "Repository Harness",
     description: "Generate setup, validation, runtime, and context commands for an agent or CI harness.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
-        includeMarkdown: { type: "boolean", description: "Include the markdown harness. Defaults to false." },
+        includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
       },
     },
   },
   {
     name: "find_domain",
     title: "Find Domain",
-    description: "Find files related to a domain across one or more repositories.",
+    description:
+      "Find files related to a domain across one or more repositories. Writes a local .dev-context/index.json cache into each target repo; the call is idempotent and does not change source files.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -255,7 +285,9 @@ const tools = [
   {
     name: "find_file_kind",
     title: "Find File Kind",
-    description: "Find files of a kind across one or more repositories.",
+    description:
+      "Find files of a kind across one or more repositories. Writes a local .dev-context/index.json cache into each target repo; the call is idempotent and does not change source files.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -273,7 +305,9 @@ const tools = [
   {
     name: "find_backend_route",
     title: "Find Backend Route",
-    description: "Find Nest controller routes in a backend repository.",
+    description:
+      "Find Nest controller routes in a backend repository. Writes a local .dev-context/index.json cache into each target repo; the call is idempotent and does not change source files.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -287,7 +321,9 @@ const tools = [
   {
     name: "find_frontend_api_client",
     title: "Find Frontend API Client",
-    description: "Find frontend API client files, optionally by domain.",
+    description:
+      "Find frontend API client files, optionally by domain. Writes a local .dev-context/index.json cache into each target repo; the call is idempotent and does not change source files.",
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -408,18 +444,31 @@ async function callTool(params = {}) {
     content: [
       {
         type: "text",
-        text: JSON.stringify(result, null, 2),
+        text: toolResultText(result),
       },
     ],
-    structuredContent: result,
     isError: false,
   };
+}
+
+// Render a dispatched tool result as the single text payload. When a tool was
+// asked for its markdown report (includeMarkdown:true) the dispatcher returns a
+// { data, markdown } pair — surface the human-readable markdown directly instead
+// of nesting it inside the full JSON, which is far smaller on the wire. Every
+// other result is serialized as compact (non-pretty) JSON. We deliberately do
+// not emit structuredContent: no tool declares an outputSchema, so no client
+// relies on it, and duplicating the payload doubled transport weight.
+function toolResultText(result) {
+  if (result && typeof result === "object" && typeof result.markdown === "string") {
+    return result.markdown;
+  }
+  return JSON.stringify(result);
 }
 
 async function dispatchTool(name, args) {
   switch (name) {
     case "repo_inspect":
-      return inspectRepo(args.path ?? ".");
+      return gateInspectScripts(inspectRepo(args.path ?? "."), args.includeScripts);
     case "repo_map":
       return compactCodeMap(getCachedCodeMap(args.path ?? "."), args);
     case "repo_discover":
@@ -429,7 +478,7 @@ async function dispatchTool(name, args) {
     case "repo_catalog":
       return listCatalog(args);
     case "repo_search":
-      return searchCatalog(requiredString(args.query, "query"), args);
+      return withSearchRemediation(searchCatalog(requiredString(args.query, "query"), args));
     case "context_pack": {
       const result = generateContextPack(requiredString(args.query, "query"), args);
       return args.includeMarkdown ? result : result.data;
@@ -492,6 +541,19 @@ async function dispatchTool(name, args) {
     default:
       throw new McpProtocolError(-32602, `Unknown tool: ${name}`);
   }
+}
+
+// repo_search only sees repositories already in the local catalog. When the
+// catalog is empty (or holds no repositories), the agent gets an empty match
+// list with no clue why — so attach an explicit next step pointing at repo_index.
+function withSearchRemediation(result) {
+  if (result && typeof result === "object" && !result.repositoryCount) {
+    return {
+      ...result,
+      remediation: "No repositories are in the local catalog yet. Call repo_index on the repositories you want to search, then retry repo_search.",
+    };
+  }
+  return result;
 }
 
 function compactCodeMap(map, args = {}) {
