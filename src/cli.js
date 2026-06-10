@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { pathToFileURL } from "node:url";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { parseArgv } from "./lib/args.js";
 import { formatDoctorReport, getDoctorReport } from "./lib/doctor.js";
 import { inspectRepo } from "./lib/repo.js";
@@ -616,7 +617,20 @@ function formatRepoSummary(result) {
 
 export { main };
 
-const invokedAsScript = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+// npm bin shims invoke this file through a symlink, so argv[1] is the symlink
+// path while import.meta.url is already realpath-resolved by the ESM loader.
+// Compare realpaths on both sides or the guard never fires for installed bins
+// (npx / npm i -g) and the CLI exits silently with no output.
+const invokedAsScript = (() => {
+  if (!process.argv[1]) {
+    return false;
+  }
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
+})();
 if (invokedAsScript) {
   main();
 }
