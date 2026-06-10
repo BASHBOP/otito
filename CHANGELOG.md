@@ -9,8 +9,7 @@ This project follows SemVer.
 ### Added
 
 - README: demo GIF.
-- `version` lifecycle hook: `npm version` now syncs `server.json` with
-  `package.json` automatically, so `version:check` can no longer block a release.
+- `version` lifecycle hook: `npm version` now syncs `server.json` with `package.json` automatically, so `version:check` can no longer block a release.
 
 ### Changed
 
@@ -18,8 +17,7 @@ This project follows SemVer.
 
 ### Note
 
-- 1.4.1 was tagged but never published: `version:check` correctly blocked the
-  npm publish because `server.json` still said 1.4.0. Superseded by 1.4.2.
+- 1.4.1 was tagged but never published: `version:check` correctly blocked the npm publish because `server.json` still said 1.4.0. Superseded by 1.4.2.
 
 ## [1.4.0] - 2026-06-09
 
