@@ -31,7 +31,7 @@ import { generatePrReview } from "./lib/pr-review.js";
 import { formatReportTerminal, generateReport } from "./lib/report.js";
 import { generateWorkspaceReport } from "./lib/workspace.js";
 import { generateHarness } from "./lib/harness.js";
-import { runEval } from "./lib/eval.js";
+import { runEval, runRetrievalEval } from "./lib/eval.js";
 import { generateDataAccessReport } from "./lib/data-access.js";
 import { getAgentTools } from "./lib/agent-tools.js";
 import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
@@ -47,6 +47,7 @@ const commandHandlers = {
   impact: handleImpact,
   pass: handlePass,
   "pass-pr": handlePassPr,
+  gate: handleGate,
   review: handleReview,
   install: handleInstall,
   i: handleInstall,
@@ -287,6 +288,22 @@ async function handlePassPr(parsed) {
 
   printText(formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
   if (data.verdict === "FAIL") process.exitCode = 1;
+}
+
+// `gate` is the canonical v2 merge-gate command. It maps to `pass` for the
+// local gate (no --pr) and to `pass-pr` for the GitHub gate (--pr <selector>),
+// mirroring the review_gate MCP tool's local-vs-PR dispatch. `pass` and
+// `pass-pr` remain available as legacy aliases.
+async function handleGate(parsed) {
+  const selector = parsed.flags.pr;
+  if (selector && selector !== true) {
+    // pass-pr reads the selector from positionals[0] and the repo from --path.
+    return handlePassPr({
+      ...parsed,
+      positionals: [selector],
+    });
+  }
+  return handlePass(parsed);
 }
 
 async function handleReview(parsed) {
@@ -537,6 +554,25 @@ async function handleHarness(parsed) {
 }
 
 async function handleEval(parsed) {
+  // --accuracy runs the labeled corpus (retrieval precision + risk
+  // classification) instead of the token-savings eval, and exits non-zero
+  // when the scoreboard falls below the corpus thresholds so CI can gate on it.
+  if (parsed.flags.accuracy) {
+    const result = runRetrievalEval({ corpusPath: parsed.flags.corpus });
+    if (parsed.flags.json) {
+      printJson(result.data);
+    } else if (parsed.flags.out) {
+      const artifact = writeArtifact(parsed.flags.out, result.markdown);
+      printText(`Accuracy eval written: ${artifact.path}`);
+    } else {
+      printText(result.markdown);
+    }
+    if (!result.data.passed) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   const repoPath = parsed.positionals[0] ?? ".";
   const options = {};
   if (parsed.flags.query) options.query = parsed.flags.query;
@@ -586,6 +622,28 @@ async function handleAgentTools(parsed) {
 
 function handleHelp() {
   printHelp();
+  // v2 supplement: the canonical merge-gate command plus the canonical-vs-legacy
+  // mapping. The base usage block lives in output.js; this keeps the v2 surface
+  // discoverable without rewriting it.
+  printText(
+    [
+      "Merge gate (v2):",
+      "  repoctx gate <repo> [--base ref] [--policy x] [--governance x] [--request text] [--json]   # local gate",
+      "  repoctx gate --pr <selector> [--path repo] [--policy x] [--governance x] [--json]            # GitHub PR gate",
+      "",
+      "Accuracy eval (v2):",
+      "  repoctx eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",
+      "",
+      "Canonical vs legacy commands:",
+      "  gate                 canonical merge gate; `pass` (local) and `pass-pr` (PR) remain as legacy aliases",
+      "  review               canonical composite verdict (impact + review context + gate)",
+      "  pr                   produces review context only (diff/comment metadata, no verdict)",
+      "",
+      "Legacy MCP tool names (pr_review, review_pr, merge_readiness, pr_merge_readiness,",
+      "repo_catalog, repo_discover, find_*) keep working via tools/call until 3.0.",
+      "See docs/MIGRATION-2.0.md.",
+    ].join("\n"),
+  );
 }
 
 function formatCommentResult(comment) {
