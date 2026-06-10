@@ -54,14 +54,15 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
   }
   assert.equal(exitCode, 0);
   assert.equal(messages[0].result.serverInfo.name, "@nugehs/repoctx");
-  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_map"));
-  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_discover"));
-  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_index"));
-  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_catalog"));
-  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_search"));
-  assert.ok(messages[1].result.tools.some((tool) => tool.name === "context_pack"));
-  assert.ok(messages[1].result.tools.some((tool) => tool.name === "pr_review"));
-  assert.ok(messages[1].result.tools.some((tool) => tool.name === "repo_harness"));
+  const listedNames = messages[1].result.tools.map((tool) => tool.name);
+  assert.equal(listedNames.length, 11, `tools/list must expose exactly 11 tools, got ${listedNames.length}: ${listedNames.join(", ")}`);
+  for (const expected of ["repo_map", "repo_index", "repo_search", "context_pack", "review_context", "repo_harness"]) {
+    assert.ok(listedNames.includes(expected), `missing tool: ${expected}`);
+  }
+  // Retired names must not appear in tools/list (they remain callable via tools/call).
+  for (const retired of ["repo_discover", "repo_catalog", "pr_review"]) {
+    assert.ok(!listedNames.includes(retired), `retired tool must not appear in tools/list: ${retired}`);
+  }
 
   // The transport ships a single compact-JSON text payload and no structuredContent.
   assert.equal(messages[2].result.structuredContent, undefined);

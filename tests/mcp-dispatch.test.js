@@ -135,26 +135,38 @@ test("startMcpServer handles initialize, ping, tools/list, and skips notificatio
   const expectedTools = [
     "repo_inspect",
     "repo_map",
-    "repo_discover",
     "repo_index",
-    "repo_catalog",
     "repo_search",
     "context_pack",
     "change_impact",
-    "pr_merge_readiness",
-    "review_pr",
-    "merge_readiness",
+    "review_gate",
+    "review_verdict",
     "workspace_report",
-    "pr_review",
+    "review_context",
     "repo_harness",
-    "find_domain",
-    "find_file_kind",
-    "find_backend_route",
-    "find_frontend_api_client",
   ];
   const names = byId(messages, 3).result.tools.map((t) => t.name);
   for (const name of expectedTools) {
     assert.ok(names.includes(name), `missing tool: ${name}`);
+  }
+  // The v2 surface is exactly 11 tools — no more, no fewer. Retired names
+  // (repo_discover, repo_catalog, find_*, pr_review, review_pr, merge_readiness,
+  // pr_merge_readiness) must NOT appear in tools/list.
+  assert.equal(names.length, 11, `tools/list must expose exactly 11 tools, got ${names.length}: ${names.join(", ")}`);
+  assert.deepEqual([...names].sort(), [...expectedTools].sort());
+  for (const retired of [
+    "repo_discover",
+    "repo_catalog",
+    "find_domain",
+    "find_file_kind",
+    "find_backend_route",
+    "find_frontend_api_client",
+    "pr_review",
+    "review_pr",
+    "merge_readiness",
+    "pr_merge_readiness",
+  ]) {
+    assert.ok(!names.includes(retired), `retired tool must not appear in tools/list: ${retired}`);
   }
 });
 
@@ -255,37 +267,58 @@ test("repo_inspect, repo_map, and repo_harness produce structured results", asyn
   assert.ok(Array.isArray(inspectWithScripts.scriptNames));
 });
 
-test("repo_discover, repo_index, repo_catalog, and repo_search round-trip a fixture", async () => {
+test("repo_index dryRun is read-only and does not write the catalog", async () => {
   const fixture = makeRepoFixture();
-  const catalogPath = path.join(os.tmpdir(), `repoctx-mcp-cat-${path.basename(fixture)}.json`);
+  const catalogPath = path.join(os.tmpdir(), `repoctx-mcp-dry-${path.basename(fixture)}.json`);
+  // Run the dryRun request on its own so the assertion sees the state before any
+  // non-dryRun index could write the catalog.
   const messages = await runRequests([
-    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_discover", arguments: { paths: [fixture], depth: 2, limit: 25 } } },
-    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "repo_index", arguments: { paths: [fixture], catalog: catalogPath } } },
-    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "repo_catalog", arguments: { catalog: catalogPath } } },
     {
       jsonrpc: "2.0",
-      id: 4,
+      id: 1,
       method: "tools/call",
-      params: { name: "repo_search", arguments: { query: "events", catalog: catalogPath, limit: 10, offline: true } },
+      params: { name: "repo_index", arguments: { paths: [fixture], dryRun: true, catalog: catalogPath, depth: 2, limit: 25 } },
     },
-    { jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "repo_search", arguments: {} } },
   ]);
 
   const discover = structured(messages, 1);
-  assert.ok(discover, "discover must return a structured result");
+  assert.equal(discover.dryRun, true, "dryRun result is flagged");
+  assert.ok(discover.repositoryCount >= 1, "dryRun discovers the fixture repo");
+  assert.ok(!fs.existsSync(catalogPath), "dryRun must not write a catalog");
 
-  const index = structured(messages, 2);
+  if (fs.existsSync(catalogPath)) fs.unlinkSync(catalogPath);
+});
+
+test("repo_index, repo_search query, and no-query repo_search catalog round-trip a fixture", async () => {
+  const fixture = makeRepoFixture();
+  const catalogPath = path.join(os.tmpdir(), `repoctx-mcp-cat-${path.basename(fixture)}.json`);
+  const messages = await runRequests([
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_index", arguments: { paths: [fixture], catalog: catalogPath } } },
+    // repo_search with no query returns the catalog listing (old repo_catalog).
+    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "repo_search", arguments: { catalog: catalogPath } } },
+    {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "repo_search", arguments: { query: "events", catalog: catalogPath, limit: 10, offline: true } },
+    },
+  ]);
+
+  const index = structured(messages, 1);
   assert.equal(index.ok, true);
+  assert.ok(fs.existsSync(catalogPath), "a non-dryRun index writes the catalog");
 
-  const catalog = structured(messages, 3);
+  // No-query repo_search returns the catalog listing.
+  const catalog = structured(messages, 2);
   assert.ok(catalog && typeof catalog === "object");
+  assert.ok(catalog.repositoryCount >= 1, "no-query repo_search lists cataloged repositories");
+  assert.ok(Array.isArray(catalog.repositories), "no-query repo_search returns a repositories array");
+  assert.equal(catalog.matchCount, undefined, "no-query repo_search is the catalog listing, not a search result");
 
-  const search = structured(messages, 4);
+  const search = structured(messages, 3);
   assert.ok(search && typeof search === "object");
   assert.ok(search.repositoryCount >= 1, "search against a populated catalog reports repositories");
   assert.equal(search.remediation, undefined, "no remediation hint when the catalog has repositories");
-
-  assert.equal(byId(messages, 5).error?.code, -32602);
 
   if (fs.existsSync(catalogPath)) fs.unlinkSync(catalogPath);
 });
@@ -398,13 +431,19 @@ test("context_pack default response is compact: no structuredContent, no pretty-
   assert.ok(markdownText.length < defaultText.length, `markdown (${markdownText.length}) should be far smaller than JSON (${defaultText.length})`);
 });
 
-test("merge_readiness and pr_review work against a real git fixture", async () => {
+test("review_gate (local), review_context, and review_verdict work against a real git fixture", async () => {
   const fixture = makeGitRepoFixture("merge");
   const messages = await runRequests([
-    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "merge_readiness", arguments: { path: fixture, base: "HEAD~1" } } },
-    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "pr_review", arguments: { path: fixture, base: "HEAD~1" } } },
-    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "pr_review", arguments: { path: fixture, base: "HEAD~1", includeMarkdown: true } } },
-    { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "review_pr", arguments: { path: fixture, base: "HEAD~1", request: "tweak greeting" } } },
+    // review_gate with no pr → local gate (old merge_readiness).
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, base: "HEAD~1" } } },
+    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "review_context", arguments: { path: fixture, base: "HEAD~1" } } },
+    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "review_context", arguments: { path: fixture, base: "HEAD~1", includeMarkdown: true } } },
+    {
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: { name: "review_verdict", arguments: { path: fixture, base: "HEAD~1", request: "tweak greeting" } },
+    },
   ]);
 
   const merge = structured(messages, 1);
@@ -416,11 +455,28 @@ test("merge_readiness and pr_review work against a real git fixture", async () =
   assert.ok(pr.changedFiles || pr.comparison);
 
   const prMd = rawText(messages, 3);
-  assert.throws(() => JSON.parse(prMd), "pr_review markdown payload must not be JSON");
+  assert.throws(() => JSON.parse(prMd), "review_context markdown payload must not be JSON");
   assert.ok(prMd.length > 0);
 
   const review = structured(messages, 4);
   assert.ok(review.verdict || review.summary || review.impact);
+});
+
+test("review_gate with a pr selector runs the GitHub gate path (vs local without one)", async () => {
+  // Without gh / a real PR this surfaces a verdict or an error — what matters is
+  // that the pr selector routes through the GitHub gate (evaluatePR), not the
+  // local gate, exactly as the old pr_merge_readiness did.
+  const fixture = makeGitRepoFixture("gate-pr");
+  const messages = await runRequests([
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, pr: "" } } },
+    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, pr: "123" } } },
+  ]);
+
+  const emptySelector = byId(messages, 1).result;
+  assert.ok(emptySelector.content[0].text.length > 0, "empty pr selector still routes to the PR gate and returns a payload");
+
+  const withSelector = byId(messages, 2).result;
+  assert.ok(withSelector.content[0].text.length > 0, "a pr selector routes to the PR gate and returns a payload");
 });
 
 test("workspace_report requires two paths and accepts includeMarkdown", async () => {
@@ -440,47 +496,137 @@ test("workspace_report requires two paths and accepts includeMarkdown", async ()
   assert.ok(withMarkdown.length > 0);
 });
 
-test("find_domain, find_file_kind, find_backend_route, find_frontend_api_client cover their helpers", async () => {
+test("repo_map domain/kind/route filters fold in the retired find_* tools", async () => {
   const fixture = makeRepoFixture();
   const messages = await runRequests([
-    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "find_domain", arguments: { path: fixture, domain: "events", limit: 5 } } },
-    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "find_domain", arguments: { path: fixture } } },
-    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "find_file_kind", arguments: { path: fixture, kind: "controller" } } },
-    { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "find_file_kind", arguments: { path: fixture } } },
-    { jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "find_backend_route", arguments: { path: fixture, limit: 10 } } },
-    { jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "find_backend_route", arguments: { path: fixture, query: "events" } } },
-    { jsonrpc: "2.0", id: 7, method: "tools/call", params: { name: "find_frontend_api_client", arguments: { path: fixture } } },
-    { jsonrpc: "2.0", id: 8, method: "tools/call", params: { name: "find_frontend_api_client", arguments: { path: fixture, query: "events" } } },
+    // domain filter (find_domain)
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_map", arguments: { path: fixture, domain: "events", includeFiles: true, limit: 5 } } },
+    // kind filter (find_file_kind)
+    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "repo_map", arguments: { path: fixture, kind: "controller", includeFiles: true } } },
+    // controller route filter (find_backend_route) — substring match on the combined route
+    {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "repo_map", arguments: { path: fixture, kind: "controller", route: "events", includeFiles: true } },
+    },
+    // route filter accepts a regex anchored to the controller route
+    {
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: { name: "repo_map", arguments: { path: fixture, kind: "controller", route: "^/events/.*", includeFiles: true } },
+    },
+    // a route that matches nothing returns an empty file set
+    {
+      jsonrpc: "2.0",
+      id: 5,
+      method: "tools/call",
+      params: { name: "repo_map", arguments: { path: fixture, kind: "controller", route: "no-such-route-xyz", includeFiles: true } },
+    },
+    // apiClient kind (find_frontend_api_client)
+    { jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "repo_map", arguments: { path: fixture, kind: "apiClient", includeFiles: true } } },
   ]);
 
-  const domain = structured(messages, 1);
-  assert.equal(domain.domain, "events");
-  assert.ok(Array.isArray(domain.repos));
-  assert.equal(domain.repos.length, 1);
-  assert.ok(domain.repos[0].files.length > 0);
+  const byDomain = structured(messages, 1);
+  assert.ok(Array.isArray(byDomain.files));
+  assert.ok(byDomain.files.length > 0, "domain filter returns matching files");
+  assert.ok(byDomain.files.every((file) => (file.domains ?? [file.domain]).some((d) => d?.includes("events"))));
 
-  assert.equal(byId(messages, 2).error?.code, -32602);
+  const byKind = structured(messages, 2);
+  assert.ok(byKind.files.every((file) => file.kind === "controller"));
+  assert.ok(byKind.files.some((file) => file.path.endsWith("events.controller.ts")));
 
-  const kind = structured(messages, 3);
-  assert.equal(kind.kind, "controller");
-  assert.ok(kind.repos[0].files.every((file) => file.kind === "controller"));
+  const byRoute = structured(messages, 3);
+  assert.ok(byRoute.files.length > 0, "route substring matches the events controller");
+  assert.ok(byRoute.files.some((file) => file.path.endsWith("events.controller.ts")));
+  assert.ok(byRoute.files.every((file) => file.kind === "controller"));
 
-  assert.equal(byId(messages, 4).error?.code, -32602);
+  const byRouteRegex = structured(messages, 4);
+  assert.ok(
+    byRouteRegex.files.some((file) => file.path.endsWith("events.controller.ts")),
+    "regex route pattern matches the /events/:id route",
+  );
 
-  const routes = structured(messages, 5);
-  assert.equal(routes.ok, true);
-  assert.ok(Array.isArray(routes.routes));
-  assert.ok(routes.routes.some((route) => route.route.startsWith("/events")));
+  const noMatch = structured(messages, 5);
+  assert.equal(noMatch.files.length, 0, "an unmatched route yields no files");
 
-  const filteredRoutes = structured(messages, 6);
-  assert.ok(filteredRoutes.routes.every((route) => `${route.file} ${route.route} ${route.method}`.toLowerCase().includes("events")));
-
-  const apiClient = structured(messages, 7);
+  const apiClient = structured(messages, 6);
   assert.equal(apiClient.ok, true);
-  assert.ok(Array.isArray(apiClient.repos));
+  assert.ok(Array.isArray(apiClient.files));
+  assert.ok(apiClient.files.every((file) => file.kind === "apiClient"));
+});
 
-  const apiClientFiltered = structured(messages, 8);
-  assert.equal(apiClientFiltered.query, "events");
+test("every legacy tool name still dispatches to a sane result via tools/call", async () => {
+  const fixture = makeRepoFixture();
+  const gitFixture = makeGitRepoFixture("legacy");
+  const catalogPath = path.join(os.tmpdir(), `repoctx-mcp-legacy-cat-${path.basename(fixture)}.json`);
+
+  // Seed the catalog so repo_catalog (no-query repo_search) has something to list.
+  await runRequests([{ jsonrpc: "2.0", id: 0, method: "tools/call", params: { name: "repo_index", arguments: { paths: [fixture], catalog: catalogPath } } }]);
+
+  const messages = await runRequests([
+    // Renames
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "pr_review", arguments: { path: gitFixture, base: "HEAD~1" } } },
+    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "review_pr", arguments: { path: gitFixture, base: "HEAD~1", request: "tweak greeting" } } },
+    // Gate merges
+    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "merge_readiness", arguments: { path: gitFixture, base: "HEAD~1" } } },
+    { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "pr_merge_readiness", arguments: { path: gitFixture, selector: "123" } } },
+    // Folded discovery/catalog
+    { jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "repo_catalog", arguments: { catalog: catalogPath } } },
+    { jsonrpc: "2.0", id: 6, method: "tools/call", params: { name: "repo_discover", arguments: { paths: [fixture], depth: 2 } } },
+    // Folded find_* tools
+    { jsonrpc: "2.0", id: 7, method: "tools/call", params: { name: "find_domain", arguments: { path: fixture, domain: "events" } } },
+    { jsonrpc: "2.0", id: 8, method: "tools/call", params: { name: "find_file_kind", arguments: { path: fixture, kind: "controller" } } },
+    { jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "find_backend_route", arguments: { path: fixture, query: "events" } } },
+    { jsonrpc: "2.0", id: 10, method: "tools/call", params: { name: "find_frontend_api_client", arguments: { path: fixture } } },
+  ]);
+
+  // pr_review → review_context: diff/comment context, no verdict.
+  const prReview = structured(messages, 1);
+  assert.ok(prReview.changedFiles || prReview.comparison, "pr_review alias yields review context");
+
+  // review_pr → review_verdict: composite verdict.
+  const reviewPr = structured(messages, 2);
+  assert.ok(reviewPr.verdict || reviewPr.summary || reviewPr.impact, "review_pr alias yields a composite verdict");
+
+  // merge_readiness → review_gate (local): PASS/WARN/FAIL.
+  const mergeReadiness = structured(messages, 3);
+  assert.ok(["PASS", "WARN", "FAIL"].includes(mergeReadiness.verdict), "merge_readiness alias yields a local gate verdict");
+  assert.ok(Array.isArray(mergeReadiness.checks));
+
+  // pr_merge_readiness → review_gate (PR): routes through the GitHub gate.
+  assert.ok(byId(messages, 4).result.content[0].text.length > 0, "pr_merge_readiness alias routes to the PR gate");
+
+  // repo_catalog → no-query repo_search: catalog listing.
+  const catalog = structured(messages, 5);
+  assert.ok(Array.isArray(catalog.repositories), "repo_catalog alias lists the catalog");
+  assert.ok(catalog.repositoryCount >= 1);
+
+  // repo_discover → repo_index dryRun: read-only discovery, no catalog write.
+  const discover = structured(messages, 6);
+  assert.equal(discover.dryRun, true, "repo_discover alias maps to dryRun discovery");
+  assert.ok(discover.repositoryCount >= 1);
+
+  // find_domain → repo_map domain filter.
+  const findDomain = structured(messages, 7);
+  assert.ok(Array.isArray(findDomain.files), "find_domain alias returns repo_map files");
+  assert.ok(findDomain.files.every((file) => (file.domains ?? [file.domain]).some((d) => d?.includes("events"))));
+
+  // find_file_kind → repo_map kind filter.
+  const findKind = structured(messages, 8);
+  assert.ok(findKind.files.every((file) => file.kind === "controller"));
+
+  // find_backend_route → repo_map kind:controller + route filter.
+  const findRoute = structured(messages, 9);
+  assert.ok(findRoute.files.every((file) => file.kind === "controller"));
+  assert.ok(findRoute.files.some((file) => file.path.endsWith("events.controller.ts")));
+
+  // find_frontend_api_client → repo_map kind:apiClient.
+  const findApi = structured(messages, 10);
+  assert.ok(findApi.files.every((file) => file.kind === "apiClient"));
+
+  if (fs.existsSync(catalogPath)) fs.unlinkSync(catalogPath);
 });
 
 test("startMcpServer never responds to notifications, including unknown methods", async () => {
@@ -541,23 +687,26 @@ test("every MCP tool declares an explicit readOnlyHint annotation", () => {
   // Tools that mutate persistent state are honestly flagged non-read-only.
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
   assert.equal(byName.get("repo_index").annotations.readOnlyHint, false, "repo_index mutates the catalog");
-  assert.equal(byName.get("pr_review").annotations.readOnlyHint, false, "pr_review can post a GitHub comment");
+  assert.equal(byName.get("review_context").annotations.readOnlyHint, false, "review_context can post a GitHub comment");
   assert.equal(byName.get("repo_inspect").annotations.readOnlyHint, true);
   assert.equal(byName.get("context_pack").annotations.readOnlyHint, true);
+  // review_gate with pr unset is a read-only local gate.
+  assert.equal(byName.get("review_gate").annotations.readOnlyHint, true, "review_gate (local mode) is read-only");
 });
 
-test("the review/merge tool descriptions are verb-first and cross-reference each other", () => {
+test("the review_* tool descriptions are verb-first and state when to use each vs its siblings", () => {
   const byName = new Map(tools.map((tool) => [tool.name, tool]));
-  const family = ["pr_review", "review_pr", "merge_readiness", "pr_merge_readiness"];
+  const family = ["review_context", "review_gate", "review_verdict"];
 
   for (const name of family) {
     const description = byName.get(name).description;
     // Verb-first: first word is a capitalized imperative verb, no leading noun phrase.
     assert.match(description, /^[A-Z][a-z]+ /, `${name} description should start with a verb`);
-    assert.match(description, /Not to be confused with/, `${name} should disambiguate from siblings`);
+    // Each review_* description cross-references at least one sibling by name.
+    const siblings = family.filter((other) => other !== name);
+    assert.ok(
+      siblings.some((sibling) => description.includes(sibling)),
+      `${name} should name a sibling review_* tool to disambiguate, got: ${description}`,
+    );
   }
-
-  // Each description leads with a distinct verb so the four cannot be confused.
-  const firstWords = family.map((name) => byName.get(name).description.split(" ")[0]);
-  assert.equal(new Set(firstWords).size, firstWords.length, `review/merge descriptions must open with distinct verbs: ${firstWords.join(", ")}`);
 });

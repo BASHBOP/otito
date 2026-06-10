@@ -1,22 +1,19 @@
 import { tools } from "./mcp.js";
 
 // CLI command that backs each MCP tool, when one exists. Tools without an entry
-// here are surfaced over MCP only (the find_* convenience tools), so their
-// invocation is reported as the mcp tools/call form instead of a bare command.
+// here are surfaced over MCP only, so their invocation is reported as the mcp
+// tools/call form instead of a bare command.
 const cliCommandByTool = {
   repo_inspect: "repoctx repo <path> --json",
   repo_map: "repoctx map <path> --json",
-  repo_discover: "repoctx discover <root...> --json",
   repo_index: "repoctx index <repo...> --json",
-  repo_catalog: "repoctx catalog --json",
   repo_search: "repoctx search <query> --json",
   context_pack: "repoctx context <query> --path <repo> --json",
   change_impact: "repoctx impact <query> --path <repo> --json",
-  merge_readiness: "repoctx pass --path <repo> --json",
-  pr_merge_readiness: "repoctx pass-pr <selector> --path <repo> --json",
-  review_pr: "repoctx review --path <repo> --json",
+  review_gate: "repoctx gate [--pr <selector>] --path <repo> --json",
+  review_verdict: "repoctx review --path <repo> --json",
   workspace_report: "repoctx workspace <repo...> --json",
-  pr_review: "repoctx pr <path> --json",
+  review_context: "repoctx pr <path> --json",
   repo_harness: "repoctx harness <path> --json",
 };
 
