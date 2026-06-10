@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [1.4.3] - 2026-06-10
+
+### Fixed
+
+- **Critical:** the npm-installed `repoctx` / `dev-context` bins were silent no-ops in 1.4.0–1.4.2. The invoked-as-script guard compared `import.meta.url` (realpath-resolved by the ESM loader) against `argv[1]` (the npm bin symlink), so `main()` never ran via `npx` or `npm i -g`. Realpaths are now compared on both sides.
+- MCP server no longer responds to JSON-RPC notifications (e.g. `notifications/cancelled`); previously unknown notifications received a spec-violating `-32601` error with no id.
+- MCP `initialize` now negotiates `protocolVersion`: a supported client revision (2024-11-05, 2025-03-26, 2025-06-18) is echoed back instead of always forcing the latest.
+
+### Added
+
+- Packed-tarball smoke test (`npm run smoke:tarball`, part of `npm run smoke` / the quality gate): packs the real tarball, installs it into a temp project, and runs the installed bin — the seam that let the broken bins ship undetected.
+
 ## [1.4.2] - 2026-06-10
 
 ### Added
