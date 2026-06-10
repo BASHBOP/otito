@@ -2,7 +2,7 @@
 
 **Local-first code context for agents and reviewers — what does this change actually touch?**
 
-[![npm](https://img.shields.io/npm/v/@nugehs/repoctx?style=flat-square&color=dc0000)](https://www.npmjs.com/package/@nugehs/repoctx) [![CI](https://img.shields.io/github/actions/workflow/status/nugehs/repoctx/repoctx-ci.yml?style=flat-square&label=CI)](https://github.com/nugehs/repoctx/actions/workflows/repoctx-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-dc0000?style=flat-square)](LICENSE) [![node](https://img.shields.io/node/v/@nugehs/repoctx?style=flat-square)](https://www.npmjs.com/package/@nugehs/repoctx)
+[![npm](https://img.shields.io/npm/v/@nugehs/repoctx?style=flat-square)](https://www.npmjs.com/package/@nugehs/repoctx) [![CI](https://img.shields.io/github/actions/workflow/status/nugehs/repoctx/repoctx-ci.yml?style=flat-square&label=CI)](https://github.com/nugehs/repoctx/actions/workflows/repoctx-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/node/v/@nugehs/repoctx?style=flat-square)](https://www.npmjs.com/package/@nugehs/repoctx)
 
 ![repoctx demo](repoctx-demo.gif)
 
