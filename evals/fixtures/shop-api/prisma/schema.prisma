@@ -1,0 +1,6 @@
+// Data-model surface (used by risk cases, not code-map retrieval).
+model Order {
+  id       String   @id @default(cuid())
+  total    Int
+  currency String
+}
