@@ -124,7 +124,10 @@ function secretCheck(files) {
 }
 
 function riskCheck(files) {
-  const matches = matchRiskPaths(files);
+  // Gate mode: ignore test files and documentation. A `checkout.spec.ts` test
+  // or a `git-checkout-guide.md` doc is risk-adjacent for ranking purposes but
+  // must not, on its own, force an explicit-review warning at merge time.
+  const matches = matchRiskPaths(files, { gate: true });
   if (matches.length > 0) {
     return {
       name: "Risk review",

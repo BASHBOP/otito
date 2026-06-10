@@ -1,4 +1,12 @@
 {
+  // checkJs is intentionally false: this gate is syntax-only today. Enabling
+  // type checking is blocked on two things, in order:
+  //   1. Add a dev dependency on @types/node (without it, every `node:*` import
+  //      and `process`/`console` reference errors: ~236 errors across all files).
+  //   2. Annotate the implicit-any fallout: ~1091 TS7006-class errors remain,
+  //      concentrated in context-engine.js, pr-review.js, pass-pr.js, impact.js,
+  //      cli.js, and mcp.js. Full checkJs currently reports ~1665 errors total
+  //      (1308 in src/, 357 in tests/), so flip it per-directory, not all at once.
   "compilerOptions": {
     "allowJs": true,
     "checkJs": false,

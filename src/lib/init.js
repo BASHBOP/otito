@@ -18,6 +18,8 @@ export function initProject(targetPath = ".", options = {}) {
 
   writeScaffoldFile(root, ".dev-context/README.md", contextReadme(toolRepo, toolRef), { force, operations });
 
+  ensureGitignoreEntry(root, ".dev-context/", operations);
+
   if (!options.noWorkflow) {
     writeScaffoldFile(root, workflowPath, workflowTemplate(toolRepo, toolRef), {
       force,
@@ -65,6 +67,40 @@ function writeScaffoldFile(root, relativePath, contents, { force, operations }) 
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
   fs.writeFileSync(absolutePath, contents);
   operations.push({ action: exists ? "updated" : "created", path: relativePath });
+}
+
+// The first context_pack / repo_map on an unprepared repo drops a
+// .dev-context/index.json cache into the tree, dirtying git status. Add the
+// directory to .gitignore so that never happens. Idempotent: skip when the
+// entry (or a covering pattern) is already present, create the file if absent.
+function ensureGitignoreEntry(root, entry, operations) {
+  const relativePath = ".gitignore";
+  const absolutePath = path.join(root, relativePath);
+  const exists = fs.existsSync(absolutePath);
+  const current = exists ? fs.readFileSync(absolutePath, "utf8") : "";
+
+  if (gitignoreCovers(current, entry)) {
+    operations.push({ action: "skipped", path: relativePath });
+    return;
+  }
+
+  const prefix = current.length && !current.endsWith("\n") ? "\n" : "";
+  fs.writeFileSync(absolutePath, `${current}${prefix}${entry}\n`);
+  operations.push({ action: exists ? "updated" : "created", path: relativePath });
+}
+
+function gitignoreCovers(contents, entry) {
+  const bare = entry.replace(/\/+$/, "");
+  return contents
+    .split("\n")
+    .map((line) => line.trim())
+    .some((line) => {
+      if (line.startsWith("#")) {
+        return false;
+      }
+      const normalized = line.replace(/^\/+/, "").replace(/\/+$/, "");
+      return normalized === bare;
+    });
 }
 
 function formatList(title, values) {

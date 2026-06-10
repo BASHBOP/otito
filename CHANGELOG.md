@@ -4,6 +4,27 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [Unreleased]
+
+### Fixed
+
+- Risk classification precision: whole-token concept matching ('fix payload parsing' no longer flags money flow), singularized path tokens (`roles.guard.ts` now flags auth/security), basename-pattern secret detection (`dev.environments.ts` and docs no longer hard-fail the gate), and gate-mode filtering so test/doc-only changes stop drawing risk warnings.
+- `repoctx pr` now uses the shared risk classifier — `pr` and `pass` agree on the same diff.
+- Impact ranking: one stray concept can no longer halve every non-matching file's score.
+- Index cache: atomic writes, warn-once on write failure, bounded in-process memo for repeated MCP calls.
+- `init` adds `.dev-context/` to the target repo's `.gitignore`, so first-call index caching no longer dirties working trees.
+
+### Changed
+
+- MCP transport slimmed: compact JSON (no pretty-printing), duplicate `structuredContent` removed, `includeMarkdown` returns the markdown report as the response text; `repo_inspect`/`context_pack` payloads gate file lists, script bodies, and per-file evidence behind opt-ins. Tools declare `readOnlyHint` annotations; the review-family tool descriptions disambiguate each other; `repo_search` hints at `repo_index` when the catalog is empty.
+- `agent-tools` catalog is derived from the MCP tools array (was a drifted hand-maintained copy), with a parity test.
+- README leads with the deterministic merge gates; code-map docs reflect the multi-language extractors.
+
+### Added
+
+- `doctor` checks for the `gh` CLI (required by `pr_merge_readiness`).
+- 72 new tests (242 total): gate fallback paths, cache staleness/corruption/atomicity, parser-path coverage, and pins on every fixed false positive/negative.
+
 ## [1.4.3] - 2026-06-10
 
 ### Fixed

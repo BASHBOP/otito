@@ -1,118 +1,60 @@
+import { tools } from "./mcp.js";
+
+// CLI command that backs each MCP tool, when one exists. Tools without an entry
+// here are surfaced over MCP only (the find_* convenience tools), so their
+// invocation is reported as the mcp tools/call form instead of a bare command.
+const cliCommandByTool = {
+  repo_inspect: "repoctx repo <path> --json",
+  repo_map: "repoctx map <path> --json",
+  repo_discover: "repoctx discover <root...> --json",
+  repo_index: "repoctx index <repo...> --json",
+  repo_catalog: "repoctx catalog --json",
+  repo_search: "repoctx search <query> --json",
+  context_pack: "repoctx context <query> --path <repo> --json",
+  change_impact: "repoctx impact <query> --path <repo> --json",
+  merge_readiness: "repoctx pass --path <repo> --json",
+  pr_merge_readiness: "repoctx pass-pr <selector> --path <repo> --json",
+  review_pr: "repoctx review --path <repo> --json",
+  workspace_report: "repoctx workspace <repo...> --json",
+  pr_review: "repoctx pr <path> --json",
+  repo_harness: "repoctx harness <path> --json",
+};
+
+// The MCP tools array in mcp.js is the single source of truth for the tool
+// surface. Derive the agent-tools catalog from it so the two never drift; a
+// parity test guards that every MCP tool appears here with matching options.
 export function getAgentTools() {
   return {
     ok: true,
     protocol: "repoctx-agent-tools/v0",
-    tools: [
-      {
-        name: "repo_inspect",
-        command: "repoctx repo <path> --json",
-        description: "Inspect repository shape, languages, package managers, scripts, entrypoints, and git metadata.",
-        input: {
-          path: "string",
-        },
-      },
-      {
-        name: "dependency_search",
-        command: "repoctx deps <package> --query <query> --json",
-        description: "Resolve package source through opensrc and search within it.",
-        input: {
-          package: "string",
-          query: "string",
-          limit: "number?",
-        },
-      },
-      {
-        name: "repo_map",
-        command: "repoctx map <path> --json",
-        description:
-          "Generate a JSON-first AST-backed code map with routes, controllers, services, modules, components, hooks, API clients, DTOs, schemas, imports, exports, symbols, and token estimates.",
-        input: {
-          path: "string",
-        },
-      },
-      {
-        name: "repo_discover",
-        command: "repoctx discover <root...> --json",
-        description: "Discover repository roots under one or more local directories without indexing them.",
-        input: {
-          paths: "string[]?",
-          depth: "number?",
-          limit: "number?",
-        },
-      },
-      {
-        name: "repo_index",
-        command: "repoctx index <repo...> --json",
-        description: "Generate local .dev-context indexes and add repositories to the local catalog.",
-        input: {
-          paths: "string[]",
-          discover: "boolean?",
-          catalog: "string?",
-        },
-      },
-      {
-        name: "repo_catalog",
-        command: "repoctx catalog --json",
-        description: "List repositories currently available in the local repoctx catalog.",
-        input: {
-          catalog: "string?",
-        },
-      },
-      {
-        name: "repo_search",
-        command: "repoctx search <query> --json",
-        description: "Search indexed local repositories by path, domain, kind, route, imports, exports, and symbols.",
-        input: {
-          query: "string",
-          catalog: "string?",
-          limit: "number?",
-          offline: "boolean?",
-        },
-      },
-      {
-        name: "context_pack",
-        command: "repoctx context <query> --path <repo> --json",
-        description: "Generate a task-aware context packet with primary files, related files, tests, patterns, validation commands, and source evidence.",
-        input: {
-          query: "string",
-          path: "string?",
-          limit: "number?",
-        },
-      },
-      {
-        name: "repo_harness",
-        command: "repoctx harness <path> --json",
-        description: "Generate setup, validation, runtime, and context commands for an agent or CI harness, including estimated context tokens.",
-        input: {
-          path: "string",
-        },
-      },
-      {
-        name: "structure_generate",
-        command: "repoctx structure <path> --out <file> --json",
-        description: "Generate TypeScript structure HTML through code-structure.",
-        input: {
-          path: "string",
-          pattern: "string[]?",
-          out: "string?",
-        },
-      },
-      {
-        name: "report_generate",
-        command: "repoctx report <path> --json",
-        description: "Generate a developer-context report with repo facts, tool availability, and adoption guidance.",
-        input: {
-          path: "string",
-        },
-      },
-      {
-        name: "workspace_report_generate",
-        command: "repoctx workspace <repo...> --json",
-        description: "Generate a product-level report across multiple related repositories.",
-        input: {
-          paths: "string[]",
-        },
-      },
-    ],
+    tools: tools.map(deriveAgentTool),
   };
+}
+
+function deriveAgentTool(tool) {
+  return {
+    name: tool.name,
+    command: cliCommandByTool[tool.name] ?? `repoctx mcp (tools/call ${tool.name})`,
+    mcpOnly: !(tool.name in cliCommandByTool),
+    description: tool.description,
+    input: deriveInput(tool.inputSchema),
+  };
+}
+
+function deriveInput(inputSchema) {
+  const properties = inputSchema?.properties ?? {};
+  const required = new Set(inputSchema?.required ?? []);
+  const input = {};
+  for (const [name, schema] of Object.entries(properties)) {
+    const optional = required.has(name) ? "" : "?";
+    input[name] = `${schemaType(schema)}${optional}`;
+  }
+  return input;
+}
+
+function schemaType(schema) {
+  if (schema?.type === "array") {
+    return `${schemaType(schema.items)}[]`;
+  }
+  return schema?.type ?? "string";
 }

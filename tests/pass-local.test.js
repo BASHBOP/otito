@@ -116,6 +116,56 @@ test("evaluateLocal escalates to FAIL under high-risk policy when prisma changes
   assert.ok(policy.details.some((line) => line.includes("GitHub PR mode")));
 });
 
+test("evaluateLocal does not warn Risk review for a test/doc-only change with a risky-looking name", () => {
+  const root = initRepo("gate-test-doc");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "src/index.ts": "export const hi = 1;\n",
+    },
+    "init",
+  );
+  // A test file and a doc that both mention money-/auth-flavored words. These
+  // are risk-adjacent for ranking but must not, on their own, trip the gate.
+  writeAndCommit(
+    root,
+    {
+      "tests/checkout.spec.ts": "import test from 'node:test';\ntest('checkout', () => {});\n",
+      "docs/git-checkout-guide.md": "# Checkout guide\n\nHow to use git checkout.\n",
+    },
+    "tests and docs",
+  );
+
+  const result = evaluateLocal(root, { base: "HEAD~1" });
+  const risk = result.checks.find((c) => c.name === "Risk review");
+  assert.equal(risk.status, "PASS", `expected no risk warning for test/doc-only change, got ${risk.status}: ${JSON.stringify(risk.details)}`);
+});
+
+test("evaluateLocal does not FAIL Secret safety for an env-substring source or a secrets doc", () => {
+  const root = initRepo("gate-secret-fp");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "src/index.ts": "export const hi = 1;\n",
+    },
+    "init",
+  );
+  writeAndCommit(
+    root,
+    {
+      "src/config/dev.environments.ts": "export const environments = ['dev'];\n",
+      "docs/secrets-management.md": "# Secrets management\n\nHow we store secrets.\n",
+    },
+    "env-substring source and secrets doc",
+  );
+
+  const result = evaluateLocal(root, { base: "HEAD~1" });
+  const secret = result.checks.find((c) => c.name === "Secret safety");
+  assert.equal(secret.status, "PASS", `expected secret check to pass, got ${secret.status}: ${JSON.stringify(secret.details)}`);
+});
+
 test("evaluateLocal markdown rendering includes the verdict and check names", () => {
   const root = initRepo("markdown");
   writeAndCommit(

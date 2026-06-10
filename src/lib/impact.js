@@ -4,11 +4,11 @@
 // point — code-map already filters to source extensions, so the documentation/
 // false-positive class from the field test cannot enter the candidate set.
 
-import { execSync } from "node:child_process";
 import path from "node:path";
 import { getCachedCodeMap } from "./index-cache.js";
-import { conceptsFromQuery, classifyPath, CONCEPT_SYNONYMS, RISK_FLAGS, glyphFor } from "./risk-paths.js";
+import { conceptsFromQuery, classifyPath, CONCEPT_SYNONYMS, RISK_FLAGS, glyphFor, singularizeToken } from "./risk-paths.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
+import { runCommand } from "./tools.js";
 
 const impactEngineVersion = 1;
 const defaultTop = 10;
@@ -282,8 +282,15 @@ function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs }) {
     score = score * 1.4 + conceptBoost;
     reasons.push(`concept match: ${[...impliedConcepts].join(", ")} (×1.4 + ${conceptBoost.toFixed(1)})`);
   } else if (concepts.length > 0) {
-    score *= 0.5;
-    reasons.push("no concept match for query, demoted");
+    // No file matched the query's concepts: demote, but proportionally and
+    // safely. A single confident concept is a strong signal that off-concept
+    // files are wrong, so demote hard; but when several concepts were detected
+    // they are more likely to disagree (and any one file rarely covers them
+    // all), so soften the demotion toward 1.0 as concept count grows. This
+    // keeps one stray concept from skewing the whole ranking.
+    const factor = conceptDemotionFactor(concepts.length);
+    score *= factor;
+    reasons.push(`no concept match for query, demoted (×${factor.toFixed(2)})`);
   }
 
   const configBonus = computeConfigBonus(file.path, weightedQuery);
@@ -322,6 +329,16 @@ function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs }) {
   }
 
   return { score, reasons };
+}
+
+// Demotion factor for a file that matches none of the query's concepts.
+// One concept → 0.5 (a confident single signal; matches the original behavior
+// and the ranking the existing tests assert). Each additional detected concept
+// softens the penalty by 0.15, capped at 0.8 so a multi-concept (and therefore
+// noisier) query can never erase an otherwise strong path/symbol match.
+function conceptDemotionFactor(conceptCount) {
+  if (conceptCount <= 1) return 0.5;
+  return Math.min(0.8, 0.5 + 0.15 * (conceptCount - 1));
 }
 
 // A file "implies" a concept if either (a) its path classifies as that
@@ -530,20 +547,22 @@ function riskSentence(flag) {
 }
 
 function validateAgainstDiff(root, base, ranked, allFiles) {
-  let changedFiles;
-  try {
-    const out = execSync(`git diff --name-only ${shellEscape(base)}`, { cwd: root, encoding: "utf8" });
-    changedFiles = out
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
-  } catch (error) {
+  // Use the arg-array runCommand helper (no shell, no string interpolation)
+  // like every other git call site in the codebase, so `base` can never be
+  // interpreted by a shell.
+  const result = runCommand("git", ["diff", "--name-only", base], { cwd: root });
+  if (!result.ok) {
+    const message = (result.stderr || result.error?.message || "command failed").trim();
     return {
       base,
       ok: false,
-      error: `git diff failed: ${error.message ?? String(error)}`,
+      error: `git diff failed: ${message}`,
     };
   }
+  const changedFiles = result.stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 
   const predictedDirect = new Set(ranked.map((entry) => entry.file.path));
   const predictedRelated = new Set();
@@ -654,20 +673,16 @@ export function weightedQueryTerms(request) {
     if (term.length >= 6) weight += 1;
     if (DOMAIN_KEYWORDS.has(term)) weight += 2;
     weighted.set(term, weight);
-    const singular = singularize(term);
+    // Query terms only get a softer (length > 4) singular fold so very short
+    // tokens like "apis" aren't stemmed into a different concept here; the
+    // actual stemming rules are shared from risk-paths so path classification
+    // and query weighting stay in sync.
+    const singular = term.length > 4 ? singularizeToken(term) : term;
     if (singular !== term) {
       weighted.set(singular, Math.max(weighted.get(singular) ?? 0, Math.max(1, weight - 1)));
     }
   }
   return weighted;
-}
-
-function singularize(term) {
-  if (term.length <= 4 || term.endsWith("ss")) return term;
-  if (term.endsWith("ies")) return `${term.slice(0, -3)}y`;
-  if (term.endsWith("es") && !term.endsWith("ses") && !term.endsWith("xes")) return term.slice(0, -2);
-  if (term.endsWith("s")) return term.slice(0, -1);
-  return term;
 }
 
 function countTokens(tokens) {
@@ -721,10 +736,6 @@ function clampInt(value, fallback, min, max) {
 
 function round(value) {
   return Math.round(value * 10) / 10;
-}
-
-function shellEscape(value) {
-  return `'${String(value).replace(/'/g, `'"'"'`)}'`;
 }
 
 export const RANK_GLYPHS = ["🥇", "🥈", "🥉", "🏅", "🏅"];

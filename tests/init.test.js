@@ -10,7 +10,7 @@ test("initProject scaffolds repoctx files without overwriting by default", () =>
   const result = initProject(fixture, { toolRepo: "example/repoctx", toolRef: "stable" });
 
   assert.equal(result.ok, true);
-  assert.deepEqual(result.created.sort(), [".dev-context/README.md", ".github/workflows/repoctx-ci.yml"].sort());
+  assert.deepEqual(result.created.sort(), [".dev-context/README.md", ".github/workflows/repoctx-ci.yml", ".gitignore"].sort());
 
   const generatedWorkflowPath = path.join(fixture, ".github", "workflows", "repoctx-ci.yml");
   const workflow = fs.readFileSync(generatedWorkflowPath, "utf8");
@@ -32,6 +32,50 @@ test("initProject scaffolds repoctx files without overwriting by default", () =>
   const skipped = initProject(fixture);
   assert.ok(skipped.skipped.includes(".github/workflows/repoctx-ci.yml"));
   assert.equal(fs.readFileSync(generatedWorkflowPath, "utf8"), "custom workflow\n");
+});
+
+test("initProject adds .dev-context/ to .gitignore (creating it when absent)", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gitignore-"));
+  const result = initProject(fixture, { noWorkflow: true });
+
+  const gitignorePath = path.join(fixture, ".gitignore");
+  assert.ok(fs.existsSync(gitignorePath), ".gitignore must be created");
+  const contents = fs.readFileSync(gitignorePath, "utf8");
+  assert.match(contents, /^\.dev-context\/$/m);
+  assert.ok(result.created.includes(".gitignore"));
+});
+
+test("initProject appends .dev-context/ to an existing .gitignore without clobbering it", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gitignore-"));
+  const gitignorePath = path.join(fixture, ".gitignore");
+  fs.writeFileSync(gitignorePath, "node_modules\ndist\n");
+
+  const result = initProject(fixture, { noWorkflow: true });
+  const contents = fs.readFileSync(gitignorePath, "utf8");
+  assert.match(contents, /node_modules/);
+  assert.match(contents, /dist/);
+  assert.match(contents, /^\.dev-context\/$/m);
+  assert.ok(result.updated.includes(".gitignore"));
+});
+
+test("initProject is idempotent about .gitignore and respects covering patterns", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gitignore-"));
+  const gitignorePath = path.join(fixture, ".gitignore");
+
+  initProject(fixture, { noWorkflow: true });
+  const afterFirst = fs.readFileSync(gitignorePath, "utf8");
+  const second = initProject(fixture, { noWorkflow: true });
+  const afterSecond = fs.readFileSync(gitignorePath, "utf8");
+
+  assert.equal(afterFirst, afterSecond, "second run must not duplicate the entry");
+  assert.ok(second.skipped.includes(".gitignore"));
+
+  // A bare ".dev-context" (no trailing slash) already covers the directory.
+  const covered = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gitignore-"));
+  fs.writeFileSync(path.join(covered, ".gitignore"), ".dev-context\n");
+  const result = initProject(covered, { noWorkflow: true });
+  assert.equal(fs.readFileSync(path.join(covered, ".gitignore"), "utf8"), ".dev-context\n");
+  assert.ok(result.skipped.includes(".gitignore"));
 });
 
 test("initProject can force overwrite and skip workflow", () => {
