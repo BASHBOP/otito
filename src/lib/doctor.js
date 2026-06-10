@@ -15,6 +15,12 @@ const toolDefinitions = [
     installHint: "Install git.",
   },
   {
+    name: "gh",
+    command: "gh",
+    versionArgs: ["--version"],
+    installHint: "Install the GitHub CLI (https://cli.github.com); required by pr_merge_readiness and gh-enriched pr_review.",
+  },
+  {
     name: "rg",
     command: "rg",
     versionArgs: ["--version"],
