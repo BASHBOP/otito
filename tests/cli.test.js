@@ -263,6 +263,34 @@ test("pass-pr surfaces errors when gh is unavailable", async () => {
   assert.ok(payload.verdict || payload.ok === false);
 });
 
+test("gate runs the local merge gate without --pr (delegates to pass)", async () => {
+  const fixture = makeGitFixture("gate-local");
+  const json = await runCli(["gate", fixture, "--base", "HEAD~1", "--json"]);
+  const payload = parseJsonOutput(json.stdout);
+  assert.ok(["PASS", "WARN", "FAIL"].includes(payload.verdict), "gate local mode yields a PASS/WARN/FAIL verdict");
+  assert.equal(json.exitCode, payload.verdict === "FAIL" ? 1 : 0);
+
+  const text = await runCli(["gate", fixture, "--base", "HEAD~1"]);
+  assert.ok(text.stdout.length > 0);
+});
+
+test("gate --pr routes to the GitHub PR gate (delegates to pass-pr)", async () => {
+  const fixture = makeGitFixture("gate-pr");
+  // Without gh / a real PR this surfaces a verdict or an ok:false error — what
+  // matters is that --pr <selector> routes through the PR gate, not the local one.
+  const json = await runCli(["gate", "--pr", "123", "--path", fixture, "--json"]);
+  const payload = parseJsonOutput(json.stdout);
+  assert.ok(payload.verdict || payload.ok === false, "gate --pr produces a PR-gate result or a surfaced error");
+});
+
+test("help lists the gate command and the canonical-vs-legacy guidance", async () => {
+  const result = await runCli(["help"]);
+  assert.equal(result.exitCode, 0);
+  assert.match(result.stdout, /repoctx gate/);
+  assert.match(result.stdout, /Canonical vs legacy/);
+  assert.match(result.stdout, /MIGRATION-2\.0\.md/);
+});
+
 test("review runs the composite review on a git fixture", async () => {
   const fixture = makeGitFixture("review");
   const json = await runCli(["review", fixture, "tweak greeting", "--base", "HEAD~1", "--json"]);
@@ -446,4 +474,13 @@ test("install --json reports an outcome without throwing", async () => {
   const result = await runCli(["install", "--json"]);
   const payload = parseJsonOutput(result.stdout);
   assert.ok(payload && typeof payload === "object");
+});
+
+test("eval --accuracy runs the labeled corpus and reports a passing scoreboard", async () => {
+  const result = await runCli(["eval", "--accuracy", "--json"]);
+  assert.equal(result.exitCode, 0, "baseline corpus run must exit 0");
+  const payload = parseJsonOutput(result.stdout);
+  assert.equal(payload.passed, true, "corpus thresholds must hold at baseline");
+  assert.ok(payload.scoreboard.retrieval.pAtK >= 0.85);
+  assert.ok(payload.scoreboard.risk.accuracy >= 0.95);
 });

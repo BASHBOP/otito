@@ -27,3 +27,16 @@ test("parseArgv parses PR review short flags", () => {
   assert.equal(parsed.flags.base, "origin/main");
   assert.equal(parsed.flags.head, "HEAD");
 });
+
+test("parseArgv parses the gate command with a --pr selector", () => {
+  const local = parseArgv(["gate", "../api", "--base", "origin/main", "--json"]);
+  assert.equal(local.command, "gate");
+  assert.deepEqual(local.positionals, ["../api"]);
+  assert.equal(local.flags.pr, undefined, "no --pr means the local gate");
+  assert.equal(local.flags.base, "origin/main");
+
+  const pr = parseArgv(["gate", "--pr", "123", "--path", "../api", "--json"]);
+  assert.equal(pr.command, "gate");
+  assert.equal(pr.flags.pr, "123", "--pr carries the PR selector");
+  assert.equal(pr.flags.path, "../api");
+});
