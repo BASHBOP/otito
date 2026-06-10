@@ -3,8 +3,14 @@
 // agreement + that the changelog was bumped. Returns the same check record
 // shape as the other pass checks: { name, status, summary, details? }.
 
+/// <reference types="node" />
+
 import fs from "node:fs";
 import path from "node:path";
+
+/** @typedef {import('./pass-local.js').Check} Check */
+/** @typedef {import('./pass-local.js').Verdict} Verdict */
+/** @typedef {{ source: string, version: string }} VersionValue */
 
 const SEMVER_RE =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
@@ -15,6 +21,7 @@ const VERSION_FILES = new Set(["package.json", "package-lock.json", "npm-shrinkw
 
 const CHANGELOG_PATHS = new Set(["changelog.md", "docs/changelog.md"]);
 
+/** @type {{ pass: "PASS", warn: "WARN", fail: "FAIL" }} */
 export const STATUS = {
   pass: "PASS",
   warn: "WARN",
@@ -32,6 +39,12 @@ export const STATUS = {
 // publishing releases, so a version bump without a changelog entry is a WARN
 // instead of a FAIL. SemVer violations and version-file mismatches stay FAIL
 // in every configuration.
+/**
+ * @param {string} root
+ * @param {string[]} files
+ * @param {{ baseContent?: (file: string) => string | null, governance?: string }} [options]
+ * @returns {Check}
+ */
 export function checkRelease(root, files, options = {}) {
   const versionFiles = pickVersionFiles(files);
   if (versionFiles.length === 0) {
@@ -83,6 +96,11 @@ export function checkRelease(root, files, options = {}) {
 // published and no team relies on the changelog. Anything else (public or
 // publishable package, team governance, unreadable package.json) keeps the
 // strict behavior.
+/**
+ * @param {string} root
+ * @param {string | undefined} governance
+ * @returns {boolean}
+ */
 function isPrivateSoloRepo(root, governance) {
   if (governance !== "solo") return false;
   try {
@@ -95,6 +113,11 @@ function isPrivateSoloRepo(root, governance) {
 
 // Resolve the project version at the base ref, preferring the manifest over the
 // lockfile. Returns null when no base version can be determined.
+/**
+ * @param {string[]} versionFiles
+ * @param {(file: string) => string | null} baseContent
+ * @returns {string | null}
+ */
 function readBaseVersion(versionFiles, baseContent) {
   const priority = ["package.json", "package-lock.json", "npm-shrinkwrap.json", "pyproject.toml", "cargo.toml"];
   const ordered = [...versionFiles].sort((a, b) => priority.indexOf(normalize(a)) - priority.indexOf(normalize(b)));
@@ -116,8 +139,14 @@ function readBaseVersion(versionFiles, baseContent) {
   return null;
 }
 
+/**
+ * @param {string[]} files
+ * @returns {string[]}
+ */
 function pickVersionFiles(files) {
+  /** @type {Set<string>} */
   const seen = new Set();
+  /** @type {string[]} */
   const matches = [];
   for (const file of files) {
     const normalized = normalize(file);
@@ -130,12 +159,23 @@ function pickVersionFiles(files) {
   return matches;
 }
 
+/**
+ * @param {string[]} files
+ * @returns {boolean}
+ */
 function changedChangelog(files) {
   return files.some((file) => CHANGELOG_PATHS.has(normalize(file)));
 }
 
+/**
+ * @param {string} root
+ * @param {string[]} files
+ * @returns {{ values: VersionValue[], warnings: string[] }}
+ */
 function readVersions(root, files) {
+  /** @type {VersionValue[]} */
   const values = [];
+  /** @type {string[]} */
   const warnings = [];
   for (const file of files) {
     const absolute = path.join(root, file);
@@ -143,19 +183,24 @@ function readVersions(root, files) {
     try {
       data = fs.readFileSync(absolute, "utf8");
     } catch (error) {
-      warnings.push(`${file} -> ${error.message ?? String(error)}`);
+      warnings.push(`${file} -> ${/** @type {Error} */ (error)?.message ?? String(error)}`);
       continue;
     }
     try {
       const parsed = parseVersionFile(file, data);
       values.push(...parsed);
     } catch (error) {
-      warnings.push(`${file} -> ${error.message ?? String(error)}`);
+      warnings.push(`${file} -> ${/** @type {Error} */ (error)?.message ?? String(error)}`);
     }
   }
   return { values, warnings };
 }
 
+/**
+ * @param {string} file
+ * @param {string} data
+ * @returns {VersionValue[]}
+ */
 function parseVersionFile(file, data) {
   switch (normalize(file)) {
     case "package.json": {
@@ -177,6 +222,10 @@ function parseVersionFile(file, data) {
   }
 }
 
+/**
+ * @param {string} data
+ * @returns {string}
+ */
 function parseJsonVersion(data) {
   const parsed = JSON.parse(data);
   const version = String(parsed?.version ?? "").trim();
@@ -184,6 +233,10 @@ function parseJsonVersion(data) {
   return version;
 }
 
+/**
+ * @param {string} data
+ * @returns {string}
+ */
 function parseLockVersion(data) {
   const parsed = JSON.parse(data);
   const rootEntry = parsed?.packages?.[""];
@@ -194,9 +247,14 @@ function parseLockVersion(data) {
   return topVersion;
 }
 
+/**
+ * @param {VersionValue[]} values
+ * @returns {string[]}
+ */
 function collectMismatches(values) {
   if (values.length < 2) return [];
   const expected = values[0].version;
+  /** @type {Set<string>} */
   const mismatches = new Set();
   for (let i = 1; i < values.length; i += 1) {
     if (values[i].version !== expected) {
@@ -207,10 +265,18 @@ function collectMismatches(values) {
   return [...mismatches];
 }
 
+/**
+ * @param {VersionValue[]} values
+ * @returns {string[]}
+ */
 function formatValues(values) {
   return [...new Set(values.map((item) => `${item.source} -> ${item.version}`))].sort();
 }
 
+/**
+ * @param {string} filePath
+ * @returns {string}
+ */
 function normalize(filePath) {
   return String(filePath ?? "")
     .toLowerCase()
@@ -218,6 +284,13 @@ function normalize(filePath) {
     .replace(/^\/+|\/+$/g, "");
 }
 
+/**
+ * @param {string} name
+ * @param {Verdict} status
+ * @param {string} summary
+ * @param {string[]} [details]
+ * @returns {Check}
+ */
 function check(name, status, summary, details) {
   if (details && details.length > 0) {
     return { name, status, summary, details };

@@ -1,4 +1,23 @@
+/**
+ * A single parsed flag value. Flags may be booleans (presence), strings
+ * (with a value), or arrays (repeatable flags like --exclude / --pattern).
+ * @typedef {boolean | string | Array<string | boolean>} FlagValue
+ */
+
+/**
+ * The result of parsing argv. This shape recurs across cli.js command handlers.
+ * @typedef {object} ParsedArgs
+ * @property {string | undefined} command
+ * @property {string[]} positionals
+ * @property {Record<string, FlagValue>} flags
+ */
+
+/**
+ * @param {string[]} argv
+ * @returns {ParsedArgs}
+ */
 export function parseArgv(argv) {
+  /** @type {ParsedArgs} */
   const result = {
     command: undefined,
     positionals: [],
@@ -44,15 +63,26 @@ export function parseArgv(argv) {
   return result;
 }
 
+/**
+ * @param {Record<string, FlagValue>} flags
+ * @param {string} key
+ * @param {string | boolean} value
+ */
 function assignFlag(flags, key, value) {
   if (["exclude", "pattern"].includes(key)) {
-    flags[key] = Array.isArray(flags[key]) ? [...flags[key], value] : [value];
+    const existing = flags[key];
+    flags[key] = Array.isArray(existing) ? [...existing, value] : [value];
     return;
   }
   flags[key] = value;
 }
 
+/**
+ * @param {string} flag
+ * @returns {string}
+ */
 function normalizeFlagName(flag) {
+  /** @type {Record<string, string>} */
   const aliases = {
     o: "out",
     e: "exclude",
@@ -66,10 +96,18 @@ function normalizeFlagName(flag) {
   return aliases[flag] ?? flag.replaceAll("-", "_");
 }
 
+/**
+ * @param {string} short
+ * @returns {string}
+ */
 function expandShortFlag(short) {
   return normalizeFlagName(short);
 }
 
+/**
+ * @param {string} short
+ * @returns {boolean}
+ */
 function shortFlagTakesValue(short) {
   return ["e", "o", "q", "p", "n", "b"].includes(short);
 }
