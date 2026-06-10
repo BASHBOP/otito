@@ -4,7 +4,7 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
-## [Unreleased]
+## [1.5.0] - 2026-06-10
 
 ### Fixed
 
@@ -26,6 +26,10 @@ This project follows SemVer.
 - 72 new tests (242 total): gate fallback paths, cache staleness/corruption/atomicity, parser-path coverage, and pins on every fixed false positive/negative.
 
 ## [1.4.3] - 2026-06-10
+
+### Note
+
+- 1.4.3 was tagged but not published to npm; its fixes first shipped in 1.5.0.
 
 ### Fixed
 
