@@ -386,3 +386,29 @@ test("find_domain, find_file_kind, find_backend_route, find_frontend_api_client 
   const apiClientFiltered = byId(messages, 8).result.structuredContent;
   assert.equal(apiClientFiltered.query, "events");
 });
+
+test("startMcpServer never responds to notifications, including unknown methods", async () => {
+  const messages = await runRequests([
+    { jsonrpc: "2.0", id: 1, method: "ping" },
+    { jsonrpc: "2.0", method: "notifications/cancelled", params: { requestId: 1 } },
+    { jsonrpc: "2.0", method: "notifications/roots/list_changed" },
+    { jsonrpc: "2.0", method: "some/unknown_notification" },
+    { jsonrpc: "2.0", id: 2, method: "ping" },
+  ]);
+
+  assert.equal(messages.length, 2, "only the two pings may produce responses");
+  assert.deepEqual(byId(messages, 1).result, {});
+  assert.deepEqual(byId(messages, 2).result, {});
+});
+
+test("initialize negotiates the protocol version against supported revisions", async () => {
+  const messages = await runRequests([
+    { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26" } },
+    { jsonrpc: "2.0", id: 2, method: "initialize", params: { protocolVersion: "1999-01-01" } },
+    { jsonrpc: "2.0", id: 3, method: "initialize", params: {} },
+  ]);
+
+  assert.equal(byId(messages, 1).result.protocolVersion, "2025-03-26");
+  assert.equal(byId(messages, 2).result.protocolVersion, "2025-06-18");
+  assert.equal(byId(messages, 3).result.protocolVersion, "2025-06-18");
+});
