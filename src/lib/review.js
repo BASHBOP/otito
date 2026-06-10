@@ -12,13 +12,36 @@ import { estimateTokens } from "./tokens.js";
 
 const reviewEngineVersion = 1;
 
+/** @typedef {import('./pass-pr.js').Runner} Runner */
+
+/**
+ * @typedef {Object} ReviewOptions
+ * @property {string} [request]
+ * @property {string} [prSelector]
+ * @property {boolean} [pr]
+ * @property {number} [impactTop]
+ * @property {string} [base]
+ * @property {string} [head]
+ * @property {string} [policy]
+ * @property {string} [governance]
+ * @property {Runner} [runner]
+ */
+
+/**
+ * @param {string} repoPath
+ * @param {ReviewOptions} [options]
+ */
 export async function generateReview(repoPath, options = {}) {
   const request = String(options.request ?? "").trim() || "review this change";
   const wantsPr = Boolean(options.prSelector || options.pr);
 
+  /** @type {any} */
   const impact = generateImpact(request, { path: repoPath, top: options.impactTop ?? 8, diffBase: options.base }).data;
   const prReview = generatePrReview(repoPath, { base: options.base, head: options.head, number: options.prSelector, github: wantsPr });
+  /** @type {any} */
+  const prData = prReview.data;
 
+  /** @type {any} */
   let passReport;
   if (wantsPr) {
     passReport = await evaluatePR(repoPath, options.prSelector ?? "", {
@@ -36,8 +59,9 @@ export async function generateReview(repoPath, options = {}) {
     });
   }
 
-  const confidence = computeConfidence({ impact, passReport, prReview: prReview.data });
+  const confidence = computeConfidence({ impact, passReport, prReview: prData });
 
+  /** @type {Record<string, unknown> & { tokenEstimate?: { fullJson: number } }} */
   const data = {
     ok: true,
     generatedAt: new Date().toISOString(),
@@ -48,31 +72,35 @@ export async function generateReview(repoPath, options = {}) {
     repo: { root: passReport.repo.root, name: passReport.repo.name },
     impactSummary: {
       concepts: impact.concepts,
-      topFiles: impact.topFiles.slice(0, 5).map((file) => ({ path: file.path, score: file.score, riskFlags: file.riskFlags })),
+      topFiles: impact.topFiles.slice(0, 5).map((/** @type {any} */ file) => ({ path: file.path, score: file.score, riskFlags: file.riskFlags })),
       risks: impact.risks,
     },
     prReviewSummary: {
-      changedFiles: prReview.data.changedFiles.length,
-      additions: prReview.data.diff?.additions ?? 0,
-      deletions: prReview.data.diff?.deletions ?? 0,
-      riskLevel: prReview.data.risk?.level,
-      riskFlags: prReview.data.risk?.flags ?? [],
-      reviewTargetsCount: prReview.data.reviewTargets?.routes?.length ?? 0,
+      changedFiles: prData.changedFiles.length,
+      additions: prData.diff?.additions ?? 0,
+      deletions: prData.diff?.deletions ?? 0,
+      riskLevel: prData.risk?.level,
+      riskFlags: prData.risk?.flags ?? [],
+      reviewTargetsCount: prData.reviewTargets?.routes?.length ?? 0,
     },
     pass: {
       verdict: passReport.verdict,
       policy: passReport.policy,
       governance: passReport.governance,
-      checks: passReport.checks.map((check) => ({ name: check.name, status: check.status, summary: check.summary })),
+      checks: passReport.checks.map((/** @type {any} */ check) => ({ name: check.name, status: check.status, summary: check.summary })),
     },
   };
   data.tokenEstimate = { fullJson: estimateTokens(data) };
-  return { data, fullReports: { impact, prReview: prReview.data, pass: passReport } };
+  return { data, fullReports: { impact, prReview: prData, pass: passReport } };
 }
 
 // Confidence score blends three signals: pass verdict, impact concept
 // coverage, and PR review risk level. The score is a 0-100 integer so the
 // terminal renderer can paint it as a bar.
+/**
+ * @param {{ impact: any, passReport: any, prReview: any }} params
+ * @returns {number}
+ */
 function computeConfidence({ impact, passReport, prReview }) {
   let score = 70;
   if (passReport.verdict === "PASS") score += 15;
@@ -85,8 +113,25 @@ function computeConfidence({ impact, passReport, prReview }) {
   return Math.max(0, Math.min(100, score));
 }
 
+/**
+ * @typedef {Object} ReviewData
+ * @property {string} request
+ * @property {string} verdict
+ * @property {number} confidence
+ * @property {{ root: string, name: string }} repo
+ * @property {{ concepts: string[], topFiles: { path: string, score: number, riskFlags: string[] }[], risks: string[] }} impactSummary
+ * @property {{ changedFiles: number, additions: number, deletions: number, riskLevel?: string, riskFlags: string[], reviewTargetsCount: number }} prReviewSummary
+ * @property {{ verdict: string, policy: string, governance: string, checks: { name: string, status: string, summary: string }[] }} pass
+ */
+
+/**
+ * @param {ReviewData} data
+ * @param {(options: object) => any} rendererFactory
+ * @returns {string}
+ */
 export function formatReviewTerminal(data, rendererFactory) {
   const renderer = rendererFactory({});
+  /** @type {string[]} */
   const lines = [];
   const sub = [
     { text: `"${data.request}"`, glyph: "💬" },
@@ -130,6 +175,12 @@ export function formatReviewTerminal(data, rendererFactory) {
   return lines.join("\n");
 }
 
+/**
+ * @param {number} value
+ * @param {number} max
+ * @param {boolean} emoji
+ * @returns {string}
+ */
 function bar(value, max, emoji) {
   const cells = 10;
   const filled = Math.max(0, Math.min(cells, Math.round((value / max) * cells)));
@@ -137,6 +188,11 @@ function bar(value, max, emoji) {
   return `[${"#".repeat(filled)}${".".repeat(cells - filled)}]`;
 }
 
+/**
+ * @param {boolean} emoji
+ * @param {string} verdict
+ * @returns {string}
+ */
 function statusGlyph(emoji, verdict) {
   if (!emoji) return `[${verdict}]`;
   if (verdict === "PASS") return "✅";

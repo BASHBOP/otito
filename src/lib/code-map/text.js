@@ -2,11 +2,21 @@
 // route/decorator classifiers. Everything here is language-agnostic: we
 // skip strings/comments and walk source character-by-character.
 
+/**
+ * @param {string} text
+ * @param {number} index
+ * @returns {number}
+ */
 export function lineNumberAt(text, index) {
   return text.slice(0, index).split("\n").length;
 }
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 export function stripNonCode(text) {
+  /** @type {string[]} */
   const chars = [];
   let index = 0;
   while (index < text.length) {
@@ -25,7 +35,13 @@ export function stripNonCode(text) {
   return chars.join("");
 }
 
+/**
+ * @param {string} text
+ * @param {string[]} names
+ * @returns {{ name: string, argument: string | undefined }[]}
+ */
 export function readDecoratorCalls(text, names) {
+  /** @type {{ name: string, argument: string | undefined }[]} */
   const calls = [];
   let index = 0;
   while (index < text.length) {
@@ -59,7 +75,13 @@ export function readDecoratorCalls(text, names) {
   return calls;
 }
 
+/**
+ * @param {string} text
+ * @param {string} callee
+ * @returns {string[]}
+ */
 export function readStringCallArguments(text, callee) {
+  /** @type {string[]} */
   const args = [];
   let index = 0;
   while (index < text.length) {
@@ -91,6 +113,11 @@ export function readStringCallArguments(text, callee) {
   return args;
 }
 
+/**
+ * @param {string} text
+ * @param {number} openParenIndex
+ * @returns {{ value: string | undefined, end: number }}
+ */
 function parseFirstCallArgument(text, openParenIndex) {
   let cursor = skipWhitespace(text, openParenIndex + 1);
   if (text[cursor] === ")" || cursor >= text.length) {
@@ -105,6 +132,11 @@ function parseFirstCallArgument(text, openParenIndex) {
   return { value: undefined, end: findClosingParen(text, cursor) };
 }
 
+/**
+ * @param {string} text
+ * @param {number} start
+ * @returns {number}
+ */
 function findClosingParen(text, start) {
   let depth = 1;
   let index = start;
@@ -127,6 +159,11 @@ function findClosingParen(text, start) {
   return text.length;
 }
 
+/**
+ * @param {string} text
+ * @param {number} index
+ * @returns {number}
+ */
 function skipNonCode(text, index) {
   if (text[index] === "/" && text[index + 1] === "/") {
     const newline = text.indexOf("\n", index + 2);
@@ -142,6 +179,11 @@ function skipNonCode(text, index) {
   return index;
 }
 
+/**
+ * @param {string} text
+ * @param {number} start
+ * @returns {{ value: string, end: number }}
+ */
 function parseStringLiteral(text, start) {
   const quote = text[start];
   let value = "";
@@ -167,6 +209,11 @@ function parseStringLiteral(text, start) {
   return { value, end: text.length };
 }
 
+/**
+ * @param {string} text
+ * @param {number} start
+ * @returns {number}
+ */
 function skipTemplateLiteral(text, start) {
   let index = start + 1;
   while (index < text.length) {
@@ -182,6 +229,11 @@ function skipTemplateLiteral(text, start) {
   return text.length;
 }
 
+/**
+ * @param {string} text
+ * @param {number} index
+ * @returns {number}
+ */
 function skipWhitespace(text, index) {
   let cursor = index;
   while (/\s/.test(text[cursor] ?? "")) {
@@ -190,10 +242,18 @@ function skipWhitespace(text, index) {
   return cursor;
 }
 
+/**
+ * @param {string | undefined} char
+ * @returns {boolean}
+ */
 function isQuote(char) {
   return char === "'" || char === '"' || char === "`";
 }
 
+/**
+ * @param {string | undefined} char
+ * @returns {boolean}
+ */
 function isIdentifierChar(char) {
   return Boolean(char && /[A-Za-z0-9_$]/.test(char));
 }

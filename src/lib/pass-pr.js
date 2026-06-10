@@ -2,6 +2,8 @@
 // pullpass/internal/githubpr/evaluate.go. Drives `gh` through a small Runner
 // abstraction so tests can swap in canned responses.
 
+/// <reference types="node" />
+
 import path from "node:path";
 import * as codeowners from "./codeowners.js";
 import { defaultGhRunner } from "./gh.js";
@@ -11,9 +13,85 @@ import { checkRelease } from "./release-check.js";
 import { matchRiskPaths, matchSecretPaths } from "./risk-paths.js";
 import { estimateTokens } from "./tokens.js";
 
+/** @typedef {import('./pass-local.js').Check} Check */
+/** @typedef {import('./pass-local.js').Verdict} Verdict */
+
+/**
+ * Minimal Runner interface for the `gh` CLI. `run` returns stdout (string)
+ * and throws on failure (the thrown Error may carry stderr/stdout).
+ * Mirrors the runner returned by `defaultGhRunner()` in gh.js.
+ * @typedef {{ run: (cwd: string | undefined, args: string[]) => string }} Runner
+ */
+
+/**
+ * `gh pr view` review entry (subset of fields used here).
+ * @typedef {{ author?: { login?: string }, state?: string }} PrReview
+ */
+
+/**
+ * One entry from `statusCheckRollup` plus optionally-enriched annotations.
+ * gh only returns the fields requested, so all are optional.
+ * @typedef {Object} StatusCheck
+ * @property {string} [name]
+ * @property {string} [context]
+ * @property {string} [workflowName]
+ * @property {string} [conclusion]
+ * @property {string} [status]
+ * @property {string} [state]
+ * @property {string} [detailsUrl]
+ * @property {{ message?: string }[]} [annotations]
+ */
+
+/**
+ * A GraphQL review thread node (subset).
+ * @typedef {Object} ReviewThread
+ * @property {boolean} [isResolved]
+ * @property {string} [path]
+ * @property {number} [line]
+ * @property {number} [startLine]
+ * @property {{ nodes?: { author?: { login?: string }, url?: string }[] }} [comments]
+ */
+
+/**
+ * Loosely-typed `gh api .../protection` response (subset of fields used here).
+ * @typedef {Object} BranchProtectionPayload
+ * @property {{ required_approving_review_count?: number, require_code_owner_reviews?: boolean }} [required_pull_request_reviews]
+ * @property {{ contexts?: unknown[], checks?: unknown[] }} [required_status_checks]
+ * @property {{ enabled?: boolean }} [required_conversation_resolution]
+ * @property {{ enabled?: boolean }} [allow_force_pushes]
+ * @property {{ enabled?: boolean }} [allow_deletions]
+ */
+
+/**
+ * A CODEOWNERS team owner descriptor as produced by codeowners.teamOwners.
+ * @typedef {{ org: string, slug: string, owner: string }} TeamOwner
+ */
+
+/**
+ * Loosely-typed `gh pr view --json ...` response. Fields are optional because
+ * gh only returns the JSON fields requested and they may be absent.
+ * @typedef {Object} PR
+ * @property {number} [number]
+ * @property {string} [title]
+ * @property {string} [url]
+ * @property {string} [baseRefName]
+ * @property {boolean} [isDraft]
+ * @property {string} [mergeStateStatus]
+ * @property {string} [mergeable]
+ * @property {string} [reviewDecision]
+ * @property {{ path: string }[]} [files]
+ * @property {any[]} [reviews]
+ * @property {any[]} [statusCheckRollup]
+ */
+
 const passPrEngineVersion = 1;
 const PR_BASE_LABEL = "GitHub PR";
 
+/**
+ * @param {string} repoPath
+ * @param {string} selector
+ * @param {{ policy?: unknown, governance?: unknown, runner?: Runner, request?: string }} [options]
+ */
 export async function evaluatePR(repoPath, selector, options = {}) {
   const profile = normalizeProfile(options.policy);
   const governance = normalizeGovernance(options.governance);
@@ -23,7 +101,7 @@ export async function evaluatePR(repoPath, selector, options = {}) {
   const pr = viewPR(root, selector, runner);
   pr.statusCheckRollup = enrichStatusCheckAnnotations(root, pr.statusCheckRollup ?? [], runner);
 
-  const files = (pr.files ?? []).map((entry) => entry.path).filter((p) => p && p.trim());
+  const files = (pr.files ?? []).map((entry) => entry.path).filter((/** @type {string} */ p) => p && p.trim());
 
   const checks = [
     prStateCheck(pr),
@@ -39,6 +117,7 @@ export async function evaluatePR(repoPath, selector, options = {}) {
   ];
   checks.push(policyCheck({ profile, governance, files, checks, remote: true }));
 
+  /** @type {Record<string, unknown> & { tokenEstimate?: { fullJson: number } }} */
   const data = {
     ok: true,
     generatedAt: new Date().toISOString(),
@@ -70,9 +149,14 @@ export async function evaluatePR(repoPath, selector, options = {}) {
 // Resolve version-file content at the PR base for release-discipline scoping.
 // Tries the remote-tracking ref first, then the local branch; null when the
 // base isn't fetched locally, in which case release discipline stays strict.
+/**
+ * @param {string} root
+ * @param {string | undefined} baseRefName
+ * @returns {((file: string) => string | null) | undefined}
+ */
 function prBaseContent(root, baseRefName) {
   if (!baseRefName) return undefined;
-  return (file) => {
+  return (/** @type {string} */ file) => {
     for (const ref of [`origin/${baseRefName}`, baseRefName]) {
       const content = gitShowContent(root, ref, file);
       if (content != null) return content;
@@ -81,6 +165,12 @@ function prBaseContent(root, baseRefName) {
   };
 }
 
+/**
+ * @param {string} root
+ * @param {string} selector
+ * @param {Runner} runner
+ * @returns {PR}
+ */
 function viewPR(root, selector, runner) {
   const args = ["pr", "view"];
   if (selector && String(selector).trim()) args.push(String(selector));
@@ -88,11 +178,16 @@ function viewPR(root, selector, runner) {
   const out = runner.run(root, args);
   try {
     return JSON.parse(out);
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     throw new Error(`parse gh pr view response: ${error.message ?? String(error)}`);
   }
 }
 
+/**
+ * @param {string} root
+ * @param {Runner} runner
+ * @returns {string}
+ */
 function nameWithOwner(root, runner) {
   const out = runner.run(root, ["repo", "view", "--json", "nameWithOwner"]);
   try {
@@ -100,11 +195,15 @@ function nameWithOwner(root, runner) {
     const value = String(parsed?.nameWithOwner ?? "").trim();
     if (!value) throw new Error("gh repo view returned empty nameWithOwner");
     return value;
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     throw new Error(`parse gh repo view response: ${error.message ?? String(error)}`);
   }
 }
 
+/**
+ * @param {string[]} files
+ * @returns {Check}
+ */
 function changedFilesCheck(files) {
   if (files.length === 0) return { name: "Changed files", status: STATUS.warn, summary: "No changed files reported for this PR." };
   return {
@@ -115,6 +214,10 @@ function changedFilesCheck(files) {
   };
 }
 
+/**
+ * @param {string[]} files
+ * @returns {Check}
+ */
 function secretCheck(files) {
   const matches = matchSecretPaths(files);
   if (matches.length > 0) {
@@ -123,6 +226,10 @@ function secretCheck(files) {
   return { name: "Secret safety", status: STATUS.pass, summary: "No obvious secret file changes found." };
 }
 
+/**
+ * @param {string[]} files
+ * @returns {Check}
+ */
 function riskCheck(files) {
   // Gate mode: ignore test files and documentation. A `checkout.spec.ts` test
   // or a `git-checkout-guide.md` doc is risk-adjacent for ranking purposes but
@@ -139,6 +246,10 @@ function riskCheck(files) {
   return { name: "Risk review", status: STATUS.pass, summary: "No obvious risk-sensitive file paths changed." };
 }
 
+/**
+ * @param {PR} pr
+ * @returns {Check}
+ */
 function prStateCheck(pr) {
   const details = [`#${pr.number ?? 0} ${pr.title ?? ""}`.trim()];
   if (pr.url) details.push(pr.url);
@@ -160,6 +271,11 @@ function prStateCheck(pr) {
   return { name: "PR state", status: STATUS.pass, summary: "PR is not draft and has no reported merge conflicts.", details };
 }
 
+/**
+ * @param {string | undefined} decision
+ * @param {string} governance
+ * @returns {Check}
+ */
 function reviewDecisionCheck(decision, governance) {
   switch (
     String(decision ?? "")
@@ -187,13 +303,22 @@ function reviewDecisionCheck(decision, governance) {
   }
 }
 
+/**
+ * @param {string} root
+ * @param {string[]} files
+ * @param {PrReview[]} reviews
+ * @param {Runner} runner
+ * @param {string} governance
+ * @returns {Check}
+ */
 function codeownersCheckPR(root, files, reviews, runner, governance) {
   const loaded = codeowners.load(root);
   if (!loaded.ok) {
     if (loaded.missing) {
       return { name: "CODEOWNERS", status: STATUS.warn, summary: "No CODEOWNERS file found; ownership checks are unavailable." };
     }
-    return { name: "CODEOWNERS", status: STATUS.warn, summary: `Could not read CODEOWNERS: ${loaded.error?.message ?? "unknown error"}` };
+    const loadError = /** @type {{ message?: string } | undefined} */ (loaded.error);
+    return { name: "CODEOWNERS", status: STATUS.warn, summary: `Could not read CODEOWNERS: ${loadError?.message ?? "unknown error"}` };
   }
   const ruleset = loaded.ruleset;
   if (ruleset.rules.length === 0) {
@@ -223,7 +348,7 @@ function codeownersCheckPR(root, files, reviews, runner, governance) {
           teamApproved = true;
           break;
         }
-      } catch (error) {
+      } catch (/** @type {any} */ error) {
         teamErrors.push(`${detail} (${team.owner}: ${error.message ?? String(error)})`);
       }
     }
@@ -261,7 +386,12 @@ function codeownersCheckPR(root, files, reviews, runner, governance) {
   return { name: "CODEOWNERS", status: STATUS.pass, summary: "Changed files have verified CODEOWNERS approval.", details: [ruleset.path] };
 }
 
+/**
+ * @param {PrReview[]} reviews
+ * @returns {Set<string>}
+ */
 function approvedReviewers(reviews) {
+  /** @type {Set<string>} */
   const approved = new Set();
   for (const review of reviews ?? []) {
     const login = String(review?.author?.login ?? "")
@@ -277,6 +407,13 @@ function approvedReviewers(reviews) {
   return approved;
 }
 
+/**
+ * @param {string} root
+ * @param {TeamOwner} team
+ * @param {Set<string>} approved
+ * @param {Runner} runner
+ * @returns {boolean}
+ */
 function teamHasApprovedReviewer(root, team, approved, runner) {
   for (const login of [...approved].sort()) {
     if (teamMembership(root, team, login, runner)) return true;
@@ -284,6 +421,13 @@ function teamHasApprovedReviewer(root, team, approved, runner) {
   return false;
 }
 
+/**
+ * @param {string} root
+ * @param {TeamOwner} team
+ * @param {string} login
+ * @param {Runner} runner
+ * @returns {boolean}
+ */
 function teamMembership(root, team, login, runner) {
   const endpoint = `orgs/${encodeURIComponent(team.org)}/teams/${encodeURIComponent(team.slug)}/memberships/${encodeURIComponent(login)}`;
   let out;
@@ -300,11 +444,17 @@ function teamMembership(root, team, login, runner) {
         .trim()
         .toLowerCase() === "active"
     );
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     throw new Error(`parse gh team membership response: ${error.message ?? String(error)}`);
   }
 }
 
+/**
+ * @param {string} root
+ * @param {number | undefined} prNumber
+ * @param {Runner} runner
+ * @returns {Check}
+ */
 function unresolvedConversationsCheck(root, prNumber, runner) {
   if (!prNumber) {
     return { name: "Review conversations", status: STATUS.warn, summary: "PR number is unavailable; review conversations could not be inspected." };
@@ -312,7 +462,7 @@ function unresolvedConversationsCheck(root, prNumber, runner) {
   let threads;
   try {
     threads = reviewThreads(root, prNumber, runner);
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     return { name: "Review conversations", status: STATUS.warn, summary: `Could not inspect review conversations: ${error.message ?? String(error)}` };
   }
   const unresolved = threads.filter((thread) => !thread.isResolved).map(threadDetail);
@@ -347,6 +497,12 @@ const REVIEW_THREADS_QUERY = `query($owner: String!, $name: String!, $number: In
   }
 }`;
 
+/**
+ * @param {string} root
+ * @param {number} prNumber
+ * @param {Runner} runner
+ * @returns {ReviewThread[]}
+ */
 function reviewThreads(root, prNumber, runner) {
   const name = nameWithOwner(root, runner);
   const slash = name.indexOf("/");
@@ -354,6 +510,7 @@ function reviewThreads(root, prNumber, runner) {
   const owner = name.slice(0, slash);
   const repo = name.slice(slash + 1);
 
+  /** @type {ReviewThread[]} */
   const threads = [];
   let cursor = "";
   for (;;) {
@@ -363,7 +520,7 @@ function reviewThreads(root, prNumber, runner) {
     let parsed;
     try {
       parsed = JSON.parse(out);
-    } catch (error) {
+    } catch (/** @type {any} */ error) {
       throw new Error(`parse gh review threads response: ${error.message ?? String(error)}`);
     }
     const page = parsed?.data?.repository?.pullRequest?.reviewThreads ?? { nodes: [], pageInfo: { hasNextPage: false } };
@@ -375,6 +532,10 @@ function reviewThreads(root, prNumber, runner) {
   return threads;
 }
 
+/**
+ * @param {ReviewThread} thread
+ * @returns {string}
+ */
 function threadDetail(thread) {
   let location = thread.path ?? "";
   let line = thread.line ?? 0;
@@ -388,22 +549,30 @@ function threadDetail(thread) {
   return location;
 }
 
+/**
+ * @param {string | undefined} branch
+ * @param {string} root
+ * @param {Runner} runner
+ * @returns {Check}
+ */
 function branchProtectionCheck(root, branch, runner) {
   const trimmed = String(branch ?? "").trim();
   if (!trimmed) {
     return { name: "Branch protection", status: STATUS.warn, summary: "Base branch is unavailable; branch protection could not be inspected." };
   }
+  /** @type {BranchProtectionPayload | null} */
   let protection;
   let exists;
   try {
     ({ protection, exists } = branchProtection(root, trimmed, runner));
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     return { name: "Branch protection", status: STATUS.warn, summary: `Could not inspect branch protection: ${error.message ?? String(error)}` };
   }
-  if (!exists) {
+  if (!exists || !protection) {
     return { name: "Branch protection", status: STATUS.warn, summary: "Base branch is not protected.", details: [trimmed] };
   }
 
+  /** @type {string[]} */
   const issues = [];
   const reviews = protection.required_pull_request_reviews;
   if (!reviews) {
@@ -430,6 +599,12 @@ function branchProtectionCheck(root, branch, runner) {
   };
 }
 
+/**
+ * @param {string} root
+ * @param {string} branch
+ * @param {Runner} runner
+ * @returns {{ protection: BranchProtectionPayload | null, exists: boolean }}
+ */
 function branchProtection(root, branch, runner) {
   const name = nameWithOwner(root, runner);
   const slash = name.indexOf("/");
@@ -446,16 +621,22 @@ function branchProtection(root, branch, runner) {
   }
   try {
     return { protection: JSON.parse(out), exists: true };
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     throw new Error(`parse gh branch protection response: ${error.message ?? String(error)}`);
   }
 }
 
+/**
+ * @param {StatusCheck[]} checks
+ * @returns {Check}
+ */
 function statusChecksCheck(checks) {
   if (!checks || checks.length === 0) {
     return { name: "Status checks", status: STATUS.warn, summary: "No status checks found on the PR." };
   }
+  /** @type {string[]} */
   const failing = [];
+  /** @type {string[]} */
   const pending = [];
   for (const check of checks) {
     const conclusion = String(check.conclusion ?? "").toUpperCase();
@@ -476,6 +657,11 @@ function statusChecksCheck(checks) {
   return { name: "Status checks", status: STATUS.pass, summary: "All returned status checks passed." };
 }
 
+/**
+ * @param {StatusCheck} check
+ * @param {string} state
+ * @returns {string}
+ */
 function statusCheckDetail(check, state) {
   const name = firstNonEmpty(check.name, check.context, check.workflowName, "unnamed check");
   let detail = `${name}: ${state}`;
@@ -488,7 +674,12 @@ function statusCheckDetail(check, state) {
   return detail;
 }
 
+/**
+ * @param {{ message?: string }[]} annotations
+ * @returns {string[]}
+ */
 function annotationDetails(annotations) {
+  /** @type {string[]} */
   const out = [];
   for (const annotation of annotations) {
     const message = String(annotation.message ?? "").trim();
@@ -500,12 +691,23 @@ function annotationDetails(annotations) {
   return out;
 }
 
+/**
+ * @param {string} message
+ * @returns {boolean}
+ */
 function isCIReadinessAnnotation(message) {
   const text = message.toLowerCase();
   return text.includes("job was not started") || text.includes("spending limit") || text.includes("payments have failed") || text.includes("billing");
 }
 
+/**
+ * @param {string} root
+ * @param {StatusCheck[]} checks
+ * @param {Runner} runner
+ * @returns {StatusCheck[]}
+ */
 function enrichStatusCheckAnnotations(root, checks, runner) {
+  /** @type {string | undefined} */
   let name;
   const enriched = [...checks];
   for (let i = 0; i < enriched.length; i += 1) {
@@ -531,12 +733,20 @@ function enrichStatusCheckAnnotations(root, checks, runner) {
   return enriched;
 }
 
+/**
+ * @param {StatusCheck} check
+ * @returns {boolean}
+ */
 function shouldFetchAnnotations(check) {
   const conclusion = String(check.conclusion ?? "").toUpperCase();
   if (!["FAILURE", "TIMED_OUT", "ACTION_REQUIRED", "CANCELLED", "STALE"].includes(conclusion)) return false;
   return Boolean(String(check.detailsUrl ?? "").trim());
 }
 
+/**
+ * @param {string | undefined} detailsUrl
+ * @returns {string}
+ */
 function checkRunIdFromDetailsUrl(detailsUrl) {
   try {
     const url = new URL(String(detailsUrl ?? "").trim());
@@ -550,6 +760,11 @@ function checkRunIdFromDetailsUrl(detailsUrl) {
   return "";
 }
 
+/**
+ * @param {PR} pr
+ * @param {string | undefined} request
+ * @returns {string[]}
+ */
 function contextEvidence(pr, request) {
   const subject = String(request ?? pr.title ?? "review this pull request").trim() || "review this pull request";
   const evidence = [`repoctx impact . ${JSON.stringify(subject)} --json`];
@@ -559,6 +774,10 @@ function contextEvidence(pr, request) {
   return evidence;
 }
 
+/**
+ * @param {...(string | undefined)} values
+ * @returns {string}
+ */
 function firstNonEmpty(...values) {
   for (const value of values) {
     if (value !== undefined && value !== null && String(value).trim() !== "") return value;
@@ -566,19 +785,46 @@ function firstNonEmpty(...values) {
   return "";
 }
 
+/**
+ * @param {unknown} error
+ * @returns {boolean}
+ */
 function isBranchNotProtected(error) {
-  const text = String(error?.message ?? "").toLowerCase();
+  const text = String(/** @type {any} */ (error)?.message ?? "").toLowerCase();
   return text.includes("branch not protected");
 }
 
+/**
+ * @param {unknown} error
+ * @returns {boolean}
+ */
 function isNotFound(error) {
-  const text = String(error?.message ?? "").toLowerCase();
+  const text = String(/** @type {any} */ (error)?.message ?? "").toLowerCase();
   return text.includes("http 404") || text.includes(`"status":"404"`) || text.includes("not found");
 }
 
+/**
+ * The shape returned by {@link evaluatePR}, as consumed by the renderers.
+ * @typedef {Object} PassPrData
+ * @property {Verdict} verdict
+ * @property {{ root: string, name: string }} repo
+ * @property {{ number?: number, title?: string, url?: string, baseRefName?: string, isDraft: boolean, mergeStateStatus: string, mergeable: string, reviewDecision: string }} pr
+ * @property {string} policy
+ * @property {string} governance
+ * @property {string[]} changedFiles
+ * @property {string[]} contextEvidence
+ * @property {Check[]} checks
+ */
+
 // Renderers reuse the pass-local layout, just with a richer header.
+/** @type {Record<string, string>} */
 const STATUS_TO_RENDER = { PASS: "pass", WARN: "warn", FAIL: "fail" };
 
+/**
+ * @param {PassPrData} data
+ * @param {(options: object) => any} rendererFactory
+ * @returns {string}
+ */
 export function formatPassPrTerminal(data, rendererFactory) {
   const renderer = rendererFactory({});
   const lines = [];
@@ -613,12 +859,22 @@ export function formatPassPrTerminal(data, rendererFactory) {
   return lines.join("\n");
 }
 
+/**
+ * @param {PassPrData} data
+ * @param {Check | undefined} blocked
+ * @param {Check | undefined} warning
+ * @returns {string}
+ */
 function nextStep(data, blocked, warning) {
   if (blocked) return `address ${blocked.name.toLowerCase()} before merge`;
   if (warning) return "review the warning before merge";
   return data.changedFiles.length === 0 ? "no changes reported" : "ready to merge";
 }
 
+/**
+ * @param {PassPrData} data
+ * @returns {string}
+ */
 export function formatPassPrMarkdown(data) {
   const lines = [
     `# repoctx pass-pr: #${data.pr.number ?? "?"} ${data.pr.title ?? ""}`.trim(),

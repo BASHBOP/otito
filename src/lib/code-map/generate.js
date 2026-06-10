@@ -9,13 +9,77 @@ import { isVendorFile } from "./vendor.js";
 
 const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go", ".cs", ".py", ".java", ".rb", ".rs"]);
 
+/**
+ * @typedef {import('./data-access.js').DataAccessHit} DataAccessHit
+ * @typedef {import('./ast.js').CodeSymbol} CodeSymbol
+ */
+
+/**
+ * Per-file analysis record.
+ * @typedef {object} FileRecord
+ * @property {string} path
+ * @property {string} kind
+ * @property {string} domain
+ * @property {string[]} domains
+ * @property {string | undefined} route
+ * @property {string | undefined} controllerBasePath
+ * @property {{ method: string, path: string }[]} httpMethods
+ * @property {string[]} imports
+ * @property {string[]} exports
+ * @property {CodeSymbol[]} symbols
+ * @property {boolean} isVendor
+ * @property {DataAccessHit[]} [dataAccess]
+ */
+
+/**
+ * Aggregated counters across all analyzed source files.
+ * @typedef {Record<string, number>} CodeMapSummary
+ */
+
+/**
+ * One domain grouping in the code map.
+ * @typedef {object} DomainKindCount
+ * @property {string} kind
+ * @property {number} count
+ *
+ * @typedef {object} DomainSummary
+ * @property {string} name
+ * @property {number} fileCount
+ * @property {DomainKindCount[]} kinds
+ */
+
+/**
+ * The full generated code map.
+ * @typedef {object} CodeMap
+ * @property {boolean} ok
+ * @property {object} repo
+ * @property {string} repo.root
+ * @property {string} repo.name
+ * @property {unknown} repo.package
+ * @property {unknown} repo.git
+ * @property {number} repo.fileCount
+ * @property {number} repo.sourceFileCount
+ * @property {unknown} repo.languages
+ * @property {string[]} repo.entrypoints
+ * @property {CodeMapSummary} summary
+ * @property {DomainSummary[]} domains
+ * @property {FileRecord[]} files
+ * @property {{ fullJson: number, estimated: boolean, method: string, total: number, sections: { name: string, tokens: number, characters: number }[] }} [tokenEstimate]
+ */
+
+/**
+ * @param {string} [repoPath]
+ * @param {{ maxSymbols?: number }} [options]
+ * @returns {CodeMap}
+ */
 export function generateCodeMap(repoPath = ".", options = {}) {
   const repo = inspectRepo(repoPath);
   const files = listRepoFiles(repo.root).filter((file) => sourceExtensions.has(path.extname(file)));
   const maxSymbols = Number(options.maxSymbols ?? 5000);
-  const sourceFiles = files.map((file) => analyzeFile(repo.root, file, maxSymbols)).filter(Boolean);
+  const sourceFiles = /** @type {FileRecord[]} */ (files.map((file) => analyzeFile(repo.root, file, maxSymbols)).filter(Boolean));
   const domains = summarizeDomains(sourceFiles);
 
+  /** @type {CodeMap} */
   const map = {
     ok: true,
     repo: {
@@ -46,6 +110,7 @@ export function generateCodeMap(repoPath = ".", options = {}) {
 
 // Maps a file kind to its summary counter key. Kinds without an entry (e.g.
 // "source", "page") are counted toward symbols/data-access only.
+/** @type {Record<string, string>} */
 const summaryKindKeys = {
   route: "routes",
   apiRoute: "apiRoutes",
@@ -60,7 +125,12 @@ const summaryKindKeys = {
   test: "tests",
 };
 
+/**
+ * @param {FileRecord[]} sourceFiles
+ * @returns {CodeMapSummary}
+ */
 function summarizeFiles(sourceFiles) {
+  /** @type {CodeMapSummary} */
   const summary = {
     routes: 0,
     apiRoutes: 0,
@@ -94,6 +164,12 @@ function summarizeFiles(sourceFiles) {
   return summary;
 }
 
+/**
+ * @param {string} root
+ * @param {string} relativePath
+ * @param {number} maxSymbols
+ * @returns {FileRecord | undefined}
+ */
 function analyzeFile(root, relativePath, maxSymbols) {
   const absolute = path.join(root, relativePath);
   const text = safeRead(absolute);
@@ -105,6 +181,7 @@ function analyzeFile(root, relativePath, maxSymbols) {
   const vendor = isVendorFile(relativePath, text);
   const dataAccess = vendor ? [] : extractDataAccess(text);
   const domainInfo = inferDomainInfo(relativePath);
+  /** @type {FileRecord} */
   const record = {
     path: relativePath,
     kind: classifyFile(relativePath),
@@ -124,7 +201,12 @@ function analyzeFile(root, relativePath, maxSymbols) {
   return record;
 }
 
+/**
+ * @param {FileRecord[]} files
+ * @returns {DomainSummary[]}
+ */
 function summarizeDomains(files) {
+  /** @type {Map<string, { name: string, fileCount: number, kinds: Map<string, number> }>} */
   const domains = new Map();
   for (const file of files) {
     const tags = file.domains?.length ? file.domains : [file.domain];
@@ -145,6 +227,10 @@ function summarizeDomains(files) {
     .sort((a, b) => b.fileCount - a.fileCount || a.name.localeCompare(b.name));
 }
 
+/**
+ * @param {string} filePath
+ * @returns {string}
+ */
 function safeRead(filePath) {
   try {
     const stats = fs.statSync(filePath);

@@ -4,11 +4,41 @@
 // point — code-map already filters to source extensions, so the documentation/
 // false-positive class from the field test cannot enter the candidate set.
 
+/// <reference types="node" />
 import path from "node:path";
 import { getCachedCodeMap } from "./index-cache.js";
 import { conceptsFromQuery, classifyPath, CONCEPT_SYNONYMS, RISK_FLAGS, glyphFor, singularizeToken } from "./risk-paths.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 import { runCommand } from "./tools.js";
+
+/**
+ * @typedef {import('./index-cache.js').CodeMapFile} CodeMapFile
+ * @typedef {import('./index-cache.js').CodeMapRepo} CodeMapRepo
+ */
+
+/**
+ * Options for generateImpact.
+ * @typedef {object} ImpactOptions
+ * @property {number} [top]
+ * @property {string} [path]
+ * @property {string} [diffBase]
+ */
+
+/**
+ * A scored candidate file as held in the scoring map.
+ * @typedef {object} ScoredEntry
+ * @property {CodeMapFile} file
+ * @property {number} score
+ * @property {string[]} reasons
+ * @property {string[]} relatedFiles
+ */
+
+/**
+ * The per-file score/reasons produced by scoreFile.
+ * @typedef {object} ScoreResult
+ * @property {number} score
+ * @property {string[]} reasons
+ */
 
 const impactEngineVersion = 1;
 const defaultTop = 10;
@@ -145,6 +175,10 @@ const PENALTY_PATH_PREFIXES = [
   { prefix: "docs/", factor: 0.6, reason: "documentation file, demoted unless docs are requested" },
 ];
 
+/**
+ * @param {string} query
+ * @param {ImpactOptions} [options]
+ */
 export function generateImpact(query, options = {}) {
   const normalized = String(query ?? "").trim();
   if (!normalized) {
@@ -168,7 +202,7 @@ export function generateImpact(query, options = {}) {
   const risks = identifyRisks(normalized, ranked, concepts);
   const validation = options.diffBase ? validateAgainstDiff(map.repo.root, options.diffBase, ranked, map.files) : null;
 
-  const data = {
+  const data = /** @type {Record<string, any> & { tokenEstimate?: any }} */ ({
     ok: true,
     generatedAt: new Date().toISOString(),
     impactEngineVersion,
@@ -192,7 +226,7 @@ export function generateImpact(query, options = {}) {
     implementationPlan,
     risks,
     validation,
-  };
+  });
 
   data.tokenEstimate = {
     ...estimateTokenSections([
@@ -211,7 +245,15 @@ export function generateImpact(query, options = {}) {
   return { data, markdown };
 }
 
+/**
+ * @param {CodeMapFile[]} files
+ * @param {Map<string, number>} weightedQuery
+ * @param {string[]} concepts
+ * @param {{ wantsTests: boolean, wantsDocs: boolean }} flags
+ * @returns {Map<string, ScoredEntry>}
+ */
 function scoreFiles(files, weightedQuery, concepts, { wantsTests, wantsDocs }) {
+  /** @type {Map<string, ScoredEntry>} */
   const scored = new Map();
   for (const file of files) {
     const result = scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs });
@@ -222,6 +264,13 @@ function scoreFiles(files, weightedQuery, concepts, { wantsTests, wantsDocs }) {
   return scored;
 }
 
+/**
+ * @param {CodeMapFile} file
+ * @param {Map<string, number>} weightedQuery
+ * @param {string[]} concepts
+ * @param {{ wantsTests: boolean, wantsDocs: boolean }} flags
+ * @returns {ScoreResult}
+ */
 function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs }) {
   const pathTokens = tokenize(file.path);
   const pathCounts = countTokens(pathTokens);
@@ -232,6 +281,7 @@ function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs }) {
   const routeTokens = tokenize([file.controllerBasePath ?? "", file.route ?? "", (file.httpMethods ?? []).join(" ")].join(" "));
 
   let score = 0;
+  /** @type {string[]} */
   const reasons = [];
 
   // Path matches — strongest single signal because path naming reflects intent.
@@ -239,35 +289,35 @@ function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs }) {
   // + filename can't out-rank a single-match owner file from another domain.
   const pathHits = matchedTerms(pathCounts, weightedQuery);
   if (pathHits.length) {
-    const amount = pathHits.reduce((sum, term) => sum + W_PATH * weightedQuery.get(term), 0);
+    const amount = pathHits.reduce((sum, term) => sum + W_PATH * /** @type {number} */ (weightedQuery.get(term)), 0);
     score += amount;
     reasons.push(`path matches: ${pathHits.slice(0, 8).join(", ")}`);
   }
 
   const symbolHits = matchedTerms(symbolCounts, weightedQuery);
   if (symbolHits.length) {
-    const amount = symbolHits.reduce((sum, term) => sum + W_SYMBOL * weightedQuery.get(term), 0);
+    const amount = symbolHits.reduce((sum, term) => sum + W_SYMBOL * /** @type {number} */ (weightedQuery.get(term)), 0);
     score += amount;
     reasons.push(`symbol matches: ${symbolHits.slice(0, 8).join(", ")}`);
   }
 
   const exportHits = matchedTerms(countTokens(exportTokens), weightedQuery);
   if (exportHits.length) {
-    const amount = exportHits.reduce((sum, term) => sum + W_EXPORT * weightedQuery.get(term), 0);
+    const amount = exportHits.reduce((sum, term) => sum + W_EXPORT * /** @type {number} */ (weightedQuery.get(term)), 0);
     score += amount;
     reasons.push(`export matches: ${exportHits.slice(0, 6).join(", ")}`);
   }
 
   const importHits = matchedTerms(countTokens(importTokens), weightedQuery);
   if (importHits.length) {
-    const amount = importHits.reduce((sum, term) => sum + W_IMPORT * weightedQuery.get(term), 0);
+    const amount = importHits.reduce((sum, term) => sum + W_IMPORT * /** @type {number} */ (weightedQuery.get(term)), 0);
     score += amount;
     reasons.push(`import matches: ${importHits.slice(0, 6).join(", ")}`);
   }
 
   const routeHits = matchedTerms(countTokens(routeTokens), weightedQuery);
   if (routeHits.length) {
-    const amount = routeHits.reduce((sum, term) => sum + W_ROUTE * weightedQuery.get(term), 0);
+    const amount = routeHits.reduce((sum, term) => sum + W_ROUTE * /** @type {number} */ (weightedQuery.get(term)), 0);
     score += amount;
     reasons.push(`route matches: ${routeHits.slice(0, 6).join(", ")}`);
   }
@@ -336,6 +386,10 @@ function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs }) {
 // and the ranking the existing tests assert). Each additional detected concept
 // softens the penalty by 0.15, capped at 0.8 so a multi-concept (and therefore
 // noisier) query can never erase an otherwise strong path/symbol match.
+/**
+ * @param {number} conceptCount
+ * @returns {number}
+ */
 function conceptDemotionFactor(conceptCount) {
   if (conceptCount <= 1) return 0.5;
   return Math.min(0.8, 0.5 + 0.15 * (conceptCount - 1));
@@ -345,7 +399,13 @@ function conceptDemotionFactor(conceptCount) {
 // concept, or (b) its symbols/imports/exports contain a synonym for that
 // concept. (b) is what catches booking.controller.ts as money-flow-adjacent
 // even though its path is "src/booking/...".
+/**
+ * @param {CodeMapFile} file
+ * @param {string[]} concepts
+ * @returns {Set<string>}
+ */
 function fileImpliesConcepts(file, concepts) {
+  /** @type {Set<string>} */
   const implied = new Set();
   const pathFlags = new Set(classifyPath(file.path, { kind: file.kind }));
   for (const concept of concepts) {
@@ -371,6 +431,11 @@ function fileImpliesConcepts(file, concepts) {
   return implied;
 }
 
+/**
+ * @param {CodeMapFile[]} allFiles
+ * @param {Map<string, ScoredEntry>} scored
+ * @returns {Map<string, ScoredEntry>}
+ */
 function applyDependencyBoosts(allFiles, scored) {
   if (scored.size === 0) return scored;
   const byPath = new Map(allFiles.map((file) => [file.path, file]));
@@ -379,6 +444,7 @@ function applyDependencyBoosts(allFiles, scored) {
 
   for (const seed of seeds) {
     const base = Math.min(seed.score * 0.16, 8.0);
+    /** @type {Set<string>} */
     const neighbors = new Set();
     for (const importPath of seed.file.imports ?? []) {
       for (const resolved of resolve(importPath, seed.file.path)) {
@@ -394,7 +460,7 @@ function applyDependencyBoosts(allFiles, scored) {
         seed.relatedFiles.push(neighbor);
       } else if (byPath.has(neighbor)) {
         scored.set(neighbor, {
-          file: byPath.get(neighbor),
+          file: /** @type {CodeMapFile} */ (byPath.get(neighbor)),
           score: base,
           reasons: [`related through imports from ${seed.file.path} (+${base.toFixed(1)})`],
           relatedFiles: [seed.file.path],
@@ -410,8 +476,14 @@ function applyDependencyBoosts(allFiles, scored) {
   return scored;
 }
 
+/**
+ * @param {CodeMapFile[]} files
+ * @returns {(importSpec: string, fromPath: string) => string[]}
+ */
 function makeImportResolver(files) {
+  /** @type {Map<string, string[]>} */
   const byBasename = new Map();
+  /** @type {Map<string, string[]>} */
   const byStem = new Map();
   for (const file of files) {
     const base = path.basename(file.path);
@@ -419,7 +491,8 @@ function makeImportResolver(files) {
     pushTo(byBasename, base, file.path);
     pushTo(byStem, stem, file.path);
   }
-  return (importSpec, fromPath) => {
+  return (/** @type {string} */ importSpec, /** @type {string} */ fromPath) => {
+    /** @type {Set<string>} */
     const candidates = new Set();
     if (importSpec.startsWith(".")) {
       const base = path.posix.dirname(fromPath);
@@ -443,15 +516,24 @@ function makeImportResolver(files) {
   };
 }
 
+/**
+ * @param {CodeMapFile[]} files
+ * @param {ScoredEntry[]} ranked
+ * @param {CodeMapRepo} repo
+ * @returns {string[]}
+ */
 function suggestTests(files, ranked, repo) {
+  /** @type {string[]} */
   const suggestions = [];
-  const scripts = repo.package?.scripts ?? {};
+  /** @type {Record<string, string>} */
+  const scripts = /** @type {any} */ (repo.package)?.scripts ?? {};
   for (const name of ["test", "test:unit", "test:integration", "test:e2e", "lint", "typecheck"]) {
     if (scripts[name]) {
       suggestions.push(`Run package script \`${name}\`: ${scripts[name]}`);
     }
   }
 
+  /** @type {Set<string>} */
   const topTerms = new Set();
   for (const entry of ranked) {
     for (const token of tokenize(entry.file.path)) topTerms.add(token);
@@ -460,6 +542,7 @@ function suggestTests(files, ranked, repo) {
   const meaningfulTerms = new Set([...topTerms].filter((term) => term.length > 2 && !TEST_MATCH_STOP_TERMS.has(term)));
 
   const testFiles = files.filter((file) => file.kind === "test");
+  /** @type {{ overlap: number, path: string }[]} */
   const matches = [];
   for (const testFile of testFiles) {
     const terms = new Set([...tokenize(testFile.path)].filter((t) => t.length > 2 && !TEST_MATCH_STOP_TERMS.has(t)));
@@ -478,6 +561,11 @@ function suggestTests(files, ranked, repo) {
   return dedupe(suggestions);
 }
 
+/**
+ * @param {string} query
+ * @param {ScoredEntry[]} ranked
+ * @returns {string[]}
+ */
 function buildPlan(query, ranked) {
   if (ranked.length === 0) {
     return [
@@ -510,6 +598,12 @@ function buildPlan(query, ranked) {
   return plan;
 }
 
+/**
+ * @param {string} query
+ * @param {ScoredEntry[]} ranked
+ * @param {string[]} concepts
+ * @returns {string[]}
+ */
 function identifyRisks(query, ranked, concepts) {
   const flags = new Set(concepts);
   for (const entry of ranked) {
@@ -523,6 +617,10 @@ function identifyRisks(query, ranked, concepts) {
   return [...flags].map(riskSentence);
 }
 
+/**
+ * @param {string} flag
+ * @returns {string}
+ */
 function riskSentence(flag) {
   switch (flag) {
     case RISK_FLAGS.authSecurity:
@@ -546,6 +644,12 @@ function riskSentence(flag) {
   }
 }
 
+/**
+ * @param {string} root
+ * @param {string} base
+ * @param {ScoredEntry[]} ranked
+ * @param {CodeMapFile[]} allFiles
+ */
 function validateAgainstDiff(root, base, ranked, allFiles) {
   // Use the arg-array runCommand helper (no shell, no string interpolation)
   // like every other git call site in the codebase, so `base` can never be
@@ -589,6 +693,10 @@ function validateAgainstDiff(root, base, ranked, allFiles) {
   };
 }
 
+/**
+ * @param {ReturnType<typeof generateImpact>['data']} data
+ * @returns {string}
+ */
 export function formatImpactMarkdown(data) {
   const lines = [
     `# Change Impact: ${data.query}`,
@@ -612,7 +720,7 @@ export function formatImpactMarkdown(data) {
     lines.push(`- Score: ${file.score}`);
     if (file.riskFlags.length) lines.push(`- Risk flags: ${file.riskFlags.join(", ")}`);
     for (const reason of file.reasons) lines.push(`- ${reason}`);
-    if (file.relatedFiles.length) lines.push(`- Related: ${file.relatedFiles.map((r) => `\`${r}\``).join(", ")}`);
+    if (file.relatedFiles.length) lines.push(`- Related: ${file.relatedFiles.map((/** @type {string} */ r) => `\`${r}\``).join(", ")}`);
     lines.push("");
   }
   lines.push("## Tests To Run Or Add", "");
@@ -637,14 +745,23 @@ export function formatImpactMarkdown(data) {
   return lines.join("\n");
 }
 
+/**
+ * @param {string[]} items
+ * @returns {string}
+ */
 function formatList(items) {
   return items.length ? items.map((item) => `\`${item}\``).join(", ") : "none";
 }
 
 // Tokenize a string into lowercased path/identifier tokens. Mirrors
 // impact-map's tokenize/split_identifier behavior.
+/**
+ * @param {unknown} value
+ * @returns {string[]}
+ */
 export function tokenize(value) {
   const raw = String(value ?? "");
+  /** @type {string[]} */
   const tokens = [];
   const chunks = raw.match(/[A-Za-z0-9_./:-]+/g) ?? [];
   for (const chunk of chunks) {
@@ -662,11 +779,17 @@ export function tokenize(value) {
 // Build the weighted query term counter. Longer / domain / repeated tokens
 // get extra weight, and a soft singular form is added so "refunds" and
 // "refund" both light up.
+/**
+ * @param {string} request
+ * @returns {Map<string, number>}
+ */
 export function weightedQueryTerms(request) {
+  /** @type {Map<string, number>} */
   const counts = new Map();
   for (const token of tokenize(request)) {
     counts.set(token, (counts.get(token) ?? 0) + 1);
   }
+  /** @type {Map<string, number>} */
   const weighted = new Map();
   for (const [term, count] of counts) {
     let weight = count;
@@ -685,22 +808,43 @@ export function weightedQueryTerms(request) {
   return weighted;
 }
 
+/**
+ * @param {string[]} tokens
+ * @returns {Map<string, number>}
+ */
 function countTokens(tokens) {
+  /** @type {Map<string, number>} */
   const counts = new Map();
   for (const token of tokens) counts.set(token, (counts.get(token) ?? 0) + 1);
   return counts;
 }
 
+/**
+ * @param {Map<string, number>} counts
+ * @param {Map<string, number>} weightedQuery
+ * @returns {string[]}
+ */
 function matchedTerms(counts, weightedQuery) {
+  /** @type {string[]} */
   const hits = [];
   for (const term of counts.keys()) if (weightedQuery.has(term)) hits.push(term);
   return hits.sort();
 }
 
+/**
+ * @param {Map<string, number>} weightedQuery
+ * @param {string[]} tokens
+ * @returns {boolean}
+ */
 function queryMentions(weightedQuery, tokens) {
   return tokens.some((token) => weightedQuery.has(token));
 }
 
+/**
+ * @param {string} filePath
+ * @param {Map<string, number>} weightedQuery
+ * @returns {number}
+ */
 function computeConfigBonus(filePath, weightedQuery) {
   const lower = filePath.toLowerCase();
   let bonus = 0;
@@ -711,14 +855,25 @@ function computeConfigBonus(filePath, weightedQuery) {
   return bonus;
 }
 
+/**
+ * @param {Map<string, string[]>} map
+ * @param {string} key
+ * @param {string} value
+ */
 function pushTo(map, key, value) {
   const existing = map.get(key);
   if (existing) existing.push(value);
   else map.set(key, [value]);
 }
 
+/**
+ * @param {string[]} values
+ * @returns {string[]}
+ */
 function dedupe(values) {
+  /** @type {Set<string>} */
   const seen = new Set();
+  /** @type {string[]} */
   const out = [];
   for (const value of values) {
     if (seen.has(value)) continue;
@@ -728,19 +883,36 @@ function dedupe(values) {
   return out;
 }
 
+/**
+ * @param {unknown} value
+ * @param {number} fallback
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
 function clampInt(value, fallback, min, max) {
   const num = Number(value);
   if (!Number.isFinite(num) || num < min) return fallback;
   return Math.min(max, Math.floor(num));
 }
 
+/**
+ * @param {number} value
+ * @returns {number}
+ */
 function round(value) {
   return Math.round(value * 10) / 10;
 }
 
 export const RANK_GLYPHS = ["🥇", "🥈", "🥉", "🏅", "🏅"];
 
+/**
+ * @param {ReturnType<typeof generateImpact>['data']} data
+ * @param {(options: Record<string, unknown>) => any} rendererFactory
+ * @returns {string}
+ */
 export function formatImpactTerminal(data, rendererFactory) {
+  /** @type {string[]} */
   const lines = [];
   const renderer = rendererFactory({});
   const headlines = [
@@ -750,7 +922,9 @@ export function formatImpactTerminal(data, rendererFactory) {
   lines.push(renderer.header({ text: "repoctx impact · change blast radius", glyph: "🎯" }, headlines));
   lines.push("");
   if (data.concepts.length) {
-    lines.push(`  ${renderer.emoji ? "🧠" : "[?]"}  concepts: ${data.concepts.map((c) => `${glyphFor(c) || ""} ${c}`.trim()).join(" · ")}`);
+    lines.push(
+      `  ${renderer.emoji ? "🧠" : "[?]"}  concepts: ${data.concepts.map((/** @type {string} */ c) => `${glyphFor(c) || ""} ${c}`.trim()).join(" · ")}`,
+    );
     lines.push("");
   }
   for (const [index, file] of data.topFiles.entries()) {
@@ -760,28 +934,30 @@ export function formatImpactTerminal(data, rendererFactory) {
       lines.push(`       ${renderer.emoji ? "└─" : "|-"} ${reason}`);
     }
     if (file.riskFlags.length) {
-      lines.push(`       ${renderer.emoji ? "└─" : "|-"} risk: ${file.riskFlags.map((flag) => `${glyphFor(flag) || ""} ${flag}`.trim()).join(" · ")}`);
+      lines.push(
+        `       ${renderer.emoji ? "└─" : "|-"} risk: ${file.riskFlags.map((/** @type {string} */ flag) => `${glyphFor(flag) || ""} ${flag}`.trim()).join(" · ")}`,
+      );
     }
     lines.push("");
   }
   lines.push(
     renderer.section(
       `${renderer.emoji ? "🧪" : ">"} Suggested tests`,
-      data.testSuggestions.slice(0, 8).map((t) => `${renderer.emoji ? "•" : "-"} ${t}`),
+      data.testSuggestions.slice(0, 8).map((/** @type {string} */ t) => `${renderer.emoji ? "•" : "-"} ${t}`),
     ),
   );
   lines.push("");
   lines.push(
     renderer.section(
       `${renderer.emoji ? "🚨" : ">"} Risk hotspots`,
-      data.risks.slice(0, 6).map((r) => `${renderer.emoji ? "•" : "-"} ${r}`),
+      data.risks.slice(0, 6).map((/** @type {string} */ r) => `${renderer.emoji ? "•" : "-"} ${r}`),
     ),
   );
   lines.push("");
   lines.push(
     renderer.section(
       `${renderer.emoji ? "📋" : ">"} Implementation plan`,
-      data.implementationPlan.map((step, i) => `${i + 1}. ${step}`),
+      data.implementationPlan.map((/** @type {string} */ step, /** @type {number} */ i) => `${i + 1}. ${step}`),
     ),
   );
   if (data.validation) {

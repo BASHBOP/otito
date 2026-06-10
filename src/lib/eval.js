@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -7,6 +8,119 @@ import { generateCodeMap } from "./code-map.js";
 import { generateHarness } from "./harness.js";
 import { generateContextPack } from "./context-engine.js";
 import { classifyPath, conceptsFromQuery, isGateRiskPath, isSecretPath } from "./risk-paths.js";
+
+/**
+ * Options for the token-savings eval.
+ * @typedef {object} EvalOptions
+ * @property {string} [query]
+ * @property {number} [naiveFileCap]
+ */
+
+/**
+ * Outcome of a single safeRun-wrapped probe.
+ * @typedef {object} ProbeResult
+ * @property {boolean} ok
+ * @property {number} bytes
+ * @property {string} [error]
+ */
+
+/**
+ * A per-task token-savings result.
+ * @typedef {object} TaskResult
+ * @property {string} name
+ * @property {string} description
+ * @property {boolean} ok
+ * @property {string} [error]
+ * @property {number} repoctxBytes
+ * @property {number} repoctxTokens
+ * @property {number} naiveBytes
+ * @property {number} naiveTokens
+ * @property {number} savedTokens
+ * @property {number} savedPct
+ * @property {number} [mapFileCount]
+ * @property {number} [naiveFileCount]
+ */
+
+/**
+ * A single retrieval test case from the corpus.
+ * @typedef {object} RetrievalCase
+ * @property {string} name
+ * @property {string} query
+ * @property {string} [repoFixture]
+ * @property {string[]} [repoFixtures]
+ * @property {string[]} [expectedPrimary]
+ * @property {string[]} [expectedAnyOf]
+ */
+
+/**
+ * A single risk test case from the corpus.
+ * @typedef {object} RiskCase
+ * @property {string} name
+ * @property {string} [mode] - "query" | "path" | "gate" | "secret".
+ * @property {string} [query]
+ * @property {string} [path]
+ * @property {string[]} [expectedConcepts]
+ * @property {string[]} [notExpectedConcepts]
+ */
+
+/**
+ * Retrieval/risk pass thresholds.
+ * @typedef {object} CorpusThresholds
+ * @property {{ precisionAtK?: number, recallAtK?: number, mrr?: number }} [retrieval]
+ * @property {{ accuracy?: number }} [risk]
+ */
+
+/**
+ * Parsed accuracy corpus document.
+ * @typedef {object} Corpus
+ * @property {number} [k]
+ * @property {Record<string, string>} [fixtureRoots]
+ * @property {RetrievalCase[]} retrieval
+ * @property {RiskCase[]} risk
+ * @property {CorpusThresholds} [thresholds]
+ */
+
+/**
+ * Retrieval scoring metrics for one case (null fields for pure-fallback cases).
+ * @typedef {object} RetrievalMetrics
+ * @property {number|null} precisionAtK
+ * @property {number|null} recallAtK
+ * @property {number|null} mrr
+ * @property {number} hits
+ * @property {number} relevant
+ */
+
+/**
+ * A scored retrieval case.
+ * @typedef {object} ScoredRetrievalCase
+ * @property {string} name
+ * @property {"retrieval"} type
+ * @property {string} query
+ * @property {string[]} fixtures
+ * @property {string[]} expectedPrimary
+ * @property {string[]} expectedAnyOf
+ * @property {string[]} ranked
+ * @property {string[]} related
+ * @property {boolean} pass
+ * @property {string} [error]
+ * @property {RetrievalMetrics} metrics
+ */
+
+/**
+ * A scored risk case.
+ * @typedef {object} ScoredRiskCase
+ * @property {string} name
+ * @property {"risk"} type
+ * @property {string} mode
+ * @property {string|undefined} input
+ * @property {string[]} expectedConcepts
+ * @property {string[]} notExpectedConcepts
+ * @property {string[]} actualConcepts
+ * @property {string[]} missing
+ * @property {string[]} leaked
+ * @property {boolean} pass
+ * @property {string} [error]
+ */
 
 const DEFAULTS = {
   query: "understand and refactor this codebase",
@@ -73,6 +187,10 @@ const IGNORED_DIRS = new Set([
 
 const CHARS_PER_TOKEN = 4;
 
+/**
+ * @param {string} repoPath
+ * @param {EvalOptions} [options]
+ */
 export function runEval(repoPath, options = {}) {
   const root = path.resolve(repoPath);
   if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
@@ -99,6 +217,10 @@ export function runEval(repoPath, options = {}) {
   return { data, markdown: formatEvalMarkdown(data) };
 }
 
+/**
+ * @param {string} root
+ * @returns {TaskResult}
+ */
 function runRepoOverview(root) {
   const repoctx = safeRun(() => {
     const result = inspectRepo(root);
@@ -114,7 +236,13 @@ function runRepoOverview(root) {
   return makeTaskResult("repo_overview", "Identify what this repo is", repoctx, naiveBytes);
 }
 
+/**
+ * @param {string} root
+ * @param {{ naiveFileCap: number }} opts
+ * @returns {TaskResult}
+ */
 function runCodeMap(root, opts) {
+  /** @type {number|undefined} */
   let mapFileCount;
   const repoctx = safeRun(() => {
     const map = generateCodeMap(root);
@@ -131,6 +259,10 @@ function runCodeMap(root, opts) {
   });
 }
 
+/**
+ * @param {string} root
+ * @returns {TaskResult}
+ */
 function runHarness(root) {
   const repoctx = safeRun(() => {
     const result = generateHarness(root);
@@ -154,6 +286,11 @@ function runHarness(root) {
   return makeTaskResult("harness", "Identify setup/validation/runtime commands", repoctx, naiveBytes);
 }
 
+/**
+ * @param {string} root
+ * @param {{ query: string, naiveFileCap: number }} opts
+ * @returns {TaskResult}
+ */
 function runContextPack(root, opts) {
   const repoctx = safeRun(() => {
     const result = generateContextPack(opts.query, { path: root });
@@ -166,6 +303,10 @@ function runContextPack(root, opts) {
   return makeTaskResult("context_pack", `Task-aware context for: "${opts.query}"`, repoctx, naiveBytes);
 }
 
+/**
+ * @param {() => string} fn
+ * @returns {ProbeResult}
+ */
 function safeRun(fn) {
   try {
     const text = fn();
@@ -175,6 +316,14 @@ function safeRun(fn) {
   }
 }
 
+/**
+ * @param {string} name
+ * @param {string} description
+ * @param {ProbeResult} repoctx
+ * @param {number} naiveBytes
+ * @param {{ mapFileCount?: number, naiveFileCount?: number }} [extra]
+ * @returns {TaskResult}
+ */
 function makeTaskResult(name, description, repoctx, naiveBytes, extra = {}) {
   const repoctxTokens = Math.ceil(repoctx.bytes / CHARS_PER_TOKEN);
   const naiveTokens = Math.ceil(naiveBytes / CHARS_PER_TOKEN);
@@ -195,6 +344,9 @@ function makeTaskResult(name, description, repoctx, naiveBytes, extra = {}) {
   };
 }
 
+/**
+ * @param {TaskResult[]} tasks
+ */
 function aggregate(tasks) {
   const repoctxBytes = tasks.reduce((s, t) => s + t.repoctxBytes, 0);
   const naiveBytes = tasks.reduce((s, t) => s + t.naiveBytes, 0);
@@ -210,12 +362,23 @@ function aggregate(tasks) {
   };
 }
 
+/**
+ * @param {string} root
+ * @returns {string}
+ */
 function naiveListing(root) {
+  /** @type {string[]} */
   const lines = [];
   walk(root, root, lines, 0);
   return lines.join("\n");
 }
 
+/**
+ * @param {string} start
+ * @param {string} dir
+ * @param {string[]} lines
+ * @param {number} depth
+ */
 function walk(start, dir, lines, depth) {
   if (depth > 4) return;
   const entries = readDirEnts(dir);
@@ -229,13 +392,22 @@ function walk(start, dir, lines, depth) {
   }
 }
 
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
 function listSourceFiles(root) {
+  /** @type {string[]} */
   const out = [];
   walkFiles(root, out);
   out.sort();
   return out;
 }
 
+/**
+ * @param {string} dir
+ * @param {string[]} out
+ */
 function walkFiles(dir, out) {
   for (const ent of readDirEnts(dir)) {
     if (IGNORED_DIRS.has(ent.name)) continue;
@@ -246,6 +418,10 @@ function walkFiles(dir, out) {
   }
 }
 
+/**
+ * @param {string} dir
+ * @returns {import('node:fs').Dirent[]}
+ */
 function readDirEnts(dir) {
   try {
     return fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
@@ -254,6 +430,10 @@ function readDirEnts(dir) {
   }
 }
 
+/**
+ * @param {string} dir
+ * @returns {string[]}
+ */
 function readDirSafe(dir) {
   try {
     return fs.readdirSync(dir);
@@ -262,6 +442,10 @@ function readDirSafe(dir) {
   }
 }
 
+/**
+ * @param {string} p
+ * @returns {boolean}
+ */
 function isFile(p) {
   try {
     return fs.statSync(p).isFile();
@@ -270,6 +454,10 @@ function isFile(p) {
   }
 }
 
+/**
+ * @param {string} p
+ * @returns {boolean}
+ */
 function isDir(p) {
   try {
     return fs.statSync(p).isDirectory();
@@ -278,6 +466,10 @@ function isDir(p) {
   }
 }
 
+/**
+ * @param {string} p
+ * @returns {number}
+ */
 function statSize(p) {
   try {
     return fs.statSync(p).size;
@@ -286,6 +478,10 @@ function statSize(p) {
   }
 }
 
+/**
+ * @param {{ repo: { name: string }, generatedAt: string, evalVersion: number, method: string, query: string, naiveFileCap: number, tasks: TaskResult[], totals: ReturnType<typeof aggregate> }} data
+ * @returns {string}
+ */
 export function formatEvalMarkdown(data) {
   const lines = [
     `# repoctx Eval: ${data.repo.name}`,
@@ -318,6 +514,10 @@ export function formatEvalMarkdown(data) {
   return lines.join("\n");
 }
 
+/**
+ * @param {TaskResult} t
+ * @returns {string}
+ */
 function formatCoverage(t) {
   if (t.mapFileCount === undefined || t.naiveFileCount === undefined) return "-";
   return `${t.mapFileCount}/${t.naiveFileCount}`;
@@ -351,7 +551,7 @@ export function runRetrievalEval(options = {}) {
   const corpusPath = options.corpusPath ? path.resolve(options.corpusPath) : defaultCorpusPath;
   const root = options.repoRoot ? path.resolve(options.repoRoot) : repoRoot;
   const corpus = loadCorpus(corpusPath);
-  const k = Number.isInteger(corpus.k) && corpus.k > 0 ? corpus.k : 5;
+  const k = Number.isInteger(corpus.k) && (corpus.k ?? 0) > 0 ? /** @type {number} */ (corpus.k) : 5;
   const fixtureRoots = corpus.fixtureRoots ?? {};
 
   const retrievalCases = (corpus.retrieval ?? []).map((testCase) => scoreRetrievalCase(testCase, { root, fixtureRoots, k }));
@@ -391,7 +591,12 @@ export function runRetrievalEval(options = {}) {
   return { data, markdown: formatRetrievalEvalMarkdown(data) };
 }
 
+/**
+ * @param {string} corpusPath
+ * @returns {Corpus}
+ */
 function loadCorpus(corpusPath) {
+  /** @type {string} */
   let raw;
   try {
     raw = fs.readFileSync(corpusPath, "utf8");
@@ -415,6 +620,11 @@ function loadCorpus(corpusPath) {
 // and the stale `.dev-context/index.json` they ship with — pinned to an old
 // absolute root and an old cache version — is dropped so the map regenerates
 // from the real files), run generateContextPack, then clean the temp dirs up.
+/**
+ * @param {RetrievalCase} testCase
+ * @param {{ root: string, fixtureRoots: Record<string, string>, k: number }} context
+ * @returns {ScoredRetrievalCase}
+ */
 function scoreRetrievalCase(testCase, { root, fixtureRoots, k }) {
   const fixtureNames = testCase.repoFixtures ?? (testCase.repoFixture ? [testCase.repoFixture] : []);
   if (fixtureNames.length === 0) {
@@ -422,9 +632,13 @@ function scoreRetrievalCase(testCase, { root, fixtureRoots, k }) {
   }
   const multiRepo = fixtureNames.length > 1;
 
+  /** @type {{ dir: string }[]} */
   const temps = [];
+  /** @type {string[]} */
   let ranked = [];
+  /** @type {string[]} */
   let relatedInPack = [];
+  /** @type {string|undefined} */
   let error;
   try {
     const paths = fixtureNames.map((name) => {
@@ -437,7 +651,8 @@ function scoreRetrievalCase(testCase, { root, fixtureRoots, k }) {
     // For multi-repo cases the labels are namespaced "<fixture>/<repo-path>",
     // resolved from each primary file's originating repo. For single-repo
     // cases the label is the plain repo-relative path.
-    const label = (file) => (multiRepo ? `${fixtureForPrimary(file, fixtureNames, paths)}/${file.path}` : file.path);
+    const label = (/** @type {{ path: string, repo?: { root?: string } }} */ file) =>
+      multiRepo ? `${fixtureForPrimary(file, fixtureNames, paths)}/${file.path}` : file.path;
     ranked = data.primaryFiles.map(label);
     relatedInPack = data.relatedFiles.map(label);
   } catch (err) {
@@ -485,6 +700,12 @@ function scoreRetrievalCase(testCase, { root, fixtureRoots, k }) {
 
 // generateContextPack returns repo.root for each primary file; map that back to
 // the logical fixture name by matching the temp dir we copied it into.
+/**
+ * @param {{ repo?: { root?: string } }} file
+ * @param {string[]} fixtureNames
+ * @param {string[]} paths
+ * @returns {string}
+ */
 function fixtureForPrimary(file, fixtureNames, paths) {
   const root = file.repo?.root;
   const index = paths.findIndex((dir) => dir === root);
@@ -501,6 +722,12 @@ function fixtureForPrimary(file, fixtureNames, paths) {
 // relevant (0 if none in top-k). When a case has no required primaries (pure
 // fallback) the metrics are not meaningful, so they are reported as null and
 // excluded from the aggregate.
+/**
+ * @param {string[]} expectedPrimary
+ * @param {string[]} ranked
+ * @param {number} k
+ * @returns {RetrievalMetrics}
+ */
 function computeRetrievalMetrics(expectedPrimary, ranked, k) {
   if (expectedPrimary.length === 0) {
     return { precisionAtK: null, recallAtK: null, mrr: null, hits: 0, relevant: 0 };
@@ -527,9 +754,13 @@ function computeRetrievalMetrics(expectedPrimary, ranked, k) {
   };
 }
 
+/**
+ * @param {ScoredRetrievalCase[]} cases
+ */
 function aggregateRetrieval(cases) {
   const scored = cases.filter((c) => c.metrics.precisionAtK !== null);
-  const avg = (selector) => (scored.length === 0 ? 0 : scored.reduce((sum, c) => sum + selector(c), 0) / scored.length);
+  /** @param {(c: ScoredRetrievalCase) => number|null} selector */
+  const avg = (selector) => (scored.length === 0 ? 0 : scored.reduce((sum, c) => sum + (selector(c) ?? 0), 0) / scored.length);
   return {
     cases: cases.length,
     scoredCases: scored.length,
@@ -547,9 +778,15 @@ function aggregateRetrieval(cases) {
 //   gate   -> isGateRiskPath(path)                 (boolean -> ["gate"] | [])
 //   secret -> isSecretPath(path)                   (boolean -> ["secret"] | [])
 // expectedConcepts must all be present; notExpectedConcepts must all be absent.
+/**
+ * @param {RiskCase} testCase
+ * @returns {ScoredRiskCase}
+ */
 function scoreRiskCase(testCase) {
   const mode = testCase.mode ?? "path";
+  /** @type {string[]} */
   let actual = [];
+  /** @type {string|undefined} */
   let error;
   try {
     actual = classifyRiskCase(mode, testCase);
@@ -580,21 +817,29 @@ function scoreRiskCase(testCase) {
   };
 }
 
+/**
+ * @param {string} mode
+ * @param {RiskCase} testCase
+ * @returns {string[]}
+ */
 function classifyRiskCase(mode, testCase) {
   switch (mode) {
     case "query":
-      return conceptsFromQuery(testCase.query);
+      return conceptsFromQuery(/** @type {string} */ (testCase.query));
     case "path":
-      return classifyPath(testCase.path);
+      return classifyPath(/** @type {string} */ (testCase.path));
     case "gate":
-      return isGateRiskPath(testCase.path) ? ["gate"] : [];
+      return isGateRiskPath(/** @type {string} */ (testCase.path)) ? ["gate"] : [];
     case "secret":
-      return isSecretPath(testCase.path) ? ["secret"] : [];
+      return isSecretPath(/** @type {string} */ (testCase.path)) ? ["secret"] : [];
     default:
       throw new Error(`unknown risk case mode "${mode}" (expected query|path|gate|secret)`);
   }
 }
 
+/**
+ * @param {ScoredRiskCase[]} cases
+ */
 function aggregateRisk(cases) {
   const passed = cases.filter((c) => c.pass).length;
   return {
@@ -604,11 +849,23 @@ function aggregateRisk(cases) {
   };
 }
 
+/**
+ * @param {ReturnType<typeof aggregateRetrieval>} retrievalScore
+ * @param {ReturnType<typeof aggregateRisk>} riskScore
+ * @param {CorpusThresholds} thresholds
+ * @returns {{ metric: string, value: number, threshold: number, pass: boolean }[]}
+ */
 function evaluateThresholds(retrievalScore, riskScore, thresholds) {
+  /** @type {{ metric: string, value: number, threshold: number, pass: boolean }[]} */
   const checks = [];
   const retrievalThresholds = thresholds.retrieval ?? {};
   const riskThresholds = thresholds.risk ?? {};
 
+  /**
+   * @param {string} metric
+   * @param {number} value
+   * @param {number|undefined|null} floor
+   */
   const pushCheck = (metric, value, floor) => {
     if (floor === undefined || floor === null) return;
     checks.push({ metric, value, threshold: floor, pass: value >= floor });
@@ -622,6 +879,12 @@ function evaluateThresholds(retrievalScore, riskScore, thresholds) {
   return checks;
 }
 
+/**
+ * @param {string} root
+ * @param {Record<string, string>} fixtureRoots
+ * @param {string} name
+ * @returns {string}
+ */
 function resolveFixture(root, fixtureRoots, name) {
   const rel = fixtureRoots[name] ?? name;
   const abs = path.isAbsolute(rel) ? rel : path.join(root, rel);
@@ -631,6 +894,10 @@ function resolveFixture(root, fixtureRoots, name) {
   return abs;
 }
 
+/**
+ * @param {string} source
+ * @returns {{ dir: string }}
+ */
 function copyFixtureToTemp(source) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-eval-fix-"));
   for (const ent of readDirEnts(source)) {
@@ -640,10 +907,18 @@ function copyFixtureToTemp(source) {
   return { dir };
 }
 
+/**
+ * @param {number} value
+ * @returns {number}
+ */
 function round3(value) {
   return Math.round(value * 1000) / 1000;
 }
 
+/**
+ * @param {{ generatedAt: string, corpusPath: string, k: number, counts: { retrieval: number, risk: number }, scoreboard: { retrieval: ReturnType<typeof aggregateRetrieval>, risk: ReturnType<typeof aggregateRisk> }, checks: ReturnType<typeof evaluateThresholds>, passed: boolean, exitCode: number, cases: { retrieval: ScoredRetrievalCase[], risk: ScoredRiskCase[] } }} data
+ * @returns {string}
+ */
 export function formatRetrievalEvalMarkdown(data) {
   const lines = [
     "# repoctx Accuracy Eval",
@@ -672,7 +947,12 @@ export function formatRetrievalEvalMarkdown(data) {
   return lines.join("\n");
 }
 
+/**
+ * @param {{ cases: { retrieval: ScoredRetrievalCase[], risk: ScoredRiskCase[] } }} data
+ * @returns {string[]}
+ */
 function formatFailingCases(data) {
+  /** @type {(ScoredRetrievalCase | ScoredRiskCase)[]} */
   const failing = [...data.cases.retrieval, ...data.cases.risk].filter((c) => !c.pass);
   if (failing.length === 0) {
     return ["- none"];

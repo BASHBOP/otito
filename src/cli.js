@@ -2,6 +2,25 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseArgv } from "./lib/args.js";
+
+/** @typedef {import('./lib/args.js').ParsedArgs} ParsedArgs */
+/** @typedef {import('./lib/args.js').FlagValue} FlagValue */
+
+/**
+ * The parsed-args shape as consumed by the command handlers. Identical to
+ * {@link ParsedArgs} except flag values are read positionally and forwarded
+ * into typed option bags; they are FlagValue at runtime but are typed `any`
+ * here so the existing dynamic forwarding type-checks without runtime changes.
+ * @typedef {Object} CliArgs
+ * @property {string | undefined} command
+ * @property {string[]} positionals
+ * @property {Record<string, any>} flags
+ */
+
+/** @typedef {import('./lib/pass-local.js').PassData} PassData */
+/** @typedef {import('./lib/pass-pr.js').PassPrData} PassPrData */
+/** @typedef {import('./lib/review.js').ReviewData} ReviewData */
+/** @typedef {import('./lib/eval.js').EvalOptions} EvalOptions */
 import { formatDoctorReport, getDoctorReport } from "./lib/doctor.js";
 import { inspectRepo } from "./lib/repo.js";
 import { formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
@@ -36,6 +55,7 @@ import { generateDataAccessReport } from "./lib/data-access.js";
 import { getAgentTools } from "./lib/agent-tools.js";
 import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
 
+/** @type {Record<string, ((parsed: CliArgs) => void | Promise<void>) | undefined>} */
 const commandHandlers = {
   doctor: handleDoctor,
   repo: handleRepo,
@@ -91,6 +111,7 @@ async function main(argv = process.argv.slice(2)) {
   }
 }
 
+/** @param {CliArgs} parsed */
 async function handleDoctor(parsed) {
   const report = getDoctorReport();
   if (parsed.flags.json) {
@@ -101,12 +122,17 @@ async function handleDoctor(parsed) {
   printText(formatDoctorReport(report, { emoji: emojiPreference(parsed) }));
 }
 
+/**
+ * @param {CliArgs} parsed
+ * @returns {boolean | undefined}
+ */
 function emojiPreference(parsed) {
   if (parsed.flags.no_emoji) return false;
   if (parsed.flags.emoji) return true;
   return undefined;
 }
 
+/** @param {CliArgs} parsed */
 async function handleRepo(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = inspectRepo(repoPath);
@@ -118,6 +144,7 @@ async function handleRepo(parsed) {
   printText(formatRepoSummary(result));
 }
 
+/** @param {CliArgs} parsed */
 async function handleDiscover(parsed) {
   const roots = parsed.positionals.length ? parsed.positionals : ["."];
   const result = discoverRepositories(roots, {
@@ -133,6 +160,7 @@ async function handleDiscover(parsed) {
   printText(formatDiscoverSummary(result));
 }
 
+/** @param {CliArgs} parsed */
 async function handleIndex(parsed) {
   const repoPaths = parsed.positionals.length ? parsed.positionals : ["."];
   const result = indexRepositories(repoPaths, {
@@ -156,6 +184,7 @@ async function handleIndex(parsed) {
   }
 }
 
+/** @param {CliArgs} parsed */
 async function handleCatalog(parsed) {
   const result = listCatalog({
     catalog: parsed.flags.catalog,
@@ -169,6 +198,7 @@ async function handleCatalog(parsed) {
   printText(formatCatalogSummary(result));
 }
 
+/** @param {CliArgs} parsed */
 async function handleSearch(parsed) {
   const query = parsed.positionals.join(" ").trim();
   const result = searchCatalog(query, {
@@ -185,6 +215,7 @@ async function handleSearch(parsed) {
   printText(formatSearchResults(result));
 }
 
+/** @param {CliArgs} parsed */
 async function handleContext(parsed) {
   const query = parsed.positionals.join(" ").trim();
   const result = generateContextPack(query, {
@@ -206,6 +237,7 @@ async function handleContext(parsed) {
   printText(result.markdown);
 }
 
+/** @param {CliArgs} parsed */
 async function handleImpact(parsed) {
   let repoPath;
   let query;
@@ -236,17 +268,21 @@ async function handleImpact(parsed) {
     return;
   }
 
-  printText(formatImpactTerminal(result.data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  printText(formatImpactTerminal(result.data, (/** @type {object} */ opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
 }
 
+/** @param {CliArgs} parsed */
 async function handlePass(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
-  const data = evaluateLocal(repoPath, {
-    base: parsed.flags.base,
-    policy: parsed.flags.policy,
-    governance: parsed.flags.governance,
-    request: parsed.flags.request,
-  });
+  // evaluateLocal returns a loosely-typed record; it is a PassData at runtime.
+  const data = /** @type {PassData} */ (
+    evaluateLocal(repoPath, {
+      base: parsed.flags.base,
+      policy: parsed.flags.policy,
+      governance: parsed.flags.governance,
+      request: parsed.flags.request,
+    })
+  );
 
   if (parsed.flags.json) {
     printJson(data);
@@ -261,17 +297,21 @@ async function handlePass(parsed) {
     return;
   }
 
-  printText(formatPassTerminal(data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  printText(formatPassTerminal(data, (/** @type {object} */ opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
 
+/** @param {CliArgs} parsed */
 async function handlePassPr(parsed) {
   const selector = parsed.positionals[0] ?? "";
-  const data = await evaluatePR(parsed.flags.path ?? ".", selector, {
-    policy: parsed.flags.policy,
-    governance: parsed.flags.governance,
-    request: parsed.flags.request,
-  });
+  // evaluatePR returns a loosely-typed record; it is a PassPrData at runtime.
+  const data = /** @type {PassPrData} */ (
+    await evaluatePR(parsed.flags.path ?? ".", selector, {
+      policy: parsed.flags.policy,
+      governance: parsed.flags.governance,
+      request: parsed.flags.request,
+    })
+  );
 
   if (parsed.flags.json) {
     printJson(data);
@@ -286,7 +326,7 @@ async function handlePassPr(parsed) {
     return;
   }
 
-  printText(formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  printText(formatPassPrTerminal(data, (/** @type {object} */ opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
 
@@ -294,6 +334,7 @@ async function handlePassPr(parsed) {
 // local gate (no --pr) and to `pass-pr` for the GitHub gate (--pr <selector>),
 // mirroring the review_gate MCP tool's local-vs-PR dispatch. `pass` and
 // `pass-pr` remain available as legacy aliases.
+/** @param {CliArgs} parsed */
 async function handleGate(parsed) {
   const selector = parsed.flags.pr;
   if (selector && selector !== true) {
@@ -306,6 +347,7 @@ async function handleGate(parsed) {
   return handlePass(parsed);
 }
 
+/** @param {CliArgs} parsed */
 async function handleReview(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const trailingRequest = parsed.positionals.slice(1).join(" ").trim();
@@ -325,10 +367,13 @@ async function handleReview(parsed) {
     return;
   }
 
-  printText(formatReviewTerminal(data, (opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  printText(
+    formatReviewTerminal(/** @type {ReviewData} */ (data), (/** @type {object} */ opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })),
+  );
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
 
+/** @param {CliArgs} parsed */
 async function handleInstall(parsed) {
   const result = installDevContext({
     global: parsed.flags.global,
@@ -349,6 +394,7 @@ async function handleInstall(parsed) {
   }
 }
 
+/** @param {CliArgs} parsed */
 async function handleMap(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateCodeMap(repoPath, {
@@ -369,13 +415,17 @@ async function handleMap(parsed) {
   printText(formatCodeMapMarkdown(result));
 }
 
+/** @param {CliArgs} parsed */
 async function handleStructure(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
-  const result = generateStructure(repoPath, {
-    out: parsed.flags.out,
-    pattern: parsed.flags.pattern,
-    exclude: parsed.flags.exclude,
-  });
+  // generateStructure returns an opaque `object`; describe the fields used here.
+  const result = /** @type {{ ok: boolean, error?: string, command?: string, installHint?: string, outputPath?: string }} */ (
+    generateStructure(repoPath, {
+      out: parsed.flags.out,
+      pattern: parsed.flags.pattern,
+      exclude: parsed.flags.exclude,
+    })
+  );
 
   if (parsed.flags.json) {
     printJson(result);
@@ -397,16 +447,22 @@ async function handleStructure(parsed) {
   printText(`Structure generated: ${result.outputPath}`);
 }
 
+/** @param {CliArgs} parsed */
 async function handleDeps(parsed) {
   const packageName = parsed.positionals[0];
   if (!packageName) {
     throw new Error("deps requires a package name, for example: repoctx deps zod --query parse");
   }
 
-  const result = inspectDependency(packageName, {
-    query: parsed.flags.query,
-    limit: Number(parsed.flags.limit ?? 25),
-  });
+  // inspectDependency is declared to return an opaque `object`; describe the
+  // ok-vs-error fields the CLI reads off it.
+  const result =
+    /** @type {{ ok: boolean, packageName: string, sourcePath?: string, query?: string, matches?: { file: string, line: number, text: string }[], error?: string, installHint?: string }} */ (
+      inspectDependency(packageName, {
+        query: parsed.flags.query,
+        limit: Number(parsed.flags.limit ?? 25),
+      })
+    );
 
   if (parsed.flags.json) {
     printJson(result);
@@ -434,6 +490,7 @@ async function handleDeps(parsed) {
   printText(lines.join("\n"));
 }
 
+/** @param {CliArgs} parsed */
 async function handleMatrix(parsed) {
   const matrix = getToolMatrix();
   if (parsed.flags.json) {
@@ -449,6 +506,7 @@ async function handleMatrix(parsed) {
   printText(["# Tool Evaluation Matrix", "", ...rows].join("\n"));
 }
 
+/** @param {CliArgs} parsed */
 async function handleInit(parsed) {
   const targetPath = parsed.positionals[0] ?? ".";
   const result = initProject(targetPath, {
@@ -470,6 +528,7 @@ async function handleMcp() {
   await startMcpServer();
 }
 
+/** @param {CliArgs} parsed */
 async function handlePr(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generatePrReview(repoPath, {
@@ -494,6 +553,7 @@ async function handlePr(parsed) {
   printText([result.markdown, formatCommentResult(result.data.comment)].filter(Boolean).join("\n"));
 }
 
+/** @param {CliArgs} parsed */
 async function handleReport(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateReport(repoPath);
@@ -512,6 +572,7 @@ async function handleReport(parsed) {
   printText(formatReportTerminal(result.data, { columns: process.stdout.columns }));
 }
 
+/** @param {CliArgs} parsed */
 async function handleWorkspace(parsed) {
   if (parsed.positionals.length < 2) {
     throw new Error("workspace requires at least two repo paths, for example: repoctx workspace ../web ../api");
@@ -533,6 +594,7 @@ async function handleWorkspace(parsed) {
   printText(result.markdown);
 }
 
+/** @param {CliArgs} parsed */
 async function handleHarness(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateHarness(repoPath, {
@@ -553,6 +615,7 @@ async function handleHarness(parsed) {
   printText(result.markdown);
 }
 
+/** @param {CliArgs} parsed */
 async function handleEval(parsed) {
   // --accuracy runs the labeled corpus (retrieval precision + risk
   // classification) instead of the token-savings eval, and exits non-zero
@@ -567,13 +630,14 @@ async function handleEval(parsed) {
     } else {
       printText(result.markdown);
     }
-    if (!result.data.passed) {
+    if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
     }
     return;
   }
 
   const repoPath = parsed.positionals[0] ?? ".";
+  /** @type {EvalOptions} */
   const options = {};
   if (parsed.flags.query) options.query = parsed.flags.query;
   if (parsed.flags.naive_cap) options.naiveFileCap = Number(parsed.flags.naive_cap);
@@ -591,6 +655,7 @@ async function handleEval(parsed) {
   printText(result.markdown);
 }
 
+/** @param {CliArgs} parsed */
 async function handleDataAccess(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateDataAccessReport(repoPath);
@@ -606,6 +671,7 @@ async function handleDataAccess(parsed) {
   printText(result.markdown);
 }
 
+/** @param {CliArgs} parsed */
 async function handleAgentTools(parsed) {
   const tools = getAgentTools();
   if (parsed.flags.json || !parsed.flags.markdown) {
@@ -620,7 +686,11 @@ async function handleAgentTools(parsed) {
   printText(lines.join("\n"));
 }
 
-function handleHelp() {
+/**
+ * @param {CliArgs} [_parsed]
+ * @returns {void}
+ */
+function handleHelp(_parsed) {
   printHelp();
   // v2 supplement: the canonical merge-gate command plus the canonical-vs-legacy
   // mapping. The base usage block lives in output.js; this keeps the v2 surface
@@ -646,6 +716,10 @@ function handleHelp() {
   );
 }
 
+/**
+ * @param {{ ok?: boolean, action?: string, url?: string, id?: string | number, error?: string } | null | undefined} comment
+ * @returns {string | undefined}
+ */
 function formatCommentResult(comment) {
   if (!comment) {
     return undefined;
@@ -656,6 +730,10 @@ function formatCommentResult(comment) {
   return `PR comment skipped: ${comment.error}`;
 }
 
+/**
+ * @param {ReturnType<typeof inspectRepo>} result
+ * @returns {string}
+ */
 function formatRepoSummary(result) {
   return [
     `# Repo: ${result.root}`,

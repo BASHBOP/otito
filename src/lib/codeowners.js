@@ -3,11 +3,35 @@
 // last-rule-wins, owners are split into direct users (@alice), teams
 // (@org/team), and external mentions (email addresses, etc.).
 
+/// <reference types="node" />
+
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * @typedef {Object} Rule
+ * @property {string} pattern
+ * @property {string[]} owners
+ */
+
+/**
+ * @typedef {Object} Ruleset
+ * @property {string} path
+ * @property {Rule[]} rules
+ */
+
+/**
+ * @typedef {Object} OwnerMatch
+ * @property {string} path
+ * @property {string[]} owners
+ */
+
 const CANDIDATE_PATHS = [".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"];
 
+/**
+ * @param {string} root
+ * @returns {{ ok: true, ruleset: Ruleset } | { ok: false, error?: unknown, missing?: boolean }}
+ */
 export function load(root) {
   for (const candidate of CANDIDATE_PATHS) {
     const absolute = path.join(root, candidate);
@@ -15,14 +39,19 @@ export function load(root) {
       const data = fs.readFileSync(absolute, "utf8");
       return { ok: true, ruleset: { path: candidate, rules: parse(data) } };
     } catch (error) {
-      if (error.code === "ENOENT") continue;
+      if (/** @type {NodeJS.ErrnoException} */ (error).code === "ENOENT") continue;
       return { ok: false, error };
     }
   }
   return { ok: false, missing: true };
 }
 
+/**
+ * @param {string} text
+ * @returns {Rule[]}
+ */
 export function parse(text) {
+  /** @type {Rule[]} */
   const rules = [];
   for (const rawLine of String(text ?? "").split(/\r?\n/)) {
     const trimmed = stripComment(rawLine).trim();
@@ -35,7 +64,13 @@ export function parse(text) {
   return rules;
 }
 
+/**
+ * @param {Ruleset} ruleset
+ * @param {string[]} files
+ * @returns {OwnerMatch[]}
+ */
 export function ownedFiles(ruleset, files) {
+  /** @type {OwnerMatch[]} */
   const owned = [];
   for (const file of files ?? []) {
     const match = matchFile(ruleset, file);
@@ -44,7 +79,13 @@ export function ownedFiles(ruleset, files) {
   return owned;
 }
 
+/**
+ * @param {Ruleset} ruleset
+ * @param {string} file
+ * @returns {OwnerMatch}
+ */
 export function matchFile(ruleset, file) {
+  /** @type {OwnerMatch} */
   let matched = { path: normalize(file), owners: [] };
   for (const rule of ruleset.rules ?? []) {
     if (matchPattern(rule.pattern, file)) {
@@ -54,6 +95,10 @@ export function matchFile(ruleset, file) {
   return matched;
 }
 
+/**
+ * @param {string[]} owners
+ * @returns {string[]}
+ */
 export function directUserOwners(owners) {
   return (owners ?? [])
     .map((owner) => String(owner).trim())
@@ -61,7 +106,12 @@ export function directUserOwners(owners) {
     .map((owner) => owner.replace(/^@/, ""));
 }
 
+/**
+ * @param {string[]} owners
+ * @returns {{ owner: string, org: string, slug: string }[]}
+ */
 export function teamOwners(owners) {
+  /** @type {{ owner: string, org: string, slug: string }[]} */
   const teams = [];
   for (const raw of owners ?? []) {
     const owner = String(raw).trim();
@@ -77,6 +127,10 @@ export function teamOwners(owners) {
   return teams;
 }
 
+/**
+ * @param {string[]} owners
+ * @returns {boolean}
+ */
 export function hasExternalOwner(owners) {
   return (owners ?? []).some((owner) => {
     const trimmed = String(owner).trim();
@@ -84,6 +138,10 @@ export function hasExternalOwner(owners) {
   });
 }
 
+/**
+ * @param {string[]} owners
+ * @returns {boolean}
+ */
 export function hasTeamOrExternalOwner(owners) {
   return (owners ?? []).some((owner) => {
     const trimmed = String(owner).trim();
@@ -92,6 +150,10 @@ export function hasTeamOrExternalOwner(owners) {
   });
 }
 
+/**
+ * @param {string} line
+ * @returns {string}
+ */
 function stripComment(line) {
   let escaped = false;
   for (let i = 0; i < line.length; i += 1) {
@@ -108,6 +170,11 @@ function stripComment(line) {
   return line;
 }
 
+/**
+ * @param {string} rawPattern
+ * @param {string} file
+ * @returns {boolean}
+ */
 function matchPattern(rawPattern, file) {
   const normalizedFile = normalize(file);
   let pattern = String(rawPattern ?? "")
@@ -129,6 +196,10 @@ function matchPattern(rawPattern, file) {
   return regexMatch(expr, normalizedFile);
 }
 
+/**
+ * @param {string} pattern
+ * @returns {string}
+ */
 function globRegex(pattern) {
   let out = "";
   for (let i = 0; i < pattern.length; i += 1) {
@@ -151,10 +222,19 @@ function globRegex(pattern) {
   return out;
 }
 
+/**
+ * @param {string} char
+ * @returns {string}
+ */
 function escapeRegex(char) {
   return /[\\^$.*+?()[\]{}|]/.test(char) ? `\\${char}` : char;
 }
 
+/**
+ * @param {string} expr
+ * @param {string} value
+ * @returns {boolean}
+ */
 function regexMatch(expr, value) {
   try {
     return new RegExp(expr).test(value);
@@ -163,6 +243,10 @@ function regexMatch(expr, value) {
   }
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function normalize(value) {
   let v = String(value ?? "")
     .trim()
@@ -172,8 +256,13 @@ function normalize(value) {
   return v.replace(/^\.\//, "");
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function pathClean(value) {
   const parts = value.split("/").filter((part) => part && part !== ".");
+  /** @type {string[]} */
   const out = [];
   for (const part of parts) {
     if (part === "..") {

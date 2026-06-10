@@ -5,8 +5,23 @@ const sqlVerbAlternation =
 const prismaOpRegex =
   /\b(?:prisma|db|tx|ctx\.db|this\.db)\.([a-z][a-zA-Z0-9_]*)\.(findUnique|findUniqueOrThrow|findFirst|findFirstOrThrow|findMany|create|createMany|update|updateMany|upsert|delete|deleteMany|count|aggregate|groupBy)\b/g;
 
+/**
+ * A detected data-access site (raw SQL string or Prisma ORM call).
+ * @typedef {object} DataAccessHit
+ * @property {"sql" | "prisma"} source
+ * @property {string} op
+ * @property {string | undefined} table
+ * @property {number} line
+ * @property {string} snippet
+ */
+
+/**
+ * @param {string} text
+ * @returns {DataAccessHit[]}
+ */
 export function extractDataAccess(text) {
   if (typeof text !== "string" || text.length === 0) return [];
+  /** @type {DataAccessHit[]} */
   const out = [];
   const seen = new Set();
 
@@ -53,7 +68,13 @@ export function extractDataAccess(text) {
   return out;
 }
 
+/**
+ * @param {string} query
+ * @param {string} op
+ * @returns {string | undefined}
+ */
 function inferSqlTable(query, op) {
+  /** @type {RegExpMatchArray | null} */
   let match;
   if (op === "SELECT" || op === "DELETE") {
     match = query.match(/\bFROM\s+([A-Za-z_][\w.]*)/i);

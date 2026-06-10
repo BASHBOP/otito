@@ -2,6 +2,24 @@ import fs from "node:fs";
 import path from "node:path";
 import { commandExists, runCommand } from "./tools.js";
 
+/**
+ * @typedef {object} DependencyMatch
+ * @property {string} file
+ * @property {number} line
+ * @property {string} text
+ */
+
+/**
+ * @typedef {object} InspectDependencyOptions
+ * @property {string} [query] Search query to run against the resolved source tree.
+ * @property {number} [limit] Maximum matches to return.
+ */
+
+/**
+ * @param {string} packageName
+ * @param {InspectDependencyOptions} [options]
+ * @returns {object}
+ */
 export function inspectDependency(packageName, options = {}) {
   const installed = commandExists("opensrc");
   if (!installed.available) {
@@ -24,6 +42,7 @@ export function inspectDependency(packageName, options = {}) {
   }
 
   const sourcePath = pathResult.stdout.trim();
+  /** @type {{ ok: boolean, packageName: string, sourcePath: string, query?: string, matches?: DependencyMatch[] }} */
   const result = {
     ok: true,
     packageName,
@@ -38,6 +57,12 @@ export function inspectDependency(packageName, options = {}) {
   return result;
 }
 
+/**
+ * @param {string} sourcePath
+ * @param {string} query
+ * @param {number} [limit]
+ * @returns {DependencyMatch[]}
+ */
 export function searchSource(sourcePath, query, limit = 25) {
   const rg = commandExists("rg");
   if (rg.available) {
@@ -50,6 +75,11 @@ export function searchSource(sourcePath, query, limit = 25) {
   return fallbackSearch(sourcePath, query, limit);
 }
 
+/**
+ * @param {string} output
+ * @param {string} sourcePath
+ * @returns {DependencyMatch[]}
+ */
 function parseRipgrep(output, sourcePath) {
   return output
     .split("\n")
@@ -64,12 +94,23 @@ function parseRipgrep(output, sourcePath) {
     });
 }
 
+/**
+ * @param {string} sourcePath
+ * @param {string} query
+ * @param {number} limit
+ * @returns {DependencyMatch[]}
+ */
 function fallbackSearch(sourcePath, query, limit) {
+  /** @type {DependencyMatch[]} */
   const results = [];
   const lowerQuery = query.toLowerCase();
   visit(sourcePath);
   return results;
 
+  /**
+   * @param {string} current
+   * @returns {void}
+   */
   function visit(current) {
     if (results.length >= limit) {
       return;
@@ -116,6 +157,10 @@ function fallbackSearch(sourcePath, query, limit) {
   }
 }
 
+/**
+ * @param {string} filePath
+ * @returns {string}
+ */
 function safeRead(filePath) {
   try {
     const stats = fs.statSync(filePath);

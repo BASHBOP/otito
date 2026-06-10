@@ -1,10 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/**
+ * @param {string} text
+ * @returns {void}
+ */
 export function printText(text) {
   process.stdout.write(`${text}\n`);
 }
 
+/**
+ * @param {unknown} value
+ * @returns {void}
+ */
 export function printJson(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
@@ -64,6 +72,11 @@ Examples:
 `);
 }
 
+/**
+ * @param {string} targetPath
+ * @param {string | NodeJS.ArrayBufferView} contents
+ * @returns {{ path: string }}
+ */
 export function writeArtifact(targetPath, contents) {
   const absolutePath = path.resolve(targetPath);
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });

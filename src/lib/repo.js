@@ -54,6 +54,7 @@ const languageByExtension = new Map([
 
 const maxInspectedFiles = 200;
 
+/** @param {string} [repoPath] */
 export function inspectRepo(repoPath = ".") {
   const root = path.resolve(repoPath);
   if (!fs.existsSync(root)) {
@@ -88,6 +89,11 @@ export function inspectRepo(repoPath = ".") {
 // large monorepo (long build/test command bodies). Drop the bodies by default
 // so an agent still sees the script NAMES (via scriptNames) but pays no byte
 // cost for command text, and only keep the full map when explicitly asked.
+/**
+ * @param {Record<string, unknown> | null | undefined} result
+ * @param {boolean} includeScripts
+ * @returns {Record<string, unknown> | null | undefined}
+ */
 export function gateInspectScripts(result, includeScripts) {
   if (includeScripts || !result || typeof result !== "object") {
     return result;
@@ -96,7 +102,12 @@ export function gateInspectScripts(result, includeScripts) {
   return rest;
 }
 
+/**
+ * @param {string} language
+ * @returns {number}
+ */
 function languagePriority(language) {
+  /** @type {Record<string, number>} */
   const priorities = {
     TypeScript: 1,
     JavaScript: 2,
@@ -114,11 +125,17 @@ function languagePriority(language) {
   return priorities[language] ?? 10;
 }
 
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
 export function walk(root) {
+  /** @type {string[]} */
   const results = [];
   visit(root);
   return results.sort();
 
+  /** @param {string} current */
   function visit(current) {
     const entries = safeReadDir(current);
     for (const entry of entries) {
@@ -138,6 +155,10 @@ export function walk(root) {
   }
 }
 
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
 export function listRepoFiles(root) {
   const gitFiles = gitTrackedAndUntrackedFiles(root);
   if (gitFiles.length) {
@@ -147,6 +168,10 @@ export function listRepoFiles(root) {
   return walk(root);
 }
 
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
 function gitTrackedAndUntrackedFiles(root) {
   const result = runCommand("git", ["ls-files", "--cached", "--others", "--exclude-standard"], {
     cwd: root,
@@ -156,7 +181,9 @@ function gitTrackedAndUntrackedFiles(root) {
     return [];
   }
 
+  /** @type {Set<string>} */
   const seen = new Set();
+  /** @type {string[]} */
   const files = [];
   for (const file of result.stdout
     .split("\n")
@@ -171,6 +198,10 @@ function gitTrackedAndUntrackedFiles(root) {
   return files.sort();
 }
 
+/**
+ * @param {string} fileName
+ * @returns {boolean}
+ */
 function isIgnoredFile(fileName) {
   const extension = path.extname(fileName).toLowerCase();
   return (
@@ -184,10 +215,18 @@ function isIgnoredFile(fileName) {
   );
 }
 
+/**
+ * @param {string} filePath
+ * @returns {boolean}
+ */
 function isIgnoredRepoPath(filePath) {
   return filePath.split(path.sep).some((segment) => ignoredDirs.has(segment) || isIgnoredFile(segment));
 }
 
+/**
+ * @param {string} directory
+ * @returns {import('node:fs').Dirent[]}
+ */
 function safeReadDir(directory) {
   try {
     return fs.readdirSync(directory, { withFileTypes: true });
@@ -196,6 +235,10 @@ function safeReadDir(directory) {
   }
 }
 
+/**
+ * @param {string} filePath
+ * @returns {any}
+ */
 function readJsonIfExists(filePath) {
   if (!fs.existsSync(filePath)) {
     return undefined;
@@ -207,7 +250,12 @@ function readJsonIfExists(filePath) {
   }
 }
 
+/**
+ * @param {string[]} files
+ * @returns {Map<string, number>}
+ */
 function countLanguages(files) {
+  /** @type {Map<string, number>} */
   const counts = new Map();
   for (const file of files) {
     const language = languageByExtension.get(path.extname(file));
@@ -219,6 +267,7 @@ function countLanguages(files) {
   return counts;
 }
 
+/** @param {any} packageJson */
 function summarizePackage(packageJson) {
   if (!packageJson) {
     return undefined;
@@ -234,7 +283,13 @@ function summarizePackage(packageJson) {
   };
 }
 
+/**
+ * @param {string} root
+ * @param {any} packageJson
+ * @returns {string[]}
+ */
 function detectPackageManagers(root, packageJson) {
+  /** @type {[string, string][]} */
   const checks = [
     ["package-lock.json", "npm"],
     ["pnpm-lock.yaml", "pnpm"],
@@ -247,6 +302,7 @@ function detectPackageManagers(root, packageJson) {
     ["go.mod", "go"],
     ["Gemfile", "bundler"],
   ];
+  /** @type {Set<string>} */
   const managers = new Set();
   const declaredManager = parsePackageManager(packageJson?.packageManager);
   if (declaredManager) {
@@ -266,6 +322,10 @@ function detectPackageManagers(root, packageJson) {
   return [...managers];
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string | undefined}
+ */
 function parsePackageManager(value) {
   if (typeof value !== "string" || !value.trim()) {
     return undefined;
@@ -273,7 +333,14 @@ function parsePackageManager(value) {
   return value.split("@")[0];
 }
 
+/**
+ * @param {string} root
+ * @param {string[]} files
+ * @param {any} packageJson
+ * @returns {string[]}
+ */
 function detectEntrypoints(root, files, packageJson) {
+  /** @type {Set<string>} */
   const candidates = new Set();
   for (const key of ["main", "module", "types"]) {
     if (typeof packageJson?.[key] === "string") {
@@ -308,6 +375,10 @@ function detectEntrypoints(root, files, packageJson) {
   return [...candidates];
 }
 
+/**
+ * @param {any} packageJson
+ * @returns {string[]}
+ */
 function packageBinEntrypoints(packageJson) {
   const bin = packageJson?.bin;
   if (typeof bin === "string") {
@@ -321,15 +392,24 @@ function packageBinEntrypoints(packageJson) {
     .map(normalizePackagePath);
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 function normalizePackagePath(value) {
   return String(value).replace(/^\.\//, "");
 }
 
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
 function detectImportantDirectories(root) {
   const candidates = ["src", "app", "apps", "packages", "pages", "lib", "server", "client", "components", "tests", "test", "docs", "scripts", "bin", "cli"];
   return candidates.filter((dir) => fs.existsSync(path.join(root, dir)));
 }
 
+/** @param {string} root */
 function getGitInfo(root) {
   const result = runCommand("git", ["rev-parse", "--show-toplevel"], { cwd: root, timeout: 5000 });
   if (!result.ok) {

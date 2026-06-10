@@ -5,6 +5,36 @@ const defaultToolRepo = "nugehs/repoctx";
 const defaultToolRef = "main";
 const workflowPath = ".github/workflows/repoctx-ci.yml";
 
+/**
+ * @typedef {object} InitOptions
+ * @property {boolean} [force] Overwrite existing scaffold files.
+ * @property {string} [toolRepo] repoctx tool repository (owner/name).
+ * @property {string} [toolRef] repoctx tool git ref.
+ * @property {boolean} [noWorkflow] Skip writing the CI workflow file.
+ */
+
+/**
+ * @typedef {{ action: "created" | "updated" | "skipped", path: string }} ScaffoldOperation
+ */
+
+/**
+ * @typedef {object} InitResult
+ * @property {boolean} ok
+ * @property {string} root
+ * @property {boolean} force
+ * @property {string} toolRepo
+ * @property {string} toolRef
+ * @property {string[]} created
+ * @property {string[]} updated
+ * @property {string[]} skipped
+ * @property {string[]} nextSteps
+ */
+
+/**
+ * @param {string} [targetPath]
+ * @param {InitOptions} [options]
+ * @returns {InitResult}
+ */
 export function initProject(targetPath = ".", options = {}) {
   const root = path.resolve(targetPath);
   if (!fs.existsSync(root)) {
@@ -14,6 +44,7 @@ export function initProject(targetPath = ".", options = {}) {
   const force = Boolean(options.force);
   const toolRepo = String(options.toolRepo ?? defaultToolRepo);
   const toolRef = String(options.toolRef ?? defaultToolRef);
+  /** @type {ScaffoldOperation[]} */
   const operations = [];
 
   writeScaffoldFile(root, ".dev-context/README.md", contextReadme(toolRepo, toolRef), { force, operations });
@@ -44,6 +75,10 @@ export function initProject(targetPath = ".", options = {}) {
   };
 }
 
+/**
+ * @param {InitResult} result
+ * @returns {string}
+ */
 export function formatInitSummary(result) {
   const lines = [`repoctx initialized: ${result.root}`, ""];
   lines.push(formatList("Created", result.created));
@@ -56,6 +91,13 @@ export function formatInitSummary(result) {
   return lines.join("\n");
 }
 
+/**
+ * @param {string} root
+ * @param {string} relativePath
+ * @param {string} contents
+ * @param {{ force: boolean, operations: ScaffoldOperation[] }} context
+ * @returns {void}
+ */
 function writeScaffoldFile(root, relativePath, contents, { force, operations }) {
   const absolutePath = path.join(root, relativePath);
   const exists = fs.existsSync(absolutePath);
@@ -73,6 +115,12 @@ function writeScaffoldFile(root, relativePath, contents, { force, operations }) 
 // .dev-context/index.json cache into the tree, dirtying git status. Add the
 // directory to .gitignore so that never happens. Idempotent: skip when the
 // entry (or a covering pattern) is already present, create the file if absent.
+/**
+ * @param {string} root
+ * @param {string} entry
+ * @param {ScaffoldOperation[]} operations
+ * @returns {void}
+ */
 function ensureGitignoreEntry(root, entry, operations) {
   const relativePath = ".gitignore";
   const absolutePath = path.join(root, relativePath);
@@ -89,6 +137,11 @@ function ensureGitignoreEntry(root, entry, operations) {
   operations.push({ action: exists ? "updated" : "created", path: relativePath });
 }
 
+/**
+ * @param {string} contents
+ * @param {string} entry
+ * @returns {boolean}
+ */
 function gitignoreCovers(contents, entry) {
   const bare = entry.replace(/\/+$/, "");
   return contents
@@ -103,6 +156,11 @@ function gitignoreCovers(contents, entry) {
     });
 }
 
+/**
+ * @param {string} title
+ * @param {string[]} values
+ * @returns {string}
+ */
 function formatList(title, values) {
   if (!values.length) {
     return `${title}: none`;
@@ -110,6 +168,11 @@ function formatList(title, values) {
   return [title, ...values.map((value) => `- ${value}`)].join("\n");
 }
 
+/**
+ * @param {string} toolRepo
+ * @param {string} toolRef
+ * @returns {string}
+ */
 function contextReadme(toolRepo, toolRef) {
   return `# repoctx
 
@@ -133,6 +196,11 @@ repoctx pr . --base origin/main --out .dev-context/pr-review.md
 `;
 }
 
+/**
+ * @param {string} toolRepo
+ * @param {string} toolRef
+ * @returns {string}
+ */
 function workflowTemplate(toolRepo, toolRef) {
   return `name: repoctx CI
 

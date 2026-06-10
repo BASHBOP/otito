@@ -3,6 +3,7 @@ import { tools } from "./mcp.js";
 // CLI command that backs each MCP tool, when one exists. Tools without an entry
 // here are surfaced over MCP only, so their invocation is reported as the mcp
 // tools/call form instead of a bare command.
+/** @type {Record<string, string>} */
 const cliCommandByTool = {
   repo_inspect: "repoctx repo <path> --json",
   repo_map: "repoctx map <path> --json",
@@ -28,6 +29,9 @@ export function getAgentTools() {
   };
 }
 
+/**
+ * @param {import('./mcp.js').McpTool} tool
+ */
 function deriveAgentTool(tool) {
   return {
     name: tool.name,
@@ -38,9 +42,23 @@ function deriveAgentTool(tool) {
   };
 }
 
+/**
+ * A minimal JSON-schema fragment as used by the MCP tool definitions.
+ * @typedef {object} JsonSchemaNode
+ * @property {string} [type]
+ * @property {JsonSchemaNode} [items]
+ * @property {Record<string, JsonSchemaNode>} [properties]
+ * @property {string[]} [required]
+ */
+
+/**
+ * @param {JsonSchemaNode | undefined} inputSchema
+ * @returns {Record<string, string>}
+ */
 function deriveInput(inputSchema) {
   const properties = inputSchema?.properties ?? {};
   const required = new Set(inputSchema?.required ?? []);
+  /** @type {Record<string, string>} */
   const input = {};
   for (const [name, schema] of Object.entries(properties)) {
     const optional = required.has(name) ? "" : "?";
@@ -49,6 +67,10 @@ function deriveInput(inputSchema) {
   return input;
 }
 
+/**
+ * @param {JsonSchemaNode | undefined} schema
+ * @returns {string}
+ */
 function schemaType(schema) {
   if (schema?.type === "array") {
     return `${schemaType(schema.items)}[]`;

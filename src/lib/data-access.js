@@ -3,6 +3,29 @@ import { generateCodeMap } from "./code-map.js";
 import { inspectRepo } from "./repo.js";
 import { estimateTokens } from "./tokens.js";
 
+/** @typedef {import('./index-cache.js').CodeMapFile} CodeMapFile */
+/** @typedef {import('./code-map/data-access.js').DataAccessHit} DataAccessHit */
+
+/**
+ * A data-access hit annotated with the owning file's repo-relative path.
+ * @typedef {DataAccessHit & { path: string }} Hit
+ */
+
+/**
+ * One `{ key, count }` aggregation row.
+ * @typedef {{ key: string, count: number }} AggregateRow
+ */
+
+/**
+ * @typedef {object} DataAccessReportOptions
+ * @property {number} [maxSymbols] Per-file symbol cap forwarded to generateCodeMap.
+ */
+
+/**
+ * @param {string} [repoPath]
+ * @param {DataAccessReportOptions} [options]
+ * @returns {{ data: object, markdown: string }}
+ */
 export function generateDataAccessReport(repoPath = ".", options = {}) {
   const repo = inspectRepo(repoPath);
   const map = generateCodeMap(repo.root, { maxSymbols: options.maxSymbols });
@@ -12,6 +35,7 @@ export function generateDataAccessReport(repoPath = ".", options = {}) {
   const bySource = aggregateBy(hits, (h) => h.source);
   const byFile = aggregateByFile(map.files);
 
+  /** @type {Record<string, any> & { tokenEstimate?: { fullJson: number, markdown: number } }} */
   const data = {
     ok: true,
     generatedAt: new Date().toISOString(),
@@ -42,17 +66,29 @@ export function generateDataAccessReport(repoPath = ".", options = {}) {
   return { data, markdown };
 }
 
+/**
+ * @param {CodeMapFile[]} files
+ * @returns {Hit[]}
+ */
 function collectHits(files) {
+  /** @type {Hit[]} */
   const hits = [];
   for (const file of files) {
     for (const access of file.dataAccess ?? []) {
-      hits.push({ ...access, path: file.path });
+      hits.push({ .../** @type {DataAccessHit} */ (access), path: file.path });
     }
   }
   return hits;
 }
 
+/**
+ * @template T
+ * @param {T[]} items
+ * @param {(item: T) => string} keyFn
+ * @returns {AggregateRow[]}
+ */
 function aggregateBy(items, keyFn) {
+  /** @type {Map<string, number>} */
   const counts = new Map();
   for (const item of items) {
     const key = keyFn(item);
@@ -61,26 +97,39 @@ function aggregateBy(items, keyFn) {
   return [...counts.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
 }
 
+/**
+ * @param {CodeMapFile[]} files
+ * @returns {object[]}
+ */
 function aggregateByFile(files) {
   return files
     .filter((f) => (f.dataAccess ?? []).length > 0)
-    .map((f) => ({
-      path: f.path,
-      kind: f.kind,
-      hits: f.dataAccess.length,
-      operations: [...new Set(f.dataAccess.map((d) => d.op))].sort(),
-      tables: [...new Set(f.dataAccess.map((d) => d.table).filter(Boolean))].sort(),
-      samples: f.dataAccess.slice(0, 5).map((d) => ({
-        source: d.source,
-        op: d.op,
-        table: d.table,
-        line: d.line,
-        snippet: d.snippet,
-      })),
-    }))
+    .map((f) => {
+      // The shared CodeMapDataAccess typedef is a subset; the records produced
+      // here carry the full DataAccessHit fields (source/op/table/snippet).
+      const accesses = /** @type {DataAccessHit[]} */ (f.dataAccess ?? []);
+      return {
+        path: f.path,
+        kind: f.kind,
+        hits: accesses.length,
+        operations: [...new Set(accesses.map((d) => d.op))].sort(),
+        tables: [...new Set(accesses.map((d) => d.table).filter(Boolean))].sort(),
+        samples: accesses.slice(0, 5).map((d) => ({
+          source: d.source,
+          op: d.op,
+          table: d.table,
+          line: d.line,
+          snippet: d.snippet,
+        })),
+      };
+    })
     .sort((a, b) => b.hits - a.hits || a.path.localeCompare(b.path));
 }
 
+/**
+ * @param {any} data Data-access report payload from generateDataAccessReport.
+ * @returns {string}
+ */
 export function formatDataAccessMarkdown(data) {
   const lines = [
     `# Data-Access Surface: ${data.repo.name}`,
@@ -100,19 +149,19 @@ export function formatDataAccessMarkdown(data) {
     "",
     "| Source | Count |",
     "|---|---:|",
-    ...data.bySource.map((row) => `| ${row.key} | ${row.count} |`),
+    ...data.bySource.map((/** @type {AggregateRow} */ row) => `| ${row.key} | ${row.count} |`),
     "",
     "## By Operation",
     "",
     "| Operation | Count |",
     "|---|---:|",
-    ...data.byOp.map((row) => `| ${row.key} | ${row.count} |`),
+    ...data.byOp.map((/** @type {AggregateRow} */ row) => `| ${row.key} | ${row.count} |`),
     "",
     "## By Table / Model",
     "",
     "| Table | Count |",
     "|---|---:|",
-    ...data.byTable.slice(0, 50).map((row) => `| ${row.key} | ${row.count} |`),
+    ...data.byTable.slice(0, 50).map((/** @type {AggregateRow} */ row) => `| ${row.key} | ${row.count} |`),
     "",
     "## By File",
     "",

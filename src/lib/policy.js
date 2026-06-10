@@ -17,6 +17,7 @@ export const GOVERNANCE = {
   solo: "solo",
 };
 
+/** @type {{ pass: "PASS", warn: "WARN", fail: "FAIL" }} */
 export const STATUS = {
   pass: "PASS",
   warn: "WARN",
@@ -34,17 +35,25 @@ const PROFILE_ALIASES = {
   regulated: PROFILES.highRisk,
 };
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 export function normalizeProfile(value) {
   const key = String(value ?? "")
     .trim()
     .toLowerCase();
-  const profile = PROFILE_ALIASES[key];
+  const profile = /** @type {Record<string, string>} */ (PROFILE_ALIASES)[key];
   if (!profile) {
     throw new Error(`unknown policy profile "${value}"; use "standard", "company", or "high-risk"`);
   }
   return profile;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 export function normalizeGovernance(value) {
   const key = String(value ?? "")
     .trim()
@@ -56,6 +65,10 @@ export function normalizeGovernance(value) {
 
 // Build the Policy profile check. `remote` is true when running in GitHub PR
 // mode (Phase 4); local mode always passes false here.
+/**
+ * @param {{ profile: string, governance: string, files: string[], checks: import('./pass-local.js').Check[], remote: boolean }} params
+ * @returns {import('./pass-local.js').Check}
+ */
 export function policyCheck({ profile, governance, files, checks, remote }) {
   switch (profile) {
     case PROFILES.company:
@@ -72,6 +85,10 @@ export function policyCheck({ profile, governance, files, checks, remote }) {
   }
 }
 
+/**
+ * @param {{ governance: string, checks: import('./pass-local.js').Check[], remote: boolean }} params
+ * @returns {import('./pass-local.js').Check}
+ */
 function companyCheck({ governance, checks, remote }) {
   const issues = companyIssues({ governance, checks, remote });
   if (issues.length > 0) {
@@ -90,6 +107,10 @@ function companyCheck({ governance, checks, remote }) {
   };
 }
 
+/**
+ * @param {{ governance: string, files: string[], checks: import('./pass-local.js').Check[], remote: boolean }} params
+ * @returns {import('./pass-local.js').Check}
+ */
 function highRiskCheck({ governance, files, checks, remote }) {
   const riskFiles = matchRiskPaths(files);
   const issues = companyIssues({ governance, checks, remote });
@@ -121,6 +142,10 @@ function highRiskCheck({ governance, files, checks, remote }) {
   };
 }
 
+/**
+ * @param {{ governance: string, checks: import('./pass-local.js').Check[], remote: boolean }} params
+ * @returns {string[]}
+ */
 function companyIssues({ governance, checks, remote }) {
   const issues = [];
   if (governance === GOVERNANCE.solo) {
@@ -146,7 +171,12 @@ function companyIssues({ governance, checks, remote }) {
 
 // Roll the per-check statuses into a single verdict. FAIL beats WARN beats
 // PASS. Matches pullpass/rules/Verdict.
+/**
+ * @param {import('./pass-local.js').Check[]} checks
+ * @returns {import('./pass-local.js').Verdict}
+ */
 export function aggregateVerdict(checks) {
+  /** @type {import('./pass-local.js').Verdict} */
   let result = STATUS.pass;
   for (const entry of checks) {
     if (entry.status === STATUS.fail) return STATUS.fail;

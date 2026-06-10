@@ -1,7 +1,66 @@
+/// <reference types="node" />
 import path from "node:path";
 import { generateHarness } from "./harness.js";
 import { getCachedCodeMap } from "./index-cache.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
+
+/**
+ * @typedef {import('./index-cache.js').CodeMap} CodeMap
+ * @typedef {import('./index-cache.js').CodeMapFile} CodeMapFile
+ * @typedef {import('./index-cache.js').CodeMapHttpMethod} CodeMapHttpMethod
+ * @typedef {import('./index-cache.js').CodeMapSymbol} CodeMapSymbol
+ */
+
+/**
+ * Parsed task intent derived from the query.
+ * @typedef {object} Intent
+ * @property {string} action
+ * @property {string[]} topics
+ * @property {string[]} hints
+ */
+
+/**
+ * A file selected and scored by the context engine. `imports`/`exports`/`symbols`
+ * are optional because stripEvidence may remove them from the returned packet.
+ * @typedef {object} ScoredFile
+ * @property {{ name: string, root: string }} repo
+ * @property {string} path
+ * @property {string} kind
+ * @property {string} domain
+ * @property {number} score
+ * @property {string[]} reasons
+ * @property {string|null} [route]
+ * @property {string|null} [controllerBasePath]
+ * @property {CodeMapHttpMethod[]} httpMethods
+ * @property {string[]} [imports]
+ * @property {string[]} [exports]
+ * @property {CodeMapSymbol[]} [symbols]
+ */
+
+/**
+ * Per-repo import adjacency built from code-map file imports.
+ * @typedef {object} ImportGraph
+ * @property {Map<string, Set<string>>} importsByPath
+ * @property {Map<string, Set<string>>} importedByPath
+ */
+
+/**
+ * A validation/refresh command surfaced in a context pack.
+ * @typedef {object} EngineCommand
+ * @property {string} command
+ * @property {string} reason
+ * @property {string} [repo]
+ * @property {string} [script]
+ */
+
+/**
+ * Options accepted by generateContextPack.
+ * @typedef {object} ContextPackOptions
+ * @property {number} [limit]
+ * @property {boolean} [includeEvidence]
+ * @property {string[]} [paths]
+ * @property {string} [path]
+ */
 
 const contextEngineVersion = 1;
 const defaultLimit = 8;
@@ -40,6 +99,10 @@ const stopWords = new Set([
 const actionWords = new Set(["add", "build", "change", "create", "debug", "fix", "implement", "refactor", "review", "test", "update"]);
 const importExtensions = ["", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", "/index.ts", "/index.tsx", "/index.js", "/index.jsx"];
 
+/**
+ * @param {string} query
+ * @param {ContextPackOptions} [options]
+ */
 export function generateContextPack(query, options = {}) {
   const normalizedQuery = String(query ?? "").trim();
   if (!normalizedQuery) {
@@ -65,7 +128,7 @@ export function generateContextPack(query, options = {}) {
   const openQuestions = inferOpenQuestions(primaryFiles, commands, intent, usedFallback);
   const sources = inferSources(maps, commands);
 
-  const data = {
+  const data = /** @type {Record<string, any> & { tokenEstimate?: any }} */ ({
     ok: true,
     generatedAt: new Date().toISOString(),
     contextEngineVersion,
@@ -81,7 +144,7 @@ export function generateContextPack(query, options = {}) {
     openQuestions,
     sources,
     agentPrompt: formatAgentPrompt(normalizedQuery, primaryFiles, relatedFiles, tests, commands),
-  };
+  });
 
   data.tokenEstimate = {
     ...estimateTokenSections([
@@ -106,6 +169,9 @@ export function generateContextPack(query, options = {}) {
   };
 }
 
+/**
+ * @param {Record<string, any>} data - The context pack data object built by generateContextPack.
+ */
 export function formatContextPackMarkdown(data) {
   const lines = [
     `# Context Pack: ${data.query}`,
@@ -118,7 +184,9 @@ export function formatContextPackMarkdown(data) {
     "",
     "## Repositories",
     "",
-    ...data.repos.map((repo) => `- ${repo.name}: ${repo.root} (${repo.sourceFileCount} source file(s))`),
+    ...data.repos.map(
+      (/** @type {{ name: string, root: string, sourceFileCount: number }} */ repo) => `- ${repo.name}: ${repo.root} (${repo.sourceFileCount} source file(s))`,
+    ),
     "",
     "## Primary Files",
     "",
@@ -134,19 +202,19 @@ export function formatContextPackMarkdown(data) {
     "",
     "## Patterns",
     "",
-    ...(data.patterns.length ? data.patterns.map((item) => `- ${item}`) : ["- none inferred"]),
+    ...(data.patterns.length ? data.patterns.map((/** @type {string} */ item) => `- ${item}`) : ["- none inferred"]),
     "",
     "## Commands",
     "",
-    ...(data.commands.length ? data.commands.map((item) => `- \`${item.command}\`: ${item.reason}`) : ["- none inferred"]),
+    ...(data.commands.length ? data.commands.map((/** @type {EngineCommand} */ item) => `- \`${item.command}\`: ${item.reason}`) : ["- none inferred"]),
     "",
     "## Conflicts",
     "",
-    ...(data.conflicts.length ? data.conflicts.map((item) => `- ${item}`) : ["- none detected"]),
+    ...(data.conflicts.length ? data.conflicts.map((/** @type {string} */ item) => `- ${item}`) : ["- none detected"]),
     "",
     "## Open Questions",
     "",
-    ...(data.openQuestions.length ? data.openQuestions.map((item) => `- ${item}`) : ["- none"]),
+    ...(data.openQuestions.length ? data.openQuestions.map((/** @type {string} */ item) => `- ${item}`) : ["- none"]),
     "",
     "## Agent Prompt",
     "",
@@ -156,7 +224,14 @@ export function formatContextPackMarkdown(data) {
   return lines.join("\n");
 }
 
+/**
+ * @param {CodeMap[]} maps
+ * @param {string[]} tokens
+ * @param {Intent} intent
+ * @returns {ScoredFile[]}
+ */
 function scoreMaps(maps, tokens, intent) {
+  /** @type {ScoredFile[]} */
   const scored = [];
   for (const map of maps) {
     for (const file of map.files ?? []) {
@@ -170,7 +245,15 @@ function scoreMaps(maps, tokens, intent) {
   return scored.sort((a, b) => b.score - a.score || a.repo.name.localeCompare(b.repo.name) || a.path.localeCompare(b.path));
 }
 
+/**
+ * @param {CodeMap} map
+ * @param {CodeMapFile} file
+ * @param {string[]} tokens
+ * @param {Intent} intent
+ * @returns {ScoredFile}
+ */
 function scoreFile(map, file, tokens, intent) {
+  /** @type {string[]} */
   const reasons = [];
   let score = 0;
 
@@ -200,7 +283,7 @@ function scoreFile(map, file, tokens, intent) {
   }
 
   if ((file.dataAccess?.length ?? 0) > 0) {
-    score += Math.min(15, 3 + file.dataAccess.length);
+    score += Math.min(15, 3 + (file.dataAccess?.length ?? 0));
     reasons.push("data access");
   }
 
@@ -214,6 +297,12 @@ function scoreFile(map, file, tokens, intent) {
   return summarizeFile(map, file, score, reasons);
 }
 
+/**
+ * @param {CodeMapFile} file
+ * @param {Intent} intent
+ * @param {string[]} reasons
+ * @returns {number}
+ */
 function scoreIntentHints(file, intent, reasons) {
   const ownText = normalizeText(`${file.path} ${file.kind} ${file.domain} ${file.exports?.join(" ")} ${file.symbols?.map((symbol) => symbol.name).join(" ")}`);
   const importText = normalizeText(file.imports?.join(" ") ?? "");
@@ -245,6 +334,11 @@ function scoreIntentHints(file, intent, reasons) {
   return score;
 }
 
+/**
+ * @param {ScoredFile[]} scoredFiles
+ * @param {number} limit
+ * @returns {ScoredFile[]}
+ */
 function selectPrimaryFiles(scoredFiles, limit) {
   const files = uniqueFiles(scoredFiles.filter((file) => file.kind !== "test"));
   const strong = files.filter((file) => file.score >= 25);
@@ -263,8 +357,15 @@ const fallbackConfigPattern = /^(?:vite|webpack|rollup|next|nuxt|astro|svelte|re
 // as "improve SEO and performance"), fall back to a deterministic ranking of
 // entrypoints, app/main/index files, and build configuration so primaryFiles
 // is never empty while the repo has source files.
+/**
+ * @param {CodeMap[]} maps
+ * @param {number} limit
+ * @returns {ScoredFile[]}
+ */
 function selectFallbackPrimaryFiles(maps, limit) {
+  /** @type {ScoredFile[]} */
   const candidates = [];
+  /** @type {ScoredFile[]} */
   const everything = [];
 
   for (const map of maps) {
@@ -285,7 +386,7 @@ function selectFallbackPrimaryFiles(maps, limit) {
         reasons.push("repo entrypoint");
       }
       if (fallbackEntryStems.has(stem)) {
-        score += fallbackEntryStems.get(stem);
+        score += fallbackEntryStems.get(stem) ?? 0;
         reasons.push(`${stem} entry file`);
       }
       if (fallbackConfigPattern.test(baseName)) {
@@ -310,13 +411,26 @@ function selectFallbackPrimaryFiles(maps, limit) {
     .slice(0, limit);
 }
 
+/**
+ * @param {CodeMap[]} maps
+ * @param {Map<string, ImportGraph>} graphs
+ * @param {ScoredFile[]} scoredFiles
+ * @param {ScoredFile[]} primaryFiles
+ * @param {Intent} intent
+ * @param {number} limit
+ * @returns {ScoredFile[]}
+ */
 function selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, limit) {
   const primaryKeys = new Set(primaryFiles.map(fileKey));
+  /** @type {ScoredFile[]} */
   const related = [];
   const primaryByRepo = groupByRepo(primaryFiles);
 
   for (const map of maps) {
-    const graph = graphs.get(map.repo.root);
+    // graphs is built from the same `maps` in generateContextPack, so every
+    // repo.root key is present; assert non-null rather than guarding (which
+    // would change runtime behavior).
+    const graph = /** @type {ImportGraph} */ (graphs.get(map.repo.root));
     const filesByPath = new Map((map.files ?? []).map((file) => [file.path, file]));
     const repoPrimary = primaryByRepo.get(map.repo.root) ?? [];
 
@@ -347,7 +461,16 @@ function selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, lim
     .slice(0, limit);
 }
 
+/**
+ * @param {CodeMap[]} maps
+ * @param {Map<string, ImportGraph>} graphs
+ * @param {ScoredFile[]} scoredFiles
+ * @param {ScoredFile[]} primaryFiles
+ * @param {number} limit
+ * @returns {ScoredFile[]}
+ */
 function selectTests(maps, graphs, scoredFiles, primaryFiles, limit) {
+  /** @type {ScoredFile[]} */
   const selected = [];
   const contextFiles = primaryFiles;
   const contextKeys = new Set(contextFiles.map(fileKey));
@@ -358,7 +481,8 @@ function selectTests(maps, graphs, scoredFiles, primaryFiles, limit) {
   }
 
   for (const map of maps) {
-    const graph = graphs.get(map.repo.root);
+    // See selectRelatedFiles: graphs always contains this repo.root.
+    const graph = /** @type {ImportGraph} */ (graphs.get(map.repo.root));
     for (const file of map.files?.filter((entry) => entry.kind === "test") ?? []) {
       const imports = graph.importsByPath.get(file.path) ?? new Set();
       const importsContext = [...imports].some((target) => contextKeys.has(`${map.repo.root}:${target}`));
@@ -375,6 +499,14 @@ function selectTests(maps, graphs, scoredFiles, primaryFiles, limit) {
     .slice(0, limit);
 }
 
+/**
+ * @param {ScoredFile[]} related
+ * @param {CodeMap} map
+ * @param {CodeMapFile|undefined} file
+ * @param {number} score
+ * @param {string} reason
+ * @param {Set<string>} primaryKeys
+ */
 function addRelated(related, map, file, score, reason, primaryKeys) {
   if (!file || file.kind === "test") {
     return;
@@ -385,18 +517,31 @@ function addRelated(related, map, file, score, reason, primaryKeys) {
   }
 }
 
+/**
+ * `primary` is always supplied by callers; it is typed optional only because the
+ * `files = []` default makes the leading parameter optional, and TS forbids a
+ * required parameter after an optional one (TS1016). No runtime contract change.
+ * @param {CodeMapFile[]} [files]
+ * @param {CodeMapFile|ScoredFile} [primary]
+ * @returns {CodeMapFile[]}
+ */
 function samePatternFiles(files = [], primary) {
-  return files
-    .filter((file) => file.path !== primary.path && file.kind === primary.kind && file.domain === primary.domain && file.kind !== "source")
-    .slice(0, 3);
+  const ref = /** @type {CodeMapFile|ScoredFile} */ (primary);
+  return files.filter((file) => file.path !== ref.path && file.kind === ref.kind && file.domain === ref.domain && file.kind !== "source").slice(0, 3);
 }
 
+/**
+ * @param {string[]} repoPaths
+ * @param {string} query
+ * @returns {EngineCommand[]}
+ */
 function inferCommands(repoPaths, query) {
+  /** @type {EngineCommand[]} */
   const commands = [];
   for (const repoPath of repoPaths) {
     const harness = generateHarness(repoPath).data;
     commands.push(
-      ...harness.commands.validate.map((command) => ({
+      .../** @type {EngineCommand[]} */ (harness.commands.validate).map((command) => ({
         ...command,
         repo: harness.repo.name,
       })),
@@ -410,8 +555,16 @@ function inferCommands(repoPaths, query) {
   return uniqueCommands(commands);
 }
 
+/**
+ * @param {ScoredFile[]} primaryFiles
+ * @param {ScoredFile[]} relatedFiles
+ * @param {ScoredFile[]} tests
+ * @param {Intent} intent
+ * @returns {string[]}
+ */
 function inferPatterns(primaryFiles, relatedFiles, tests, intent) {
   const files = [...primaryFiles, ...relatedFiles];
+  /** @type {string[]} */
   const patterns = [];
   const byKind = countBy(files, (file) => file.kind);
 
@@ -440,17 +593,31 @@ function inferPatterns(primaryFiles, relatedFiles, tests, intent) {
   return [...new Set(patterns)];
 }
 
+/**
+ * @param {CodeMap[]} maps
+ * @returns {string[]}
+ */
 function inferConflicts(maps) {
+  /** @type {string[]} */
   const conflicts = [];
   for (const map of maps) {
-    if (map.repo.git?.available && !map.repo.git.clean) {
-      conflicts.push(`${map.repo.name} has ${map.repo.git.changes} uncommitted git change(s); inspect the working tree before editing.`);
+    const git = /** @type {{ available?: boolean, clean?: boolean, changes?: number }} */ (map.repo.git);
+    if (git?.available && !git.clean) {
+      conflicts.push(`${map.repo.name} has ${git.changes} uncommitted git change(s); inspect the working tree before editing.`);
     }
   }
   return conflicts;
 }
 
+/**
+ * @param {ScoredFile[]} primaryFiles
+ * @param {EngineCommand[]} commands
+ * @param {Intent} intent
+ * @param {boolean} usedFallback
+ * @returns {string[]}
+ */
 function inferOpenQuestions(primaryFiles, commands, intent, usedFallback) {
+  /** @type {string[]} */
   const questions = [];
   if (!primaryFiles.length) {
     questions.push("No strong primary files matched the task; refine the query or index more repositories.");
@@ -468,6 +635,10 @@ function inferOpenQuestions(primaryFiles, commands, intent, usedFallback) {
   return questions;
 }
 
+/**
+ * @param {CodeMap[]} maps
+ * @param {EngineCommand[]} commands
+ */
 function inferSources(maps, commands) {
   return [
     ...maps.map((map) => ({
@@ -479,7 +650,7 @@ function inferSources(maps, commands) {
     })),
     ...uniqueBy(
       commands.filter((command) => command.repo),
-      (command) => command.repo,
+      (command) => command.repo ?? "",
     ).map((command) => ({
       type: "harness",
       repo: command.repo,
@@ -488,9 +659,15 @@ function inferSources(maps, commands) {
   ];
 }
 
+/**
+ * @param {string} query
+ * @param {string[]} tokens
+ * @returns {Intent}
+ */
 function inferIntent(query, tokens) {
   const normalized = normalizeText(query);
   const action = tokens.find((token) => actionWords.has(token)) ?? "unknown";
+  /** @type {string[]} */
   const hints = [];
   if (normalized.includes("mcp")) hints.push("mcp", "tool");
   if (normalized.includes("cli") || normalized.includes("command")) hints.push("cli");
@@ -505,6 +682,14 @@ function inferIntent(query, tokens) {
   };
 }
 
+/**
+ * @param {string} query
+ * @param {ScoredFile[]} primaryFiles
+ * @param {ScoredFile[]} relatedFiles
+ * @param {ScoredFile[]} tests
+ * @param {EngineCommand[]} commands
+ * @returns {string}
+ */
 function formatAgentPrompt(query, primaryFiles, relatedFiles, tests, commands) {
   const fileList =
     [...primaryFiles, ...relatedFiles]
@@ -531,12 +716,19 @@ function formatAgentPrompt(query, primaryFiles, relatedFiles, tests, commands) {
   ].join("\n");
 }
 
+/**
+ * @param {CodeMapFile[]} [files]
+ * @returns {ImportGraph}
+ */
 function buildImportGraph(files = []) {
   const fileSet = new Set(files.map((file) => file.path));
+  /** @type {Map<string, Set<string>>} */
   const importsByPath = new Map();
+  /** @type {Map<string, Set<string>>} */
   const importedByPath = new Map();
 
   for (const file of files) {
+    /** @type {Set<string>} */
     const imports = new Set();
     for (const specifier of file.imports ?? []) {
       const resolved = resolveImport(file.path, specifier, fileSet);
@@ -554,6 +746,12 @@ function buildImportGraph(files = []) {
   return { importsByPath, importedByPath };
 }
 
+/**
+ * @param {string} fromPath
+ * @param {string} specifier
+ * @param {Set<string>} fileSet
+ * @returns {string|undefined}
+ */
 function resolveImport(fromPath, specifier, fileSet) {
   if (!specifier.startsWith(".")) {
     return undefined;
@@ -569,6 +767,9 @@ function resolveImport(fromPath, specifier, fileSet) {
   return undefined;
 }
 
+/**
+ * @param {CodeMap} map
+ */
 function summarizeRepo(map) {
   return {
     root: map.repo.root,
@@ -581,6 +782,13 @@ function summarizeRepo(map) {
   };
 }
 
+/**
+ * @param {CodeMap} map
+ * @param {CodeMapFile} file
+ * @param {number} score
+ * @param {string[]} reasons
+ * @returns {ScoredFile}
+ */
 function summarizeFile(map, file, score, reasons) {
   return {
     repo: {
@@ -607,19 +815,33 @@ function summarizeFile(map, file, score, reasons) {
 // and routing fields are always kept.
 const evidenceFields = ["imports", "exports", "symbols"];
 
+/**
+ * @param {ScoredFile[]} files
+ * @param {boolean} includeEvidence
+ * @returns {ScoredFile[]}
+ */
 function stripEvidence(files, includeEvidence) {
   if (includeEvidence) {
     return files;
   }
   return files.map((file) => {
+    /** @type {Record<string, any>} */
     const rest = { ...file };
     for (const field of evidenceFields) {
       delete rest[field];
     }
-    return rest;
+    return /** @type {ScoredFile} */ (rest);
   });
 }
 
+/**
+ * @param {string|null|undefined} value
+ * @param {string[]} tokens
+ * @param {number} weight
+ * @param {string} reason
+ * @param {string[]} reasons
+ * @returns {number}
+ */
 function scoreField(value, tokens, weight, reason, reasons) {
   if (!value) {
     return 0;
@@ -641,6 +863,11 @@ function scoreField(value, tokens, weight, reason, reasons) {
   return score;
 }
 
+/**
+ * @param {ScoredFile[]} files
+ * @param {string} fallback
+ * @returns {string[]}
+ */
 function formatFiles(files, fallback) {
   if (!files.length) {
     return [`- ${fallback}`];
@@ -652,7 +879,12 @@ function formatFiles(files, fallback) {
   });
 }
 
+/**
+ * @param {ScoredFile[]} files
+ * @returns {Map<string, ScoredFile[]>}
+ */
 function groupByRepo(files) {
+  /** @type {Map<string, ScoredFile[]>} */
   const grouped = new Map();
   for (const file of files) {
     const values = grouped.get(file.repo.root) ?? [];
@@ -662,20 +894,40 @@ function groupByRepo(files) {
   return grouped;
 }
 
+/**
+ * @param {CodeMap} map
+ * @param {CodeMapFile} file
+ * @returns {boolean|undefined}
+ */
 function isCliEntrypoint(map, file) {
   return map.repo.entrypoints?.includes(file.path) || file.path === "src/cli.js" || file.path.endsWith("/cli.js");
 }
 
+/**
+ * @param {ScoredFile[]} files
+ * @returns {ScoredFile[]}
+ */
 function uniqueFiles(files) {
   return uniqueBy(files, fileKey);
 }
 
+/**
+ * @param {EngineCommand[]} commands
+ * @returns {EngineCommand[]}
+ */
 function uniqueCommands(commands) {
   return uniqueBy(commands, (command) => `${command.repo}:${command.command}`);
 }
 
+/**
+ * @template T
+ * @param {T[]} values
+ * @param {(value: T) => string} keyForValue
+ * @returns {T[]}
+ */
 function uniqueBy(values, keyForValue) {
   const seen = new Set();
+  /** @type {T[]} */
   const result = [];
   for (const value of values) {
     const key = keyForValue(value);
@@ -688,11 +940,22 @@ function uniqueBy(values, keyForValue) {
   return result;
 }
 
+/**
+ * @param {ScoredFile|CodeMapFile & { repo: { root: string } }} file
+ * @returns {string}
+ */
 function fileKey(file) {
   return `${file.repo.root}:${file.path}`;
 }
 
+/**
+ * @template T
+ * @param {T[]} values
+ * @param {(value: T) => string} keyForValue
+ * @returns {Map<string, number>}
+ */
 function countBy(values, keyForValue) {
+  /** @type {Map<string, number>} */
   const counts = new Map();
   for (const value of values) {
     const key = keyForValue(value);
@@ -701,6 +964,10 @@ function countBy(values, keyForValue) {
   return counts;
 }
 
+/**
+ * @param {string} value
+ * @returns {string[]}
+ */
 function tokenize(value) {
   return normalizeText(value)
     .split(" ")
@@ -708,6 +975,10 @@ function tokenize(value) {
     .filter((token) => token.length > 1 && !stopWords.has(token));
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function normalizeText(value) {
   return String(value)
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
@@ -716,15 +987,29 @@ function normalizeText(value) {
     .trim();
 }
 
+/**
+ * @param {string[]} paths
+ * @returns {string[]}
+ */
 function normalizePaths(paths) {
   const values = Array.isArray(paths) && paths.length ? paths : ["."];
   return [...new Set(values.map((value) => path.resolve(String(value || "."))))];
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function normalizeRepoPath(value) {
   return value.replaceAll("\\", "/").replace(/^\.\//, "");
 }
 
+/**
+ * @param {unknown} value
+ * @param {number} fallback
+ * @param {number} max
+ * @returns {number}
+ */
 function normalizeLimit(value, fallback, max) {
   const parsed = Number(value ?? fallback);
   if (!Number.isFinite(parsed) || parsed <= 0) {

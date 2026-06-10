@@ -1,8 +1,53 @@
+/// <reference types="node" />
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { getCachedCodeMap } from "./index-cache.js";
 import { estimateTokens } from "./tokens.js";
+
+/**
+ * @typedef {import('./index-cache.js').CodeMap} CodeMap
+ * @typedef {import('./index-cache.js').CodeMapFile} CodeMapFile
+ * @typedef {import('./index-cache.js').CodeMapPackage} CodeMapPackage
+ */
+
+/**
+ * A catalog entry persisted for an indexed repository.
+ * @typedef {object} CatalogRepository
+ * @property {string} root
+ * @property {string} name
+ * @property {string} [marker]
+ * @property {CodeMapPackage} [package]
+ * @property {object} [git]
+ * @property {Record<string, number>|object} [languages]
+ * @property {string[]} [entrypoints]
+ * @property {number} [sourceFileCount]
+ * @property {import('./index-cache.js').CodeMapSummary} [summary]
+ * @property {import('./index-cache.js').CodeMapDomain[]} [domains]
+ * @property {string} [indexPath]
+ * @property {string} [fingerprint]
+ * @property {string} [generatedAt]
+ * @property {string} [indexedAt]
+ */
+
+/**
+ * The on-disk catalog document.
+ * @typedef {object} Catalog
+ * @property {number} version
+ * @property {string} [updatedAt]
+ * @property {CatalogRepository[]} repositories
+ */
+
+/**
+ * Options accepted across catalog operations. All fields optional.
+ * @typedef {object} CatalogOptions
+ * @property {string} [catalogPath]
+ * @property {string} [catalog]
+ * @property {number} [depth]
+ * @property {number} [limit]
+ * @property {boolean} [discover]
+ * @property {boolean} [offline]
+ */
 
 const catalogVersion = 1;
 const defaultLimit = 25;
@@ -54,11 +99,16 @@ export function defaultCatalogPath() {
   return path.resolve(process.env.REPOCTX_CATALOG ?? process.env.DEV_CONTEXT_CATALOG ?? path.join(os.homedir(), ".dev-context", "catalog.json"));
 }
 
+/**
+ * @param {string[]} [rootPaths]
+ * @param {CatalogOptions} [options]
+ */
 export function discoverRepositories(rootPaths = ["."], options = {}) {
   const roots = normalizePathList(rootPaths);
   const maxDepth = normalizeLimit(options.depth, defaultDiscoverDepth, 20);
   const maxRepos = normalizeLimit(options.limit, 100, 1000);
   const seen = new Set();
+  /** @type {{ root: string, name: string, marker: string, package?: CodeMapPackage }[]} */
   const repositories = [];
 
   for (const rootPath of roots) {
@@ -73,6 +123,10 @@ export function discoverRepositories(rootPaths = ["."], options = {}) {
     repositories: repositories.sort((a, b) => a.root.localeCompare(b.root)),
   };
 
+  /**
+   * @param {string} current
+   * @param {number} depth
+   */
   function visit(current, depth) {
     if (repositories.length >= maxRepos || depth > maxDepth || !isDirectory(current)) {
       return;
@@ -99,11 +153,17 @@ export function discoverRepositories(rootPaths = ["."], options = {}) {
   }
 }
 
+/**
+ * @param {string[]} [repoPaths]
+ * @param {CatalogOptions} [options]
+ */
 export function indexRepositories(repoPaths = ["."], options = {}) {
   const catalogPath = resolveCatalogPath(options);
   const catalog = loadCatalog({ catalogPath }).catalog;
   const indexedAt = new Date().toISOString();
+  /** @type {CatalogRepository[]} */
   const repositories = [];
+  /** @type {{ path: string, error: string }[]} */
   const errors = [];
   const paths = options.discover ? discoverRepositories(repoPaths, options).repositories.map((repo) => repo.root) : normalizePathList(repoPaths);
 
@@ -135,6 +195,9 @@ export function indexRepositories(repoPaths = ["."], options = {}) {
   };
 }
 
+/**
+ * @param {CatalogOptions} [options]
+ */
 export function listCatalog(options = {}) {
   const { catalog, catalogPath } = loadCatalog(options);
   return {
@@ -147,6 +210,10 @@ export function listCatalog(options = {}) {
   };
 }
 
+/**
+ * @param {string} query
+ * @param {CatalogOptions} [options]
+ */
 export function searchCatalog(query, options = {}) {
   const tokens = tokenize(query);
   if (!tokens.length) {
@@ -155,7 +222,9 @@ export function searchCatalog(query, options = {}) {
 
   const limit = normalizeLimit(options.limit, defaultLimit, 200);
   const { catalog, catalogPath } = loadCatalog(options);
+  /** @type {ReturnType<typeof scoreFile>[]} */
   const matches = [];
+  /** @type {{ root: string, error: string }[]} */
   const errors = [];
 
   for (const repository of catalog.repositories) {
@@ -180,6 +249,7 @@ export function searchCatalog(query, options = {}) {
 
   matches.sort((a, b) => b.score - a.score || a.repository.name.localeCompare(b.repository.name) || a.file.path.localeCompare(b.file.path));
 
+  /** @type {{ ok: boolean, query: string, tokens: string[], catalogPath: string, repositoryCount: number, matchCount: number, matches: ReturnType<typeof scoreFile>[], errors: { root: string, error: string }[], tokenEstimate?: object }} */
   const result = {
     ok: true,
     query,
@@ -198,6 +268,9 @@ export function searchCatalog(query, options = {}) {
   return result;
 }
 
+/**
+ * @param {ReturnType<typeof discoverRepositories>} result
+ */
 export function formatDiscoverSummary(result) {
   const lines = [`Repositories discovered: ${result.repositoryCount}`, ""];
 
@@ -212,6 +285,9 @@ export function formatDiscoverSummary(result) {
   return lines.join("\n").trimEnd();
 }
 
+/**
+ * @param {ReturnType<typeof indexRepositories>} result
+ */
 export function formatIndexSummary(result) {
   const lines = [
     `Catalog indexed: ${result.catalogPath}`,
@@ -234,6 +310,9 @@ export function formatIndexSummary(result) {
   return lines.join("\n").trimEnd();
 }
 
+/**
+ * @param {ReturnType<typeof listCatalog>} result
+ */
 export function formatCatalogSummary(result) {
   const lines = [
     `Catalog: ${result.catalogPath}`,
@@ -257,6 +336,9 @@ export function formatCatalogSummary(result) {
   return lines.join("\n").trimEnd();
 }
 
+/**
+ * @param {ReturnType<typeof searchCatalog>} result
+ */
 export function formatSearchResults(result) {
   const lines = [`Search: ${result.query}`, `Matches: ${result.matchCount}`, ""];
 
@@ -279,8 +361,13 @@ export function formatSearchResults(result) {
   return lines.join("\n").trimEnd();
 }
 
+/**
+ * @param {CatalogOptions} [options]
+ * @returns {{ catalog: Catalog, catalogPath: string }}
+ */
 function loadCatalog(options = {}) {
   const catalogPath = resolveCatalogPath(options);
+  /** @type {Catalog | undefined} */
   let catalog;
   try {
     catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));
@@ -299,21 +386,38 @@ function loadCatalog(options = {}) {
   return { catalog, catalogPath };
 }
 
+/**
+ * @param {Catalog} catalog
+ * @param {CatalogOptions} [options]
+ */
 function saveCatalog(catalog, options = {}) {
   const catalogPath = resolveCatalogPath(options);
   fs.mkdirSync(path.dirname(catalogPath), { recursive: true });
   fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2));
 }
 
+/**
+ * @param {CatalogOptions} [options]
+ * @returns {string}
+ */
 function resolveCatalogPath(options = {}) {
   return path.resolve(options.catalogPath ?? options.catalog ?? defaultCatalogPath());
 }
 
+/**
+ * @param {string[]} paths
+ * @returns {string[]}
+ */
 function normalizePathList(paths) {
   const values = Array.isArray(paths) && paths.length ? paths : ["."];
   return [...new Set(values.map((value) => path.resolve(value || ".")))];
 }
 
+/**
+ * @param {CodeMap} map
+ * @param {string} indexedAt
+ * @returns {CatalogRepository}
+ */
 function catalogEntryFromMap(map, indexedAt) {
   return {
     root: map.repo.root,
@@ -332,18 +436,32 @@ function catalogEntryFromMap(map, indexedAt) {
   };
 }
 
+/**
+ * @param {Catalog} catalog
+ * @param {CatalogRepository} entry
+ */
 function upsertRepository(catalog, entry) {
   catalog.repositories = [...catalog.repositories.filter((repository) => repository.root !== entry.root), entry].sort(
     (a, b) => a.name.localeCompare(b.name) || a.root.localeCompare(b.root),
   );
 }
 
+/**
+ * @param {CatalogRepository} repository
+ * @returns {CodeMap}
+ */
 function readIndexedMap(repository) {
-  const cached = JSON.parse(fs.readFileSync(repository.indexPath, "utf8"));
+  const cached = JSON.parse(fs.readFileSync(String(repository.indexPath), "utf8"));
   return cached.map ?? cached;
 }
 
+/**
+ * @param {CatalogRepository} repository
+ * @param {CodeMapFile} file
+ * @param {string[]} tokens
+ */
 function scoreFile(repository, file, tokens) {
+  /** @type {string[]} */
   const reasons = [];
   let score = 0;
 
@@ -390,6 +508,14 @@ function scoreFile(repository, file, tokens) {
   };
 }
 
+/**
+ * @param {string|null|undefined} value
+ * @param {string[]} tokens
+ * @param {number} weight
+ * @param {string} reason
+ * @param {string[]} reasons
+ * @returns {number}
+ */
 function scoreField(value, tokens, weight, reason, reasons) {
   if (!value) {
     return 0;
@@ -411,6 +537,10 @@ function scoreField(value, tokens, weight, reason, reasons) {
   return score;
 }
 
+/**
+ * @param {string} value
+ * @returns {string[]}
+ */
 function tokenize(value) {
   return normalizeText(value)
     .split(" ")
@@ -418,6 +548,10 @@ function tokenize(value) {
     .filter((token) => token.length > 1 && !stopWords.has(token));
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function normalizeText(value) {
   return String(value)
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
@@ -426,6 +560,12 @@ function normalizeText(value) {
     .trim();
 }
 
+/**
+ * @param {unknown} value
+ * @param {number} fallback
+ * @param {number} max
+ * @returns {number}
+ */
 function normalizeLimit(value, fallback, max) {
   const parsed = Number(value ?? fallback);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -434,6 +574,10 @@ function normalizeLimit(value, fallback, max) {
   return Math.min(Math.floor(parsed), max);
 }
 
+/**
+ * @param {string} root
+ * @returns {string|undefined}
+ */
 function repoMarker(root) {
   for (const marker of repoMarkers) {
     if (fs.existsSync(path.join(root, marker))) {
@@ -443,6 +587,11 @@ function repoMarker(root) {
   return undefined;
 }
 
+/**
+ * @param {string} root
+ * @param {string} marker
+ * @returns {{ root: string, name: string, marker: string, package?: CodeMapPackage }}
+ */
 function discoveredRepository(root, marker) {
   const packageJson = readJson(path.join(root, "package.json"));
   return {
@@ -460,6 +609,10 @@ function discoveredRepository(root, marker) {
   };
 }
 
+/**
+ * @param {string} filePath
+ * @returns {any}
+ */
 function readJson(filePath) {
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf8"));
@@ -468,6 +621,10 @@ function readJson(filePath) {
   }
 }
 
+/**
+ * @param {string} directory
+ * @returns {import('node:fs').Dirent[]}
+ */
 function safeReadDir(directory) {
   try {
     return fs.readdirSync(directory, { withFileTypes: true });
@@ -476,6 +633,10 @@ function safeReadDir(directory) {
   }
 }
 
+/**
+ * @param {string} value
+ * @returns {boolean}
+ */
 function isDirectory(value) {
   try {
     return fs.statSync(value).isDirectory();
@@ -484,6 +645,10 @@ function isDirectory(value) {
   }
 }
 
+/**
+ * @param {string} value
+ * @returns {string|undefined}
+ */
 function realpath(value) {
   try {
     return fs.realpathSync(value);

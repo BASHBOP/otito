@@ -4,6 +4,8 @@
 // dependency audit hint, review-state placeholder) and rolls them up into a
 // single PASS/WARN/FAIL verdict.
 
+/// <reference types="node" />
+
 import fs from "node:fs";
 import path from "node:path";
 import { runCommand } from "./tools.js";
@@ -12,8 +14,26 @@ import { checkRelease } from "./release-check.js";
 import { aggregateVerdict, normalizeGovernance, normalizeProfile, policyCheck, STATUS } from "./policy.js";
 import { estimateTokens } from "./tokens.js";
 
+/**
+ * A single check produced by the local/PR merge-readiness gates.
+ * @typedef {Object} Check
+ * @property {string} name
+ * @property {Verdict} status
+ * @property {string} summary
+ * @property {string[]} [details]
+ */
+
+/**
+ * Rolled-up gate result. Mirrors the STATUS values from policy.js.
+ * @typedef {"PASS" | "WARN" | "FAIL"} Verdict
+ */
+
 const passEngineVersion = 1;
 
+/**
+ * @param {string} repoPath
+ * @param {{ policy?: unknown, governance?: unknown, base?: string, request?: string }} [options]
+ */
 export function evaluateLocal(repoPath, options = {}) {
   const profile = normalizeProfile(options.policy);
   const governance = normalizeGovernance(options.governance);
@@ -22,6 +42,7 @@ export function evaluateLocal(repoPath, options = {}) {
   const base = options.base ?? defaultBase(root);
   const files = changedFiles(root, base);
 
+  /** @param {string} file */
   const baseContent = (file) => gitShowContent(root, base, file);
   const checks = [
     changedFilesCheck(files),
@@ -39,6 +60,7 @@ export function evaluateLocal(repoPath, options = {}) {
 
   const verdict = aggregateVerdict(checks);
 
+  /** @type {Record<string, unknown> & { tokenEstimate?: { fullJson: number } }} */
   const data = {
     ok: true,
     generatedAt: new Date().toISOString(),
@@ -57,6 +79,11 @@ export function evaluateLocal(repoPath, options = {}) {
   return data;
 }
 
+/**
+ * @param {string} root
+ * @param {string} base
+ * @returns {string[]}
+ */
 export function changedFiles(root, base) {
   const tracked = runGit(root, ["diff", "--name-only", "--relative", base, "--"]);
   const staged = runGit(root, ["diff", "--cached", "--name-only", "--relative", "--"]);
@@ -68,12 +95,21 @@ export function changedFiles(root, base) {
   return [...seen].sort();
 }
 
+/**
+ * @param {string} repoPath
+ * @returns {string}
+ */
 export function gitRoot(repoPath) {
   const lines = runGit(repoPath, ["rev-parse", "--show-toplevel"]);
   if (lines.length === 0) throw new Error("not a git repository");
   return lines[0];
 }
 
+/**
+ * @param {string} cwd
+ * @param {string[]} args
+ * @returns {string[]}
+ */
 function runGit(cwd, args) {
   const result = runCommand("git", args, { cwd });
   if (!result.ok) {
@@ -82,17 +118,24 @@ function runGit(cwd, args) {
   }
   return result.stdout
     .split("\n")
-    .map((line) => line.trim())
+    .map((/** @type {string} */ line) => line.trim())
     .filter(Boolean);
 }
 
 // Content of `file` at the `base` ref, or null when the ref or path is absent.
 // Non-throwing so release discipline can fall back to head-only inspection.
+/**
+ * @param {string} cwd
+ * @param {string} base
+ * @param {string} file
+ * @returns {string | null}
+ */
 export function gitShowContent(cwd, base, file) {
   const result = runCommand("git", ["show", `${base}:${file}`], { cwd });
   return result.ok ? result.stdout : null;
 }
 
+/** @param {string} root */
 function defaultBase(root) {
   for (const candidate of ["origin/main", "origin/master", "main", "master"]) {
     const probe = runCommand("git", ["rev-parse", "--verify", candidate], { cwd: root });
@@ -101,6 +144,10 @@ function defaultBase(root) {
   return "HEAD";
 }
 
+/**
+ * @param {string[]} files
+ * @returns {Check}
+ */
 function changedFilesCheck(files) {
   if (files.length === 0) {
     return { name: "Changed files", status: STATUS.warn, summary: "No changed files found against the selected base." };
@@ -113,6 +160,10 @@ function changedFilesCheck(files) {
   };
 }
 
+/**
+ * @param {string[]} files
+ * @returns {Check}
+ */
 function secretCheck(files) {
   const matches = matchSecretPaths(files);
   if (matches.length > 0) {
@@ -121,6 +172,10 @@ function secretCheck(files) {
   return { name: "Secret safety", status: STATUS.pass, summary: "No obvious secret file changes found." };
 }
 
+/**
+ * @param {string[]} files
+ * @returns {Check}
+ */
 function riskCheck(files) {
   // Gate mode: ignore test files and documentation. A `checkout.spec.ts` test
   // or a `git-checkout-guide.md` doc is risk-adjacent for ranking purposes but
@@ -137,6 +192,10 @@ function riskCheck(files) {
   return { name: "Risk review", status: STATUS.pass, summary: "No obvious risk-sensitive file paths changed." };
 }
 
+/**
+ * @param {string} root
+ * @returns {Check}
+ */
 function validationCommandsCheck(root) {
   const commands = inferValidationCommands(root);
   if (commands.length === 0) {
@@ -145,6 +204,10 @@ function validationCommandsCheck(root) {
   return { name: "Validation commands", status: STATUS.pass, summary: "Validation commands are available.", details: commands };
 }
 
+/**
+ * @param {string} root
+ * @returns {Check | null}
+ */
 function dependencyAuditCheck(root) {
   if (!exists(path.join(root, "package.json"))) return null;
   const commands = dependencyAuditCommands(root);
@@ -159,6 +222,7 @@ function dependencyAuditCheck(root) {
   return { name: "Dependency audit", status: STATUS.pass, summary: "Dependency audit commands are available.", details: commands };
 }
 
+/** @returns {Check} */
 function localReviewCheck() {
   return {
     name: "Review state",
@@ -171,6 +235,10 @@ function localReviewCheck() {
 // (https://github.com/nugehs/tieline). Runs only when a tieline config is
 // discoverable AND the binary resolves; otherwise it skips silently so the gate
 // never hard-depends on tieline being installed.
+/**
+ * @param {string} root
+ * @returns {Check | null}
+ */
 function contractDriftCheck(root) {
   const cfg = findTielineConfig(root);
   if (!cfg) return null;
@@ -195,7 +263,12 @@ function contractDriftCheck(root) {
   if (drift === 0) {
     return { name: "Contract drift", status: STATUS.pass, summary: "No frontend↔backend contract drift (tieline)." };
   }
-  const details = (parsed.drift ?? []).slice(0, 10).map((d) => `${d.method} ${d.path} (${d.name}) — ${d.hint ?? "no matching backend route"}`);
+  const details = (parsed.drift ?? [])
+    .slice(0, 10)
+    .map(
+      (/** @type {{ method: string, path: string, name: string, hint?: string }} */ d) =>
+        `${d.method} ${d.path} (${d.name}) — ${d.hint ?? "no matching backend route"}`,
+    );
   return {
     name: "Contract drift",
     status: STATUS.warn,
@@ -204,6 +277,10 @@ function contractDriftCheck(root) {
   };
 }
 
+/**
+ * @param {string} root
+ * @returns {string | null}
+ */
 function findTielineConfig(root) {
   const envCfg = process.env.REPOCTX_TIELINE_CONFIG;
   if (envCfg && exists(envCfg)) return path.resolve(envCfg);
@@ -218,6 +295,11 @@ function findTielineConfig(root) {
   return null;
 }
 
+/**
+ * @param {string} cwd
+ * @param {string} root
+ * @returns {string | null}
+ */
 function resolveTielineBin(cwd, root) {
   for (const base of [cwd, root]) {
     const local = path.join(base, "node_modules", ".bin", "tieline");
@@ -228,6 +310,10 @@ function resolveTielineBin(cwd, root) {
   return null;
 }
 
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
 function dependencyAuditCommands(root) {
   switch (packageRunner(root)) {
     case "yarn":
@@ -239,10 +325,15 @@ function dependencyAuditCommands(root) {
   }
 }
 
+/** @param {string} root */
 function hasPackageLockfile(root) {
   return ["package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock"].some((name) => exists(path.join(root, name)));
 }
 
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
 function inferValidationCommands(root) {
   if (exists(path.join(root, "package.json"))) {
     const commands = packageValidationCommands(root);
@@ -254,6 +345,10 @@ function inferValidationCommands(root) {
   return [];
 }
 
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
 function packageValidationCommands(root) {
   let parsed;
   try {
@@ -275,29 +370,48 @@ function packageValidationCommands(root) {
   return commands;
 }
 
+/**
+ * @param {string} root
+ * @returns {"pnpm" | "yarn" | "npm"}
+ */
 function packageRunner(root) {
   if (exists(path.join(root, "pnpm-lock.yaml"))) return "pnpm";
   if (exists(path.join(root, "yarn.lock"))) return "yarn";
   return "npm";
 }
 
+/**
+ * @param {string} runner
+ * @param {string} name
+ * @returns {string}
+ */
 function packageScriptCommand(runner, name) {
   if (runner === "yarn") return `yarn ${name}`;
   if (runner === "pnpm") return name === "test" ? "pnpm test" : `pnpm run ${name}`;
   return name === "test" ? "npm test" : `npm run ${name}`;
 }
 
+/**
+ * @param {string} runner
+ * @returns {string}
+ */
 function typeScriptFallback(runner) {
   if (runner === "yarn") return "yarn tsc --noEmit";
   if (runner === "pnpm") return "pnpm exec tsc --noEmit";
   return "npm exec --package typescript -- tsc --noEmit";
 }
 
+/**
+ * @param {string} base
+ * @param {string} [request]
+ * @returns {string[]}
+ */
 function contextEvidence(base, request) {
   const quoted = JSON.stringify(request && request.trim() ? request : "review this change");
   return [`repoctx impact . ${quoted} --json`, `repoctx pr . --base ${base} --out .dev-context/pr-review.md`];
 }
 
+/** @param {string} filePath */
 function exists(filePath) {
   try {
     fs.statSync(filePath);
@@ -307,6 +421,7 @@ function exists(filePath) {
   }
 }
 
+/** @param {string} filePath */
 function isDir(filePath) {
   try {
     return fs.statSync(filePath).isDirectory();
@@ -324,6 +439,23 @@ const STATUS_TO_RENDER = {
   FAIL: "fail",
 };
 
+/**
+ * @typedef {Object} PassData
+ * @property {Verdict} verdict
+ * @property {{ root: string, name: string }} repo
+ * @property {string} base
+ * @property {string} policy
+ * @property {string} governance
+ * @property {string[]} changedFiles
+ * @property {string[]} contextEvidence
+ * @property {Check[]} checks
+ */
+
+/**
+ * @param {PassData} data
+ * @param {(options: object) => any} rendererFactory
+ * @returns {string}
+ */
 export function formatPassTerminal(data, rendererFactory) {
   const renderer = rendererFactory({});
   const lines = [];
@@ -358,6 +490,11 @@ export function formatPassTerminal(data, rendererFactory) {
   return lines.join("\n");
 }
 
+/**
+ * @param {string} detail
+ * @param {boolean} emoji
+ * @returns {string}
+ */
 function decorateDetail(detail, emoji) {
   if (!emoji) return detail;
   const flags = classifyPath(detail);
@@ -365,6 +502,12 @@ function decorateDetail(detail, emoji) {
   return glyph ? `${glyph}  ${detail}` : detail;
 }
 
+/**
+ * @param {PassData} data
+ * @param {Check | undefined} blocked
+ * @param {Check | undefined} warning
+ * @returns {string}
+ */
 function nextStepFor(data, blocked, warning) {
   if (blocked) {
     if (blocked.name === "Secret safety") return "remove or rotate the affected file before merge";
@@ -380,6 +523,10 @@ function nextStepFor(data, blocked, warning) {
   return data.changedFiles.length === 0 ? "no changes vs base" : "ready to merge";
 }
 
+/**
+ * @param {PassData} data
+ * @returns {string}
+ */
 export function formatPassMarkdown(data) {
   const lines = [
     `# repoctx pass: ${data.repo.name}`,

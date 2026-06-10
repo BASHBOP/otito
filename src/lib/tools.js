@@ -1,5 +1,25 @@
 import { spawnSync } from "node:child_process";
 
+/**
+ * Options shared by the command runners.
+ * @typedef {object} RunOptions
+ * @property {string} [cwd]
+ * @property {NodeJS.ProcessEnv} [env]
+ * @property {number} [timeout]
+ * @property {number} [maxBuffer]
+ *
+ * @typedef {object} RunResult
+ * @property {boolean} ok
+ * @property {number | null} status
+ * @property {string} stdout
+ * @property {string} stderr
+ * @property {Error | undefined} error
+ */
+
+/**
+ * @param {string} command
+ * @returns {{ available: boolean, path: string | undefined }}
+ */
 export function commandExists(command) {
   const result = spawnSync("/bin/sh", ["-lc", `command -v ${quote(command)}`], {
     encoding: "utf8",
@@ -10,6 +30,11 @@ export function commandExists(command) {
   };
 }
 
+/**
+ * @param {string} command
+ * @param {string[]} [args]
+ * @returns {string | undefined}
+ */
 export function commandVersion(command, args = ["--version"]) {
   const exists = commandExists(command);
   if (!exists.available) {
@@ -24,6 +49,12 @@ export function commandVersion(command, args = ["--version"]) {
   return output.split("\n")[0] || undefined;
 }
 
+/**
+ * @param {string} command
+ * @param {string[]} args
+ * @param {RunOptions} [options]
+ * @returns {RunResult}
+ */
 export function runCommand(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
@@ -41,6 +72,11 @@ export function runCommand(command, args, options = {}) {
   };
 }
 
+/**
+ * @param {string} commandLine
+ * @param {RunOptions} [options]
+ * @returns {RunResult}
+ */
 export function runShellCommand(commandLine, options = {}) {
   const result = spawnSync("/bin/sh", ["-lc", commandLine], {
     cwd: options.cwd,
@@ -59,6 +95,10 @@ export function runShellCommand(commandLine, options = {}) {
   };
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 export function quote(value) {
   return `'${String(value).replaceAll("'", "'\\''")}'`;
 }

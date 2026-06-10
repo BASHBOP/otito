@@ -3,6 +3,22 @@ import ts from "typescript";
 import { lineNumberAt, readStringCallArguments, stripNonCode } from "./text.js";
 import { extractCsharpFacts, extractGoFacts, extractJavaFacts, extractPythonFacts, extractRubyFacts, extractRustFacts } from "./ast-languages.js";
 
+/**
+ * A code symbol extracted from a source file.
+ * @typedef {object} CodeSymbol
+ * @property {string} type
+ * @property {string} name
+ * @property {number} line
+ */
+
+/**
+ * Language-agnostic AST facts extracted for a single file.
+ * @typedef {object} AstFacts
+ * @property {string[]} imports
+ * @property {string[]} exports
+ * @property {CodeSymbol[]} symbols
+ */
+
 const declarationPatterns = [
   { type: "class", pattern: /\bexport\s+(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
   { type: "class", pattern: /\b(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/g },
@@ -15,6 +31,11 @@ const declarationPatterns = [
   { type: "enum", pattern: /\bexport\s+enum\s+([A-Za-z_$][\w$]*)/g },
 ];
 
+/**
+ * @param {string} relativePath
+ * @param {string} text
+ * @returns {AstFacts}
+ */
 export function extractAstFacts(relativePath, text) {
   const ext = path.extname(relativePath).toLowerCase();
   if (ext === ".go") {
@@ -39,10 +60,14 @@ export function extractAstFacts(relativePath, text) {
   try {
     const sourceFile = ts.createSourceFile(relativePath, text, ts.ScriptTarget.Latest, true, scriptKindForFile(relativePath));
     const facts = {
+      /** @type {Set<string>} */
       imports: new Set(),
+      /** @type {Set<string>} */
       exports: new Set(),
+      /** @type {CodeSymbol[]} */
       symbols: [],
     };
+    /** @type {Set<string>} */
     const seenSymbols = new Set();
 
     visit(sourceFile);
@@ -52,6 +77,7 @@ export function extractAstFacts(relativePath, text) {
       symbols: facts.symbols,
     };
 
+    /** @param {ts.Node} node */
     function visit(node) {
       collectImport(node, facts.imports);
       collectExport(node, facts.exports);
@@ -68,6 +94,10 @@ export function extractAstFacts(relativePath, text) {
   }
 }
 
+/**
+ * @param {string} file
+ * @returns {ts.ScriptKind}
+ */
 function scriptKindForFile(file) {
   const extension = path.extname(file).toLowerCase();
   if (extension === ".tsx" || extension === ".jsx") return ts.ScriptKind.TSX;
@@ -75,6 +105,10 @@ function scriptKindForFile(file) {
   return ts.ScriptKind.TS;
 }
 
+/**
+ * @param {ts.Node} node
+ * @param {Set<string>} imports
+ */
 function collectImport(node, imports) {
   if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && isStringLiteralNode(node.moduleSpecifier)) {
     imports.add(node.moduleSpecifier.text);
@@ -95,6 +129,10 @@ function collectImport(node, imports) {
   }
 }
 
+/**
+ * @param {ts.Node} node
+ * @param {Set<string>} exports
+ */
 function collectExport(node, exports) {
   if (hasExportModifier(node)) {
     for (const name of declarationNames(node)) {
@@ -113,10 +151,20 @@ function collectExport(node, exports) {
   }
 }
 
+/**
+ * @param {ts.Node | undefined} node
+ * @returns {node is ts.StringLiteral | ts.NoSubstitutionTemplateLiteral}
+ */
 function isStringLiteralNode(node) {
   return Boolean(node && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)));
 }
 
+/**
+ * @param {ts.SourceFile} sourceFile
+ * @param {ts.Node} node
+ * @param {CodeSymbol[]} symbols
+ * @param {Set<string>} seen
+ */
 function collectSymbol(sourceFile, node, symbols, seen) {
   const symbol = symbolForNode(sourceFile, node);
   if (!symbol) {
@@ -131,6 +179,11 @@ function collectSymbol(sourceFile, node, symbols, seen) {
   symbols.push(symbol);
 }
 
+/**
+ * @param {ts.SourceFile} sourceFile
+ * @param {ts.Node} node
+ * @returns {CodeSymbol | undefined}
+ */
 function symbolForNode(sourceFile, node) {
   if (ts.isClassDeclaration(node) && node.name) {
     return symbol(sourceFile, node, "class", node.name.text);
@@ -148,7 +201,10 @@ function symbolForNode(sourceFile, node) {
     return symbol(sourceFile, node, "enum", node.name.text);
   }
   if (ts.isVariableStatement(node) && isTopLevelNode(node)) {
-    const declaration = node.declarationList.declarations.find((item) => ts.isIdentifier(item.name));
+    const declaration = node.declarationList.declarations.find(
+      /** @returns {item is ts.VariableDeclaration & { name: ts.Identifier }} */
+      (item) => ts.isIdentifier(item.name),
+    );
     if (declaration) {
       return symbol(sourceFile, declaration, variableKind(node), declaration.name.text);
     }
@@ -156,6 +212,13 @@ function symbolForNode(sourceFile, node) {
   return undefined;
 }
 
+/**
+ * @param {ts.SourceFile} sourceFile
+ * @param {ts.Node} node
+ * @param {string} type
+ * @param {string} name
+ * @returns {CodeSymbol}
+ */
 function symbol(sourceFile, node, type, name) {
   return {
     type,
@@ -164,17 +227,36 @@ function symbol(sourceFile, node, type, name) {
   };
 }
 
+/**
+ * @param {ts.Node} node
+ * @returns {string[]}
+ */
 function declarationNames(node) {
   if (ts.isVariableStatement(node)) {
-    return node.declarationList.declarations.filter((declaration) => ts.isIdentifier(declaration.name)).map((declaration) => declaration.name.text);
+    return node.declarationList.declarations
+      .filter(
+        /** @returns {declaration is ts.VariableDeclaration & { name: ts.Identifier }} */
+        (declaration) => ts.isIdentifier(declaration.name),
+      )
+      .map((declaration) => declaration.name.text);
   }
-  return node.name?.text ? [node.name.text] : [];
+  // `name` exists on most declaration node types but not on ts.Node generally.
+  const named = /** @type {{ name?: { text?: string } }} */ (node);
+  return named.name?.text ? [named.name.text] : [];
 }
 
+/**
+ * @param {ts.Node} node
+ * @returns {boolean}
+ */
 function hasExportModifier(node) {
   return Boolean(ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword));
 }
 
+/**
+ * @param {ts.VariableStatement} node
+ * @returns {"const" | "let" | "var"}
+ */
 function variableKind(node) {
   const flags = node.declarationList.flags;
   if (flags & ts.NodeFlags.Const) return "const";
@@ -182,11 +264,20 @@ function variableKind(node) {
   return "var";
 }
 
+/**
+ * @param {ts.Node} node
+ * @returns {boolean}
+ */
 function isTopLevelNode(node) {
   return ts.isSourceFile(node.parent);
 }
 
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
 function extractImports(text) {
+  /** @type {Set<string>} */
   const imports = new Set();
   for (const line of text.split("\n")) {
     const trimmed = line.trim();
@@ -206,7 +297,12 @@ function extractImports(text) {
   return [...imports].slice(0, 100);
 }
 
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
 function extractExports(text) {
+  /** @type {Set<string>} */
   const exports = new Set();
   const patterns = [/export\s+(?:default\s+)?(?:class|function|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)/g, /export\s*{\s*([^}]+)\s*}/g];
   for (const pattern of patterns) {
@@ -227,8 +323,14 @@ function extractExports(text) {
   return [...exports].slice(0, 100);
 }
 
+/**
+ * @param {string} text
+ * @returns {CodeSymbol[]}
+ */
 function extractSymbols(text) {
+  /** @type {CodeSymbol[]} */
   const symbols = [];
+  /** @type {Set<string>} */
   const seen = new Set();
   for (const definition of declarationPatterns) {
     for (const match of text.matchAll(definition.pattern)) {

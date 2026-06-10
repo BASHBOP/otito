@@ -1,5 +1,20 @@
 import { lineNumberAt, stripNonCode } from "./text.js";
 
+/**
+ * @typedef {import('./ast.js').AstFacts} AstFacts
+ * @typedef {import('./ast.js').CodeSymbol} CodeSymbol
+ */
+
+/**
+ * A code symbol with a visibility flag, used internally before the flag is
+ * stripped from the exported {@link CodeSymbol} shape.
+ * @typedef {CodeSymbol & { isPublic: boolean }} VisibilitySymbol
+ */
+
+/**
+ * @param {string} text
+ * @returns {AstFacts}
+ */
 export function extractGoFacts(text) {
   const codeText = stripNonCode(text);
   const symbols = extractGoSymbols(codeText);
@@ -10,7 +25,12 @@ export function extractGoFacts(text) {
   };
 }
 
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
 function extractGoImports(text) {
+  /** @type {Set<string>} */
   const imports = new Set();
   for (const match of text.matchAll(/^\s*import\s+(?:"([^"]+)"|\(([\s\S]*?)\))/gm)) {
     if (match[1]) {
@@ -24,8 +44,14 @@ function extractGoImports(text) {
   return [...imports].slice(0, 100);
 }
 
+/**
+ * @param {string} text
+ * @returns {CodeSymbol[]}
+ */
 function extractGoSymbols(text) {
+  /** @type {CodeSymbol[]} */
   const symbols = [];
+  /** @type {Set<string>} */
   const seen = new Set();
   const definitions = [
     { type: "function", pattern: /^\s*func\s+(?:\([^)]+\)\s*)?([A-Za-z_]\w*)\s*\(/gm },
@@ -47,6 +73,10 @@ function extractGoSymbols(text) {
   return symbols;
 }
 
+/**
+ * @param {string} text
+ * @returns {AstFacts}
+ */
 export function extractCsharpFacts(text) {
   const codeText = stripNonCode(text);
   const symbols = extractCsharpSymbols(codeText);
@@ -58,7 +88,12 @@ export function extractCsharpFacts(text) {
   };
 }
 
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
 function extractCsharpImports(text) {
+  /** @type {Set<string>} */
   const imports = new Set();
   for (const match of text.matchAll(/^\s*using\s+(?:static\s+)?([A-Za-z_][\w.]*)\s*;/gm)) {
     imports.add(match[1]);
@@ -66,8 +101,14 @@ function extractCsharpImports(text) {
   return [...imports].slice(0, 100);
 }
 
+/**
+ * @param {string} text
+ * @returns {VisibilitySymbol[]}
+ */
 function extractCsharpSymbols(text) {
+  /** @type {VisibilitySymbol[]} */
   const symbols = [];
+  /** @type {Set<string>} */
   const seen = new Set();
   const accessModifiers = "(?:public|private|protected|internal|protected\\s+internal|private\\s+protected)";
   const otherModifiers = "(?:static|sealed|abstract|partial|virtual|override|async|readonly|extern|unsafe|new)";
@@ -132,6 +173,10 @@ function extractCsharpSymbols(text) {
   return symbols;
 }
 
+/**
+ * @param {string} text
+ * @returns {AstFacts}
+ */
 export function extractPythonFacts(text) {
   const codeText = stripPythonComments(text);
   const symbols = extractPythonSymbols(codeText);
@@ -142,7 +187,12 @@ export function extractPythonFacts(text) {
   };
 }
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 function stripPythonComments(text) {
+  /** @type {string[]} */
   const chars = [];
   let index = 0;
   let inString = false;
@@ -195,7 +245,12 @@ function stripPythonComments(text) {
   return chars.join("");
 }
 
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
 function extractPythonImports(text) {
+  /** @type {Set<string>} */
   const imports = new Set();
   for (const match of text.matchAll(/^\s*import\s+([A-Za-z_][\w.]*(?:\s*,\s*[A-Za-z_][\w.]*)*)/gm)) {
     for (const name of match[1].split(",")) {
@@ -209,8 +264,14 @@ function extractPythonImports(text) {
   return [...imports].slice(0, 100);
 }
 
+/**
+ * @param {string} text
+ * @returns {CodeSymbol[]}
+ */
 function extractPythonSymbols(text) {
+  /** @type {CodeSymbol[]} */
   const symbols = [];
+  /** @type {Set<string>} */
   const seen = new Set();
   const definitions = [
     { type: "class", pattern: /^[ \t]*class\s+([A-Za-z_]\w*)/gm },
@@ -229,6 +290,10 @@ function extractPythonSymbols(text) {
   return symbols;
 }
 
+/**
+ * @param {string} text
+ * @returns {AstFacts}
+ */
 export function extractJavaFacts(text) {
   const codeText = stripNonCode(text);
   const symbols = extractJavaSymbols(codeText);
@@ -240,7 +305,12 @@ export function extractJavaFacts(text) {
   };
 }
 
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
 function extractJavaImports(text) {
+  /** @type {Set<string>} */
   const imports = new Set();
   for (const match of text.matchAll(/^\s*import\s+(?:static\s+)?([A-Za-z_][\w.]*(?:\.\*)?)\s*;/gm)) {
     imports.add(match[1]);
@@ -248,8 +318,14 @@ function extractJavaImports(text) {
   return [...imports].slice(0, 100);
 }
 
+/**
+ * @param {string} text
+ * @returns {VisibilitySymbol[]}
+ */
 function extractJavaSymbols(text) {
+  /** @type {VisibilitySymbol[]} */
   const symbols = [];
+  /** @type {Set<string>} */
   const seen = new Set();
   const accessModifiers = "(?:public|private|protected)";
   const otherModifiers = "(?:static|final|abstract|sealed|non-sealed|strictfp|default)";
@@ -292,6 +368,10 @@ function extractJavaSymbols(text) {
   return symbols;
 }
 
+/**
+ * @param {string} text
+ * @returns {AstFacts}
+ */
 export function extractRubyFacts(text) {
   const codeText = stripRubyComments(text);
   const symbols = extractRubySymbols(codeText);
@@ -302,8 +382,13 @@ export function extractRubyFacts(text) {
   };
 }
 
+/**
+ * @param {string} text
+ * @returns {string}
+ */
 function stripRubyComments(text) {
   const lines = text.split("\n");
+  /** @type {string[]} */
   const out = [];
   let inHeredoc = false;
   let inBlockComment = false;
@@ -327,7 +412,12 @@ function stripRubyComments(text) {
   return out.join("\n");
 }
 
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
 function extractRubyImports(text) {
+  /** @type {Set<string>} */
   const imports = new Set();
   for (const match of text.matchAll(/^\s*require(?:_relative)?\s+["']([^"']+)["']/gm)) {
     imports.add(match[1]);
@@ -335,8 +425,14 @@ function extractRubyImports(text) {
   return [...imports].slice(0, 100);
 }
 
+/**
+ * @param {string} text
+ * @returns {CodeSymbol[]}
+ */
 function extractRubySymbols(text) {
+  /** @type {CodeSymbol[]} */
   const symbols = [];
+  /** @type {Set<string>} */
   const seen = new Set();
   const definitions = [
     { type: "module", pattern: /^[ \t]*module\s+([A-Z][\w:]*)/gm },
@@ -356,6 +452,10 @@ function extractRubySymbols(text) {
   return symbols;
 }
 
+/**
+ * @param {string} text
+ * @returns {AstFacts}
+ */
 export function extractRustFacts(text) {
   const codeText = stripNonCode(text);
   const symbols = extractRustSymbols(codeText);
@@ -366,7 +466,12 @@ export function extractRustFacts(text) {
   };
 }
 
+/**
+ * @param {string} text
+ * @returns {string[]}
+ */
 function extractRustImports(text) {
+  /** @type {Set<string>} */
   const imports = new Set();
   for (const match of text.matchAll(/^\s*use\s+([A-Za-z_][\w:]*(?:::[\w:{}*,\s]+)?)\s*;/gm)) {
     const cleaned = match[1].replace(/\s+/g, "");
@@ -375,8 +480,14 @@ function extractRustImports(text) {
   return [...imports].slice(0, 100);
 }
 
+/**
+ * @param {string} text
+ * @returns {VisibilitySymbol[]}
+ */
 function extractRustSymbols(text) {
+  /** @type {VisibilitySymbol[]} */
   const symbols = [];
+  /** @type {Set<string>} */
   const seen = new Set();
   const visibility = "(?:pub(?:\\s*\\([^)]*\\))?)";
   const definitions = [
