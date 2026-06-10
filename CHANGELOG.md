@@ -4,7 +4,7 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
-## [Unreleased] - 2.0.0
+## [2.0.0] - 2026-06-10
 
 Major version: the MCP tool surface changed. Every legacy tool name still works via `tools/call` (guaranteed until 3.0) — see [docs/MIGRATION-2.0.md](docs/MIGRATION-2.0.md).
 
