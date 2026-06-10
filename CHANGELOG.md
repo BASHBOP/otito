@@ -29,7 +29,7 @@ This project follows SemVer.
 
 ### Note
 
-- 1.4.3 was tagged but not published to npm; its fixes first shipped in 1.5.0.
+- Published automatically by the tag-triggered release workflow when the `v1.4.3` tag landed; 1.5.0 followed minutes later with the review-findings batch.
 
 ### Fixed
 
