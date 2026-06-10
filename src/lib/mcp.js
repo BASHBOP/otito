@@ -45,7 +45,7 @@ export const tools = [
     name: "repo_map",
     title: "Map Repository",
     description:
-      "Generate a compact JSON code map for a repository. Writes a local .dev-context/index.json cache into the target repo; the call is idempotent and does not change source files.",
+      "Map a repository into a compact JSON code map, optionally narrowed by domain, file kind, or controller route. Pass domain to find files for a feature, kind to find files of a type (route, controller, service, apiClient, component, test), or route to match Nest controller routes by substring/regex. Replaces the old find_domain, find_file_kind, find_backend_route, and find_frontend_api_client tools. Writes a local .dev-context/index.json cache into the target repo; the call is idempotent and does not change source files.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
@@ -53,22 +53,13 @@ export const tools = [
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         domain: { type: "string", description: "Optional domain filter such as booking, payment, email, events." },
         kind: { type: "string", description: "Optional file kind filter such as route, controller, service, apiClient, component, test." },
+        route: {
+          type: "string",
+          description:
+            "Optional route filter. Substring or regex matched against each controller's combined route (controllerBasePath + httpMethods paths) and file path.",
+        },
         includeFiles: { type: "boolean", description: "Include matching files in the response. Defaults to false." },
         limit: { type: "number", description: "Maximum files to include. Defaults to 100." },
-      },
-    },
-  },
-  {
-    name: "repo_discover",
-    title: "Discover Repositories",
-    description: "Discover repository roots under one or more local directories.",
-    annotations: { readOnlyHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        paths: { type: "array", items: { type: "string" }, description: "Directories to scan. Defaults to current working directory." },
-        depth: { type: "number", description: "Maximum directory depth. Defaults to 4." },
-        limit: { type: "number", description: "Maximum repositories to return. Defaults to 100." },
       },
     },
   },
@@ -76,7 +67,7 @@ export const tools = [
     name: "repo_index",
     title: "Index Repositories",
     description:
-      "Generate local .dev-context indexes and add repositories to the local catalog. Mutates the persistent local catalog, so it is not a pure read.",
+      "Index local repositories: generate .dev-context indexes and add them to the local catalog. Pass discover:true to find repository roots under the given paths first. Pass dryRun:true to discover and report without writing any indexes or catalog (read-only); this replaces the old repo_discover tool. Without dryRun this mutates the persistent local catalog, so it is not a pure read.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object",
@@ -84,6 +75,10 @@ export const tools = [
         paths: { type: "array", items: { type: "string" }, description: "Repository paths, or roots when discover is true." },
         path: { type: "string", description: "Single repository path." },
         discover: { type: "boolean", description: "Discover repositories under the provided paths before indexing." },
+        dryRun: {
+          type: "boolean",
+          description: "Discover and report repositories without writing indexes or mutating the catalog. Read-only. Defaults to false.",
+        },
         catalog: { type: "string", description: "Optional catalog JSON path." },
         depth: { type: "number", description: "Maximum discovery depth." },
         limit: { type: "number", description: "Maximum discovered repositories." },
@@ -91,32 +86,19 @@ export const tools = [
     },
   },
   {
-    name: "repo_catalog",
-    title: "List Catalog",
-    description: "List the local repoctx repository catalog.",
-    annotations: { readOnlyHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        catalog: { type: "string", description: "Optional catalog JSON path." },
-      },
-    },
-  },
-  {
     name: "repo_search",
     title: "Search Repository Catalog",
     description:
-      "Search indexed local repositories by path, domain, kind, route, imports, exports, and symbols. Only searches repositories already in the local catalog — if the catalog is empty this returns no matches, so call repo_index on the target repositories first.",
+      "Search indexed local repositories by path, domain, kind, route, imports, exports, and symbols. Omit query to list the local repository catalog instead (the catalog listing the old repo_catalog tool returned). Only searches repositories already in the local catalog — if the catalog is empty this returns no matches, so call repo_index on the target repositories first.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
-        query: { type: "string", description: "Search query." },
+        query: { type: "string", description: "Search query. Omit to return the catalog listing instead of search matches." },
         catalog: { type: "string", description: "Optional catalog JSON path." },
         limit: { type: "number", description: "Maximum matches. Defaults to 25." },
         offline: { type: "boolean", description: "Use stored index files without refreshing fingerprints." },
       },
-      required: ["query"],
     },
   },
   {
@@ -163,16 +145,17 @@ export const tools = [
     },
   },
   {
-    name: "pr_merge_readiness",
-    title: "PR Merge Readiness",
+    name: "review_gate",
+    title: "Review Gate",
     description:
-      "Gate an open GitHub pull request for merge. Uses `gh` to inspect PR state, review decision, CODEOWNERS approvals (with team-membership), unresolved conversations, branch protection, and status checks, then rolls up into a PASS / WARN / FAIL verdict. Use this when you have a PR on GitHub and need the remote merge-gate verdict. Not to be confused with merge_readiness (the local, no-GitHub gate) or review_pr (the full impact + review + gate composite).",
+      "Gate a change for merge and return a PASS / WARN / FAIL verdict. Omit pr to run the local, no-GitHub gate against a base ref (changed files, secret safety, risk-sensitive paths, release discipline, validation commands, dependency audit, policy profile). Set pr to gate an open GitHub PR via `gh` (PR state, review decision, CODEOWNERS approvals, unresolved conversations, branch protection, status checks). Merges the old merge_readiness and pr_merge_readiness tools. Use review_verdict instead when you want the full impact + review + gate composite, or review_context when you want diff/comment context with no verdict.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
       properties: {
-        selector: { type: "string", description: "PR selector (number, URL, or branch). Defaults to the current branch's PR." },
+        pr: { type: "string", description: "Optional PR selector (number, URL, or branch). When set, runs the GitHub gate; when absent, runs the local gate." },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        base: { type: "string", description: "Base ref for the local gate. Defaults to origin/main, then HEAD. Ignored in PR mode." },
         policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
         governance: { type: "string", description: "Governance: team (default) or solo." },
         request: { type: "string", description: "Optional change request for context evidence output." },
@@ -180,10 +163,10 @@ export const tools = [
     },
   },
   {
-    name: "review_pr",
-    title: "Review PR",
+    name: "review_verdict",
+    title: "Review Verdict",
     description:
-      "Run the full review pipeline in one shot: change_impact plus pr_review plus the merge gate, returning a unified verdict with a derived confidence score. Use this when you want the complete picture of a change in a single call. Not to be confused with pr_review (diff metadata only, no verdict) or merge_readiness / pr_merge_readiness (the gate verdicts alone).",
+      "Run the full review pipeline in one shot: change_impact plus review_context plus review_gate, returning a unified verdict with a derived confidence score. Use review_verdict when you want the complete picture of a change in a single call. Use review_context instead for diff metadata only (no verdict), or review_gate for the gate verdict alone.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
@@ -195,23 +178,6 @@ export const tools = [
         policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
         governance: { type: "string", description: "Governance: team (default) or solo." },
         impactTop: { type: "number", description: "Number of impact files. Defaults to 8." },
-      },
-    },
-  },
-  {
-    name: "merge_readiness",
-    title: "Merge Readiness",
-    description:
-      "Check a local working tree for merge readiness without GitHub. Runs deterministic checks (changed files, secret safety, risk-sensitive paths, release discipline, validation commands, dependency audit, policy profile) against a base ref and returns a PASS / WARN / FAIL verdict. Use this when there is no PR yet or no GitHub access. Not to be confused with pr_merge_readiness (the GitHub PR gate) or review_pr (the full impact + review + gate composite).",
-    annotations: { readOnlyHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        path: { type: "string", description: "Repository path. Defaults to current working directory." },
-        base: { type: "string", description: "Base ref to diff against. Defaults to origin/main, then HEAD." },
-        policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
-        governance: { type: "string", description: "Governance: team (default) or solo." },
-        request: { type: "string", description: "Optional change request, for context evidence output." },
       },
     },
   },
@@ -234,10 +200,10 @@ export const tools = [
     },
   },
   {
-    name: "pr_review",
-    title: "PR Review",
+    name: "review_context",
+    title: "Review Context",
     description:
-      "Produce PR review context from local git diff metadata, optionally enriched with GitHub PR comments. Use this when you want the raw diff/comment context for a change, not a verdict. Not to be confused with review_pr (the full impact + review + gate composite) or pr_merge_readiness / merge_readiness (the gate verdicts).",
+      "Produce PR review context from local git diff metadata, optionally enriched with GitHub PR comments. Use review_context when you want the raw diff/comment context for a change, not a verdict. Use review_verdict instead for the full impact + review + gate composite, or review_gate for the gate verdict alone.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object",
@@ -265,77 +231,52 @@ export const tools = [
       },
     },
   },
-  {
-    name: "find_domain",
-    title: "Find Domain",
-    description:
-      "Find files related to a domain across one or more repositories. Writes a local .dev-context/index.json cache into each target repo; the call is idempotent and does not change source files.",
-    annotations: { readOnlyHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        path: { type: "string", description: "Single repository path." },
-        paths: { type: "array", items: { type: "string" }, description: "Repository paths." },
-        domain: { type: "string", description: "Domain to find, such as booking, payment, email, events." },
-        limit: { type: "number", description: "Maximum files per repository. Defaults to 100." },
-      },
-      required: ["domain"],
-    },
-  },
-  {
-    name: "find_file_kind",
-    title: "Find File Kind",
-    description:
-      "Find files of a kind across one or more repositories. Writes a local .dev-context/index.json cache into each target repo; the call is idempotent and does not change source files.",
-    annotations: { readOnlyHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        path: { type: "string", description: "Single repository path." },
-        paths: { type: "array", items: { type: "string" }, description: "Repository paths." },
-        kind: {
-          type: "string",
-          description: "File kind: route, apiRoute, controller, service, module, component, hook, apiClient, dto, schema, test, source.",
-        },
-        limit: { type: "number", description: "Maximum files per repository. Defaults to 100." },
-      },
-      required: ["kind"],
-    },
-  },
-  {
-    name: "find_backend_route",
-    title: "Find Backend Route",
-    description:
-      "Find Nest controller routes in a backend repository. Writes a local .dev-context/index.json cache into each target repo; the call is idempotent and does not change source files.",
-    annotations: { readOnlyHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        path: { type: "string", description: "Backend repository path." },
-        paths: { type: "array", items: { type: "string" }, description: "Repository paths." },
-        query: { type: "string", description: "Optional route/controller query." },
-        limit: { type: "number", description: "Maximum route entries. Defaults to 100." },
-      },
-    },
-  },
-  {
-    name: "find_frontend_api_client",
-    title: "Find Frontend API Client",
-    description:
-      "Find frontend API client files, optionally by domain. Writes a local .dev-context/index.json cache into each target repo; the call is idempotent and does not change source files.",
-    annotations: { readOnlyHint: true },
-    inputSchema: {
-      type: "object",
-      properties: {
-        path: { type: "string", description: "Frontend repository path." },
-        paths: { type: "array", items: { type: "string" }, description: "Repository paths." },
-        domain: { type: "string", description: "Optional domain such as booking, payment, email." },
-        query: { type: "string", description: "Optional file/import/export query." },
-        limit: { type: "number", description: "Maximum files. Defaults to 100." },
-      },
-    },
-  },
 ];
+
+// Legacy MCP tool names remain callable through tools/call even though they no
+// longer appear in tools/list. Each entry maps an old name to its canonical
+// successor plus a pure arguments translator. Renames forward 1:1; folded tools
+// translate params (e.g. find_backend_route's query → repo_map.route). This
+// guarantee holds until repoctx 3.0; see docs/MIGRATION-2.0.md.
+export const LEGACY_TOOL_ALIASES = {
+  // Renames — same schema, new name.
+  pr_review: { tool: "review_context", mapArgs: (args) => args },
+  review_pr: { tool: "review_verdict", mapArgs: (args) => args },
+  // merge_readiness is the local gate (no pr); pr_merge_readiness is the GitHub
+  // gate — map its `selector` onto review_gate's `pr`.
+  merge_readiness: { tool: "review_gate", mapArgs: ({ selector: _selector, ...rest } = {}) => rest },
+  pr_merge_readiness: {
+    tool: "review_gate",
+    mapArgs: ({ selector, ...rest } = {}) => ({ ...rest, pr: selector ?? rest.pr ?? "" }),
+  },
+  // repo_catalog → repo_search with no query returns the catalog listing.
+  repo_catalog: { tool: "repo_search", mapArgs: ({ query: _query, ...rest } = {}) => rest },
+  // repo_discover → repo_index in read-only discover mode.
+  repo_discover: { tool: "repo_index", mapArgs: (args = {}) => ({ ...args, discover: true, dryRun: true }) },
+  // The four find_* tools fold into repo_map's domain/kind/route/includeFiles params.
+  find_domain: {
+    tool: "repo_map",
+    mapArgs: ({ domain, path, paths, limit } = {}) => ({ domain, path: path ?? paths?.[0], limit, includeFiles: true }),
+  },
+  find_file_kind: {
+    tool: "repo_map",
+    mapArgs: ({ kind, path, paths, limit } = {}) => ({ kind, path: path ?? paths?.[0], limit, includeFiles: true }),
+  },
+  find_backend_route: {
+    tool: "repo_map",
+    mapArgs: ({ query, path, paths, limit } = {}) => ({ kind: "controller", route: query, path: path ?? paths?.[0], limit, includeFiles: true }),
+  },
+  find_frontend_api_client: {
+    tool: "repo_map",
+    mapArgs: ({ query, domain, path, paths, limit } = {}) => ({
+      kind: "apiClient",
+      route: query ?? domain,
+      path: path ?? paths?.[0],
+      limit,
+      includeFiles: true,
+    }),
+  },
+};
 
 export async function startMcpServer({ input = process.stdin, output = process.stdout } = {}) {
   const rl = readline.createInterface({ input, crlfDelay: Infinity });
@@ -466,19 +407,29 @@ function toolResultText(result) {
 }
 
 async function dispatchTool(name, args) {
+  const alias = LEGACY_TOOL_ALIASES[name];
+  if (alias) {
+    return dispatchTool(alias.tool, alias.mapArgs(args) ?? {});
+  }
+
   switch (name) {
     case "repo_inspect":
       return gateInspectScripts(inspectRepo(args.path ?? "."), args.includeScripts);
     case "repo_map":
       return compactCodeMap(getCachedCodeMap(args.path ?? "."), args);
-    case "repo_discover":
-      return discoverRepositories(args.paths ?? [args.path ?? "."], args);
     case "repo_index":
+      // dryRun discovers and reports without writing indexes or mutating the
+      // catalog, preserving the read-only semantics of the old repo_discover tool.
+      if (args.dryRun) {
+        return { ...discoverRepositories(args.paths ?? [args.path ?? "."], args), dryRun: true };
+      }
       return indexRepositories(args.paths ?? [args.path ?? "."], args);
-    case "repo_catalog":
-      return listCatalog(args);
     case "repo_search":
-      return withSearchRemediation(searchCatalog(requiredString(args.query, "query"), args));
+      // No query → return the catalog listing (what repo_catalog returned).
+      if (typeof args.query !== "string" || !args.query.trim()) {
+        return listCatalog(args);
+      }
+      return withSearchRemediation(searchCatalog(args.query, args));
     case "context_pack": {
       const result = generateContextPack(requiredString(args.query, "query"), args);
       return args.includeMarkdown ? result : result.data;
@@ -491,7 +442,17 @@ async function dispatchTool(name, args) {
       });
       return args.includeMarkdown ? result : result.data;
     }
-    case "merge_readiness": {
+    case "review_gate": {
+      // pr set → GitHub gate (evaluatePR); pr absent → local gate (evaluateLocal).
+      // This is exactly what the old pr_merge_readiness and merge_readiness did.
+      const hasPr = typeof args.pr === "string" && args.pr.trim();
+      if (hasPr) {
+        return evaluatePR(args.path ?? ".", args.pr, {
+          policy: args.policy,
+          governance: args.governance,
+          request: args.request,
+        });
+      }
       return evaluateLocal(args.path ?? ".", {
         base: args.base,
         policy: args.policy,
@@ -499,14 +460,7 @@ async function dispatchTool(name, args) {
         request: args.request,
       });
     }
-    case "pr_merge_readiness": {
-      return evaluatePR(args.path ?? ".", args.selector ?? "", {
-        policy: args.policy,
-        governance: args.governance,
-        request: args.request,
-      });
-    }
-    case "review_pr": {
+    case "review_verdict": {
       const { data } = await generateReview(args.path ?? ".", {
         request: args.request,
         base: args.base,
@@ -522,7 +476,7 @@ async function dispatchTool(name, args) {
       const result = generateWorkspaceReport(paths);
       return args.includeMarkdown ? result : result.data;
     }
-    case "pr_review": {
+    case "review_context": {
       const result = generatePrReview(args.path ?? ".", args);
       return args.includeMarkdown ? result : result.data;
     }
@@ -530,14 +484,6 @@ async function dispatchTool(name, args) {
       const result = generateHarness(args.path ?? ".", args);
       return args.includeMarkdown ? result : result.data;
     }
-    case "find_domain":
-      return findDomain(args);
-    case "find_file_kind":
-      return findFileKind(args);
-    case "find_backend_route":
-      return findBackendRoute(args);
-    case "find_frontend_api_client":
-      return findFrontendApiClient(args);
     default:
       throw new McpProtocolError(-32602, `Unknown tool: ${name}`);
   }
@@ -558,6 +504,7 @@ function withSearchRemediation(result) {
 
 function compactCodeMap(map, args = {}) {
   const limit = normalizeLimit(args.limit, 100);
+  const filtered = args.domain || args.kind || args.route;
   const files = filterFiles(map.files, args).slice(0, limit).map(summarizeFile);
   return {
     ok: true,
@@ -565,96 +512,44 @@ function compactCodeMap(map, args = {}) {
     cache: map.cache,
     summary: map.summary,
     domains: map.domains.slice(0, 30),
-    files: args.includeFiles || args.domain || args.kind ? files : undefined,
-    notableFiles: args.includeFiles || args.domain || args.kind ? undefined : map.files.filter(isNotableFile).slice(0, limit).map(summarizeFile),
+    files: args.includeFiles || filtered ? files : undefined,
+    notableFiles: args.includeFiles || filtered ? undefined : map.files.filter(isNotableFile).slice(0, limit).map(summarizeFile),
   };
 }
 
-function findDomain(args) {
-  const domain = requiredString(args.domain, "domain");
-  const limit = normalizeLimit(args.limit, 100);
-  return {
-    ok: true,
-    domain,
-    repos: pathList(args).map((repoPath) => {
-      const map = getCachedCodeMap(repoPath);
-      return {
-        repo: map.repo,
-        files: map.files
-          .filter((file) => matches(domainSearchText(file), domain))
-          .slice(0, limit)
-          .map(summarizeFile),
-      };
-    }),
-  };
-}
-
-function findFileKind(args) {
-  const kind = requiredString(args.kind, "kind");
-  const limit = normalizeLimit(args.limit, 100);
-  return {
-    ok: true,
-    kind,
-    repos: pathList(args).map((repoPath) => {
-      const map = getCachedCodeMap(repoPath);
-      return {
-        repo: map.repo,
-        files: map.files
-          .filter((file) => file.kind === kind)
-          .slice(0, limit)
-          .map(summarizeFile),
-      };
-    }),
-  };
-}
-
-function findBackendRoute(args) {
-  const query = args.query;
-  const limit = normalizeLimit(args.limit, 100);
-  const routes = [];
-  for (const repoPath of pathList(args)) {
-    const map = getCachedCodeMap(repoPath);
-    for (const file of map.files.filter((entry) => entry.kind === "controller")) {
-      for (const method of file.httpMethods) {
-        const route = combineRoute(file.controllerBasePath, method.path);
-        const item = {
-          repo: map.repo.name,
-          file: file.path,
-          controllerBasePath: file.controllerBasePath,
-          method: method.method,
-          route,
-        };
-        if (!query || matches(`${file.path} ${route} ${method.method}`, query)) {
-          routes.push(item);
-        }
-      }
-    }
-  }
-  return { ok: true, query, routes: routes.slice(0, limit) };
-}
-
-function findFrontendApiClient(args) {
-  const limit = normalizeLimit(args.limit, 100);
-  const query = args.query ?? args.domain;
-  return {
-    ok: true,
-    query,
-    repos: pathList(args).map((repoPath) => {
-      const map = getCachedCodeMap(repoPath);
-      return {
-        repo: map.repo,
-        files: map.files
-          .filter((file) => file.kind === "apiClient")
-          .filter((file) => !query || matches(`${file.path} ${domainSearchText(file)} ${file.imports.join(" ")} ${file.exports.join(" ")}`, query))
-          .slice(0, limit)
-          .map(summarizeFile),
-      };
-    }),
-  };
-}
-
+// The domain/kind/route filters fold in the behavior of the retired find_domain,
+// find_file_kind, find_backend_route, and find_frontend_api_client tools. The
+// route filter replicates findBackendRoute's matching: it checks every controller
+// route built from controllerBasePath + each httpMethod path (and the file path),
+// so kind:"controller" + route reproduces the backend-route lookup, while
+// kind:"apiClient" + route reproduces the frontend-api-client query.
 function filterFiles(files, args = {}) {
-  return files.filter((file) => !args.domain || matches(domainSearchText(file), args.domain)).filter((file) => !args.kind || file.kind === args.kind);
+  return files
+    .filter((file) => !args.domain || matches(domainSearchText(file), args.domain))
+    .filter((file) => !args.kind || file.kind === args.kind)
+    .filter((file) => !args.route || matchesRoute(file, args.route));
+}
+
+function matchesRoute(file, route) {
+  const haystacks = [file.path, file.route, file.controllerBasePath, domainSearchText(file), ...(file.imports ?? []), ...(file.exports ?? [])];
+  for (const method of file.httpMethods ?? []) {
+    haystacks.push(combineRoute(file.controllerBasePath, method.path), method.path, method.method);
+  }
+  return haystacks.some((value) => matchesPattern(value, route));
+}
+
+// Route filter matches as a regex when the value is a valid pattern, otherwise
+// falls back to case-insensitive substring matching (findBackendRoute's behavior).
+function matchesPattern(value, pattern) {
+  const text = String(value ?? "");
+  if (!text) {
+    return false;
+  }
+  try {
+    return new RegExp(pattern, "i").test(text);
+  } catch {
+    return matches(text, pattern);
+  }
 }
 
 function domainSearchText(file) {
@@ -679,16 +574,6 @@ function summarizeFile(file) {
 
 function isNotableFile(file) {
   return ["route", "apiRoute", "controller", "service", "module", "apiClient"].includes(file.kind);
-}
-
-function pathList(args = {}) {
-  if (Array.isArray(args.paths) && args.paths.length > 0) {
-    return args.paths;
-  }
-  if (typeof args.path === "string" && args.path) {
-    return [args.path];
-  }
-  return ["."];
 }
 
 function requirePaths(args = {}) {

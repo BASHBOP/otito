@@ -1,0 +1,252 @@
+{
+  "$schema": "./corpus.schema.note",
+  "description": "Labeled accuracy corpus for repoctx retrieval (generateContextPack) and risk classification (risk-paths). Retrieval cases score precision@k / recall@k / MRR of expectedPrimary within primaryFiles. Risk cases assert conceptsFromQuery / classifyPath / isGateRiskPath / isSecretPath against expected and notExpected labels. See docs/EVALS.md for how to add a case and how thresholds work.",
+  "k": 5,
+  "thresholds": {
+    "comment": "Floors set to current-baseline-minus-slack so the suite is green today but a regression trips it. Baseline (2026-06-10): retrieval p@5=0.933 r@5=1.0 mrr=1.0; risk accuracy=1.0 (16/16). Aggregate metrics must be >= these floors for exit code 0. Re-record both baseline and floors in docs/EVALS.md after any intentional behavior change.",
+    "retrieval": {
+      "precisionAtK": 0.85,
+      "recallAtK": 0.9,
+      "mrr": 0.9
+    },
+    "risk": {
+      "accuracy": 0.95
+    }
+  },
+  "fixtureRoots": {
+    "comment": "Logical fixture name -> directory relative to repo root. 'existing/*' reuse the codex dev-context eval fixtures; 'fixtures/*' are richer synthetic repos added for this corpus.",
+    "sample-api": "codex/skills/dev-context/evals/files/sample-api",
+    "sample-web": "codex/skills/dev-context/evals/files/sample-web",
+    "sample-node-api": "codex/skills/dev-context/evals/files/sample-node-api",
+    "shop-api": "evals/fixtures/shop-api",
+    "polyglot-svc": "evals/fixtures/polyglot-svc",
+    "web-client": "evals/fixtures/web-client"
+  },
+  "retrieval": [
+    {
+      "name": "api-add-rsvp-endpoint",
+      "query": "add rsvp endpoint to events",
+      "repoFixture": "sample-api",
+      "expectedPrimary": ["src/events/events.controller.ts"]
+    },
+    {
+      "name": "api-events-controller-noun",
+      "query": "events controller",
+      "repoFixture": "sample-api",
+      "expectedPrimary": ["src/events/events.controller.ts"]
+    },
+    {
+      "name": "web-fix-rsvp-button",
+      "query": "fix the rsvp button",
+      "repoFixture": "sample-web",
+      "expectedPrimary": ["src/components/EventRsvpButton.tsx"],
+      "expectedAnyOf": ["src/api/events.ts"]
+    },
+    {
+      "name": "web-api-client-by-symbol",
+      "query": "submitEventRsvp api client",
+      "repoFixture": "sample-web",
+      "expectedPrimary": ["src/api/events.ts"]
+    },
+    {
+      "name": "node-route-shaped-query",
+      "query": "where are the routes defined",
+      "repoFixture": "sample-node-api",
+      "expectedPrimary": ["src/server.js"]
+    },
+    {
+      "name": "shop-refund-payment",
+      "query": "refund a payment",
+      "repoFixture": "shop-api",
+      "expectedPrimary": ["src/payment/checkout.service.ts"],
+      "expectedAnyOf": ["src/payment/stripe.webhook.ts"]
+    },
+    {
+      "name": "shop-stripe-webhook",
+      "query": "stripe webhook",
+      "repoFixture": "shop-api",
+      "expectedPrimary": ["src/payment/stripe.webhook.ts"]
+    },
+    {
+      "name": "shop-roles-guard",
+      "query": "role based access guard",
+      "repoFixture": "shop-api",
+      "expectedPrimary": ["src/auth/roles.guard.ts"]
+    },
+    {
+      "name": "shop-create-order-route",
+      "query": "create an order endpoint",
+      "repoFixture": "shop-api",
+      "expectedPrimary": ["src/orders/orders.controller.ts"]
+    },
+    {
+      "name": "shop-error-shaped-fallback",
+      "comment": "Error-message-shaped query matches no indexed keywords; must fall back gracefully to a non-empty primary set rather than returning nothing. expectedAnyOf accepts any indexed source file the fallback ranker surfaces.",
+      "query": "ENOENT no such file or directory at readFileSync",
+      "repoFixture": "shop-api",
+      "expectedPrimary": [],
+      "expectedAnyOf": ["src/auth/roles.guard.ts", "src/orders/orders.controller.ts", "src/payment/checkout.service.ts", "src/payment/stripe.webhook.ts"]
+    },
+    {
+      "name": "poly-plural-users-service",
+      "comment": "Plural query token 'users' must fold to singular and rank the Python service.",
+      "query": "update the users service",
+      "repoFixture": "polyglot-svc",
+      "expectedPrimary": ["src/users_service.py"]
+    },
+    {
+      "name": "poly-singular-user",
+      "query": "user lookup",
+      "repoFixture": "polyglot-svc",
+      "expectedPrimary": ["src/users_service.py"]
+    },
+    {
+      "name": "poly-go-inventory",
+      "comment": "Cross-language: Go file ranked from an English query.",
+      "query": "inventory reservation",
+      "repoFixture": "polyglot-svc",
+      "expectedPrimary": ["src/inventory_handler.go"]
+    },
+    {
+      "name": "poly-ts-notification",
+      "query": "send a notification",
+      "repoFixture": "polyglot-svc",
+      "expectedPrimary": ["src/notifications.ts"]
+    },
+    {
+      "name": "web-checkout-button",
+      "query": "checkout button component",
+      "repoFixture": "web-client",
+      "expectedPrimary": ["src/components/CheckoutButton.tsx"],
+      "expectedAnyOf": ["src/api/orders.ts"]
+    },
+    {
+      "name": "multi-repo-order-pairing",
+      "comment": "Multi-repo route<->client pairing: backend controller and frontend client should both surface as primary for 'order creation'. Paths are namespaced as <fixture>/<repo-relative-path>.",
+      "query": "order creation",
+      "repoFixtures": ["shop-api", "web-client"],
+      "expectedPrimary": ["shop-api/src/orders/orders.controller.ts", "web-client/src/api/orders.ts"]
+    }
+  ],
+  "risk": [
+    {
+      "name": "query-payload-not-money",
+      "comment": "Regression guard: 'pay' substring in 'payload' must NOT imply money flow.",
+      "mode": "query",
+      "query": "fix payload parsing",
+      "expectedConcepts": [],
+      "notExpectedConcepts": ["money flow"]
+    },
+    {
+      "name": "query-apple-signin-is-auth",
+      "mode": "query",
+      "query": "add apple sign in",
+      "expectedConcepts": ["auth/security"],
+      "notExpectedConcepts": []
+    },
+    {
+      "name": "query-apple-emoji-not-auth",
+      "comment": "'apple' alone (no sign-in verb) must NOT imply auth.",
+      "mode": "query",
+      "query": "add an apple emoji to the header",
+      "expectedConcepts": [],
+      "notExpectedConcepts": ["auth/security"]
+    },
+    {
+      "name": "query-refund-is-money",
+      "mode": "query",
+      "query": "refund a payment",
+      "expectedConcepts": ["money flow"],
+      "notExpectedConcepts": []
+    },
+    {
+      "name": "query-migration-is-data-model",
+      "mode": "query",
+      "query": "update the database migration",
+      "expectedConcepts": ["data model"],
+      "notExpectedConcepts": []
+    },
+    {
+      "name": "query-order-route-is-request-surface",
+      "mode": "query",
+      "query": "add a new order route",
+      "expectedConcepts": ["request surface"],
+      "notExpectedConcepts": ["money flow"]
+    },
+    {
+      "name": "path-roles-guard-is-auth",
+      "comment": "Regression guard: roles.guard.ts must classify as auth/security.",
+      "mode": "path",
+      "path": "src/auth/roles.guard.ts",
+      "expectedConcepts": ["auth/security"],
+      "notExpectedConcepts": ["money flow"]
+    },
+    {
+      "name": "path-checkout-service-is-money",
+      "mode": "path",
+      "path": "src/payment/checkout.service.ts",
+      "expectedConcepts": ["money flow"],
+      "notExpectedConcepts": ["auth/security"]
+    },
+    {
+      "name": "path-tokens-util-not-auth",
+      "comment": "Regression guard: a generic tokens.js utility must NOT fold into auth/security.",
+      "mode": "path",
+      "path": "src/lib/tokens.js",
+      "expectedConcepts": [],
+      "notExpectedConcepts": ["auth/security"]
+    },
+    {
+      "name": "path-sessions-service-is-auth",
+      "mode": "path",
+      "path": "src/users/sessions.service.ts",
+      "expectedConcepts": ["auth/security"],
+      "notExpectedConcepts": []
+    },
+    {
+      "name": "path-prisma-schema-is-data-model",
+      "mode": "path",
+      "path": "prisma/schema.prisma",
+      "expectedConcepts": ["data model"],
+      "notExpectedConcepts": []
+    },
+    {
+      "name": "gate-checkout-spec-no-gate",
+      "comment": "Regression guard: tests/checkout.spec.ts must NOT trip the merge gate even though it mentions checkout.",
+      "mode": "gate",
+      "path": "tests/checkout.spec.ts",
+      "expectedConcepts": [],
+      "notExpectedConcepts": ["gate"]
+    },
+    {
+      "name": "gate-payment-service-gates",
+      "mode": "gate",
+      "path": "src/payment/checkout.service.ts",
+      "expectedConcepts": ["gate"],
+      "notExpectedConcepts": []
+    },
+    {
+      "name": "secret-dev-environments-not-secret",
+      "comment": "Regression guard: dev.environments.ts must NOT be treated as a secret file via the '.env' substring.",
+      "mode": "secret",
+      "path": "config/dev.environments.ts",
+      "expectedConcepts": [],
+      "notExpectedConcepts": ["secret"]
+    },
+    {
+      "name": "secret-env-production-is-secret",
+      "mode": "secret",
+      "path": ".env.production",
+      "expectedConcepts": ["secret"],
+      "notExpectedConcepts": []
+    },
+    {
+      "name": "secret-docs-not-secret",
+      "comment": "Regression guard: docs/secrets-management.md merely documents secrets; must NOT be a secret file.",
+      "mode": "secret",
+      "path": "docs/secrets-management.md",
+      "expectedConcepts": [],
+      "notExpectedConcepts": ["secret"]
+    }
+  ]
+}
