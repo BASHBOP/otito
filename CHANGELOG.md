@@ -4,6 +4,20 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [Unreleased] - 2.0.0
+
+Major version: the MCP tool surface changed. Every legacy tool name still works via `tools/call` (guaranteed until 3.0) — see [docs/MIGRATION-2.0.md](docs/MIGRATION-2.0.md).
+
+### Changed
+
+- **MCP tool surface consolidated from 18 tools to 11.** `pr_review` → `review_context`, `review_pr` → `review_verdict`; `merge_readiness` + `pr_merge_readiness` → `review_gate` (a `pr` param selects local vs GitHub mode); the four `find_*` tools fold into `repo_map` (new `route` param); `repo_catalog` folds into `repo_search` (query now optional); `repo_discover` folds into `repo_index` (new `dryRun` param). `tools/list` advertises the 11 canonical tools; all 18 legacy names keep working through a back-compat alias layer.
+- The whole `src/` tree is now type-checked: `checkJs` is enabled and the codebase carries JSDoc annotations (1393 → 0 errors), so `npm run typecheck` is a real type check rather than syntax-only. No runtime behavior changed.
+
+### Added
+
+- **Accuracy eval corpus.** `repoctx eval --accuracy` scores retrieval precision@5 / recall@5 / MRR and risk-classification accuracy against a 32-case labeled corpus, exiting non-zero below tunable thresholds. Wired into the quality gate so retrieval/risk regressions now block CI. Baseline: p@5 0.933, r@5 1.0, MRR 1.0, risk accuracy 1.0. See [docs/EVALS.md](docs/EVALS.md).
+- `repoctx gate <repo>` (local) / `gate --pr <selector>` (GitHub) — the canonical CLI merge-gate command; `pass`/`pass-pr` remain as aliases.
+
 ## [1.5.0] - 2026-06-10
 
 ### Fixed
