@@ -171,13 +171,22 @@ export const RISK_GLYPHS = {
   [RISK_FLAGS.releaseDiscipline]: "🏷️",
 };
 
+/**
+ * @param {string} flag
+ * @returns {string}
+ */
 export function glyphFor(flag) {
-  return RISK_GLYPHS[flag] ?? "";
+  return /** @type {Record<string, string>} */ (RISK_GLYPHS)[flag] ?? "";
 }
 
 // Classify a file path into canonical risk flags. Accepts optional `kind` from
 // the code-map and optional diff sizes so the same function powers both
 // task-context scoring and PR review.
+/**
+ * @param {string} filePath
+ * @param {{ kind?: string, additions?: number, deletions?: number }} [options]
+ * @returns {string[]}
+ */
 export function classifyPath(filePath, options = {}) {
   const path = String(filePath ?? "").toLowerCase();
   // Two token views of the path:
@@ -189,7 +198,9 @@ export function classifyPath(filePath, options = {}) {
   // words (e.g. "token") only match the raw view, so a generic `tokens.js`
   // utility does NOT fold into the auth concept while `token.service.ts` still
   // does. The original word is also always kept so a plural pattern still hits.
+  /** @type {Set<string>} */
   const rawTokens = new Set();
+  /** @type {Set<string>} */
   const singularTokens = new Set();
   for (const token of path.split(/[^a-z0-9]+/).filter(Boolean)) {
     rawTokens.add(token);
@@ -198,6 +209,7 @@ export function classifyPath(filePath, options = {}) {
   const kind = options.kind ?? "";
   const additions = options.additions ?? 0;
   const deletions = options.deletions ?? 0;
+  /** @type {Set<string>} */
   const flags = new Set();
 
   for (const pattern of RISK_PATTERNS) {
@@ -229,6 +241,13 @@ const AMBIGUOUS_PATH_PARTS = new Set(["token"]);
 // substring (when the part contains punctuation, e.g. "package.json" or
 // ".github/workflows"). Avoids substring false positives observed in
 // field-test: "processors" → "sso" → auth/security.
+/**
+ * @param {string} part
+ * @param {Set<string>} rawTokens
+ * @param {Set<string>} singularTokens
+ * @param {string} path
+ * @returns {boolean}
+ */
 function matchesPathPart(part, rawTokens, singularTokens, path) {
   if (/^[a-z0-9]+$/.test(part)) {
     if (AMBIGUOUS_PATH_PARTS.has(part)) {
@@ -246,6 +265,10 @@ function matchesPathPart(part, rawTokens, singularTokens, path) {
 // it only ever turns an obvious plural into its singular concept word. Shared
 // from here so impact.js, the gates, and pr-review all singularize the same
 // way instead of each rolling their own copy.
+/**
+ * @param {string} term
+ * @returns {string}
+ */
 export function singularizeToken(term) {
   if (term.length <= 3 || term.endsWith("ss")) return term;
   if (term.endsWith("ies")) return `${term.slice(0, -3)}y`;
@@ -258,6 +281,10 @@ export function singularizeToken(term) {
 
 // True when the path is a documentation file (by extension or by living under
 // a docs/ directory). The gates never treat docs as risk- or secret-sensitive.
+/**
+ * @param {string} filePath
+ * @returns {boolean}
+ */
 export function isDocPath(filePath) {
   const path = String(filePath ?? "")
     .toLowerCase()
@@ -267,6 +294,10 @@ export function isDocPath(filePath) {
   return path.split("/").some((segment) => DOC_SEGMENTS.has(segment));
 }
 
+/**
+ * @param {string} filePath
+ * @returns {boolean}
+ */
 export function isSecretPath(filePath) {
   const normalized = String(filePath ?? "")
     .toLowerCase()
@@ -279,6 +310,10 @@ export function isSecretPath(filePath) {
   return segments.slice(0, -1).some((segment) => SECRET_SEGMENTS.has(segment));
 }
 
+/**
+ * @param {string[]} paths
+ * @returns {string[]}
+ */
 export function matchSecretPaths(paths) {
   return (paths ?? []).filter((path) => isSecretPath(path));
 }
@@ -288,6 +323,10 @@ export function matchSecretPaths(paths) {
 // for ranking; this gate-facing predicate filters the noise the gates care
 // about (a `checkout.spec.ts` test or a `git-checkout-guide.md` doc must not
 // trip the money-flow risk gate).
+/**
+ * @param {string} filePath
+ * @returns {boolean}
+ */
 export function isGateRiskPath(filePath) {
   const path = String(filePath ?? "");
   if (!path.trim()) return false;
@@ -299,8 +338,13 @@ export function isGateRiskPath(filePath) {
 // Default matcher reports any path the classifier flags — used where concept
 // reporting (not gating) is wanted. Pass `{ gate: true }` to apply the
 // test/doc filtering the merge gates require.
+/**
+ * @param {string[]} paths
+ * @param {{ gate?: boolean }} [options]
+ * @returns {string[]}
+ */
 export function matchRiskPaths(paths, options = {}) {
-  const predicate = options.gate ? isGateRiskPath : (path) => classifyPath(path).length > 0;
+  const predicate = options.gate ? isGateRiskPath : (/** @type {string} */ path) => classifyPath(path).length > 0;
   return (paths ?? []).filter(predicate);
 }
 
@@ -309,8 +353,13 @@ export function matchRiskPaths(paths, options = {}) {
 // sign-in → boost auth/security paths." Matching is whole-token (and, for
 // multi-word keywords, an ordered whole-token phrase) so substring accidents
 // like "fix payload parsing" → money flow (via "pay") cannot happen.
+/**
+ * @param {string} query
+ * @returns {string[]}
+ */
 export function conceptsFromQuery(query) {
   const tokens = tokenizeQuery(query);
+  /** @type {Set<string>} */
   const flags = new Set();
   for (const [flag, words] of Object.entries(CONCEPT_SYNONYMS)) {
     for (const word of words) {
@@ -326,8 +375,13 @@ export function conceptsFromQuery(query) {
 // Tokenize a free-text query into lowercased whole-word tokens. Hyphenated
 // forms are kept as a single token ("sign-in") AND split ("sign", "in") so a
 // hyphenated synonym and its spaced phrase both have a chance to match.
+/**
+ * @param {string} query
+ * @returns {string[]}
+ */
 function tokenizeQuery(query) {
   const text = String(query ?? "").toLowerCase();
+  /** @type {string[]} */
   const tokens = [];
   for (const raw of text.split(/[^a-z0-9-]+/).filter(Boolean)) {
     tokens.push(raw);
@@ -341,6 +395,11 @@ function tokenizeQuery(query) {
 // A concept keyword matches when it is present as a whole token, its singular
 // form is, or — for multi-word keywords — its words appear as an ordered,
 // contiguous run of whole tokens in the query.
+/**
+ * @param {string} keyword
+ * @param {string[]} tokens
+ * @returns {boolean}
+ */
 function matchesConcept(keyword, tokens) {
   const words = keyword.split(/[\s-]+/).filter(Boolean);
   if (words.length <= 1) {
@@ -349,6 +408,11 @@ function matchesConcept(keyword, tokens) {
   return containsPhrase(tokens, words);
 }
 
+/**
+ * @param {string[]} tokens
+ * @param {string[]} words
+ * @returns {boolean}
+ */
 function containsPhrase(tokens, words) {
   for (let i = 0; i + words.length <= tokens.length; i += 1) {
     let matched = true;

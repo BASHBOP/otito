@@ -26,11 +26,42 @@ const validationScripts = [
 
 const runtimeScripts = ["dev", "start", "preview"];
 
+/** @typedef {ReturnType<typeof generateCodeMap>} CodeMap */
+/** @typedef {ReturnType<typeof inspectRepo>} RepoInspection */
+
+/**
+ * One suggested command with a human-readable reason.
+ * @typedef {object} HarnessCommand
+ * @property {string} command
+ * @property {string} reason
+ * @property {string} [script]
+ */
+
+/**
+ * The grouped command set inferred for a repository.
+ * @typedef {object} HarnessCommands
+ * @property {HarnessCommand[]} setup
+ * @property {HarnessCommand[]} validate
+ * @property {HarnessCommand[]} runtime
+ * @property {HarnessCommand[]} context
+ */
+
+/**
+ * @typedef {object} HarnessOptions
+ * @property {number} [maxSymbols] Per-file symbol cap forwarded to generateCodeMap.
+ */
+
+/**
+ * @param {string} [repoPath]
+ * @param {HarnessOptions} [options]
+ * @returns {{ data: Record<string, any>, markdown: string }}
+ */
 export function generateHarness(repoPath = ".", options = {}) {
   const repo = inspectRepo(repoPath);
   const map = generateCodeMap(repo.root, { maxSymbols: options.maxSymbols });
   const commands = inferCommands(repo);
   const context = summarizeContext(map);
+  /** @type {Record<string, any> & { tokenEstimate?: Record<string, any> }} */
   const data = {
     ok: true,
     generatedAt: new Date().toISOString(),
@@ -65,6 +96,10 @@ export function generateHarness(repoPath = ".", options = {}) {
   return { data, markdown };
 }
 
+/**
+ * @param {any} data Harness payload from generateHarness.
+ * @returns {string}
+ */
 export function formatHarnessMarkdown(data) {
   const lines = [
     `# repoctx Harness: ${data.repo.name}`,
@@ -103,16 +138,22 @@ export function formatHarnessMarkdown(data) {
     "",
     "## Focus Areas",
     "",
-    ...(data.focusAreas.length ? data.focusAreas.map((item) => `- ${item}`) : ["- none detected"]),
+    ...(data.focusAreas.length ? data.focusAreas.map((/** @type {string} */ item) => `- ${item}`) : ["- none detected"]),
     "",
     "## Top Domains",
     "",
-    ...(data.context.domains.length ? data.context.domains.map((domain) => `- ${domain.name}: ${domain.fileCount} file(s)`) : ["- none detected"]),
+    ...(data.context.domains.length
+      ? data.context.domains.map((/** @type {import('./index-cache.js').CodeMapDomain} */ domain) => `- ${domain.name}: ${domain.fileCount} file(s)`)
+      : ["- none detected"]),
     "",
   ];
   return lines.join("\n");
 }
 
+/**
+ * @param {RepoInspection} repo
+ * @returns {HarnessCommands}
+ */
 function inferCommands(repo) {
   const runner = packageRunner(repo.packageManagers);
   return {
@@ -136,7 +177,12 @@ function inferCommands(repo) {
   };
 }
 
+/**
+ * @param {RepoInspection} repo
+ * @returns {HarnessCommand[]}
+ */
 function inferSetupCommands(repo) {
+  /** @type {HarnessCommand[]} */
   const commands = [];
   const root = repo.root;
   if (repo.packageManagers.includes("pnpm")) commands.push({ command: "pnpm install", reason: "install Node dependencies" });
@@ -151,6 +197,12 @@ function inferSetupCommands(repo) {
   return commands;
 }
 
+/**
+ * @param {Record<string, unknown>} scripts
+ * @param {string} runner
+ * @param {string[]} names
+ * @returns {HarnessCommand[]}
+ */
 function inferScriptCommands(scripts = {}, runner, names) {
   return names
     .filter((name) => scripts[name])
@@ -161,6 +213,10 @@ function inferScriptCommands(scripts = {}, runner, names) {
     }));
 }
 
+/**
+ * @param {CodeMap} map
+ * @returns {object}
+ */
 function summarizeContext(map) {
   return {
     sourceFileCount: map.repo.sourceFileCount,
@@ -180,7 +236,13 @@ function summarizeContext(map) {
   };
 }
 
+/**
+ * @param {CodeMap} map
+ * @param {HarnessCommands} commands
+ * @returns {string[]}
+ */
 function inferFocusAreas(map, commands) {
+  /** @type {string[]} */
   const areas = [];
   if (map.summary.routes || map.summary.apiRoutes) areas.push("frontend/application routes");
   if (map.summary.controllers) areas.push("backend request controllers");
@@ -191,6 +253,10 @@ function inferFocusAreas(map, commands) {
   return areas;
 }
 
+/**
+ * @param {string[]} [packageManagers]
+ * @returns {string}
+ */
 function packageRunner(packageManagers = []) {
   if (packageManagers.includes("pnpm")) return "pnpm";
   if (packageManagers.includes("yarn")) return "yarn";
@@ -198,6 +264,11 @@ function packageRunner(packageManagers = []) {
   return "npm";
 }
 
+/**
+ * @param {string} runner
+ * @param {string} script
+ * @returns {string}
+ */
 function commandForScript(runner, script) {
   if (runner === "npm") {
     return script === "test" ? "npm test" : `npm run ${script}`;
@@ -208,6 +279,10 @@ function commandForScript(runner, script) {
   return `${runner} ${script}`;
 }
 
+/**
+ * @param {string} name
+ * @returns {string}
+ */
 function scriptReason(name) {
   if (name === "ci" || name === "quality") return "full quality gate";
   if (name === "audit") return "production dependency security audit";
@@ -223,6 +298,11 @@ function scriptReason(name) {
   return "project script";
 }
 
+/**
+ * @param {HarnessCommand[]} commands
+ * @param {string} fallback
+ * @returns {string[]}
+ */
 function formatCommands(commands, fallback) {
   if (!commands.length) {
     return [`- ${fallback}`];
@@ -230,6 +310,10 @@ function formatCommands(commands, fallback) {
   return commands.map((item) => `- \`${item.command}\`: ${item.reason}`);
 }
 
+/**
+ * @param {{ available?: boolean, clean?: boolean, changes?: number, branch?: string, commit?: string }} git
+ * @returns {string}
+ */
 function formatGit(git) {
   if (!git.available) {
     return "not detected";

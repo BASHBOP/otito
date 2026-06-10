@@ -1,6 +1,10 @@
 import path from "node:path";
 import { readDecoratorCalls } from "./text.js";
 
+/**
+ * @param {string} file
+ * @returns {string}
+ */
 export function classifyFile(file) {
   const base = path.basename(file);
   if (isTestFilePath(file)) return "test";
@@ -27,11 +31,19 @@ export function classifyFile(file) {
   return "source";
 }
 
+/**
+ * @param {string} file
+ * @returns {boolean}
+ */
 export function isTestFilePath(file) {
   const normalized = file.replaceAll("\\", "/");
   return /(^|\/)(__tests__|test|tests)(\/|$)/.test(normalized) || /\.(spec|test)\.[jt]sx?$/.test(normalized) || /(^|\/)[^/]+_test\.go$/.test(normalized);
 }
 
+/**
+ * @param {{ kind: string }} file
+ * @returns {boolean}
+ */
 export function isNotableFile(file) {
   return ["route", "apiRoute", "controller", "service", "module", "apiClient"].includes(file.kind);
 }
@@ -40,10 +52,16 @@ export function isNotableFile(file) {
 // and the full set of domain tags this file should be discoverable under.
 // Feature subdirs (components/livestream/*) get both "components" and "livestream"
 // so domain searches don't miss them.
+/**
+ * @param {string} file
+ * @returns {{ primary: string, all: string[] }}
+ */
 export function inferDomainInfo(file) {
   const normalized = file.replaceAll("\\", "/").replace(/^src\//, "");
   const parts = normalized.split("/");
+  /** @type {Set<string>} */
   const all = new Set();
+  /** @param {string} value */
   const add = (value) => {
     const cleaned = cleanDomain(value);
     if (cleaned) all.add(cleaned);
@@ -52,8 +70,10 @@ export function inferDomainInfo(file) {
   // Treat parts[i] as a feature directory only if a deeper segment exists —
   // otherwise it's actually the file (e.g. components/Button.tsx → parts[1]
   // is the file, not a feature).
+  /** @param {number} i */
   const isDir = (i) => i < parts.length - 1;
 
+  /** @type {string} */
   let primary;
   if (normalized.startsWith("app/api/") && parts[2]) {
     primary = cleanDomain(parts[2]);
@@ -85,6 +105,10 @@ export function inferDomainInfo(file) {
   return { primary, all: [...all] };
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function cleanDomain(value) {
   return (
     value
@@ -97,6 +121,10 @@ function cleanDomain(value) {
   );
 }
 
+/**
+ * @param {string} file
+ * @returns {string | undefined}
+ */
 export function inferNextRoute(file) {
   const normalized = file.replaceAll("\\", "/");
   if (!normalized.startsWith("app/") && !normalized.startsWith("src/app/") && !normalized.startsWith("pages/") && !normalized.startsWith("src/pages/")) {
@@ -118,10 +146,18 @@ export function inferNextRoute(file) {
   );
 }
 
+/**
+ * @param {string} text
+ * @returns {string | undefined}
+ */
 export function inferControllerBasePath(text) {
   return readDecoratorCalls(text, ["Controller"]).find((call) => call.argument !== undefined)?.argument;
 }
 
+/**
+ * @param {string} text
+ * @returns {{ method: string, path: string }[]}
+ */
 export function extractHttpMethods(text) {
   return readDecoratorCalls(text, ["Get", "Post", "Put", "Patch", "Delete", "Options", "Head"]).map((call) => ({
     method: call.name.toUpperCase(),

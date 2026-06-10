@@ -18,6 +18,25 @@ const defaultExcludes = [
   "coverage/**",
 ];
 
+/**
+ * @typedef {object} StructureOptions
+ * @property {string} [out] Output HTML path.
+ * @property {string | string[]} [pattern] Glob pattern(s) to include.
+ * @property {string | string[]} [exclude] Glob pattern(s) to exclude.
+ */
+
+/**
+ * @typedef {object} ResolvedCodeStructure
+ * @property {boolean} available
+ * @property {string} [runner]
+ * @property {string[]} [commandParts]
+ */
+
+/**
+ * @param {string} [repoPath]
+ * @param {StructureOptions} [options]
+ * @returns {object}
+ */
 export function generateStructure(repoPath = ".", options = {}) {
   const root = path.resolve(repoPath);
   const outputPath = path.resolve(options.out ?? path.join(root, ".dev-context", "structure.html"));
@@ -36,7 +55,10 @@ export function generateStructure(repoPath = ".", options = {}) {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   const patterns = normalizeList(options.pattern).length ? normalizeList(options.pattern) : ["**/*.ts", "**/*.tsx"];
   const excludes = [...defaultExcludes, ...normalizeList(options.exclude)];
-  const args = [...installed.commandParts.map((part) => quote(part)), ...patterns.map((pattern) => quote(pattern)), "-o", quote(outputPath)];
+  // installed.available is true past the guard above, which in this code always
+  // implies commandParts is set; assert that for the type checker.
+  const commandParts = /** @type {string[]} */ (installed.commandParts);
+  const args = [...commandParts.map((part) => quote(part)), ...patterns.map((pattern) => quote(pattern)), "-o", quote(outputPath)];
   for (const excluded of excludes) {
     args.push("--exclude", quote(excluded));
   }
@@ -58,6 +80,10 @@ export function generateStructure(repoPath = ".", options = {}) {
   };
 }
 
+/**
+ * @param {string} localBin
+ * @returns {ResolvedCodeStructure}
+ */
 function resolveCodeStructure(localBin) {
   if (fs.existsSync(localBin)) {
     return { available: true, runner: "local", commandParts: [localBin] };
@@ -76,6 +102,10 @@ function resolveCodeStructure(localBin) {
   return { available: false };
 }
 
+/**
+ * @param {string | string[] | undefined} value
+ * @returns {string[]}
+ */
 function normalizeList(value) {
   if (!value) {
     return [];
@@ -84,10 +114,19 @@ function normalizeList(value) {
   return Array.isArray(value) ? value : [value];
 }
 
+/**
+ * @param {string} text
+ * @returns {number}
+ */
 function countLines(text) {
   return text.trim() ? text.trim().split("\n").length : 0;
 }
 
+/**
+ * @param {string} text
+ * @param {number} [lineLimit]
+ * @returns {string}
+ */
 function previewOutput(text, lineLimit = 40) {
   const lines = text
     .trim()

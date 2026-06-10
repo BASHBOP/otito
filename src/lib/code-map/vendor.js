@@ -18,6 +18,11 @@ const vendorLibPrefixes = [
 const vendorPathSegments = new Set(["node_modules", "bower_components", "vendor", "third_party", "third-party", "dist", "build"]);
 const vendorFileSuffixes = [".min.js", ".min.css", ".min.mjs", ".bundle.js", ".bundle.min.js", ".chunk.js"];
 
+/**
+ * @param {string} relativePath
+ * @param {string} [text]
+ * @returns {boolean}
+ */
 export function isVendorFile(relativePath, text) {
   const lower = relativePath.toLowerCase();
   const segments = lower.split(/[/\\]/);

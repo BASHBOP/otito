@@ -1,5 +1,9 @@
 import { isNotableFile } from "./classify.js";
 
+/**
+ * @param {import('./generate.js').CodeMap} map
+ * @returns {string}
+ */
 export function formatCodeMapMarkdown(map) {
   const lines = [
     `# Code Map: ${map.repo.name}`,
