@@ -28,22 +28,7 @@ export function generateCodeMap(repoPath = ".", options = {}) {
       languages: repo.languages,
       entrypoints: repo.entrypoints,
     },
-    summary: {
-      routes: sourceFiles.filter((file) => file.kind === "route").length,
-      apiRoutes: sourceFiles.filter((file) => file.kind === "apiRoute").length,
-      controllers: sourceFiles.filter((file) => file.kind === "controller").length,
-      services: sourceFiles.filter((file) => file.kind === "service").length,
-      modules: sourceFiles.filter((file) => file.kind === "module").length,
-      components: sourceFiles.filter((file) => file.kind === "component").length,
-      hooks: sourceFiles.filter((file) => file.kind === "hook").length,
-      apiClients: sourceFiles.filter((file) => file.kind === "apiClient").length,
-      dtos: sourceFiles.filter((file) => file.kind === "dto").length,
-      schemas: sourceFiles.filter((file) => file.kind === "schema").length,
-      tests: sourceFiles.filter((file) => file.kind === "test").length,
-      symbols: sourceFiles.reduce((total, file) => total + file.symbols.length, 0),
-      dataAccessFiles: sourceFiles.filter((file) => (file.dataAccess ?? []).length > 0).length,
-      dataAccessHits: sourceFiles.reduce((total, file) => total + (file.dataAccess?.length ?? 0), 0),
-    },
+    summary: summarizeFiles(sourceFiles),
     domains,
     files: sourceFiles,
   };
@@ -57,6 +42,56 @@ export function generateCodeMap(repoPath = ".", options = {}) {
     ]),
   };
   return map;
+}
+
+// Maps a file kind to its summary counter key. Kinds without an entry (e.g.
+// "source", "page") are counted toward symbols/data-access only.
+const summaryKindKeys = {
+  route: "routes",
+  apiRoute: "apiRoutes",
+  controller: "controllers",
+  service: "services",
+  module: "modules",
+  component: "components",
+  hook: "hooks",
+  apiClient: "apiClients",
+  dto: "dtos",
+  schema: "schemas",
+  test: "tests",
+};
+
+function summarizeFiles(sourceFiles) {
+  const summary = {
+    routes: 0,
+    apiRoutes: 0,
+    controllers: 0,
+    services: 0,
+    modules: 0,
+    components: 0,
+    hooks: 0,
+    apiClients: 0,
+    dtos: 0,
+    schemas: 0,
+    tests: 0,
+    symbols: 0,
+    dataAccessFiles: 0,
+    dataAccessHits: 0,
+  };
+
+  for (const file of sourceFiles) {
+    const key = summaryKindKeys[file.kind];
+    if (key) {
+      summary[key] += 1;
+    }
+    summary.symbols += file.symbols.length;
+    const dataAccessHits = file.dataAccess?.length ?? 0;
+    if (dataAccessHits > 0) {
+      summary.dataAccessFiles += 1;
+      summary.dataAccessHits += dataAccessHits;
+    }
+  }
+
+  return summary;
 }
 
 function analyzeFile(root, relativePath, maxSymbols) {
