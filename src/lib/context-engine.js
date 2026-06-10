@@ -47,6 +47,7 @@ export function generateContextPack(query, options = {}) {
   }
 
   const limit = normalizeLimit(options.limit, defaultLimit, 50);
+  const includeEvidence = Boolean(options.includeEvidence);
   const repoPaths = normalizePaths(options.paths ?? [options.path ?? "."]);
   const maps = repoPaths.map((repoPath) => getCachedCodeMap(repoPath));
   const graphs = new Map(maps.map((map) => [map.repo.root, buildImportGraph(map.files)]));
@@ -55,9 +56,9 @@ export function generateContextPack(query, options = {}) {
   const scoredFiles = scoreMaps(maps, tokens, intent);
   const matchedPrimaryFiles = selectPrimaryFiles(scoredFiles, limit);
   const usedFallback = matchedPrimaryFiles.length === 0;
-  const primaryFiles = usedFallback ? selectFallbackPrimaryFiles(maps, limit) : matchedPrimaryFiles;
-  const relatedFiles = selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, limit);
-  const tests = selectTests(maps, graphs, scoredFiles, primaryFiles, limit);
+  const primaryFiles = stripEvidence(usedFallback ? selectFallbackPrimaryFiles(maps, limit) : matchedPrimaryFiles, includeEvidence);
+  const relatedFiles = stripEvidence(selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, limit), includeEvidence);
+  const tests = stripEvidence(selectTests(maps, graphs, scoredFiles, primaryFiles, limit), includeEvidence);
   const commands = inferCommands(repoPaths, normalizedQuery);
   const patterns = inferPatterns(primaryFiles, relatedFiles, tests, intent);
   const conflicts = inferConflicts(maps);
@@ -598,6 +599,25 @@ function summarizeFile(map, file, score, reasons) {
     exports: file.exports?.slice(0, 12) ?? [],
     symbols: file.symbols?.slice(0, 16) ?? [],
   };
+}
+
+// imports/exports/symbols are the bulk of a file entry's bytes and are only
+// useful when an agent wants the evidence trail. They are dropped by default
+// (includeEvidence:false) so the packet stays compact; path/kind/score/reasons
+// and routing fields are always kept.
+const evidenceFields = ["imports", "exports", "symbols"];
+
+function stripEvidence(files, includeEvidence) {
+  if (includeEvidence) {
+    return files;
+  }
+  return files.map((file) => {
+    const rest = { ...file };
+    for (const field of evidenceFields) {
+      delete rest[field];
+    }
+    return rest;
+  });
 }
 
 function scoreField(value, tokens, weight, reason, reasons) {
