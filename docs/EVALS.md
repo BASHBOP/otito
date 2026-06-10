@@ -14,7 +14,7 @@ gap. This document covers the accuracy eval.
 
 ## What the corpus measures
 
-The corpus lives at [`evals/corpus.json`](../evals/corpus.json) and has two
+The corpus lives at `evals/corpus.json` and has two
 case types.
 
 ### Retrieval cases
@@ -49,7 +49,7 @@ multi-repo route↔client pairing.
 ### Risk cases
 
 Each risk case exercises the shared risk vocabulary in
-[`src/lib/risk-paths.js`](../src/lib/risk-paths.js) so the recently-fixed false
+`src/lib/risk-paths.js` so the recently-fixed false
 positives/negatives surface in CI, not in production review output. The `mode`
 field selects the predicate:
 
