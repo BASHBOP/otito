@@ -2,7 +2,7 @@
 
 **Purpose:** Context foundation for AI-assisted software teams<br>
 **Maintainer:** Oluwasegun Olumbe<br>
-**Current Version:** 1.3.1 — npm and MCP manifest versions are aligned; docs and MCP surface are current with multi-domain discoverability, eval + data-access subcommands, code maps for C#, Python, Java, Ruby, and Rust, and the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`)
+**Version:** See [`package.json`](../package.json) for the canonical version; `server.json` is kept in sync for the MCP manifest. The surface includes multi-domain discoverability, eval + data-access subcommands, code maps for C#, Python, Java, Ruby, and Rust, and the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`).
 
 ---
 
