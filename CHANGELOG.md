@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [1.4.2] - 2026-06-10
+
+### Added
+
+- README: demo GIF.
+- `version` lifecycle hook: `npm version` now syncs `server.json` with
+  `package.json` automatically, so `version:check` can no longer block a release.
+
+### Changed
+
+- README badges use semantic colors instead of brand red.
+
+### Note
+
+- 1.4.1 was tagged but never published: `version:check` correctly blocked the
+  npm publish because `server.json` still said 1.4.0. Superseded by 1.4.2.
+
 ## [1.4.0] - 2026-06-09
 
 - **Fix `context_pack` returning zero primary files on small repos.** When task keywords match nothing in the index (common for broad queries like "improve SEO and performance" against a small Vite/React repo), `repoctx context` now falls back to a deterministic ranking of repo entrypoints, `main`/`app`/`index` files, and build configuration (`vite.config.*`, `webpack.config.*`, etc.), so `primaryFiles` is never empty while the repo has source files. An open question notes when the fallback was used; behavior for queries that do match the index is unchanged.
