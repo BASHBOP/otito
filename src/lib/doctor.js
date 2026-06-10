@@ -46,6 +46,24 @@ const toolDefinitions = [
   },
 ];
 
+/**
+ * One tool's availability status in the doctor report.
+ * @typedef {object} DoctorTool
+ * @property {string} name
+ * @property {string} command
+ * @property {boolean} available
+ * @property {string | undefined} path
+ * @property {string | undefined} version
+ * @property {string} installHint
+ *
+ * @typedef {object} DoctorReport
+ * @property {boolean} ok
+ * @property {DoctorTool[]} tools
+ */
+
+/**
+ * @returns {DoctorReport}
+ */
 export function getDoctorReport() {
   return {
     ok: true,
@@ -63,8 +81,14 @@ export function getDoctorReport() {
   };
 }
 
+/**
+ * @param {DoctorReport} report
+ * @param {{ emoji?: boolean, color?: boolean }} [options]
+ * @returns {string}
+ */
 export function formatDoctorReport(report, options = {}) {
   const renderer = createRenderer(options);
+  /** @type {string[]} */
   const lines = [];
   lines.push(renderer.header({ text: "repoctx doctor", glyph: "📋" }, [{ text: "local runtime + optional tools", glyph: "🩺" }]));
   lines.push("");

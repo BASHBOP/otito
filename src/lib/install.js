@@ -9,7 +9,21 @@ const binaryName = "repoctx";
 const legacyBinaryName = "dev-context";
 const repoUrl = "https://github.com/nugehs/repoctx";
 
+/**
+ * @typedef {object} InstallOptions
+ * @property {boolean} [global]
+ * @property {boolean} [link]
+ */
+
+/**
+ * @param {InstallOptions} [options]
+ * @returns {ReturnType<typeof getInstallPlan> & { mode?: string, applied?: boolean, command?: string, stdout?: string, stderr?: string, error?: string }}
+ */
 export function installDevContext(options = {}) {
+  // getInstallPlan() ignores its arguments; this passed `options` is dead and
+  // has no effect at runtime. Suppressing the arity error rather than changing
+  // the call (annotation-only pass). See suspected-bug report.
+  // @ts-expect-error -- getInstallPlan takes no parameters; the argument is ignored.
   const plan = getInstallPlan(options);
   const mode = options.global ? "global" : options.link ? "link" : "plan";
 
@@ -63,6 +77,10 @@ export function getInstallPlan() {
   };
 }
 
+/**
+ * @param {ReturnType<typeof installDevContext>} result
+ * @returns {string}
+ */
 export function formatInstallSummary(result) {
   const lines = [
     designPrint,

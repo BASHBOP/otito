@@ -1,7 +1,122 @@
+/// <reference types="node" />
 import fs from "node:fs";
 import path from "node:path";
 import { generateCodeMap } from "./code-map.js";
 import { listRepoFiles } from "./repo.js";
+
+/**
+ * A single declaration extracted from a source file.
+ * @typedef {object} CodeMapSymbol
+ * @property {string} type - Declaration kind ("class", "function", "const", "interface", "type", "enum", "let", "var").
+ * @property {string} name
+ * @property {number} line - 1-based line number of the declaration.
+ */
+
+/**
+ * An HTTP method/path pair inferred from a controller or route file.
+ * @typedef {object} CodeMapHttpMethod
+ * @property {string} method
+ * @property {string} path
+ */
+
+/**
+ * A data-access hit (e.g. ORM call) detected in a file.
+ * @typedef {object} CodeMapDataAccess
+ * @property {string} [kind]
+ * @property {string} [name]
+ * @property {number} [line]
+ */
+
+/**
+ * One source file's facts as produced by generateCodeMap.
+ * @typedef {object} CodeMapFile
+ * @property {string} path - Repo-relative path.
+ * @property {string} kind - Classified file kind ("route", "controller", "service", etc.).
+ * @property {string} domain - Primary inferred domain.
+ * @property {string[]} [domains] - All inferred domains.
+ * @property {string|null} [route] - Inferred framework route, if any.
+ * @property {string|null} [controllerBasePath] - Inferred controller base path, if any.
+ * @property {CodeMapHttpMethod[]} [httpMethods]
+ * @property {string[]} imports - Imported module specifiers.
+ * @property {string[]} exports - Exported symbol names.
+ * @property {CodeMapSymbol[]} symbols
+ * @property {boolean} [isVendor]
+ * @property {CodeMapDataAccess[]} [dataAccess]
+ */
+
+/**
+ * Package metadata captured from package.json.
+ * @typedef {object} CodeMapPackage
+ * @property {string} [name]
+ * @property {string} [version]
+ * @property {string} [type]
+ * @property {boolean} [private]
+ */
+
+/**
+ * Repository-level metadata in a code map.
+ * @typedef {object} CodeMapRepo
+ * @property {string} root
+ * @property {string} name
+ * @property {CodeMapPackage} [package]
+ * @property {object} [git]
+ * @property {number} [fileCount]
+ * @property {number} [sourceFileCount]
+ * @property {Record<string, number>|object} [languages]
+ * @property {string[]} [entrypoints]
+ */
+
+/**
+ * Aggregate counts across all source files.
+ * @typedef {object} CodeMapSummary
+ * @property {number} routes
+ * @property {number} apiRoutes
+ * @property {number} controllers
+ * @property {number} services
+ * @property {number} modules
+ * @property {number} components
+ * @property {number} hooks
+ * @property {number} apiClients
+ * @property {number} dtos
+ * @property {number} schemas
+ * @property {number} tests
+ * @property {number} symbols
+ * @property {number} dataAccessFiles
+ * @property {number} dataAccessHits
+ */
+
+/**
+ * A domain rollup in a code map.
+ * @typedef {object} CodeMapDomain
+ * @property {string} name
+ * @property {number} fileCount
+ * @property {{ kind: string, count: number }[]} kinds
+ */
+
+/**
+ * Cache provenance attached to a served code map.
+ * @typedef {object} CodeMapCacheInfo
+ * @property {boolean} hit
+ * @property {string} source - "memo" | "disk" | "generated".
+ * @property {string} path
+ * @property {string} [generatedAt]
+ * @property {string} fingerprint
+ */
+
+/**
+ * The canonical code map shape produced by generateCodeMap and served (with a
+ * `cache` field) by getCachedCodeMap. This is the shape consumed across the
+ * retrieval/scoring engines; reference it elsewhere with
+ * {import('./index-cache.js').CodeMap}.
+ * @typedef {object} CodeMap
+ * @property {boolean} ok
+ * @property {CodeMapRepo} repo
+ * @property {CodeMapSummary} summary
+ * @property {CodeMapDomain[]} domains
+ * @property {CodeMapFile[]} files
+ * @property {object} [tokenEstimate]
+ * @property {CodeMapCacheInfo} [cache]
+ */
 
 const cacheVersion = 4;
 

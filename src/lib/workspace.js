@@ -5,6 +5,15 @@ import { inspectRepo } from "./repo.js";
 
 const keyScriptNames = ["dev", "start", "build", "lint", "tsc:check", "check:type", "test", "test:e2e"];
 
+/** @typedef {ReturnType<typeof inspectRepo>} RepoInspection */
+/** @typedef {ReturnType<typeof generateCodeMap>} CodeMap */
+/** @typedef {{ available?: boolean, clean?: boolean, changes?: number, branch?: string, commit?: string }} GitInfo */
+/** @typedef {{ domain: string, frontendApiClients: number, backendControllers: number, backendServices: number }} Integration */
+
+/**
+ * @param {string[]} repoPaths
+ * @returns {{ data: Record<string, any>, markdown: string }}
+ */
 export function generateWorkspaceReport(repoPaths) {
   const repos = repoPaths.map((repoPath) => inspectRepo(repoPath));
   const maps = repoPaths.map((repoPath) => generateCodeMap(repoPath));
@@ -27,6 +36,11 @@ export function generateWorkspaceReport(repoPaths) {
   };
 }
 
+/**
+ * @param {RepoInspection} repo
+ * @param {CodeMap} codeMap
+ * @returns {object}
+ */
 function summarizeRepo(repo, codeMap) {
   return {
     name: path.basename(repo.root),
@@ -43,7 +57,12 @@ function summarizeRepo(repo, codeMap) {
   };
 }
 
+/**
+ * @param {RepoInspection[]} repos
+ * @returns {{ language: string, count: number }[]}
+ */
 function aggregateLanguages(repos) {
+  /** @type {Map<string, number>} */
   const counts = new Map();
   for (const repo of repos) {
     for (const item of repo.languages) {
@@ -54,10 +73,18 @@ function aggregateLanguages(repos) {
   return [...counts.entries()].map(([language, count]) => ({ language, count })).sort((a, b) => b.count - a.count || a.language.localeCompare(b.language));
 }
 
+/**
+ * @param {Record<string, unknown>} scripts
+ * @returns {Record<string, unknown>}
+ */
 function pickKeyScripts(scripts) {
   return Object.fromEntries(keyScriptNames.filter((name) => scripts[name]).map((name) => [name, scripts[name]]));
 }
 
+/**
+ * @param {any} data Workspace report payload from generateWorkspaceReport.
+ * @returns {string}
+ */
 function formatWorkspaceReport(data) {
   const lines = [
     "# repoctx Workspace Report",
@@ -68,7 +95,7 @@ function formatWorkspaceReport(data) {
     "",
     `- Repositories: ${data.repoCount}`,
     `- Files scanned: ${data.totalFiles}`,
-    `- Languages: ${data.languages.map((item) => `${item.language} (${item.count})`).join(", ") || "unknown"}`,
+    `- Languages: ${data.languages.map((/** @type {{ language: string, count: number }} */ item) => `${item.language} (${item.count})`).join(", ") || "unknown"}`,
     `- Package managers: ${data.packageManagers.join(", ") || "none detected"}`,
     "",
     "## Repositories",
@@ -80,7 +107,7 @@ function formatWorkspaceReport(data) {
   for (const repo of data.repos) {
     const git = formatGit(repo.git);
     lines.push(
-      `| ${repo.name} | ${repo.fileCount} | ${git} | ${repo.languages.map((item) => `${item.language} ${item.count}`).join(", ") || "unknown"} | ${repo.entrypoints.join(", ") || "none detected"} |`,
+      `| ${repo.name} | ${repo.fileCount} | ${git} | ${repo.languages.map((/** @type {{ language: string, count: number }} */ item) => `${item.language} ${item.count}`).join(", ") || "unknown"} | ${repo.entrypoints.join(", ") || "none detected"} |`,
     );
   }
 
@@ -141,7 +168,12 @@ function formatWorkspaceReport(data) {
   return lines.join("\n");
 }
 
+/**
+ * @param {CodeMap[]} maps
+ * @returns {{ name: string, fileCount: number, repos: string[] }[]}
+ */
 function aggregateDomains(maps) {
+  /** @type {Map<string, { name: string, fileCount: number, repos: Set<string> }>} */
   const domains = new Map();
   for (const map of maps) {
     for (const domain of map.domains) {
@@ -157,6 +189,10 @@ function aggregateDomains(maps) {
     .sort((a, b) => b.fileCount - a.fileCount || a.name.localeCompare(b.name));
 }
 
+/**
+ * @param {CodeMap[]} maps
+ * @returns {Integration[]}
+ */
 function inferIntegrations(maps) {
   const frontend = maps.find((map) => map.summary.apiClients > 0 || map.summary.routes > 0);
   const backend = maps.find((map) => map.summary.controllers > 0 || map.summary.services > 0);
@@ -180,7 +216,12 @@ function inferIntegrations(maps) {
     .sort((a, b) => scoreIntegration(b) - scoreIntegration(a) || a.domain.localeCompare(b.domain));
 }
 
+/**
+ * @param {import('./index-cache.js').CodeMapFile[]} files
+ * @returns {Map<string, number>}
+ */
 function countByDomain(files) {
+  /** @type {Map<string, number>} */
   const counts = new Map();
   for (const file of files) {
     counts.set(file.domain, (counts.get(file.domain) ?? 0) + 1);
@@ -188,10 +229,18 @@ function countByDomain(files) {
   return counts;
 }
 
+/**
+ * @param {Integration} item
+ * @returns {number}
+ */
 function scoreIntegration(item) {
   return Math.min(item.frontendApiClients, 1) * 10 + item.backendControllers * 2 + item.backendServices;
 }
 
+/**
+ * @param {GitInfo} git
+ * @returns {string}
+ */
 function formatGit(git) {
   if (!git.available) {
     return "not detected";

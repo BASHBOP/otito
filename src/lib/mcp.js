@@ -14,18 +14,53 @@ import { inspectRepo, gateInspectScripts } from "./repo.js";
 import { generatePrReview } from "./pr-review.js";
 import { generateWorkspaceReport } from "./workspace.js";
 
+/**
+ * A JSON-schema fragment describing one MCP tool input.
+ * @typedef {object} McpInputSchema
+ * @property {string} [type]
+ * @property {McpInputSchema} [items]
+ * @property {Record<string, McpInputSchema & { description?: string }>} [properties]
+ * @property {string[]} [required]
+ */
+
+/**
+ * One MCP tool definition as advertised over tools/list.
+ * @typedef {object} McpTool
+ * @property {string} name
+ * @property {string} title
+ * @property {string} description
+ * @property {{ readOnlyHint?: boolean }} annotations
+ * @property {McpInputSchema} inputSchema
+ */
+
+/**
+ * Loosely-typed tool-call arguments. Tool handlers read a heterogeneous set of
+ * optional fields off this bag, so it is intentionally permissive.
+ * @typedef {Record<string, any>} ToolArgs
+ */
+
+/**
+ * A parsed JSON-RPC request/notification.
+ * @typedef {{ jsonrpc?: string, id?: string | number | null, method?: string, params?: any }} JsonRpcMessage
+ */
+
 const latestProtocolVersion = "2025-06-18";
 // This server's surface (initialize, ping, tools/list, tools/call) is
 // identical across these protocol revisions, so we can echo whichever the
 // client asks for instead of forcing our latest and triggering a disconnect.
 const supportedProtocolVersions = new Set(["2024-11-05", "2025-03-26", latestProtocolVersion]);
 
+/**
+ * @param {unknown} requested
+ * @returns {string}
+ */
 function negotiateProtocolVersion(requested) {
-  return supportedProtocolVersions.has(requested) ? requested : latestProtocolVersion;
+  return typeof requested === "string" && supportedProtocolVersions.has(requested) ? requested : latestProtocolVersion;
 }
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8"));
 
+/** @type {McpTool[]} */
 export const tools = [
   {
     name: "repo_inspect",
@@ -238,6 +273,10 @@ export const tools = [
 // successor plus a pure arguments translator. Renames forward 1:1; folded tools
 // translate params (e.g. find_backend_route's query → repo_map.route). This
 // guarantee holds until repoctx 3.0; see docs/MIGRATION-2.0.md.
+/**
+ * @typedef {{ tool: string, mapArgs: (args?: ToolArgs) => (ToolArgs | undefined) }} LegacyAlias
+ * @type {Record<string, LegacyAlias>}
+ */
 export const LEGACY_TOOL_ALIASES = {
   // Renames — same schema, new name.
   pr_review: { tool: "review_context", mapArgs: (args) => args },
@@ -278,6 +317,10 @@ export const LEGACY_TOOL_ALIASES = {
   },
 };
 
+/**
+ * @param {{ input?: NodeJS.ReadableStream, output?: NodeJS.WritableStream }} [options]
+ * @returns {Promise<void>}
+ */
 export async function startMcpServer({ input = process.stdin, output = process.stdout } = {}) {
   const rl = readline.createInterface({ input, crlfDelay: Infinity });
 
@@ -287,11 +330,12 @@ export async function startMcpServer({ input = process.stdin, output = process.s
       continue;
     }
 
+    /** @type {JsonRpcMessage} */
     let message;
     try {
       message = JSON.parse(trimmed);
     } catch (error) {
-      writeMessage(output, errorResponse(null, -32700, `Parse error: ${error.message}`));
+      writeMessage(output, errorResponse(null, -32700, `Parse error: ${error instanceof Error ? error.message : String(error)}`));
       continue;
     }
 
@@ -302,6 +346,10 @@ export async function startMcpServer({ input = process.stdin, output = process.s
   }
 }
 
+/**
+ * @param {JsonRpcMessage | null} message
+ * @returns {Promise<object | undefined>}
+ */
 async function handleMessage(message) {
   // JSON-RPC notifications (no id member) must never receive a response —
   // not even an error for unknown methods. Real MCP clients routinely send
@@ -347,6 +395,10 @@ async function handleMessage(message) {
   }
 }
 
+/**
+ * @param {any} [params]
+ * @returns {Promise<{ content: { type: string, text: string }[], isError: boolean }>}
+ */
 async function callTool(params = {}) {
   if (!params || typeof params !== "object") {
     throw new McpProtocolError(-32602, "Tool call params must be an object");
@@ -399,13 +451,22 @@ async function callTool(params = {}) {
 // other result is serialized as compact (non-pretty) JSON. We deliberately do
 // not emit structuredContent: no tool declares an outputSchema, so no client
 // relies on it, and duplicating the payload doubled transport weight.
+/**
+ * @param {unknown} result
+ * @returns {string}
+ */
 function toolResultText(result) {
-  if (result && typeof result === "object" && typeof result.markdown === "string") {
-    return result.markdown;
+  if (result && typeof result === "object" && "markdown" in result && typeof (/** @type {{ markdown?: unknown }} */ (result).markdown) === "string") {
+    return /** @type {{ markdown: string }} */ (result).markdown;
   }
   return JSON.stringify(result);
 }
 
+/**
+ * @param {string} name
+ * @param {ToolArgs} args
+ * @returns {Promise<any>}
+ */
 async function dispatchTool(name, args) {
   const alias = LEGACY_TOOL_ALIASES[name];
   if (alias) {
@@ -492,6 +553,10 @@ async function dispatchTool(name, args) {
 // repo_search only sees repositories already in the local catalog. When the
 // catalog is empty (or holds no repositories), the agent gets an empty match
 // list with no clue why — so attach an explicit next step pointing at repo_index.
+/**
+ * @param {any} result
+ * @returns {any}
+ */
 function withSearchRemediation(result) {
   if (result && typeof result === "object" && !result.repositoryCount) {
     return {
@@ -502,6 +567,11 @@ function withSearchRemediation(result) {
   return result;
 }
 
+/**
+ * @param {any} map
+ * @param {ToolArgs} [args]
+ * @returns {object}
+ */
 function compactCodeMap(map, args = {}) {
   const limit = normalizeLimit(args.limit, 100);
   const filtered = args.domain || args.kind || args.route;
@@ -523,6 +593,11 @@ function compactCodeMap(map, args = {}) {
 // route built from controllerBasePath + each httpMethod path (and the file path),
 // so kind:"controller" + route reproduces the backend-route lookup, while
 // kind:"apiClient" + route reproduces the frontend-api-client query.
+/**
+ * @param {any[]} files
+ * @param {ToolArgs} [args]
+ * @returns {any[]}
+ */
 function filterFiles(files, args = {}) {
   return files
     .filter((file) => !args.domain || matches(domainSearchText(file), args.domain))
@@ -530,6 +605,11 @@ function filterFiles(files, args = {}) {
     .filter((file) => !args.route || matchesRoute(file, args.route));
 }
 
+/**
+ * @param {any} file
+ * @param {string} route
+ * @returns {boolean}
+ */
 function matchesRoute(file, route) {
   const haystacks = [file.path, file.route, file.controllerBasePath, domainSearchText(file), ...(file.imports ?? []), ...(file.exports ?? [])];
   for (const method of file.httpMethods ?? []) {
@@ -540,6 +620,11 @@ function matchesRoute(file, route) {
 
 // Route filter matches as a regex when the value is a valid pattern, otherwise
 // falls back to case-insensitive substring matching (findBackendRoute's behavior).
+/**
+ * @param {unknown} value
+ * @param {string} pattern
+ * @returns {boolean}
+ */
 function matchesPattern(value, pattern) {
   const text = String(value ?? "");
   if (!text) {
@@ -552,11 +637,19 @@ function matchesPattern(value, pattern) {
   }
 }
 
+/**
+ * @param {any} file
+ * @returns {string}
+ */
 function domainSearchText(file) {
   const tags = file.domains?.length ? file.domains : [file.domain];
   return tags.filter(Boolean).join(" ");
 }
 
+/**
+ * @param {any} file
+ * @returns {object}
+ */
 function summarizeFile(file) {
   return {
     path: file.path,
@@ -572,10 +665,18 @@ function summarizeFile(file) {
   };
 }
 
+/**
+ * @param {any} file
+ * @returns {boolean}
+ */
 function isNotableFile(file) {
   return ["route", "apiRoute", "controller", "service", "module", "apiClient"].includes(file.kind);
 }
 
+/**
+ * @param {ToolArgs} [args]
+ * @returns {string[]}
+ */
 function requirePaths(args = {}) {
   if (!Array.isArray(args.paths) || args.paths.length < 2) {
     throw new McpProtocolError(-32602, "paths must contain at least two repository paths");
@@ -583,6 +684,11 @@ function requirePaths(args = {}) {
   return args.paths;
 }
 
+/**
+ * @param {unknown} value
+ * @param {string} name
+ * @returns {string}
+ */
 function requiredString(value, name) {
   if (typeof value !== "string" || !value.trim()) {
     throw new McpProtocolError(-32602, `${name} is required`);
@@ -590,6 +696,11 @@ function requiredString(value, name) {
   return value;
 }
 
+/**
+ * @param {unknown} value
+ * @param {number} fallback
+ * @returns {number}
+ */
 function normalizeLimit(value, fallback) {
   const number = Number(value ?? fallback);
   if (!Number.isFinite(number) || number <= 0) {
@@ -598,18 +709,32 @@ function normalizeLimit(value, fallback) {
   return Math.min(Math.floor(number), 500);
 }
 
+/**
+ * @param {unknown} value
+ * @param {unknown} query
+ * @returns {boolean}
+ */
 function matches(value, query) {
   return String(value ?? "")
     .toLowerCase()
     .includes(String(query ?? "").toLowerCase());
 }
 
+/**
+ * @param {unknown} basePath
+ * @param {unknown} methodPath
+ * @returns {string}
+ */
 function combineRoute(basePath, methodPath) {
   const base = normalizeRoutePart(basePath);
   const child = normalizeRoutePart(methodPath);
   return `/${[base, child].filter(Boolean).join("/")}`.replace(/\/+/g, "/");
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 function normalizeRoutePart(value) {
   return String(value ?? "")
     .trim()
@@ -617,21 +742,42 @@ function normalizeRoutePart(value) {
     .replace(/^:$/, "");
 }
 
+/**
+ * @param {string | number | null | undefined} id
+ * @param {object} result
+ * @returns {object}
+ */
 function successResponse(id, result) {
   return { jsonrpc: "2.0", id, result };
 }
 
+/**
+ * @param {string | number | null | undefined} id
+ * @param {number} code
+ * @param {string} message
+ * @returns {object}
+ */
 function errorResponse(id, code, message) {
   return { jsonrpc: "2.0", id, error: { code, message } };
 }
 
+/**
+ * @param {NodeJS.WritableStream} output
+ * @param {object} message
+ * @returns {void}
+ */
 function writeMessage(output, message) {
   output.write(`${JSON.stringify(message)}\n`);
 }
 
 class McpProtocolError extends Error {
+  /**
+   * @param {number} code
+   * @param {string} message
+   */
   constructor(code, message) {
     super(message);
+    /** @type {number} */
     this.code = code;
   }
 }

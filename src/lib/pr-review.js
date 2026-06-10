@@ -7,6 +7,176 @@ import { classifyPath } from "./risk-paths.js";
 import { runCommand } from "./tools.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
+/**
+ * @typedef {import('./index-cache.js').CodeMapFile} CodeMapFile
+ * @typedef {import('./index-cache.js').CodeMapHttpMethod} CodeMapHttpMethod
+ * @typedef {import('./index-cache.js').CodeMapSymbol} CodeMapSymbol
+ */
+
+/**
+ * Options accepted by {@link generatePrReview}. All fields are optional and
+ * sourced from CLI flags / MCP tool args, so values are loosely typed.
+ * @typedef {object} PrReviewOptions
+ * @property {string|number} [number] - Explicit PR number to load via gh.
+ * @property {string|number} [pr] - Alias for `number`.
+ * @property {boolean} [github] - Force loading PR metadata from GitHub.
+ * @property {boolean} [comment] - Post/update the PR review comment.
+ * @property {string} [base] - Base ref override for the diff.
+ * @property {string} [head] - Head ref override for the diff.
+ */
+
+/**
+ * A single changed-file row after enrichment from the code map and diff stats.
+ * @typedef {object} EnrichedFile
+ * @property {string} path
+ * @property {string} [previousPath]
+ * @property {string} status
+ * @property {string} statusName
+ * @property {number} additions
+ * @property {number} deletions
+ * @property {string} kind
+ * @property {string} domain
+ * @property {string|null} [route]
+ * @property {string|null} [controllerBasePath]
+ * @property {CodeMapHttpMethod[]} httpMethods
+ * @property {string[]} imports
+ * @property {string[]} exports
+ * @property {CodeMapSymbol[]} symbols
+ * @property {string[]} [riskFlags]
+ */
+
+/**
+ * Parsed git name-status entry before code-map enrichment.
+ * @typedef {object} DiffFileEntry
+ * @property {string} status
+ * @property {string} [score]
+ * @property {string} [previousPath]
+ * @property {string} path
+ */
+
+/**
+ * Per-file numstat record keyed by normalized path.
+ * @typedef {object} NumstatEntry
+ * @property {number} additions
+ * @property {number} deletions
+ */
+
+/**
+ * Result of {@link getDiff}.
+ * @typedef {object} DiffResult
+ * @property {string} mode
+ * @property {DiffFileEntry[]} files
+ * @property {Map<string, NumstatEntry>} numstat
+ * @property {number} insertions
+ * @property {number} deletions
+ * @property {string} shortstat
+ * @property {string} [fallbackReason]
+ */
+
+/**
+ * PR metadata loaded from the GitHub CLI (or a stub when not requested).
+ * @typedef {object} PrMetadata
+ * @property {boolean} requested
+ * @property {boolean} available
+ * @property {string} [source]
+ * @property {string|number} [number]
+ * @property {string} [title]
+ * @property {string} [body]
+ * @property {string} [state]
+ * @property {string} [url]
+ * @property {string} [author]
+ * @property {string} [baseRefName]
+ * @property {string} [headRefName]
+ * @property {string} [error]
+ * @property {any[]} [files]
+ * @property {any[]} comments
+ * @property {any[]} reviews
+ * @property {any[]} reviewComments
+ */
+
+/**
+ * Normalized review/comment item.
+ * @typedef {object} ReviewCommentItem
+ * @property {string} type
+ * @property {string} [author]
+ * @property {string} [path]
+ * @property {number} [line]
+ * @property {string} [state]
+ * @property {string} body
+ * @property {string} [url]
+ */
+
+/**
+ * @typedef {object} ReviewComments
+ * @property {number} count
+ * @property {ReviewCommentItem[]} items
+ */
+
+/**
+ * @typedef {object} RiskSummary
+ * @property {string} level
+ * @property {number} score
+ * @property {string[]} flags
+ */
+
+/**
+ * @typedef {object} RouteTarget
+ * @property {string} file
+ * @property {string} [method]
+ * @property {string} route
+ */
+
+/**
+ * @typedef {object} SymbolTarget
+ * @property {string} file
+ * @property {string[]} symbols
+ */
+
+/**
+ * @typedef {object} ReviewTargets
+ * @property {RouteTarget[]} routes
+ * @property {SymbolTarget[]} symbols
+ * @property {string[]} configFiles
+ * @property {string[]} testFiles
+ */
+
+/**
+ * @typedef {object} TestHint
+ * @property {string} [script]
+ * @property {string} command
+ * @property {string} reason
+ */
+
+/**
+ * Outcome of attempting to post the PR review comment.
+ * @typedef {object} CommentResult
+ * @property {boolean} ok
+ * @property {string} [action]
+ * @property {string|number} [id]
+ * @property {string} [url]
+ * @property {string} [error]
+ */
+
+/**
+ * The full PR-review data payload returned by {@link generatePrReview}.
+ * @typedef {object} PrReviewData
+ * @property {boolean} ok
+ * @property {string} generatedAt
+ * @property {{ root: string, name: string, git: any, packageManagers: string[] }} repo
+ * @property {PrMetadata} pr
+ * @property {{ base: string, head: string, mode: string, changedFileCount: number, insertions: number, deletions: number, shortstat: string, fallbackReason?: string }} comparison
+ * @property {EnrichedFile[]} changedFiles
+ * @property {ReturnType<typeof summarizeDomains>} domains
+ * @property {ReviewComments} reviewComments
+ * @property {RiskSummary} risk
+ * @property {ReviewTargets} reviewTargets
+ * @property {string[]} reviewPrompts
+ * @property {TestHint[]} testHints
+ * @property {string[]} nextSteps
+ * @property {ReturnType<typeof estimateTokenSections> & { fullJson?: number, markdown?: number }} [tokenEstimate]
+ * @property {CommentResult} [comment]
+ */
+
 const ghPrFields = ["number", "title", "body", "state", "url", "author", "baseRefName", "headRefName", "comments", "reviews", "files"].join(",");
 
 const statusNames = {
@@ -24,6 +194,11 @@ const preferredScripts = ["lint", "typecheck", "type-check", "check:type", "tsc"
 const prCommentMarker = "<!-- repoctx-pr-review -->";
 const legacyPrCommentMarker = "<!-- dev-context-pr-review -->";
 
+/**
+ * @param {string} [repoPath]
+ * @param {PrReviewOptions} [options]
+ * @returns {{ data: PrReviewData, markdown: string }}
+ */
 export function generatePrReview(repoPath = ".", options = {}) {
   const repo = inspectRepo(repoPath);
   if (!repo.git.available) {
@@ -44,6 +219,7 @@ export function generatePrReview(repoPath = ".", options = {}) {
   const reviewTargets = inferReviewTargets(changedFiles);
   const reviewPrompts = inferReviewPrompts(changedFiles, risk, reviewTargets);
 
+  /** @type {PrReviewData} */
   const data = {
     ok: true,
     generatedAt: new Date().toISOString(),
@@ -78,7 +254,8 @@ export function generatePrReview(repoPath = ".", options = {}) {
     nextSteps: inferNextSteps(changedFiles, risk, reviewComments, testHints),
   };
 
-  data.tokenEstimate = {
+  /** @type {ReturnType<typeof estimateTokenSections> & { fullJson?: number, markdown?: number }} */
+  const tokenEstimate = {
     ...estimateTokenSections([
       { name: "comparison", value: data.comparison },
       { name: "changedFiles", value: data.changedFiles },
@@ -87,16 +264,17 @@ export function generatePrReview(repoPath = ".", options = {}) {
       { name: "reviewComments", value: data.reviewComments },
     ]),
   };
-  data.tokenEstimate.fullJson = estimateTokens(data);
+  data.tokenEstimate = tokenEstimate;
+  tokenEstimate.fullJson = estimateTokens(data);
 
   if (options.comment) {
     data.comment = tryPostPrReviewComment(root, data);
   }
 
   let markdown = formatPrReviewMarkdown(data);
-  data.tokenEstimate.markdown = estimateTokens(markdown);
+  tokenEstimate.markdown = estimateTokens(markdown);
   markdown = formatPrReviewMarkdown(data);
-  data.tokenEstimate.markdown = estimateTokens(markdown);
+  tokenEstimate.markdown = estimateTokens(markdown);
 
   return {
     data,
@@ -104,6 +282,10 @@ export function generatePrReview(repoPath = ".", options = {}) {
   };
 }
 
+/**
+ * @param {PrReviewData} data
+ * @returns {string}
+ */
 export function formatPrReviewMarkdown(data) {
   const lines = [
     "# PR Review Context",
@@ -119,8 +301,8 @@ export function formatPrReviewMarkdown(data) {
     `- Changed files: ${data.comparison.changedFileCount}`,
     `- Diff: ${data.comparison.shortstat || `${data.comparison.insertions} insertion(s), ${data.comparison.deletions} deletion(s)`}`,
     `- Risk: ${data.risk.level} (${data.risk.score})`,
-    `- Estimated JSON tokens: ${data.tokenEstimate.fullJson}`,
-    `- Estimated Markdown tokens: ${data.tokenEstimate.markdown ?? "pending"}`,
+    `- Estimated JSON tokens: ${/** @type {NonNullable<typeof data.tokenEstimate>} */ (data.tokenEstimate).fullJson}`,
+    `- Estimated Markdown tokens: ${/** @type {NonNullable<typeof data.tokenEstimate>} */ (data.tokenEstimate).markdown ?? "pending"}`,
   ];
 
   if (data.comparison.fallbackReason) {
@@ -188,7 +370,7 @@ export function formatPrReviewMarkdown(data) {
     lines.push("| File | Status | Kind | Domain | +/- | Notes |", "|---|---|---|---|---:|---|");
     for (const file of data.changedFiles.slice(0, 80)) {
       lines.push(
-        `| ${formatFileCell(file)} | ${file.statusName} | ${file.kind} | ${file.domain} | +${file.additions} / -${file.deletions} | ${file.riskFlags.join("; ") || ""} |`,
+        `| ${formatFileCell(file)} | ${file.statusName} | ${file.kind} | ${file.domain} | +${file.additions} / -${file.deletions} | ${/** @type {string[]} */ (file.riskFlags).join("; ") || ""} |`,
       );
     }
   } else {
@@ -225,6 +407,10 @@ export function formatPrReviewMarkdown(data) {
   return lines.join("\n");
 }
 
+/**
+ * @param {PrReviewData} data
+ * @returns {string}
+ */
 export function formatPrCommentMarkdown(data) {
   const lines = [
     prCommentMarker,
@@ -266,11 +452,11 @@ export function formatPrCommentMarkdown(data) {
     lines.push("- none detected");
   }
 
-  const riskyFiles = data.changedFiles.filter((file) => file.riskFlags.length).slice(0, 15);
+  const riskyFiles = data.changedFiles.filter((file) => /** @type {string[]} */ (file.riskFlags).length).slice(0, 15);
   lines.push("", "### Risky Files", "");
   if (riskyFiles.length) {
     for (const file of riskyFiles) {
-      lines.push(`- \`${formatFileCell(file)}\`: ${file.riskFlags.join(", ")}`);
+      lines.push(`- \`${formatFileCell(file)}\`: ${/** @type {string[]} */ (file.riskFlags).join(", ")}`);
     }
   } else {
     lines.push("- none detected");
@@ -296,6 +482,11 @@ export function formatPrCommentMarkdown(data) {
   return lines.join("\n");
 }
 
+/**
+ * @param {string} root
+ * @param {PrReviewOptions} options
+ * @returns {PrMetadata}
+ */
 function loadPrMetadata(root, options) {
   const number = options.number ?? options.pr;
   const shouldLoad = Boolean(number ?? options.github ?? options.comment);
@@ -353,7 +544,7 @@ function loadPrMetadata(root, options) {
       requested: true,
       available: false,
       number,
-      error: `failed to parse gh output: ${error.message}`,
+      error: `failed to parse gh output: ${/** @type {Error} */ (error).message}`,
       comments: [],
       reviews: [],
       reviewComments: [],
@@ -361,6 +552,11 @@ function loadPrMetadata(root, options) {
   }
 }
 
+/**
+ * @param {string} root
+ * @param {PrReviewData} data
+ * @returns {CommentResult}
+ */
 function tryPostPrReviewComment(root, data) {
   try {
     return postPrReviewComment(root, data);
@@ -372,6 +568,11 @@ function tryPostPrReviewComment(root, data) {
   }
 }
 
+/**
+ * @param {string} root
+ * @param {PrReviewData} data
+ * @returns {CommentResult}
+ */
 function postPrReviewComment(root, data) {
   const number = data.pr.number;
   if (!number) {
@@ -428,6 +629,12 @@ function postPrReviewComment(root, data) {
   }
 }
 
+/**
+ * @param {string} root
+ * @param {string} nameWithOwner
+ * @param {string|number} number
+ * @returns {{ id: string|number, html_url?: string } | undefined}
+ */
 function findExistingPrComment(root, nameWithOwner, number) {
   const comments = runCommand("gh", ["api", `repos/${nameWithOwner}/issues/${number}/comments?per_page=100`], {
     cwd: root,
@@ -438,7 +645,7 @@ function findExistingPrComment(root, nameWithOwner, number) {
   }
 
   try {
-    return JSON.parse(comments.stdout).find((comment) => {
+    return JSON.parse(comments.stdout).find((/** @type {any} */ comment) => {
       const body = String(comment.body ?? "");
       return body.includes(prCommentMarker) || body.includes(legacyPrCommentMarker);
     });
@@ -447,6 +654,10 @@ function findExistingPrComment(root, nameWithOwner, number) {
   }
 }
 
+/**
+ * @param {string} body
+ * @returns {string}
+ */
 function writeCommentPayload(body) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-comment-"));
   const payloadPath = path.join(directory, "body.json");
@@ -454,6 +665,7 @@ function writeCommentPayload(body) {
   return payloadPath;
 }
 
+/** @param {string} filePath */
 function safeUnlink(filePath) {
   try {
     fs.unlinkSync(filePath);
@@ -463,6 +675,11 @@ function safeUnlink(filePath) {
   }
 }
 
+/**
+ * @param {string} root
+ * @param {string|number} number
+ * @returns {any[]}
+ */
 function loadGhReviewComments(root, number) {
   const repo = runCommand("gh", ["repo", "view", "--json", "nameWithOwner"], { cwd: root, timeout: 20000 });
   if (!repo.ok) {
@@ -488,6 +705,12 @@ function loadGhReviewComments(root, number) {
   }
 }
 
+/**
+ * @param {string} root
+ * @param {PrReviewOptions} options
+ * @param {PrMetadata} pr
+ * @returns {string}
+ */
 function resolveBaseRef(root, options, pr) {
   const candidates = [options.base, pr.baseRefName, upstreamRef(root), "origin/main", "main", "origin/master", "master", "HEAD~1"].filter(Boolean).map(String);
 
@@ -500,6 +723,10 @@ function resolveBaseRef(root, options, pr) {
   throw new Error("Could not resolve a base ref. Pass --base <ref>.");
 }
 
+/**
+ * @param {string} root
+ * @returns {string | undefined}
+ */
 function upstreamRef(root) {
   const result = runCommand("git", ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], {
     cwd: root,
@@ -508,10 +735,21 @@ function upstreamRef(root) {
   return result.ok ? result.stdout.trim() : undefined;
 }
 
+/**
+ * @param {string} root
+ * @param {string} ref
+ * @returns {boolean}
+ */
 function refExists(root, ref) {
   return runCommand("git", ["rev-parse", "--verify", `${ref}^{commit}`], { cwd: root, timeout: 5000 }).ok;
 }
 
+/**
+ * @param {string} root
+ * @param {string} base
+ * @param {string} head
+ * @returns {DiffResult}
+ */
 function getDiff(root, base, head) {
   const comparison = `${base}...${head}`;
   const nameStatus = runCommand("git", ["diff", "--name-status", "--find-renames", comparison], { cwd: root });
@@ -566,6 +804,12 @@ function getDiff(root, base, head) {
   };
 }
 
+/**
+ * @param {string} root
+ * @param {DiffFileEntry[]} files
+ * @param {Map<string, NumstatEntry>} stats
+ * @returns {DiffFileEntry[]}
+ */
 function includeUntrackedFiles(root, files, stats) {
   const result = [...files];
   const seen = new Set(result.map((file) => file.path));
@@ -584,6 +828,10 @@ function includeUntrackedFiles(root, files, stats) {
   return result;
 }
 
+/**
+ * @param {string} filePath
+ * @returns {number}
+ */
 function countFileLines(filePath) {
   try {
     const text = fs.readFileSync(filePath, "utf8");
@@ -596,6 +844,11 @@ function countFileLines(filePath) {
   }
 }
 
+/**
+ * @param {Map<string, NumstatEntry>} stats
+ * @param {'additions' | 'deletions'} key
+ * @returns {number}
+ */
 function sumStats(stats, key) {
   let total = 0;
   for (const item of stats.values()) {
@@ -604,6 +857,13 @@ function sumStats(stats, key) {
   return total;
 }
 
+/**
+ * @param {number} fileCount
+ * @param {number} insertions
+ * @param {number} deletions
+ * @param {string} fallback
+ * @returns {string}
+ */
 function formatShortstat(fileCount, insertions, deletions, fallback) {
   if (!fileCount) {
     return fallback;
@@ -611,12 +871,16 @@ function formatShortstat(fileCount, insertions, deletions, fallback) {
   return `${fileCount} file(s) changed, ${insertions} insertion(s), ${deletions} deletion(s)`;
 }
 
+/**
+ * @param {string} output
+ * @returns {DiffFileEntry[]}
+ */
 function parseNameStatus(output) {
-  return output
+  const entries = output
     .trim()
     .split("\n")
     .filter(Boolean)
-    .map((line) => {
+    .map((/** @type {string} */ line) => {
       const parts = line.split("\t");
       const rawStatus = parts[0] ?? "";
       const status = rawStatus[0] ?? "X";
@@ -634,9 +898,17 @@ function parseNameStatus(output) {
       };
     })
     .filter((file) => file.path);
+  // The filter above guarantees `path` is set; cast since the predicate is not
+  // a TS type guard.
+  return /** @type {DiffFileEntry[]} */ (entries);
 }
 
+/**
+ * @param {string} output
+ * @returns {{ files: Map<string, NumstatEntry>, insertions: number, deletions: number }}
+ */
 function parseNumstat(output) {
+  /** @type {Map<string, NumstatEntry>} */
   const files = new Map();
   let insertions = 0;
   let deletions = 0;
@@ -655,6 +927,10 @@ function parseNumstat(output) {
   return { files, insertions, deletions };
 }
 
+/**
+ * @param {string} filePath
+ * @returns {string}
+ */
 function normalizeNumstatPath(filePath) {
   const renameMatch = filePath.match(/^(.*) => (.*)$/);
   if (!renameMatch) {
@@ -667,21 +943,32 @@ function normalizeNumstatPath(filePath) {
   return `${sharedPrefix}${after}`;
 }
 
+/**
+ * @param {string | undefined} value
+ * @returns {number}
+ */
 function parseStatNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/**
+ * @param {DiffFileEntry[]} files
+ * @param {Map<string, NumstatEntry>} numstat
+ * @param {ReturnType<typeof generateCodeMap>} codeMap
+ * @returns {EnrichedFile[]}
+ */
 function enrichChangedFiles(files, numstat, codeMap) {
   const byPath = new Map(codeMap.files.map((file) => [file.path, file]));
   return files.map((file) => {
-    const codeInfo = byPath.get(file.path) ?? byPath.get(file.previousPath);
-    const stats = numstat.get(file.path) ?? numstat.get(file.previousPath) ?? { additions: 0, deletions: 0 };
+    const codeInfo = file.previousPath ? (byPath.get(file.path) ?? byPath.get(file.previousPath)) : byPath.get(file.path);
+    const stats = numstat.get(file.path) ?? (file.previousPath ? numstat.get(file.previousPath) : undefined) ?? { additions: 0, deletions: 0 };
+    /** @type {EnrichedFile} */
     const enriched = {
       path: file.path,
       previousPath: file.previousPath,
       status: file.status,
-      statusName: statusNames[file.status] ?? file.status,
+      statusName: /** @type {Record<string, string>} */ (statusNames)[file.status] ?? file.status,
       additions: stats.additions,
       deletions: stats.deletions,
       kind: codeInfo?.kind ?? inferBasicKind(file.path),
@@ -698,6 +985,10 @@ function enrichChangedFiles(files, numstat, codeMap) {
   });
 }
 
+/**
+ * @param {string} file
+ * @returns {string}
+ */
 function inferBasicKind(file) {
   const base = path.basename(file);
   const extension = path.extname(file).toLowerCase();
@@ -717,11 +1008,19 @@ function inferBasicKind(file) {
   return "source";
 }
 
+/**
+ * @param {string} file
+ * @returns {boolean}
+ */
 function isTestFilePath(file) {
   const normalized = file.replaceAll("\\", "/");
   return /(^|\/)(__tests__|test|tests)(\/|$)/.test(normalized) || /\.(spec|test)\.[jt]sx?$/.test(normalized) || /(^|\/)[^/]+_test\.go$/.test(normalized);
 }
 
+/**
+ * @param {string} file
+ * @returns {string}
+ */
 function inferBasicDomain(file) {
   const parts = file.split("/");
   const interestingRoots = new Set(["app", "src", "components", "lib", "utils", "redux", "services", "schemas", "hooks", "types"]);
@@ -731,6 +1030,10 @@ function inferBasicDomain(file) {
   return cleanDomain(parts[0] ?? "root");
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function cleanDomain(value) {
   return (
     value
@@ -747,6 +1050,10 @@ function cleanDomain(value) {
 // so PR review and the merge gates agree on the same diff. This also removes
 // the old raw-substring regexes here, which produced false positives such as
 // `tokens.js` → auth/security (via the bare substring "token").
+/**
+ * @param {EnrichedFile} file
+ * @returns {string[]}
+ */
 function inferFileRiskFlags(file) {
   return classifyPath(file.path, {
     kind: file.kind,
@@ -755,7 +1062,12 @@ function inferFileRiskFlags(file) {
   });
 }
 
+/**
+ * @param {EnrichedFile[]} files
+ * @returns {{ name: string, fileCount: number, additions: number, deletions: number, kinds: { kind: string, count: number }[] }[]}
+ */
 function summarizeDomains(files) {
+  /** @type {Map<string, { name: string, fileCount: number, additions: number, deletions: number, kinds: Map<string, number> }>} */
   const domains = new Map();
   for (const file of files) {
     const domain = domains.get(file.domain) ?? {
@@ -783,7 +1095,12 @@ function summarizeDomains(files) {
     .sort((a, b) => b.fileCount - a.fileCount || b.additions + b.deletions - (a.additions + a.deletions) || a.name.localeCompare(b.name));
 }
 
+/**
+ * @param {PrMetadata} pr
+ * @returns {ReviewComments}
+ */
 function normalizeReviewComments(pr) {
+  /** @type {ReviewCommentItem[]} */
   const items = [];
   for (const comment of pr.reviewComments ?? []) {
     items.push({
@@ -824,7 +1141,14 @@ function normalizeReviewComments(pr) {
   };
 }
 
+/**
+ * @param {EnrichedFile[]} files
+ * @param {DiffResult} diff
+ * @param {ReviewComments} comments
+ * @returns {RiskSummary}
+ */
 function inferRisk(files, diff, comments) {
+  /** @type {Set<string>} */
   const flags = new Set();
   let score = 0;
   const nonTestFiles = files.filter((file) => file.kind !== "test");
@@ -832,7 +1156,7 @@ function inferRisk(files, diff, comments) {
   const testFiles = files.filter((file) => file.kind === "test");
 
   for (const file of files) {
-    for (const flag of file.riskFlags) {
+    for (const flag of /** @type {string[]} */ (file.riskFlags)) {
       flags.add(flag);
     }
   }
@@ -868,13 +1192,21 @@ function inferRisk(files, diff, comments) {
   };
 }
 
+/**
+ * @param {ReturnType<typeof inspectRepo>} repo
+ * @param {EnrichedFile[]} files
+ * @param {RiskSummary} risk
+ * @returns {TestHint[]}
+ */
 function inferTestHints(repo, files, risk) {
   if (!files.length) {
     return [];
   }
 
+  /** @type {Record<string, string>} */
   const scripts = repo.scripts ?? {};
   const runner = packageRunner(repo.packageManagers);
+  /** @type {TestHint[]} */
   const hints = [];
 
   for (const name of preferredScripts) {
@@ -902,6 +1234,10 @@ function inferTestHints(repo, files, risk) {
   return uniqueBy(hints, (hint) => hint.command).slice(0, 6);
 }
 
+/**
+ * @param {EnrichedFile[]} files
+ * @returns {ReviewTargets}
+ */
 function inferReviewTargets(files) {
   return {
     routes: files.flatMap(routeTargetsForFile).slice(0, 100),
@@ -912,11 +1248,15 @@ function inferReviewTargets(files) {
         symbols: file.symbols.slice(0, 12).map((symbol) => `${symbol.type} ${symbol.name}`),
       }))
       .slice(0, 100),
-    configFiles: files.filter((file) => file.kind === "config" || file.riskFlags.includes("configuration")).map((file) => file.path),
+    configFiles: files.filter((file) => file.kind === "config" || /** @type {string[]} */ (file.riskFlags).includes("configuration")).map((file) => file.path),
     testFiles: files.filter((file) => file.kind === "test").map((file) => file.path),
   };
 }
 
+/**
+ * @param {EnrichedFile} file
+ * @returns {RouteTarget[]}
+ */
 function routeTargetsForFile(file) {
   if (file.route) {
     return [{ file: file.path, route: file.route }];
@@ -931,7 +1271,14 @@ function routeTargetsForFile(file) {
   }));
 }
 
+/**
+ * @param {EnrichedFile[]} files
+ * @param {RiskSummary} risk
+ * @param {ReviewTargets} targets
+ * @returns {string[]}
+ */
 function inferReviewPrompts(files, risk, targets) {
+  /** @type {string[]} */
   const prompts = [];
   if (targets.routes.length) {
     prompts.push(
@@ -962,6 +1309,12 @@ function inferReviewPrompts(files, risk, targets) {
   return prompts;
 }
 
+/**
+ * @param {string} name
+ * @param {EnrichedFile[]} files
+ * @param {RiskSummary} risk
+ * @returns {string | undefined}
+ */
 function reasonForScript(name, files, risk) {
   const changedKinds = new Set(files.map((file) => file.kind));
   const hasTypedSource = files.some((file) => /\.[cm]?[jt]sx?$/.test(file.path));
@@ -980,6 +1333,10 @@ function reasonForScript(name, files, risk) {
   return undefined;
 }
 
+/**
+ * @param {string[]} [packageManagers]
+ * @returns {string}
+ */
 function packageRunner(packageManagers = []) {
   if (packageManagers.includes("pnpm")) return "pnpm";
   if (packageManagers.includes("yarn")) return "yarn";
@@ -987,6 +1344,11 @@ function packageRunner(packageManagers = []) {
   return "npm";
 }
 
+/**
+ * @param {string} runner
+ * @param {string} script
+ * @returns {string}
+ */
 function commandForScript(runner, script) {
   if (runner === "npm") {
     return script === "test" ? "npm test" : `npm run ${script}`;
@@ -994,8 +1356,15 @@ function commandForScript(runner, script) {
   return `${runner} ${script}`;
 }
 
+/**
+ * @template T
+ * @param {T[]} items
+ * @param {(item: T) => unknown} keyFn
+ * @returns {T[]}
+ */
 function uniqueBy(items, keyFn) {
   const seen = new Set();
+  /** @type {T[]} */
   const result = [];
   for (const item of items) {
     const key = keyFn(item);
@@ -1008,12 +1377,21 @@ function uniqueBy(items, keyFn) {
   return result;
 }
 
+/**
+ * @param {string | null | undefined} basePath
+ * @param {string | null | undefined} methodPath
+ * @returns {string}
+ */
 function combineRoute(basePath, methodPath) {
   const base = normalizeRoutePart(basePath);
   const child = normalizeRoutePart(methodPath);
   return `/${[base, child].filter(Boolean).join("/")}`.replace(/\/+/g, "/");
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 function normalizeRoutePart(value) {
   return String(value ?? "")
     .trim()
@@ -1021,7 +1399,15 @@ function normalizeRoutePart(value) {
     .replace(/^:$/, "");
 }
 
+/**
+ * @param {EnrichedFile[]} files
+ * @param {RiskSummary} risk
+ * @param {ReviewComments} comments
+ * @param {TestHint[]} hints
+ * @returns {string[]}
+ */
 function inferNextSteps(files, risk, comments, hints) {
+  /** @type {string[]} */
   const steps = [];
   if (!files.length) {
     return ["No changed files detected for this comparison."];
@@ -1054,6 +1440,10 @@ function inferNextSteps(files, risk, comments, hints) {
   return steps;
 }
 
+/**
+ * @param {any} git
+ * @returns {string}
+ */
 function formatGit(git) {
   if (!git.available) {
     return "not detected";
@@ -1062,6 +1452,10 @@ function formatGit(git) {
   return `${git.branch ?? "unknown"} @ ${git.commit ?? "unknown"} (${dirty})`;
 }
 
+/**
+ * @param {EnrichedFile} file
+ * @returns {string}
+ */
 function formatFileCell(file) {
   if (file.previousPath) {
     return `${file.previousPath} -> ${file.path}`;
@@ -1069,6 +1463,10 @@ function formatFileCell(file) {
   return file.path;
 }
 
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
 function compactText(value) {
   return String(value ?? "")
     .replace(/\s+/g, " ")
@@ -1076,6 +1474,11 @@ function compactText(value) {
     .slice(0, 500);
 }
 
+/**
+ * @param {import('./tools.js').RunResult} result
+ * @param {string} fallback
+ * @returns {string}
+ */
 function cleanCommandError(result, fallback) {
   const message = `${result.stderr || result.stdout || result.error?.message || fallback}`.trim();
   return message.split("\n")[0] || fallback;

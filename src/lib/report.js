@@ -3,14 +3,81 @@ import { getToolMatrix } from "./matrix.js";
 import { inspectRepo } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
+/** @typedef {import('./doctor.js').DoctorTool} DoctorTool */
+
+/**
+ * Git info surfaced in the report (subset of the inspectRepo git shape).
+ * @typedef {Object} GitInfo
+ * @property {boolean} available
+ * @property {boolean} [clean]
+ * @property {number} [changes]
+ * @property {string} [branch]
+ * @property {string} [commit]
+ */
+
+/**
+ * The repo overview the report consumes (subset of inspectRepo output).
+ * @typedef {Object} RepoInfo
+ * @property {string} root
+ * @property {number} fileCount
+ * @property {GitInfo} git
+ * @property {{ language: string, count: number }[]} languages
+ * @property {string[]} packageManagers
+ * @property {string[]} entrypoints
+ */
+
+/**
+ * One row of the tool-fit matrix.
+ * @typedef {Object} MatrixTool
+ * @property {string} name
+ * @property {string} role
+ * @property {string} pilotUse
+ * @property {string} notes
+ */
+
+/**
+ * One token-estimate breakdown section.
+ * @typedef {{ name: string, tokens: number }} TokenSection
+ */
+
+/**
+ * Aggregate token estimate attached to the report data.
+ * @typedef {Object} TokenEstimate
+ * @property {number} [fullJson]
+ * @property {number} [markdown]
+ * @property {TokenSection[]} [sections]
+ */
+
+/**
+ * The full report data object built by {@link generateReport}. `tokenEstimate`
+ * is populated after the base object is created, so it is optional on the type
+ * but always present by the time the report is returned.
+ * @typedef {Object} ReportData
+ * @property {boolean} ok
+ * @property {string} generatedAt
+ * @property {RepoInfo} repo
+ * @property {{ ok: boolean, tools: DoctorTool[] }} doctor
+ * @property {{ ok: boolean, tools: MatrixTool[] }} matrix
+ * @property {TokenEstimate} tokenEstimate
+ */
+
+/**
+ * @param {string} [repoPath]
+ * @returns {{ data: ReportData, markdown: string, terminal: string }}
+ */
 export function generateReport(repoPath = ".") {
-  const data = {
-    ok: true,
-    generatedAt: new Date().toISOString(),
-    repo: inspectRepo(repoPath),
-    doctor: getDoctorReport(),
-    matrix: getToolMatrix(),
-  };
+  // tokenEstimate is filled in immediately below; cast through unknown so the
+  // literal satisfies the required-property type without restructuring the
+  // assignment order (inspectRepo returns a wider shape than ReportData.repo).
+  const data = /** @type {ReportData} */ (
+    /** @type {unknown} */ ({
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      repo: inspectRepo(repoPath),
+      doctor: getDoctorReport(),
+      matrix: getToolMatrix(),
+    })
+  );
 
   data.tokenEstimate = {
     ...estimateTokenSections([
@@ -33,6 +100,10 @@ export function generateReport(repoPath = ".") {
   };
 }
 
+/**
+ * @param {ReportData} data
+ * @returns {string}
+ */
 function formatReportMarkdown(data) {
   const repo = data.repo;
   const missing = data.doctor.tools.filter((tool) => !tool.available);
@@ -79,6 +150,11 @@ function formatReportMarkdown(data) {
   ].join("\n");
 }
 
+/**
+ * @param {ReportData} data
+ * @param {{ columns?: number }} [options]
+ * @returns {string}
+ */
 export function formatReportTerminal(data, options = {}) {
   const width = normalizeColumns(options.columns);
   const repo = data.repo;
@@ -154,6 +230,10 @@ export function formatReportTerminal(data, options = {}) {
   return lines.join("\n");
 }
 
+/**
+ * @param {GitInfo} git
+ * @returns {string}
+ */
 function formatGit(git) {
   if (!git.available) {
     return "not detected";
@@ -163,6 +243,10 @@ function formatGit(git) {
   return `${git.branch ?? "unknown"} @ ${git.commit ?? "unknown"} (${dirty})`;
 }
 
+/**
+ * @param {ReportData} data
+ * @returns {string}
+ */
 function formatStatusLine(data) {
   const repo = data.repo;
   const missing = data.doctor.tools.filter((tool) => !tool.available);
@@ -172,10 +256,20 @@ function formatStatusLine(data) {
   return `${gitState}; ${repo.fileCount} files scanned; ${present.length} tools ready; ${optionalGaps}.`;
 }
 
+/**
+ * @param {string[]} lines
+ * @param {string} title
+ * @returns {void}
+ */
 function addSection(lines, title) {
   lines.push("", title, "-".repeat(title.length));
 }
 
+/**
+ * @param {[string, string | number | null | undefined][]} rows
+ * @param {{ width: number, indent?: string }} options
+ * @returns {string[]}
+ */
 function formatKeyValues(rows, { width, indent = "  " }) {
   const labelWidth = Math.max(...rows.map(([label]) => label.length));
   const valuePrefix = `${indent}${" ".repeat(labelWidth)}  `;
@@ -188,6 +282,11 @@ function formatKeyValues(rows, { width, indent = "  " }) {
   });
 }
 
+/**
+ * @param {DoctorTool[]} tools
+ * @param {{ width: number, fallback: string, includeHint?: boolean }} options
+ * @returns {string[]}
+ */
 function formatToolRows(tools, { width, fallback, includeHint = false }) {
   if (!tools.length) {
     return [`  ${fallback}`];
@@ -204,6 +303,11 @@ function formatToolRows(tools, { width, fallback, includeHint = false }) {
   });
 }
 
+/**
+ * @param {ReportData} data
+ * @param {{ width: number }} options
+ * @returns {string[]}
+ */
 function formatTokenSummary(data, { width }) {
   const sections = data.tokenEstimate.sections ?? [];
   const lines = [
@@ -230,6 +334,12 @@ function formatTokenSummary(data, { width }) {
   return lines;
 }
 
+/**
+ * @param {string} label
+ * @param {string} value
+ * @param {{ width: number, indent?: string }} options
+ * @returns {string[]}
+ */
 function formatLabeledParagraph(label, value, { width, indent = "" }) {
   const prefix = `${indent}${label}: `;
   const continuationPrefix = `${indent}${" ".repeat(label.length + 2)}`;
@@ -237,6 +347,11 @@ function formatLabeledParagraph(label, value, { width, indent = "" }) {
   return [`${prefix}${wrapped[0] ?? ""}`, ...wrapped.slice(1).map((line) => `${continuationPrefix}${line}`)];
 }
 
+/**
+ * @param {string[]} items
+ * @param {{ width: number }} options
+ * @returns {string[]}
+ */
 function formatNumberedList(items, { width }) {
   const markerWidth = `${items.length}. `.length;
   return items.flatMap((item, index) => {
@@ -248,12 +363,18 @@ function formatNumberedList(items, { width }) {
   });
 }
 
+/**
+ * @param {string} value
+ * @param {number} width
+ * @returns {string[]}
+ */
 function wrapText(value, width) {
   const text = String(value).replace(/\s+/g, " ").trim();
   if (!text) {
     return [""];
   }
 
+  /** @type {string[]} */
   const lines = [];
   let current = "";
   for (const word of text.split(" ")) {
@@ -281,7 +402,13 @@ function wrapText(value, width) {
   return lines;
 }
 
+/**
+ * @param {string} word
+ * @param {number} width
+ * @returns {string[]}
+ */
 function chunkWord(word, width) {
+  /** @type {string[]} */
   const chunks = [];
   for (let index = 0; index < word.length; index += width) {
     chunks.push(word.slice(index, index + width));
@@ -289,6 +416,10 @@ function chunkWord(word, width) {
   return chunks;
 }
 
+/**
+ * @param {number | undefined} columns
+ * @returns {number}
+ */
 function normalizeColumns(columns) {
   const value = Number(columns);
   if (!Number.isFinite(value) || value < 40) {
@@ -297,6 +428,10 @@ function normalizeColumns(columns) {
   return Math.min(140, Math.floor(value));
 }
 
+/**
+ * @param {string} value
+ * @returns {string}
+ */
 function titleCase(value) {
   return String(value).replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
