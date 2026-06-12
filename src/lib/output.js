@@ -36,7 +36,7 @@ Usage:
   repoctx map <path> [--out file] [--json]
   repoctx structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
   repoctx deps <package> [--query text] [--limit n] [--json]
-  repoctx init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--json]
+  repoctx init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--no-gates] [--no-precommit] [--hooks-path] [--yes] [--json]
   repoctx matrix [--json]
   repoctx mcp
   repoctx pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
@@ -61,6 +61,7 @@ Examples:
   node src/cli.js install
   node src/cli.js map . --json
   node src/cli.js init ../my-repo
+  node src/cli.js init ../my-repo --hooks-path --yes
   node src/cli.js mcp
   node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
   node src/cli.js harness . --out .dev-context/harness.md
