@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import readline from "node:readline/promises";
 import { parseArgv } from "./lib/args.js";
 
 /** @typedef {import('./lib/args.js').ParsedArgs} ParsedArgs */
@@ -509,11 +510,33 @@ async function handleMatrix(parsed) {
 /** @param {CliArgs} parsed */
 async function handleInit(parsed) {
   const targetPath = parsed.positionals[0] ?? ".";
+
+  // Resolve scaffold options from flags first. --no-gates / --no-precommit turn
+  // the new behaviors off; --hooks-path opts into the git core.hooksPath write.
+  let gates = !parsed.flags.no_gates;
+  let precommit = !parsed.flags.no_precommit;
+  let hooksPath = Boolean(parsed.flags.hooks_path);
+
+  // Prompting lives only here, and only for a human at a TTY. MCP, agents, CI,
+  // and --json/--yes callers run fully non-interactively off the flags above, so
+  // init never blocks an unattended caller.
+  const interactive = Boolean(process.stdin.isTTY) && !parsed.flags.yes && !parsed.flags.json;
+  if (interactive) {
+    gates = await promptYesNo("Generate harness-driven CI quality gates?", gates);
+    precommit = await promptYesNo("Scaffold a dependency-free pre-commit hook (.githooks/pre-commit)?", precommit);
+    if (precommit && !hooksPath) {
+      hooksPath = await promptYesNo("Point git core.hooksPath at .githooks now?", false);
+    }
+  }
+
   const result = initProject(targetPath, {
     force: parsed.flags.force,
     noWorkflow: parsed.flags.no_workflow,
     toolRepo: parsed.flags.tool_repo,
     toolRef: parsed.flags.tool_ref,
+    gates,
+    precommit,
+    hooksPath,
   });
 
   if (parsed.flags.json) {
@@ -522,6 +545,27 @@ async function handleInit(parsed) {
   }
 
   printText(formatInitSummary(result));
+}
+
+/**
+ * Ask a yes/no question at an interactive TTY. Used only by `init`; never
+ * reached for non-interactive callers (guarded by process.stdin.isTTY).
+ * @param {string} question
+ * @param {boolean} defaultValue
+ * @returns {Promise<boolean>}
+ */
+async function promptYesNo(question, defaultValue) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const hint = defaultValue ? "Y/n" : "y/N";
+    const answer = (await rl.question(`${question} [${hint}] `)).trim().toLowerCase();
+    if (!answer) {
+      return defaultValue;
+    }
+    return answer === "y" || answer === "yes";
+  } finally {
+    rl.close();
+  }
 }
 
 async function handleMcp() {

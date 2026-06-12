@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { initProject } from "../src/lib/init.js";
 
 test("initProject scaffolds repoctx files without overwriting by default", () => {
@@ -90,4 +91,122 @@ test("initProject can force overwrite and skip workflow", () => {
   const result = initProject(noWorkflow, { noWorkflow: true });
   assert.ok(result.created.includes(".dev-context/README.md"));
   assert.equal(fs.existsSync(path.join(noWorkflow, ".github", "workflows", "repoctx-ci.yml")), false);
+});
+
+test("initProject injects a harness-driven quality job and pre-commit hook from package scripts", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gates-"));
+  fs.writeFileSync(
+    path.join(fixture, "package.json"),
+    JSON.stringify({ name: "sample", scripts: { lint: "eslint .", typecheck: "tsc --noEmit", test: "node --test" } }, null, 2),
+  );
+
+  const result = initProject(fixture);
+
+  assert.equal(result.gatesApplied, true);
+  assert.equal(result.gatesStatus, "applied");
+  assert.equal(result.precommitApplied, true);
+  assert.equal(result.precommitStatus, "applied");
+  assert.ok(result.created.includes(".githooks/pre-commit"));
+
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "repoctx-ci.yml"), "utf8");
+  const qualitySection = workflow.split("  review:")[0];
+  assert.match(workflow, /^ {2}quality:$/m);
+  assert.match(workflow, /actions\/setup-node@v4/);
+  assert.match(qualitySection, /install Node dependencies\n {8}run: npm install/);
+  assert.doesNotMatch(qualitySection, /install Node dependencies\n {8}run: npm ci/);
+  assert.match(workflow, /run: npm run lint/);
+  assert.match(workflow, /run: npm run typecheck/);
+  assert.match(workflow, /run: npm test/);
+  // the review job must survive alongside the new quality job
+  assert.match(workflow, /name: Generate PR review context/);
+
+  const hookFile = path.join(fixture, ".githooks", "pre-commit");
+  const hook = fs.readFileSync(hookFile, "utf8");
+  assert.match(hook, /^#!\/bin\/sh/);
+  assert.match(hook, /npm run lint/);
+  assert.match(hook, /npm run typecheck/);
+  // slow gates (test/build/audit) never run in the pre-commit hook
+  assert.doesNotMatch(hook, /npm test/);
+  // the hook must be executable
+  assert.equal(fs.statSync(hookFile).mode & 0o111, 0o111);
+});
+
+test("initProject omits gates and pre-commit when disabled", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-nogates-"));
+  fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint ." } }, null, 2));
+
+  const result = initProject(fixture, { gates: false, precommit: false });
+
+  assert.equal(result.gatesApplied, false);
+  assert.equal(result.gatesStatus, "disabled");
+  assert.equal(result.precommitApplied, false);
+  assert.equal(result.precommitStatus, "disabled");
+  assert.equal(fs.existsSync(path.join(fixture, ".githooks", "pre-commit")), false);
+
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "repoctx-ci.yml"), "utf8");
+  assert.doesNotMatch(workflow, /^ {2}quality:$/m);
+  assert.match(workflow, /name: Generate PR review context/);
+});
+
+test("initProject leaves gates and pre-commit off when no scripts are detected", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-bare-"));
+  const result = initProject(fixture);
+
+  assert.equal(result.gatesApplied, false);
+  assert.equal(result.gatesStatus, "none");
+  assert.equal(result.precommitApplied, false);
+  assert.equal(result.precommitStatus, "none");
+  assert.equal(fs.existsSync(path.join(fixture, ".githooks", "pre-commit")), false);
+});
+
+test("initProject uses npm ci when package-lock.json is present", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-lock-"));
+  fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint .", test: "node --test" } }, null, 2));
+  fs.writeFileSync(path.join(fixture, "package-lock.json"), JSON.stringify({ name: "sample", lockfileVersion: 3, packages: {} }, null, 2));
+
+  initProject(fixture);
+
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "repoctx-ci.yml"), "utf8");
+  const qualitySection = workflow.split("  review:")[0];
+  assert.match(qualitySection, /install Node dependencies\n {8}run: npm ci/);
+});
+
+test("initProject excludes non-static script names from the pre-commit hook", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-precommit-filter-"));
+  fs.writeFileSync(
+    path.join(fixture, "package.json"),
+    JSON.stringify({ name: "sample", scripts: { lint: "eslint .", prototype: "node prototype.js", test: "node --test" } }, null, 2),
+  );
+
+  const result = initProject(fixture);
+
+  assert.equal(result.precommitApplied, true);
+  const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
+  assert.match(hook, /npm run lint/);
+  assert.doesNotMatch(hook, /prototype/);
+  assert.doesNotMatch(hook, /npm test/);
+});
+
+test("initProject sets core.hooksPath only when requested, inside a git repo", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-hooks-"));
+  fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint ." } }, null, 2));
+  execFileSync("git", ["init"], { cwd: fixture, stdio: "ignore" });
+
+  const result = initProject(fixture, { hooksPath: true });
+
+  assert.equal(result.precommitApplied, true);
+  assert.equal(result.hooksConfigured, true);
+  const configured = execFileSync("git", ["config", "core.hooksPath"], { cwd: fixture }).toString().trim();
+  assert.equal(configured, ".githooks");
+});
+
+test("initProject skips hooks path when no pre-commit hook was scaffolded", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-hooks-skip-"));
+  execFileSync("git", ["init"], { cwd: fixture, stdio: "ignore" });
+
+  const result = initProject(fixture, { hooksPath: true, gates: false, precommit: false });
+
+  assert.equal(result.hooksPathRequested, true);
+  assert.equal(result.hooksConfigured, false);
+  assert.ok(result.nextSteps.some((step) => step.includes("core.hooksPath was not set")));
 });
