@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [Unreleased]
+
+## [2.1.0] - 2026-06-12
+
+### Added
+
+- **`repoctx init` now scaffolds a real CI quality gate and an optional pre-commit hook**, derived from `repoctx harness`. The generated `repoctx-ci.yml` gains a `quality` job that runs the project's detected setup + validation commands (install → lint/typecheck/test/build/audit, with toolchain setup for npm/pnpm/yarn/bun) alongside the existing PR-review job. A dependency-free `.githooks/pre-commit` hook runs only the fast static checks (lint/format:check/typecheck) — slow gates stay in CI. Repos with no detectable scripts are unchanged (review-only workflow, no hook).
+- `init` prompts interactively only at a TTY; MCP, agents, CI, and `--json`/`--yes` callers stay fully non-interactive. New flags: `--no-gates`, `--no-precommit`, `--hooks-path` (sets `git core.hooksPath .githooks` with consent), and `--yes`. `initProject()` stays pure — all decisions arrive as explicit options.
+- CI install steps use frozen lockfile installs only when the matching lockfile is present; lockfile-less repos keep a plain install command.
+
 ## [2.0.0] - 2026-06-10
 
 Major version: the MCP tool surface changed. Every legacy tool name still works via `tools/call` (guaranteed until 3.0) — see [docs/MIGRATION-2.0.md](docs/MIGRATION-2.0.md).

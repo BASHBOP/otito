@@ -1,9 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { generateHarness } from "./harness.js";
 
 const defaultToolRepo = "nugehs/repoctx";
 const defaultToolRef = "main";
 const workflowPath = ".github/workflows/repoctx-ci.yml";
+const hookPath = ".githooks/pre-commit";
+
+// Pre-commit runs only the fast, deterministic static checks — never the slow
+// (test/build/audit/smoke) gates, which belong in CI. A harness validate
+// command qualifies when its npm script name is a known static check.
+const staticPrecommitScripts = new Set(["lint", "format:check", "typecheck", "type-check", "tsc", "check:type"]);
 
 /**
  * @typedef {object} InitOptions
@@ -11,6 +19,9 @@ const workflowPath = ".github/workflows/repoctx-ci.yml";
  * @property {string} [toolRepo] repoctx tool repository (owner/name).
  * @property {string} [toolRef] repoctx tool git ref.
  * @property {boolean} [noWorkflow] Skip writing the CI workflow file.
+ * @property {boolean} [gates] Inject a harness-driven quality job into the workflow. Defaults to true.
+ * @property {boolean} [precommit] Scaffold a dependency-free pre-commit hook. Defaults to true.
+ * @property {boolean} [hooksPath] Point git core.hooksPath at .githooks (requires the pre-commit hook). Defaults to false.
  */
 
 /**
@@ -24,6 +35,12 @@ const workflowPath = ".github/workflows/repoctx-ci.yml";
  * @property {boolean} force
  * @property {string} toolRepo
  * @property {string} toolRef
+ * @property {boolean} gatesApplied Whether a harness-driven quality job was added to the workflow.
+ * @property {"applied" | "disabled" | "none"} gatesStatus Why gates were or were not scaffolded.
+ * @property {boolean} precommitApplied Whether a pre-commit hook was scaffolded.
+ * @property {"applied" | "disabled" | "none"} precommitStatus Why the pre-commit hook was or was not scaffolded.
+ * @property {boolean} hooksConfigured Whether git core.hooksPath was set to .githooks.
+ * @property {boolean} hooksPathRequested Whether the caller asked to set core.hooksPath.
  * @property {string[]} created
  * @property {string[]} updated
  * @property {string[]} skipped
@@ -44,18 +61,55 @@ export function initProject(targetPath = ".", options = {}) {
   const force = Boolean(options.force);
   const toolRepo = String(options.toolRepo ?? defaultToolRepo);
   const toolRef = String(options.toolRef ?? defaultToolRef);
+  const wantGates = options.gates !== false; // default on
+  const wantPrecommit = options.precommit !== false; // default on
+  const wantHooksPath = Boolean(options.hooksPath); // default off — never mutate git config without consent
   /** @type {ScaffoldOperation[]} */
   const operations = [];
 
-  writeScaffoldFile(root, ".dev-context/README.md", contextReadme(toolRepo, toolRef), { force, operations });
+  // Inspect the repo once to drive both the CI gates and the pre-commit hook.
+  // A harness failure (unreadable repo, parse error) must never block the core
+  // scaffold, so fall back to the review-only workflow with no detected gates.
+  /** @type {{ commands?: { validate?: HarnessCommand[], setup?: HarnessCommand[] }, repo?: { packageManagers?: string[] } } | null} */
+  let harness = null;
+  if (wantGates || wantPrecommit) {
+    try {
+      harness = generateHarness(root).data;
+    } catch {
+      harness = null;
+    }
+  }
+
+  const validate = harness?.commands?.validate ?? [];
+  const setup = harness?.commands?.setup ?? [];
+  const packageManagers = harness?.repo?.packageManagers ?? [];
+
+  const qualityJob = wantGates ? buildQualityJob({ root, setup, validate, packageManagers }) : "";
+  const gatesApplied = qualityJob.length > 0;
+  const gatesStatus = gatesApplied ? "applied" : wantGates ? "none" : "disabled";
+
+  const precommitCommands = wantPrecommit ? selectPrecommitCommands(validate) : [];
+  const precommitApplied = precommitCommands.length > 0;
+  const precommitStatus = precommitApplied ? "applied" : wantPrecommit ? "none" : "disabled";
+
+  writeScaffoldFile(root, ".dev-context/README.md", contextReadme(toolRepo, toolRef, { gatesApplied, precommitApplied }), { force, operations });
 
   ensureGitignoreEntry(root, ".dev-context/", operations);
 
   if (!options.noWorkflow) {
-    writeScaffoldFile(root, workflowPath, workflowTemplate(toolRepo, toolRef), {
+    writeScaffoldFile(root, workflowPath, buildWorkflow(toolRepo, toolRef, qualityJob), {
       force,
       operations,
     });
+  }
+
+  if (precommitApplied) {
+    writeScaffoldFile(root, hookPath, buildPrecommitHook(precommitCommands), { force, operations, mode: 0o755 });
+  }
+
+  let hooksConfigured = false;
+  if (precommitApplied && wantHooksPath) {
+    hooksConfigured = setHooksPath(root);
   }
 
   return {
@@ -64,14 +118,16 @@ export function initProject(targetPath = ".", options = {}) {
     force,
     toolRepo,
     toolRef,
+    gatesApplied,
+    gatesStatus,
+    precommitApplied,
+    precommitStatus,
+    hooksConfigured,
+    hooksPathRequested: wantHooksPath,
     created: operations.filter((item) => item.action === "created").map((item) => item.path),
     updated: operations.filter((item) => item.action === "updated").map((item) => item.path),
     skipped: operations.filter((item) => item.action === "skipped").map((item) => item.path),
-    nextSteps: [
-      "Review the generated workflow before opening a PR.",
-      "If the repoctx tool repository is private, add a DEV_CONTEXT_REPO_TOKEN secret and enable the token line in the workflow.",
-      "Open or update a pull request to verify the PR comment and artifact.",
-    ],
+    nextSteps: buildNextSteps({ gatesApplied, precommitApplied, hooksConfigured, hooksPathRequested: wantHooksPath }),
   };
 }
 
@@ -84,6 +140,12 @@ export function formatInitSummary(result) {
   lines.push(formatList("Created", result.created));
   lines.push(formatList("Updated", result.updated));
   lines.push(formatList("Skipped", result.skipped));
+  lines.push("");
+  lines.push(`Gates: ${formatGatesSummary(result)}`);
+  lines.push(`Pre-commit: ${formatPrecommitSummary(result)}`);
+  if (result.hooksPathRequested && !result.precommitApplied) {
+    lines.push("Hooks path: skipped (no pre-commit hook was scaffolded)");
+  }
   lines.push("", "Next steps:");
   for (const step of result.nextSteps) {
     lines.push(`- ${step}`);
@@ -92,13 +154,66 @@ export function formatInitSummary(result) {
 }
 
 /**
+ * @param {InitResult} result
+ * @returns {string}
+ */
+function formatGatesSummary(result) {
+  if (result.gatesStatus === "applied") {
+    return "harness-driven quality job added to CI";
+  }
+  if (result.gatesStatus === "disabled") {
+    return "skipped (--no-gates)";
+  }
+  return "none (no validation scripts detected)";
+}
+
+/**
+ * @param {InitResult} result
+ * @returns {string}
+ */
+function formatPrecommitSummary(result) {
+  if (result.precommitStatus === "applied") {
+    return result.hooksConfigured
+      ? "hook installed and core.hooksPath set to .githooks"
+      : "hook scaffolded (run `git config core.hooksPath .githooks` to enable)";
+  }
+  if (result.precommitStatus === "disabled") {
+    return "skipped (--no-precommit)";
+  }
+  return "none (no static-check scripts detected)";
+}
+
+/**
+ * @param {{ gatesApplied: boolean, precommitApplied: boolean, hooksConfigured: boolean, hooksPathRequested: boolean }} status
+ * @returns {string[]}
+ */
+function buildNextSteps({ gatesApplied, precommitApplied, hooksConfigured, hooksPathRequested }) {
+  const steps = ["Review the generated workflow before opening a PR."];
+  if (gatesApplied) {
+    steps.push("Confirm the CI quality steps match how you run this project locally; edit the workflow if they drift.");
+  }
+  if (precommitApplied && !hooksConfigured) {
+    steps.push("Enable the pre-commit hook: `git config core.hooksPath .githooks` (re-run `init --hooks-path` to do it automatically).");
+  }
+  if (hooksPathRequested && !precommitApplied) {
+    steps.push("core.hooksPath was not set because no pre-commit hook was scaffolded.");
+  }
+  if (hooksConfigured) {
+    steps.push("Pre-commit hook is active via core.hooksPath; bypass a single commit with `git commit --no-verify`.");
+  }
+  steps.push("If the repoctx tool repository is private, add a DEV_CONTEXT_REPO_TOKEN secret and enable the token line in the workflow.");
+  steps.push("Open or update a pull request to verify the PR comment and artifact.");
+  return steps;
+}
+
+/**
  * @param {string} root
  * @param {string} relativePath
  * @param {string} contents
- * @param {{ force: boolean, operations: ScaffoldOperation[] }} context
+ * @param {{ force: boolean, operations: ScaffoldOperation[], mode?: number }} context
  * @returns {void}
  */
-function writeScaffoldFile(root, relativePath, contents, { force, operations }) {
+function writeScaffoldFile(root, relativePath, contents, { force, operations, mode }) {
   const absolutePath = path.join(root, relativePath);
   const exists = fs.existsSync(absolutePath);
   if (exists && !force) {
@@ -108,6 +223,9 @@ function writeScaffoldFile(root, relativePath, contents, { force, operations }) 
 
   fs.mkdirSync(path.dirname(absolutePath), { recursive: true });
   fs.writeFileSync(absolutePath, contents);
+  if (mode !== undefined) {
+    fs.chmodSync(absolutePath, mode);
+  }
   operations.push({ action: exists ? "updated" : "created", path: relativePath });
 }
 
@@ -168,20 +286,71 @@ function formatList(title, values) {
   return [title, ...values.map((value) => `- ${value}`)].join("\n");
 }
 
+/** @typedef {import('./harness.js').HarnessCommand} HarnessCommand */
+
+/**
+ * Pick the fast static checks safe to run on every commit.
+ * @param {HarnessCommand[]} validate
+ * @returns {HarnessCommand[]}
+ */
+function selectPrecommitCommands(validate) {
+  return validate.filter((command) => isStaticPrecommitScript(command.script ?? ""));
+}
+
+/**
+ * @param {string} script
+ * @returns {boolean}
+ */
+function isStaticPrecommitScript(script) {
+  if (staticPrecommitScripts.has(script)) {
+    return true;
+  }
+  // Match harness lint naming without broad "type" substring hits (e.g. "prototype").
+  return script.includes("lint");
+}
+
+/**
+ * Set git core.hooksPath so the scaffolded .githooks directory is honored.
+ * Returns false (rather than throwing) when git is unavailable or the target
+ * is not a git repository, so init never fails on an optional convenience.
+ * @param {string} root
+ * @returns {boolean}
+ */
+function setHooksPath(root) {
+  try {
+    execFileSync("git", ["config", "core.hooksPath", ".githooks"], { cwd: root, stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * @param {string} toolRepo
  * @param {string} toolRef
+ * @param {{ gatesApplied: boolean, precommitApplied: boolean }} status
  * @returns {string}
  */
-function contextReadme(toolRepo, toolRef) {
+function contextReadme(toolRepo, toolRef, status) {
+  const assets = [
+    status.gatesApplied
+      ? `- \`${workflowPath}\`: runs quality gates and PR review context generation on pull requests`
+      : `- \`${workflowPath}\`: runs PR review context generation on pull requests`,
+    "- `.dev-context/pr-review.md`: generated by GitHub Actions and uploaded as an artifact",
+  ];
+  if (status.gatesApplied) {
+    assets.push("- CI quality job: derived from your package scripts by `repoctx harness`");
+  }
+  if (status.precommitApplied) {
+    assets.push(`- \`${hookPath}\`: dependency-free pre-commit hook running fast static checks (enable with \`git config core.hooksPath .githooks\`)`);
+  }
   return `# repoctx
 
 This folder is managed by repoctx.
 
 Generated assets:
 
-- \`${workflowPath}\`: runs quality gates and PR review context generation on pull requests
-- \`.dev-context/pr-review.md\`: generated by GitHub Actions and uploaded as an artifact
+${assets.join("\n")}
 
 Tool source:
 
@@ -197,11 +366,15 @@ repoctx pr . --base origin/main --out .dev-context/pr-review.md
 }
 
 /**
+ * Compose the workflow file: an optional harness-driven quality job followed by
+ * the PR/commit review job. When no gates are detected the quality job is empty
+ * and the file is identical to the review-only template.
  * @param {string} toolRepo
  * @param {string} toolRef
+ * @param {string} qualityJob Rendered quality-job YAML block, or "" to omit it.
  * @returns {string}
  */
-function workflowTemplate(toolRepo, toolRef) {
+function buildWorkflow(toolRepo, toolRef, qualityJob) {
   return `name: repoctx CI
 
 on:
@@ -215,7 +388,7 @@ permissions:
   pull-requests: read
 
 jobs:
-  review:
+${qualityJob}  review:
     name: Generate PR review context
     runs-on: ubuntu-latest
 
@@ -291,5 +464,121 @@ jobs:
         with:
           name: repoctx-pr-review
           path: .dev-context/pr-review.md
+`;
+}
+
+/**
+ * Render the quality job from harness setup + validate commands. Returns "" when
+ * there is nothing to gate so the workflow stays review-only.
+ * @param {{ root: string, setup: HarnessCommand[], validate: HarnessCommand[], packageManagers: string[] }} harness
+ * @returns {string}
+ */
+function buildQualityJob({ root, setup, validate, packageManagers }) {
+  if (!validate.length) {
+    return "";
+  }
+
+  const lines = [
+    "  quality:",
+    "    name: Quality gates",
+    "    runs-on: ubuntu-latest",
+    "",
+    "    steps:",
+    "      - name: Checkout",
+    "        uses: actions/checkout@v4",
+  ];
+
+  for (const step of runtimeSetupSteps(packageManagers)) {
+    lines.push("", ...step);
+  }
+
+  for (const command of setup) {
+    lines.push("", `      - name: ${command.reason}`, `        run: ${ciSetupCommand(command.command, root)}`);
+  }
+
+  for (const command of validate) {
+    lines.push("", `      - name: ${command.reason}`, `        run: ${command.command}`);
+  }
+
+  return `${lines.join("\n")}\n\n`;
+}
+
+/**
+ * Toolchain setup steps (pnpm/bun action + setup-node with the matching cache).
+ * @param {string[]} packageManagers
+ * @returns {string[][]}
+ */
+function runtimeSetupSteps(packageManagers) {
+  if (packageManagers.includes("pnpm")) {
+    return [
+      ["      - name: Set up pnpm", "        uses: pnpm/action-setup@v4"],
+      ["      - name: Set up Node.js", "        uses: actions/setup-node@v4", "        with:", "          node-version: 22", "          cache: pnpm"],
+    ];
+  }
+  if (packageManagers.includes("yarn")) {
+    return [["      - name: Set up Node.js", "        uses: actions/setup-node@v4", "        with:", "          node-version: 22", "          cache: yarn"]];
+  }
+  if (packageManagers.includes("npm")) {
+    return [["      - name: Set up Node.js", "        uses: actions/setup-node@v4", "        with:", "          node-version: 22", "          cache: npm"]];
+  }
+  if (packageManagers.includes("bun")) {
+    return [["      - name: Set up Bun", "        uses: oven-sh/setup-bun@v2"]];
+  }
+  return [];
+}
+
+/**
+ * Map a local install command to its CI-deterministic equivalent when a
+ * lockfile is present; otherwise keep the original install command.
+ * @param {string} command
+ * @param {string} root
+ * @returns {string}
+ */
+function ciSetupCommand(command, root) {
+  switch (command) {
+    case "npm install":
+      return hasNpmLockfile(root) ? "npm ci" : "npm install";
+    case "pnpm install":
+      return fs.existsSync(path.join(root, "pnpm-lock.yaml")) ? "pnpm install --frozen-lockfile" : "pnpm install";
+    case "yarn install":
+      return fs.existsSync(path.join(root, "yarn.lock")) ? "yarn install --frozen-lockfile" : "yarn install";
+    case "bun install":
+      return hasBunLockfile(root) ? "bun install --frozen-lockfile" : "bun install";
+    default:
+      return command;
+  }
+}
+
+/**
+ * @param {string} root
+ * @returns {boolean}
+ */
+function hasNpmLockfile(root) {
+  return ["package-lock.json", "npm-shrinkwrap.json"].some((name) => fs.existsSync(path.join(root, name)));
+}
+
+/**
+ * @param {string} root
+ * @returns {boolean}
+ */
+function hasBunLockfile(root) {
+  return ["bun.lockb", "bun.lock"].some((name) => fs.existsSync(path.join(root, name)));
+}
+
+/**
+ * Render a POSIX-sh pre-commit hook that runs the given static-check commands.
+ * @param {HarnessCommand[]} commands
+ * @returns {string}
+ */
+function buildPrecommitHook(commands) {
+  const body = commands.map((command) => command.command).join("\n");
+  return `#!/bin/sh
+# Managed by repoctx (\`repoctx init\`). Runs fast static checks before each commit.
+# Bypass a single commit with: git commit --no-verify
+# Slower gates (tests, build, audit) run in CI, not here.
+set -e
+
+echo "repoctx pre-commit: running static checks"
+${body}
 `;
 }

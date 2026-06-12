@@ -1,0 +1,10 @@
+#!/bin/sh
+# Managed by repoctx (`repoctx init`). Runs fast static checks before each commit.
+# Bypass a single commit with: git commit --no-verify
+# Slower gates (tests, build, audit) run in CI, not here.
+set -e
+
+echo "repoctx pre-commit: running static checks"
+npm run lint
+npm run format:check
+npm run typecheck
