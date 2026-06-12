@@ -17,7 +17,7 @@ const SEMVER_RE =
 
 const STRING_VERSION_RE = /^\s*version\s*=\s*"([^"]+)"/m;
 
-const VERSION_FILES = new Set(["package.json", "package-lock.json", "npm-shrinkwrap.json", "pyproject.toml", "cargo.toml"]);
+const VERSION_FILES = new Set(["package.json", "package-lock.json", "npm-shrinkwrap.json", "server.json", "pyproject.toml", "cargo.toml"]);
 
 const CHANGELOG_PATHS = new Set(["changelog.md", "docs/changelog.md"]);
 
@@ -119,7 +119,7 @@ function isPrivateSoloRepo(root, governance) {
  * @returns {string | null}
  */
 function readBaseVersion(versionFiles, baseContent) {
-  const priority = ["package.json", "package-lock.json", "npm-shrinkwrap.json", "pyproject.toml", "cargo.toml"];
+  const priority = ["package.json", "server.json", "package-lock.json", "npm-shrinkwrap.json", "pyproject.toml", "cargo.toml"];
   const ordered = [...versionFiles].sort((a, b) => priority.indexOf(normalize(a)) - priority.indexOf(normalize(b)));
   for (const file of ordered) {
     let content;
@@ -212,6 +212,9 @@ function parseVersionFile(file, data) {
       const version = parseLockVersion(data);
       return version ? [{ source: file, version }] : [];
     }
+    case "server.json": {
+      return parseServerManifestVersions(file, data);
+    }
     case "pyproject.toml":
     case "cargo.toml": {
       const match = data.match(STRING_VERSION_RE);
@@ -245,6 +248,31 @@ function parseLockVersion(data) {
   const topVersion = String(parsed?.version ?? "").trim();
   if (!topVersion) throw new Error("version is empty");
   return topVersion;
+}
+
+/**
+ * @param {string} file
+ * @param {string} data
+ * @returns {VersionValue[]}
+ */
+function parseServerManifestVersions(file, data) {
+  const parsed = JSON.parse(data);
+  /** @type {VersionValue[]} */
+  const values = [];
+  const manifestVersion = String(parsed?.version ?? "").trim();
+  if (manifestVersion) {
+    values.push({ source: file, version: manifestVersion });
+  }
+  for (const [index, pkg] of (parsed?.packages ?? []).entries()) {
+    const packageVersion = String(pkg?.version ?? "").trim();
+    if (packageVersion) {
+      values.push({ source: `${file}#packages[${index}]`, version: packageVersion });
+    }
+  }
+  if (values.length === 0) {
+    throw new Error("version is empty");
+  }
+  return values;
 }
 
 /**
