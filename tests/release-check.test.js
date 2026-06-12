@@ -112,3 +112,25 @@ test("checkRelease still fails a real version bump with no changelog even with b
   assert.equal(result.status, "FAIL");
   assert.match(result.summary, /without a changelog/);
 });
+
+test("checkRelease fails when server.json MCP manifest drifts from package.json", () => {
+  const root = fixture("server-mismatch", {
+    "package.json": JSON.stringify({ version: "2.1.0" }),
+    "server.json": JSON.stringify({ version: "2.0.0", packages: [{ version: "2.0.0" }] }),
+    "CHANGELOG.md": "# Changelog\n\n## [2.1.0]\n",
+  });
+  const result = checkRelease(root, ["package.json", "server.json", "CHANGELOG.md"]);
+  assert.equal(result.status, "FAIL");
+  assert.match(result.summary, /do not agree/);
+});
+
+test("checkRelease passes when server.json MCP manifest matches package.json", () => {
+  const root = fixture("server-ok", {
+    "package.json": JSON.stringify({ version: "2.1.0" }),
+    "server.json": JSON.stringify({ version: "2.1.0", packages: [{ version: "2.1.0" }] }),
+    "CHANGELOG.md": "# Changelog\n\n## [2.1.0]\n",
+  });
+  const result = checkRelease(root, ["package.json", "server.json", "CHANGELOG.md"]);
+  assert.equal(result.status, "PASS");
+  assert.match(result.summary, /changelog was updated/);
+});
