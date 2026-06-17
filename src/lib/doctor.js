@@ -83,7 +83,7 @@ export function getDoctorReport() {
 
 /**
  * @param {DoctorReport} report
- * @param {{ emoji?: boolean, color?: boolean }} [options]
+ * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
  * @returns {string}
  */
 export function formatDoctorReport(report, options = {}) {

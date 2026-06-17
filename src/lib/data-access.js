@@ -179,3 +179,63 @@ export function formatDataAccessMarkdown(data) {
   }
   return lines.join("\n");
 }
+
+/**
+ * Mermaid flowchart: source files → tables with operation labels.
+ * @param {any} data Data-access report payload from generateDataAccessReport.
+ * @returns {string}
+ */
+export function formatDataAccessMermaid(data) {
+  const lines = ["flowchart LR"];
+  const files = (data.byFile ?? []).slice(0, 10);
+  // Map each distinct raw table name to a collision-free node id. Sanitizing
+  // with mId() alone is lossy ("public.users" and "public_users" collapse), so
+  // keep a per-name registry and disambiguate with a numeric suffix.
+  /** @type {Map<string, string>} */
+  const tableIds = new Map();
+  const usedIds = new Set();
+  /** @param {string} table @returns {string} */
+  function tableId(table) {
+    const existing = tableIds.get(table);
+    if (existing) return existing;
+    const base = `T_${mId(table)}`;
+    let id = base;
+    let n = 1;
+    while (usedIds.has(id)) id = `${base}_${n++}`;
+    usedIds.add(id);
+    tableIds.set(table, id);
+    return id;
+  }
+
+  for (const [fi, file] of files.entries()) {
+    const basename = (file.path.split("/").pop() ?? file.path).replace(/"/g, "'");
+    lines.push(`    F${fi}["${basename}"]`);
+    for (const table of (file.tables ?? []).slice(0, 5)) {
+      const seen = tableIds.has(table);
+      const id = tableId(table);
+      if (!seen) lines.push(`    ${id}[("${String(table).replace(/"/g, "'")}")]`);
+      const ops = mermaidEdgeLabel((file.operations ?? []).slice(0, 2).join("/")) || "access";
+      lines.push(`    F${fi} -->|"${ops}"| ${id}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Strip characters that prematurely terminate a Mermaid `|"..."|` edge label.
+ * @param {string} text
+ * @returns {string}
+ */
+function mermaidEdgeLabel(text) {
+  return String(text)
+    .replace(/[[\]{}|"]/g, " ")
+    .trim();
+}
+
+/** @param {string} text @returns {string} */
+function mId(text) {
+  return String(text)
+    .replace(/[^a-zA-Z0-9]/g, "_")
+    .replace(/^(\d)/, "_$1");
+}

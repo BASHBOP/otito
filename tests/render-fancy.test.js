@@ -62,6 +62,27 @@ test("tip and bullet stay legible in plain mode", () => {
   assert.match(r.bullet("first item"), /\* first item/);
 });
 
+test("named themes survive the CLI's always-present undefined emoji/color options", () => {
+  // The CLI always passes emoji/color explicitly; they are undefined when no
+  // flag is set. Those undefined keys must NOT clobber the theme's defaults.
+  const minimal = createRenderer({ emoji: undefined, color: undefined, theme: "minimal" });
+  assert.equal(minimal.emoji, false);
+  assert.equal(minimal.color, false);
+
+  const colorTheme = createRenderer({ emoji: undefined, color: undefined, theme: "color" });
+  assert.equal(colorTheme.color, true);
+
+  const hc = createRenderer({ emoji: undefined, color: undefined, theme: "high-contrast" });
+  assert.equal(hc.emoji, true);
+  assert.equal(hc.color, true);
+});
+
+test("explicit emoji/color options still override the selected theme", () => {
+  // minimal forces both off, but an explicit flag must win.
+  assert.equal(createRenderer({ theme: "minimal", emoji: true }).emoji, true);
+  assert.equal(createRenderer({ theme: "color", color: false }).color, false);
+});
+
 test("renderer width clamps to a sensible terminal size", () => {
   assert.equal(createRenderer({ width: 30 }).width, 60);
   assert.equal(createRenderer({ width: 999 }).width, 120);
