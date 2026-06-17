@@ -249,3 +249,46 @@ function formatGit(git) {
   const dirty = git.clean ? "clean" : `${git.changes} change(s)`;
   return `${git.branch ?? "unknown"} @ ${git.commit ?? "unknown"} (${dirty})`;
 }
+
+/**
+ * Mermaid architecture diagram: repos with their role counts and integration edges.
+ * @param {ReturnType<typeof generateWorkspaceReport>['data']} data
+ * @returns {string}
+ */
+export function formatWorkspaceMermaid(data) {
+  const lines = ["graph LR"];
+  const repos = data.repos ?? [];
+
+  for (const [ri, repo] of repos.entries()) {
+    lines.push(`    subgraph R${ri}["${repo.name}"]`);
+    const m = repo.map ?? {};
+    if (m.apiClients > 0) lines.push(`        R${ri}_a["api-clients: ${m.apiClients}"]`);
+    if (m.controllers > 0) lines.push(`        R${ri}_c["controllers: ${m.controllers}"]`);
+    if (m.services > 0) lines.push(`        R${ri}_s["services: ${m.services}"]`);
+    if (m.components > 0) lines.push(`        R${ri}_u["components: ${m.components}"]`);
+    lines.push("    end");
+  }
+
+  // Draw integration edges between the frontend repo (has apiClients) and the backend (has controllers).
+  const frontendIdx = repos.findIndex((/** @type {any} */ r) => (r.map?.apiClients ?? 0) > 0);
+  const backendIdx = repos.findIndex((/** @type {any} */ r) => (r.map?.controllers ?? 0) > 0 || (r.map?.services ?? 0) > 0);
+  if (frontendIdx >= 0 && backendIdx >= 0 && frontendIdx !== backendIdx) {
+    for (const integration of (data.integrations ?? []).slice(0, 12)) {
+      // Strip chars that would prematurely close the |"..."| edge label.
+      const label = String(integration.domain)
+        .replace(/[[\]{}|"]/g, " ")
+        .trim();
+      lines.push(`    R${frontendIdx}_a -->|"${label}"| R${backendIdx}_c`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/** @param {string} text @returns {string} */
+function mId(text) {
+  return String(text)
+    .replace(/[^a-zA-Z0-9]/g, "_")
+    .replace(/^(\d)/, "_$1");
+}
+void mId; // referenced by integration edge label building if needed in future

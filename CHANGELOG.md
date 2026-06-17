@@ -6,6 +6,15 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-06-17
+
+### Added
+
+- **ANSI color in the terminal renderer.** `createRenderer` now colorizes status lines (green/yellow/red), verdicts (bold + colored), tips (cyan), and dims box borders. Color is opt-in by detection and fully spec-compliant: `NO_COLOR` (any value) disables it, `FORCE_COLOR`/`CLICOLOR` force it, and it stays off when stdout is not a TTY (pipes, CI, test runners) so machine-readable output is never polluted. `visualWidth()` strips ANSI escapes before measuring, so box alignment is unaffected. New `--color` / `--no-color` flags.
+- **Persistent configuration.** New `src/lib/config.js` loads merged settings with precedence defaults → user global (`~/.config/repoctx/config.json`, honoring `XDG_CONFIG_HOME`) → repo-local (`.repoctxrc.json`, walked up from the cwd) → environment (`REPOCTX_EMOJI`, `REPOCTX_COLOR`, `REPOCTX_THEME`, `REPOCTX_WIDTH`, `NO_COLOR`) → CLI flags. New `repoctx config get|set|list` command, with `set --local` writing to `.repoctxrc.json`. Known keys: `emoji`, `color`, `theme`, `width`, `policy`, `governance`.
+- **Named themes** (`--theme <name>` or the `theme` config key): `default` (auto-detect), `color` (force color on), `minimal` (pure ASCII, no emoji or color), and `high-contrast` (bright ANSI palette). Themes set defaults that explicit `--color`/`--emoji` flags still override.
+- **Mermaid diagram export** via `--mermaid` on `impact`, `map`, `workspace`, `data-access`, `review`, and `report`. Prints a fenced `mermaid` block to stdout, or writes a file with `--out`. Diagrams: impact concept/file flowchart, code-map domain distribution (`xychart-beta`), workspace repo-integration graph, data-access file→table flowchart, review gate-to-verdict flowchart, and a report language `pie` chart.
+
 ## [2.1.0] - 2026-06-12
 
 ### Added

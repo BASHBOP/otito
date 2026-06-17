@@ -24,7 +24,6 @@ import { parseArgv } from "./lib/args.js";
 /** @typedef {import('./lib/eval.js').EvalOptions} EvalOptions */
 import { formatDoctorReport, getDoctorReport } from "./lib/doctor.js";
 import { inspectRepo } from "./lib/repo.js";
-import { formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { generateStructure } from "./lib/structure.js";
 import { inspectDependency } from "./lib/deps.js";
 import {
@@ -42,19 +41,21 @@ import { formatInstallSummary, installDevContext } from "./lib/install.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
 import { generateContextPack } from "./lib/context-engine.js";
-import { formatImpactTerminal, generateImpact } from "./lib/impact.js";
+import { formatImpactMermaid, formatImpactTerminal, generateImpact } from "./lib/impact.js";
 import { evaluateLocal, formatPassMarkdown, formatPassTerminal } from "./lib/pass-local.js";
 import { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } from "./lib/pass-pr.js";
-import { formatReviewTerminal, generateReview } from "./lib/review.js";
+import { formatReviewMermaid, formatReviewTerminal, generateReview } from "./lib/review.js";
 import { createRenderer } from "./lib/render/fancy.js";
 import { generatePrReview } from "./lib/pr-review.js";
-import { formatReportTerminal, generateReport } from "./lib/report.js";
-import { generateWorkspaceReport } from "./lib/workspace.js";
+import { formatReportMermaid, formatReportTerminal, generateReport } from "./lib/report.js";
+import { formatWorkspaceMermaid, generateWorkspaceReport } from "./lib/workspace.js";
 import { generateHarness } from "./lib/harness.js";
 import { runEval, runRetrievalEval } from "./lib/eval.js";
-import { generateDataAccessReport } from "./lib/data-access.js";
+import { formatDataAccessMermaid, generateDataAccessReport } from "./lib/data-access.js";
 import { getAgentTools } from "./lib/agent-tools.js";
+import { formatCodeMapMermaid, formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
+import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
 
 /** @type {Record<string, ((parsed: CliArgs) => void | Promise<void>) | undefined>} */
 const commandHandlers = {
@@ -85,6 +86,7 @@ const commandHandlers = {
   eval: handleEval,
   "data-access": handleDataAccess,
   "agent-tools": handleAgentTools,
+  config: handleConfig,
   help: handleHelp,
 };
 
@@ -92,6 +94,27 @@ async function main(argv = process.argv.slice(2)) {
   const parsed = parseArgv(argv);
   const command = parsed.command ?? "help";
   const handler = commandHandlers[command];
+
+  // Load persisted config and inject defaults into flags. CLI flags always win —
+  // only inject when the user hasn't already supplied the flag.
+  if (command !== "config") {
+    const cfg = loadConfig();
+    if (cfg.emoji !== undefined && parsed.flags.emoji === undefined && parsed.flags.no_emoji === undefined) {
+      parsed.flags[cfg.emoji ? "emoji" : "no_emoji"] = true;
+    }
+    if (cfg.color !== undefined && parsed.flags.color === undefined && parsed.flags.no_color === undefined) {
+      parsed.flags[cfg.color ? "color" : "no_color"] = true;
+    }
+    if (cfg.theme !== undefined && cfg.theme !== "default" && parsed.flags.theme === undefined) {
+      parsed.flags.theme = cfg.theme;
+    }
+    if (cfg.policy !== undefined && parsed.flags.policy === undefined) {
+      parsed.flags.policy = cfg.policy;
+    }
+    if (cfg.governance !== undefined && parsed.flags.governance === undefined) {
+      parsed.flags.governance = cfg.governance;
+    }
+  }
 
   if (!handler || parsed.flags.help) {
     handleHelp(parsed);
@@ -120,7 +143,7 @@ async function handleDoctor(parsed) {
     return;
   }
 
-  printText(formatDoctorReport(report, { emoji: emojiPreference(parsed) }));
+  printText(formatDoctorReport(report, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
 }
 
 /**
@@ -131,6 +154,25 @@ function emojiPreference(parsed) {
   if (parsed.flags.no_emoji) return false;
   if (parsed.flags.emoji) return true;
   return undefined;
+}
+
+/**
+ * @param {CliArgs} parsed
+ * @returns {boolean | undefined}
+ */
+function colorPreference(parsed) {
+  if (parsed.flags.no_color) return false;
+  if (parsed.flags.color) return true;
+  return undefined;
+}
+
+/**
+ * @param {CliArgs} parsed
+ * @returns {string | undefined}
+ */
+function themePreference(parsed) {
+  const t = parsed.flags.theme;
+  return typeof t === "string" ? t : undefined;
 }
 
 /** @param {CliArgs} parsed */
@@ -263,13 +305,21 @@ async function handleImpact(parsed) {
     return;
   }
 
+  if (parsed.flags.mermaid) {
+    return writeMermaid(parsed, formatImpactMermaid(result.data), "Impact diagram");
+  }
+
   if (parsed.flags.out) {
     const artifact = writeArtifact(parsed.flags.out, result.markdown);
     printText(`Change impact written: ${artifact.path}`);
     return;
   }
 
-  printText(formatImpactTerminal(result.data, (/** @type {object} */ opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  printText(
+    formatImpactTerminal(result.data, (/** @type {object} */ opts) =>
+      createRenderer({ ...opts, emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }),
+    ),
+  );
 }
 
 /** @param {CliArgs} parsed */
@@ -298,7 +348,11 @@ async function handlePass(parsed) {
     return;
   }
 
-  printText(formatPassTerminal(data, (/** @type {object} */ opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  printText(
+    formatPassTerminal(data, (/** @type {object} */ opts) =>
+      createRenderer({ ...opts, emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }),
+    ),
+  );
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
 
@@ -327,7 +381,11 @@ async function handlePassPr(parsed) {
     return;
   }
 
-  printText(formatPassPrTerminal(data, (/** @type {object} */ opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })));
+  printText(
+    formatPassPrTerminal(data, (/** @type {object} */ opts) =>
+      createRenderer({ ...opts, emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }),
+    ),
+  );
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
 
@@ -368,8 +426,16 @@ async function handleReview(parsed) {
     return;
   }
 
+  if (parsed.flags.mermaid) {
+    writeMermaid(parsed, formatReviewMermaid(/** @type {ReviewData} */ (data)), "Review diagram");
+    if (data.verdict === "FAIL") process.exitCode = 1;
+    return;
+  }
+
   printText(
-    formatReviewTerminal(/** @type {ReviewData} */ (data), (/** @type {object} */ opts) => createRenderer({ ...opts, emoji: emojiPreference(parsed) })),
+    formatReviewTerminal(/** @type {ReviewData} */ (data), (/** @type {object} */ opts) =>
+      createRenderer({ ...opts, emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }),
+    ),
   );
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
@@ -405,6 +471,10 @@ async function handleMap(parsed) {
   if (parsed.flags.json) {
     printJson(result);
     return;
+  }
+
+  if (parsed.flags.mermaid) {
+    return writeMermaid(parsed, formatCodeMapMermaid(result), "Code map diagram");
   }
 
   if (parsed.flags.out) {
@@ -607,6 +677,10 @@ async function handleReport(parsed) {
     return;
   }
 
+  if (parsed.flags.mermaid) {
+    return writeMermaid(parsed, formatReportMermaid(result.data), "Report diagram");
+  }
+
   if (parsed.flags.out) {
     const artifact = writeArtifact(parsed.flags.out, result.markdown);
     printText(`Report written: ${artifact.path}`);
@@ -627,6 +701,10 @@ async function handleWorkspace(parsed) {
   if (parsed.flags.json) {
     printJson(result.data);
     return;
+  }
+
+  if (parsed.flags.mermaid) {
+    return writeMermaid(parsed, formatWorkspaceMermaid(result.data), "Workspace diagram");
   }
 
   if (parsed.flags.out) {
@@ -707,6 +785,9 @@ async function handleDataAccess(parsed) {
     printJson(result.data);
     return;
   }
+  if (parsed.flags.mermaid) {
+    return writeMermaid(parsed, formatDataAccessMermaid(result.data), "Data-access diagram");
+  }
   if (parsed.flags.out) {
     const artifact = writeArtifact(parsed.flags.out, result.markdown);
     printText(`Data-access report written: ${artifact.path}`);
@@ -728,6 +809,83 @@ async function handleAgentTools(parsed) {
     lines.push(`## ${tool.name}`, "", tool.description, "", `Input: \`${JSON.stringify(tool.input)}\``, "");
   }
   printText(lines.join("\n"));
+}
+
+/** @param {CliArgs} parsed */
+async function handleConfig(parsed) {
+  const sub = parsed.positionals[0];
+
+  if (sub === "set") {
+    const key = parsed.positionals[1];
+    const rawValue = parsed.positionals[2];
+    if (!key || rawValue === undefined) {
+      throw new Error("config set requires a key and a value, e.g. repoctx config set color true");
+    }
+    if (!CONFIG_KEYS.includes(key)) {
+      throw new Error(`config set: unknown key "${key}". Valid keys: ${CONFIG_KEYS.join(", ")}`);
+    }
+    let value = /** @type {unknown} */ (rawValue);
+    if (rawValue === "true") value = true;
+    else if (rawValue === "false") value = false;
+    else if (!isNaN(Number(rawValue)) && rawValue.trim() !== "") value = Number(rawValue);
+    const scope = parsed.flags.local ? "local" : "user";
+    writeConfig({ [key]: value }, scope);
+    const target = getConfigPath(scope);
+    printText(`Set ${key} = ${String(value)} in ${target}`);
+    return;
+  }
+
+  if (sub === "get") {
+    const key = parsed.positionals[1];
+    const cfg = loadConfig();
+    if (parsed.flags.json) {
+      printJson(key ? { [key]: /** @type {Record<string,unknown>} */ (cfg)[key] } : cfg);
+      return;
+    }
+    if (key) {
+      if (!CONFIG_KEYS.includes(key)) {
+        throw new Error(`config get: unknown key "${key}". Valid keys: ${CONFIG_KEYS.join(", ")}`);
+      }
+      printText(String(/** @type {Record<string,unknown>} */ (cfg)[key] ?? ""));
+      return;
+    }
+    for (const k of CONFIG_KEYS) {
+      printText(`${k.padEnd(14)} ${String(/** @type {Record<string,unknown>} */ (cfg)[k] ?? "")}`);
+    }
+    return;
+  }
+
+  // Default: list with source annotations (also handles explicit "list" sub-command).
+  const sources = listConfigSources();
+  if (parsed.flags.json) {
+    printJson(sources);
+    return;
+  }
+  printText("repoctx config");
+  printText("");
+  for (const { key, value, source } of sources) {
+    const annotation = source === "default" ? "" : `  [${source}]`;
+    printText(`  ${key.padEnd(14)} ${String(value ?? "").padEnd(16)}${annotation}`);
+  }
+  printText("");
+  printText(`User config:  ${getConfigPath("user")}`);
+  printText(`Local config: ${getConfigPath("local")}`);
+}
+
+/**
+ * Shared mermaid output: print fenced block to stdout or write to --out file.
+ * @param {CliArgs} parsed
+ * @param {string} diagram
+ * @param {string} label
+ * @returns {void}
+ */
+function writeMermaid(parsed, diagram, label) {
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, diagram);
+    printText(`${label} written: ${artifact.path}`);
+    return;
+  }
+  printText(["```mermaid", diagram, "```"].join("\n"));
 }
 
 /**

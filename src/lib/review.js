@@ -199,3 +199,36 @@ function statusGlyph(emoji, verdict) {
   if (verdict === "WARN") return "⚠️ ";
   return "❌";
 }
+
+/**
+ * Mermaid flowchart: request → impact summary → gate checks → verdict.
+ * @param {ReviewData} data
+ * @returns {string}
+ */
+export function formatReviewMermaid(data) {
+  const lines = ["flowchart TD"];
+  const req = (data.request ?? "review").slice(0, 50).replace(/"/g, "'");
+  lines.push(`    Q["💬 ${req}"]`);
+
+  const concepts = ((data.impactSummary?.concepts ?? []).slice(0, 4).join(", ") || "—").replace(/"/g, "'");
+  const fileCount = data.impactSummary?.topFiles?.length ?? 0;
+  const riskLevel = String(data.prReviewSummary?.riskLevel ?? "?").replace(/"/g, "'");
+  // Mermaid renders <br/> as a line break; a literal \n is shown as text.
+  lines.push(`    I["Impact: ${fileCount} file(s)<br/>concepts: ${concepts}<br/>risk: ${riskLevel}"]`);
+  lines.push(`    Q --> I`);
+
+  const checks = data.pass?.checks ?? [];
+  for (const [ci, check] of checks.entries()) {
+    const glyph = check.status === "PASS" ? "✅" : check.status === "WARN" ? "⚠️" : "❌";
+    const label = `${glyph} ${String(check.name).slice(0, 40)}`.replace(/"/g, "'");
+    lines.push(`    G${ci}["${label}"]`);
+    lines.push(`    I --> G${ci}`);
+  }
+
+  const vGlyph = data.verdict === "PASS" ? "✅" : data.verdict === "WARN" ? "⚠️" : "❌";
+  lines.push(`    V["🚦 ${vGlyph} VERDICT: ${data.verdict ?? "?"}"]`);
+  for (let ci = 0; ci < checks.length; ci++) lines.push(`    G${ci} --> V`);
+  if (checks.length === 0) lines.push(`    I --> V`);
+
+  return lines.join("\n");
+}

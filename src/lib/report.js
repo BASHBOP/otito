@@ -435,3 +435,23 @@ function normalizeColumns(columns) {
 function titleCase(value) {
   return String(value).replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
+
+/**
+ * Mermaid pie chart of language distribution for the repo.
+ * @param {ReportData} data
+ * @returns {string}
+ */
+export function formatReportMermaid(data) {
+  const langs = (data.repo?.languages ?? []).slice(0, 10);
+  // The pie title runs to end-of-line, so strip quotes/newlines that would
+  // break it or inject a second title line.
+  const repoName = ((data.repo?.root ? data.repo.root.split("/").pop() : undefined) ?? "repo").replace(/["\r\n]/g, " ").trim() || "repo";
+  if (!langs.length) {
+    return [`pie title No language data — ${repoName}`, `    "unknown" : 1`].join("\n");
+  }
+  const lines = [`pie title Languages — ${repoName}`];
+  for (const { language, count } of langs) {
+    lines.push(`    "${language}" : ${count}`);
+  }
+  return lines.join("\n");
+}

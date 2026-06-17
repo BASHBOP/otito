@@ -9,12 +9,12 @@
     "source": "github",
     "id": "1242199320"
   },
-  "version": "2.1.0",
+  "version": "2.2.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@nugehs/repoctx",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "transport": {
         "type": "stdio"
       },

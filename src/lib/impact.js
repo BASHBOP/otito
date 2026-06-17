@@ -982,3 +982,73 @@ export function formatImpactTerminal(data, rendererFactory) {
   lines.push(`  ${renderer.emoji ? "📦" : "[i]"} Token estimate: JSON ${data.tokenEstimate.fullJson} · markdown ${data.tokenEstimate.markdown}`);
   return lines.join("\n");
 }
+
+/**
+ * Mermaid flowchart: query → concepts → top files → related files.
+ * @param {ReturnType<typeof generateImpact>['data']} data
+ * @returns {string}
+ */
+export function formatImpactMermaid(data) {
+  const lines = ["flowchart TD"];
+  const query = (data.query ?? "query").slice(0, 60).replace(/"/g, "'");
+  lines.push(`    Q["🔍 ${query}"]`);
+
+  const concepts = (data.concepts ?? []).slice(0, 5);
+  for (const [i, concept] of concepts.entries()) {
+    lines.push(`    C${i}["💡 ${concept}"]`);
+    lines.push(`    Q --> C${i}`);
+  }
+
+  const topFiles = (data.topFiles ?? []).slice(0, 8);
+  const seenRelated = new Set();
+  const relatedIds = uniqueIds();
+
+  for (const [fi, file] of topFiles.entries()) {
+    const basename = file.path.split("/").pop() ?? file.path;
+    // Mermaid renders <br/> as a line break; a literal \n is shown as text.
+    const label = `${basename}<br/>score: ${file.score}`.replace(/"/g, "'");
+    lines.push(`    F${fi}["📄 ${label}"]`);
+    // Attach to first concept that matches the file's domain, else concept 0 or query.
+    const ci = concepts.findIndex(
+      (/** @type {string} */ c) => file.domain?.includes(c) || (file.reasons ?? []).some((/** @type {string} */ r) => r.toLowerCase().includes(c)),
+    );
+    if (ci >= 0) lines.push(`    C${ci} --> F${fi}`);
+    else if (concepts.length === 0) lines.push(`    Q --> F${fi}`);
+    else lines.push(`    C0 --> F${fi}`);
+
+    for (const rel of (file.relatedFiles ?? []).slice(0, 3)) {
+      if (seenRelated.has(rel)) continue;
+      seenRelated.add(rel);
+      const relBase = (rel.split("/").pop() ?? rel).replace(/"/g, "'");
+      const rid = relatedIds(`R_${mId(rel)}`);
+      lines.push(`    ${rid}["${relBase}"]`);
+      lines.push(`    F${fi} -.-> ${rid}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/** @param {string} text @returns {string} */
+function mId(text) {
+  return String(text)
+    .replace(/[^a-zA-Z0-9]/g, "_")
+    .replace(/^(\d)/, "_$1");
+}
+
+/**
+ * Returns a function that maps a candidate Mermaid node id to a collision-free
+ * id, appending a numeric suffix when distinct labels sanitize to the same base.
+ * @returns {(base: string) => string}
+ */
+function uniqueIds() {
+  /** @type {Set<string>} */
+  const used = new Set();
+  return (base) => {
+    let id = base;
+    let n = 1;
+    while (used.has(id)) id = `${base}_${n++}`;
+    used.add(id);
+    return id;
+  };
+}
