@@ -6,6 +6,8 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-06-20
+
 ### Deprecated
 
 - **The `dev-context` command alias is deprecated and will be removed in v3.0.0.** Use `repoctx`. Invoking the CLI through the `dev-context` bin now prints a deprecation warning to stderr (never on `--json` stdout). The `.dev-context/` output directory is unaffected — it is not part of the deprecation.
