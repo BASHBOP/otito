@@ -12,9 +12,9 @@
 > needs a remote `gh` call and would break the local-first/offline guarantee;
 > (2) blast-radius file count uses the score "elbow" (files within half the top
 > match's score) instead of the raw `top` count, which is just the requested list
-> size. The `ax_score` MCP tool is not yet registered because the MCP surface is
-> contract-locked at exactly 11 tools (guarded by three tests + the migration
-> doc); adding a 12th is a deliberate surface bump tracked separately.
+> size. AX is exposed over MCP as the `agent_experience` tool, the deliberate
+> 12th entry on a surface that was previously contract-locked at 11 (the count is
+> guarded by three tests + the migration doc).
 
 ## 1. Summary
 

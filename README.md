@@ -478,6 +478,7 @@ repoctx 2.0 exposes **11** MCP tools (down from 18). All legacy names still work
 | `repo_search`      | Search the catalog; omit `query` to return the catalog listing                       |
 | `context_pack`     | Build a task-aware context packet                                                    |
 | `change_impact`    | Rank files most likely to own a plain-English change request                         |
+| `agent_experience` | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity   |
 | `review_context`   | Diff/comment review context (no verdict)                                             |
 | `review_gate`      | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`             |
 | `review_verdict`   | Composite verdict: impact + review_context + review_gate                             |

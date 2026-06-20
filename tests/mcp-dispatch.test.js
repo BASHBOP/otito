@@ -139,6 +139,7 @@ test("startMcpServer handles initialize, ping, tools/list, and skips notificatio
     "repo_search",
     "context_pack",
     "change_impact",
+    "agent_experience",
     "review_gate",
     "review_verdict",
     "workspace_report",
@@ -149,10 +150,10 @@ test("startMcpServer handles initialize, ping, tools/list, and skips notificatio
   for (const name of expectedTools) {
     assert.ok(names.includes(name), `missing tool: ${name}`);
   }
-  // The v2 surface is exactly 11 tools — no more, no fewer. Retired names
+  // The v2 surface is exactly 12 tools — no more, no fewer. Retired names
   // (repo_discover, repo_catalog, find_*, pr_review, review_pr, merge_readiness,
   // pr_merge_readiness) must NOT appear in tools/list.
-  assert.equal(names.length, 11, `tools/list must expose exactly 11 tools, got ${names.length}: ${names.join(", ")}`);
+  assert.equal(names.length, 12, `tools/list must expose exactly 12 tools, got ${names.length}: ${names.join(", ")}`);
   assert.deepEqual([...names].sort(), [...expectedTools].sort());
   for (const retired of [
     "repo_discover",
@@ -390,6 +391,40 @@ test("context_pack and change_impact require a query and respect includeMarkdown
   assert.ok(impactMarkdown.length > 0);
 
   assert.equal(byId(messages, 6).error?.code, -32602);
+});
+
+test("agent_experience scores a change, requires a query, and respects includeMarkdown", async () => {
+  const fixture = makeRepoFixture();
+  const messages = await runRequests([
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "agent_experience", arguments: { query: "rename event controller", path: fixture, top: 5 } },
+    },
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: { name: "agent_experience", arguments: { query: "rename event controller", path: fixture, includeMarkdown: true } },
+    },
+    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "agent_experience", arguments: { path: fixture } } },
+  ]);
+
+  const ax = structured(messages, 1);
+  assert.equal(ax.markdown, undefined);
+  assert.equal(ax.mode, "task");
+  assert.ok(Number.isInteger(ax.ax) && ax.ax >= 0 && ax.ax <= 100);
+  assert.ok(["poor", "fair", "good", "excellent"].includes(ax.band));
+  for (const key of ["changeability", "containment", "guardrails", "clarity"]) {
+    assert.ok(Number.isInteger(ax.subScores[key]), `subScores.${key} must be an integer`);
+  }
+
+  const axMarkdown = rawText(messages, 2);
+  assert.match(axMarkdown, /# Agent Experience \(AX\):/, "includeMarkdown returns the markdown report as text");
+  assert.throws(() => JSON.parse(axMarkdown), "AX markdown payload must not be JSON");
+
+  assert.equal(byId(messages, 3).error?.code, -32602);
 });
 
 test("context_pack default response is compact: no structuredContent, no pretty-print, evidence gated", async () => {

@@ -48,7 +48,7 @@ scaffolding** — the artifact a strategic operator hands to a fleet of tactical
 ### 4. Skills leak into context → audit repoctx's own tool surface
 
 Every MCP tool description is permanent context cost for every agent that loads the server.
-repoctx exposes ~11 tools. Audit the descriptions for bloat, keep the surface minimal, and
+repoctx exposes ~12 tools. Audit the descriptions for bloat, keep the surface minimal, and
 consider a `disable model invocation`-style flag so heavy tools (e.g. a full `repo_index`)
 are user-invoked **procedures** rather than always-on **abilities**. This makes repoctx the
 kind of lean tool that survives Pocock's "delete everything and start from a blank slate"
