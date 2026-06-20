@@ -95,6 +95,13 @@ nav:
   - Harness Thesis & AX:
       - Overview: 07-harness-thesis/README.md
       - AX Score Spec: 07-harness-thesis/ax-score-spec.md
+  - Tutorials Integration:
+      - Codespaces: 08-tutorials-integration/README.md
+  - Convergence Thesis:
+      - Overview: 09-convergence-thesis/README.md
+      - Convergence Score Spec: 09-convergence-thesis/convergence-score-spec.md
+  - Usage Dashboard:
+      - Overview: 10-usage-dashboard/README.md
   - Glossary: GLOSSARY.md
 
 copyright: "(c) 2026 Oluwasegun Olumbe. MIT licensed."

@@ -16,6 +16,16 @@ test("CONFIG_KEYS lists all expected keys", () => {
   assert.ok(CONFIG_KEYS.includes("width"));
   assert.ok(CONFIG_KEYS.includes("policy"));
   assert.ok(CONFIG_KEYS.includes("governance"));
+  assert.ok(CONFIG_KEYS.includes("telemetry"));
+});
+
+test("telemetry defaults to off and REPOCTX_TELEMETRY overrides it", () => {
+  const tmp = makeTmpDir();
+  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetry, false, "opt-in: off by default");
+  fs.writeFileSync(path.join(tmp, ".repoctxrc.json"), JSON.stringify({ telemetry: true }));
+  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetry, true, "config can enable it");
+  assert.equal(loadConfig({ cwd: tmp, env: { REPOCTX_TELEMETRY: "0" } }).telemetry, false, "env overrides config");
+  fs.rmSync(tmp, { recursive: true });
 });
 
 test("loadConfig returns built-in defaults when no files or env present", () => {

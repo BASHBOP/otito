@@ -12,6 +12,7 @@ const cliCommandByTool = {
   context_pack: "repoctx context <query> --path <repo> --json",
   change_impact: "repoctx impact <query> --path <repo> --json",
   agent_experience: "repoctx ax <query> --path <repo> --json",
+  convergence_score: "repoctx converge <query> --base <ref> --path <repo> --json",
   review_gate: "repoctx gate [--pr <selector>] --path <repo> --json",
   review_verdict: "repoctx review --path <repo> --json",
   workspace_report: "repoctx workspace <repo...> --json",

@@ -30,6 +30,7 @@ Usage:
   repoctx context <query> [--path repo] [--limit n] [--out file] [--json]
   repoctx impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--mermaid] [--no-emoji] [--color|--no-color] [--theme name]
   repoctx ax <repo> <query> [--top n] [--out file] [--json]
+  repoctx converge <repo> <query> --base <ref> [--top n] [--out file] [--json]
   repoctx pass <repo> [--base ref] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--out file] [--json] [--no-emoji]
   repoctx pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--out file] [--json] [--no-emoji]
   repoctx review <repo> [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--json] [--mermaid] [--no-emoji]
@@ -47,12 +48,15 @@ Usage:
   repoctx eval <path> [--query text] [--naive-cap n] [--out file] [--json]
   repoctx data-access <path> [--out file] [--json] [--mermaid]
   repoctx agent-tools [--json|--markdown]
+  repoctx dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]   # local usage & performance UI (HTML)
+  repoctx telemetry [status|on|off|clear] [--json]                                          # opt-in usage capture (off by default)
   repoctx config [list]                           # show config with source annotations
   repoctx config get [key]                        # show one or all resolved values
   repoctx config set <key> <value> [--local]      # write to user (or local) config
   repoctx config set color true                   # enable color in user config
   repoctx config set theme high-contrast          # set theme (default|color|minimal|high-contrast)
   repoctx config set emoji false                  # disable emoji in user config
+  repoctx config set telemetry true               # opt in to local usage capture for the dashboard
 
 Legacy alias (deprecated, removed in v3.0.0 — use repoctx):
   dev-context <command>

@@ -140,6 +140,7 @@ test("startMcpServer handles initialize, ping, tools/list, and skips notificatio
     "context_pack",
     "change_impact",
     "agent_experience",
+    "convergence_score",
     "review_gate",
     "review_verdict",
     "workspace_report",
@@ -150,10 +151,10 @@ test("startMcpServer handles initialize, ping, tools/list, and skips notificatio
   for (const name of expectedTools) {
     assert.ok(names.includes(name), `missing tool: ${name}`);
   }
-  // The v2 surface is exactly 12 tools — no more, no fewer. Retired names
+  // The v2 surface is exactly 13 tools — no more, no fewer. Retired names
   // (repo_discover, repo_catalog, find_*, pr_review, review_pr, merge_readiness,
   // pr_merge_readiness) must NOT appear in tools/list.
-  assert.equal(names.length, 12, `tools/list must expose exactly 12 tools, got ${names.length}: ${names.join(", ")}`);
+  assert.equal(names.length, 13, `tools/list must expose exactly 13 tools, got ${names.length}: ${names.join(", ")}`);
   assert.deepEqual([...names].sort(), [...expectedTools].sort());
   for (const retired of [
     "repo_discover",
@@ -495,6 +496,45 @@ test("review_gate (local), review_context, and review_verdict work against a rea
 
   const review = structured(messages, 4);
   assert.ok(review.verdict || review.summary || review.impact);
+});
+
+test("convergence_score scores intent vs diff against a real git fixture, with a recomputable receipt", async () => {
+  const fixture = makeGitRepoFixture("converge");
+  const messages = await runRequests([
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "convergence_score", arguments: { path: fixture, base: "HEAD~1", query: "update the greeting" } },
+    },
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: { name: "convergence_score", arguments: { path: fixture, base: "HEAD~1", query: "update the greeting", includeMarkdown: true } },
+    },
+    // Missing base and missing query are both -32602.
+    { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "convergence_score", arguments: { path: fixture, query: "update the greeting" } } },
+    { jsonrpc: "2.0", id: 4, method: "tools/call", params: { name: "convergence_score", arguments: { path: fixture, base: "HEAD~1" } } },
+  ]);
+
+  const conv = structured(messages, 1);
+  assert.equal(conv.markdown, undefined);
+  assert.ok(Number.isInteger(conv.convergence) && conv.convergence >= 0 && conv.convergence <= 100);
+  assert.ok(["aligned", "partial", "drift"].includes(conv.band));
+  for (const key of ["coverage", "scope", "riskAlignment"]) {
+    assert.ok(Number.isInteger(conv.subScores[key]), `subScores.${key} must be an integer`);
+  }
+  assert.match(conv.receipt.id, /^rcpt_[0-9a-f]{12}$/, "ships a recomputable receipt id");
+  assert.equal(conv.receipt.algorithm, "sha256");
+  assert.equal(conv.base, "HEAD~1");
+
+  const convMd = rawText(messages, 2);
+  assert.match(convMd, /# Convergence:/, "includeMarkdown returns the markdown report as text");
+  assert.throws(() => JSON.parse(convMd), "convergence markdown payload must not be JSON");
+
+  assert.equal(byId(messages, 3).error?.code, -32602, "missing base is rejected");
+  assert.equal(byId(messages, 4).error?.code, -32602, "missing query is rejected");
 });
 
 test("review_gate with a pr selector runs the GitHub gate path (vs local without one)", async () => {
