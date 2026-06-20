@@ -1,12 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
+import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "./catalog.js";
 import { generateContextPack } from "./context-engine.js";
 import { generateImpact } from "./impact.js";
 import { generateAxScore, formatAxMarkdown } from "./ax.js";
 import { generateConvergence, formatConvergenceMarkdown } from "./converge.js";
+import { appendEvent, extractSignals, redactError } from "./telemetry.js";
 import { evaluateLocal } from "./pass-local.js";
 import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
@@ -451,10 +453,12 @@ async function callTool(params = {}) {
     throw new McpProtocolError(-32602, "Tool arguments must be an object");
   }
 
+  const startedAt = performance.now();
   let result;
   try {
     result = await dispatchTool(name, args);
   } catch (error) {
+    recordToolEvent(name, args, startedAt, error instanceof McpProtocolError ? "error" : "fail", { error });
     if (error instanceof McpProtocolError) {
       throw error;
     }
@@ -470,6 +474,7 @@ async function callTool(params = {}) {
     };
   }
 
+  recordToolEvent(name, args, startedAt, "ok", { result });
   return {
     content: [
       {
@@ -479,6 +484,44 @@ async function callTool(params = {}) {
     ],
     isError: false,
   };
+}
+
+// Opt-in usage telemetry tap for the MCP surface. Records the canonical tool
+// name, latency, outcome, value signals, and result size. Wrapped in its own
+// try/catch and routed through appendEvent (which is itself best-effort and
+// never writes stdout) so it can NEVER alter or delay the JSON-RPC response.
+/**
+ * @param {string} name
+ * @param {ToolArgs} args
+ * @param {number} startedAt
+ * @param {"ok" | "fail" | "error"} outcome
+ * @param {{ result?: any, error?: unknown }} payload
+ * @returns {void}
+ */
+function recordToolEvent(name, args, startedAt, outcome, payload) {
+  try {
+    const canonical = LEGACY_TOOL_ALIASES[name]?.tool ?? name;
+    const hasResult = payload.result !== undefined;
+    const data = hasResult && payload.result && typeof payload.result === "object" && "markdown" in payload.result ? payload.result.data : payload.result;
+    /** @type {Record<string, any> | null} */
+    let signals = hasResult ? extractSignals(data) : null;
+    if (hasResult) {
+      signals = { ...(signals ?? {}), resultBytes: toolResultText(payload.result).length };
+    }
+    appendEvent({
+      surface: "mcp",
+      cmd: canonical,
+      requested: canonical !== name ? name : null,
+      argsShape: { positionals: 0, flags: Object.keys(args ?? {}).sort() },
+      outcome,
+      error: payload.error ? redactError(payload.error) : null,
+      durationMs: performance.now() - startedAt,
+      signals,
+      repoRoot: typeof args?.path === "string" ? args.path : process.cwd(),
+    });
+  } catch {
+    // Telemetry must never affect the JSON-RPC channel.
+  }
 }
 
 // Render a dispatched tool result as the single text payload. When a tool was

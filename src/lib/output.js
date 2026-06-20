@@ -48,12 +48,15 @@ Usage:
   repoctx eval <path> [--query text] [--naive-cap n] [--out file] [--json]
   repoctx data-access <path> [--out file] [--json] [--mermaid]
   repoctx agent-tools [--json|--markdown]
+  repoctx dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]   # local usage & performance UI (HTML)
+  repoctx telemetry [status|on|off|clear] [--json]                                          # opt-in usage capture (off by default)
   repoctx config [list]                           # show config with source annotations
   repoctx config get [key]                        # show one or all resolved values
   repoctx config set <key> <value> [--local]      # write to user (or local) config
   repoctx config set color true                   # enable color in user config
   repoctx config set theme high-contrast          # set theme (default|color|minimal|high-contrast)
   repoctx config set emoji false                  # disable emoji in user config
+  repoctx config set telemetry true               # opt in to local usage capture for the dashboard
 
 Legacy alias (deprecated, removed in v3.0.0 — use repoctx):
   dev-context <command>

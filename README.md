@@ -62,6 +62,7 @@ repoctx now includes a publishable MkDocs documentation site, shaped as a practi
 - [Harness Thesis & Agent Experience](docs/07-harness-thesis/README.md)
 - [Tutorials Integration (Codespaces)](docs/08-tutorials-integration/README.md)
 - [Convergence Thesis & Score](docs/09-convergence-thesis/README.md)
+- [Usage & Performance Dashboard](docs/10-usage-dashboard/README.md)
 - [Glossary](docs/GLOSSARY.md)
 
 When GitHub Pages is enabled for the repository, the published site is configured for:
@@ -140,6 +141,7 @@ node src/cli.js structure . --out .dev-context/structure.html
 | Index local projects | `repoctx index ~/projects --discover` | `.dev-context/index.json` files plus a local catalog |
 | Search indexed repos | `repoctx search "events controller"` | Ranked matches across paths, domains, routes, imports, exports, and symbols |
 | Run the MCP server | `repoctx mcp` | Stdio MCP server exposing repoctx tools |
+| Track usage & performance | `repoctx dashboard` | Self-contained HTML from an opt-in local usage log (off by default) |
 
 For Claude Desktop, VS Code, Cursor, and generic stdio client snippets, see [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md).
 
