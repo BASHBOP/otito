@@ -61,7 +61,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           awk -v ver="$VERSION" '
-            /^## / { if (found) exit; if ($2 == "v" ver) { found = 1; next } }
+            /^## / { if (found) exit; if ($2 == "[" ver "]") { found = 1; next } }
             found { print }
           ' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
           if [ ! -s "$RUNNER_TEMP/release-notes.md" ]; then
