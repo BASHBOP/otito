@@ -44,6 +44,7 @@ import { startMcpServer } from "./lib/mcp.js";
 import { generateContextPack } from "./lib/context-engine.js";
 import { formatImpactMermaid, formatImpactTerminal, generateImpact } from "./lib/impact.js";
 import { formatAxMarkdown, generateAxScore } from "./lib/ax.js";
+import { formatConvergenceMarkdown, generateConvergence } from "./lib/converge.js";
 import { evaluateLocal, formatPassMarkdown, formatPassTerminal } from "./lib/pass-local.js";
 import { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } from "./lib/pass-pr.js";
 import { formatReviewMermaid, formatReviewTerminal, generateReview } from "./lib/review.js";
@@ -70,6 +71,7 @@ const commandHandlers = {
   context: handleContext,
   impact: handleImpact,
   ax: handleAx,
+  converge: handleConverge,
   pass: handlePass,
   "pass-pr": handlePassPr,
   gate: handleGate,
@@ -354,6 +356,47 @@ async function handleAx(parsed) {
   }
 
   printText(formatAxMarkdown(data));
+}
+
+/** @param {CliArgs} parsed */
+async function handleConverge(parsed) {
+  // Mirror `impact` arg parsing: `converge "<task>" --path . --base <ref>` or
+  // `converge <repo> "<task>" --base <ref>`.
+  let repoPath;
+  let query;
+  if (parsed.flags.path) {
+    repoPath = parsed.flags.path;
+    query = parsed.positionals.join(" ").trim();
+  } else if (parsed.positionals.length >= 2) {
+    // `converge <repo> "<task>"` form.
+    repoPath = parsed.positionals[0];
+    query = parsed.positionals.slice(1).join(" ").trim();
+  } else {
+    // `converge "<task>"` form — repo defaults to cwd.
+    repoPath = ".";
+    query = parsed.positionals.join(" ").trim();
+  }
+  if (!query) {
+    throw new Error('converge requires a task, e.g. `repoctx converge "add Stripe refunds" --base origin/main`');
+  }
+  const data = generateConvergence(query, {
+    path: repoPath,
+    base: parsed.flags.base ?? parsed.flags.diff_base,
+    top: parsed.flags.top,
+  });
+
+  if (parsed.flags.json) {
+    printJson(data);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, formatConvergenceMarkdown(data));
+    printText(`Convergence report written: ${artifact.path}`);
+    return;
+  }
+
+  printText(formatConvergenceMarkdown(data));
 }
 
 /** @param {CliArgs} parsed */

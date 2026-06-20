@@ -60,6 +60,8 @@ repoctx now includes a publishable MkDocs documentation site, shaped as a practi
 - [Trust-Layer Demo](docs/05-trust-layer-demo/README.md)
 - [Builder-Founder Operating Loop](docs/06-builder-founder-operating-loop/README.md)
 - [Harness Thesis & Agent Experience](docs/07-harness-thesis/README.md)
+- [Tutorials Integration (Codespaces)](docs/08-tutorials-integration/README.md)
+- [Convergence Thesis & Score](docs/09-convergence-thesis/README.md)
 - [Glossary](docs/GLOSSARY.md)
 
 When GitHub Pages is enabled for the repository, the published site is configured for:

@@ -6,6 +6,7 @@ import { discoverRepositories, indexRepositories, listCatalog, searchCatalog } f
 import { generateContextPack } from "./context-engine.js";
 import { generateImpact } from "./impact.js";
 import { generateAxScore, formatAxMarkdown } from "./ax.js";
+import { generateConvergence, formatConvergenceMarkdown } from "./converge.js";
 import { evaluateLocal } from "./pass-local.js";
 import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
@@ -195,6 +196,24 @@ export const tools = [
         includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
       },
       required: ["query"],
+    },
+  },
+  {
+    name: "convergence_score",
+    title: "Convergence Score",
+    description:
+      "Score convergence: a deterministic 0–100 measure of the distance between a stated task (intent) and the actual git diff (execution), with sub-scores for Coverage (did the intent happen?), Scope (did only the intent happen?), and Risk alignment (did unrequested drift land on risk-sensitive paths?). Composed from the change_impact diff comparison and the shared risk vocabulary — no model, no new analysis. Emits a recomputable receipt (a timestamp-free hash anyone can regenerate and verify) as durable evidence. Requires a base git ref to diff against.",
+    annotations: { readOnlyHint: true },
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: 'The stated task / intent to measure against the diff, e.g. "add Stripe refunds".' },
+        base: { type: "string", description: "Git ref to diff against (e.g. origin/main, HEAD~1). Required." },
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        top: { type: "number", description: "Number of predicted owner files to consider. Defaults to 10." },
+        includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
+      },
+      required: ["query", "base"],
     },
   },
   {
@@ -527,6 +546,14 @@ async function dispatchTool(name, args) {
         top: args.top,
       });
       return args.includeMarkdown ? { data, markdown: formatAxMarkdown(data) } : data;
+    }
+    case "convergence_score": {
+      const data = generateConvergence(requiredString(args.query, "query"), {
+        path: args.path ?? ".",
+        base: requiredString(args.base, "base"),
+        top: args.top,
+      });
+      return args.includeMarkdown ? { data, markdown: formatConvergenceMarkdown(data) } : data;
     }
     case "review_gate": {
       // pr set → GitHub gate (evaluatePR); pr absent → local gate (evaluateLocal).
