@@ -29,6 +29,7 @@ Usage:
   repoctx search <query> [--catalog file] [--limit n] [--offline] [--json]
   repoctx context <query> [--path repo] [--limit n] [--out file] [--json]
   repoctx impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--mermaid] [--no-emoji] [--color|--no-color] [--theme name]
+  repoctx ax <repo> <query> [--top n] [--out file] [--json]
   repoctx pass <repo> [--base ref] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--out file] [--json] [--no-emoji]
   repoctx pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--out file] [--json] [--no-emoji]
   repoctx review <repo> [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--json] [--mermaid] [--no-emoji]
@@ -53,7 +54,7 @@ Usage:
   repoctx config set theme high-contrast          # set theme (default|color|minimal|high-contrast)
   repoctx config set emoji false                  # disable emoji in user config
 
-Legacy alias:
+Legacy alias (deprecated, removed in v3.0.0 — use repoctx):
   dev-context <command>
 
 Examples:

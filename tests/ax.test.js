@@ -1,0 +1,106 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { generateAxScore, changeabilityFromTokens, bandFor } from "../src/lib/ax.js";
+
+/**
+ * Build a minimal repo fixture. With no guardrail signals by default; callers
+ * opt into tests/validation/owners/ci.
+ * @param {{ scripts?: Record<string, string>, owners?: boolean, ci?: boolean, testsDir?: boolean }} [opts]
+ * @returns {string}
+ */
+function makeRepo(opts = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-ax-"));
+  fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "events-api", scripts: opts.scripts ?? {} }));
+  fs.writeFileSync(
+    path.join(root, "src", "events", "controller.js"),
+    "export function createEvent(input) {\n  return { id: 1, ...input };\n}\nexport function listEvents() {\n  return [];\n}\n",
+  );
+  fs.writeFileSync(path.join(root, "src", "events", "service.js"), "import { createEvent } from './controller.js';\nexport const svc = { createEvent };\n");
+  if (opts.testsDir) {
+    fs.mkdirSync(path.join(root, "tests"), { recursive: true });
+    fs.writeFileSync(path.join(root, "tests", "events.test.js"), "// test\n");
+  }
+  if (opts.owners) {
+    fs.mkdirSync(path.join(root, ".github"), { recursive: true });
+    fs.writeFileSync(path.join(root, ".github", "CODEOWNERS"), "* @team/core\n");
+  }
+  if (opts.ci) {
+    fs.mkdirSync(path.join(root, ".github", "workflows"), { recursive: true });
+    fs.writeFileSync(path.join(root, ".github", "workflows", "ci.yml"), "name: ci\n");
+  }
+  return root;
+}
+
+test("generateAxScore returns a valid, bounded schema", () => {
+  const root = makeRepo();
+  const data = generateAxScore("add an events endpoint", { path: root });
+
+  assert.equal(data.ok, true);
+  assert.equal(data.mode, "task");
+  assert.ok(Number.isInteger(data.ax) && data.ax >= 0 && data.ax <= 100);
+  assert.ok(["poor", "fair", "good", "excellent"].includes(data.band));
+  for (const key of ["changeability", "containment", "guardrails", "clarity"]) {
+    const v = data.subScores[key];
+    assert.ok(Number.isInteger(v) && v >= 0 && v <= 100, `${key}=${v} out of range`);
+  }
+  assert.equal(typeof data.drivers.guardrails.tests, "boolean");
+  assert.ok(Array.isArray(data.recommendations));
+});
+
+test("AX is deterministic for the same repo + query", () => {
+  const root = makeRepo({ scripts: { test: "node --test" }, owners: true, ci: true });
+  const a = generateAxScore("add an events endpoint", { path: root });
+  const b = generateAxScore("add an events endpoint", { path: root });
+  assert.equal(a.ax, b.ax);
+  assert.deepEqual(a.subScores, b.subScores);
+  assert.deepEqual(a.drivers.guardrails, b.drivers.guardrails);
+});
+
+test("enabling guardrails never lowers the guardrail sub-score", () => {
+  const bare = generateAxScore("add an events endpoint", { path: makeRepo() });
+  const guarded = generateAxScore("add an events endpoint", {
+    path: makeRepo({ scripts: { lint: "eslint .", test: "node --test" }, owners: true, ci: true, testsDir: true }),
+  });
+
+  assert.ok(guarded.subScores.guardrails >= bare.subScores.guardrails);
+  assert.equal(bare.drivers.guardrails.owners, false);
+  assert.equal(guarded.drivers.guardrails.owners, true);
+  assert.equal(guarded.drivers.guardrails.ci, true);
+  assert.equal(guarded.drivers.guardrails.tests, true);
+  assert.equal(guarded.subScores.guardrails, 100);
+});
+
+test("a bare repo recommends the missing guardrails", () => {
+  const data = generateAxScore("add an events endpoint", { path: makeRepo() });
+  const joined = data.recommendations.join("\n");
+  assert.match(joined, /CODEOWNERS/);
+  assert.match(joined, /CI workflow/);
+});
+
+test("changeabilityFromTokens is monotonic non-increasing in tokens", () => {
+  const points = [500, 1500, 3000, 8000, 20000, 40000, 80000];
+  let prev = Infinity;
+  for (const t of points) {
+    const score = changeabilityFromTokens(t);
+    assert.ok(score >= 0 && score <= 100);
+    assert.ok(score <= prev + 1e-9, `changeability rose at ${t} tokens (${score} > ${prev})`);
+    prev = score;
+  }
+  assert.equal(changeabilityFromTokens(1000), 100); // at/under floor
+  assert.equal(changeabilityFromTokens(50000), 0); // at/over ceiling
+});
+
+test("bandFor maps scores to the expected bands", () => {
+  assert.equal(bandFor(95), "excellent");
+  assert.equal(bandFor(70), "good");
+  assert.equal(bandFor(50), "fair");
+  assert.equal(bandFor(10), "poor");
+});
+
+test("ax requires a non-empty change request", () => {
+  assert.throws(() => generateAxScore("   ", { path: makeRepo() }), /requires a change request/);
+});

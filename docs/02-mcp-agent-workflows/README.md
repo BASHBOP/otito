@@ -164,6 +164,7 @@ Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 | `repo_search`      | Search cataloged repositories by path, route, import, export, symbol, or domain       |
 | `context_pack`     | Build a task-aware context packet                                                     |
 | `change_impact`    | Rank files most likely to own a plain-English change request (v1.0+)                  |
+| `agent_experience` | Score Agent Experience (AX 0–100) for a change: changeability, containment, guardrails, clarity (v2.3+) |
 | `repo_harness`     | Generate setup, validation, runtime, and context commands                             |
 | `workspace_report` | Build product-level context across multiple repos                                     |
 | `pr_review`        | Generate diff-aware PR review context                                                 |

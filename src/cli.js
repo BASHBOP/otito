@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
+import { basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import readline from "node:readline/promises";
 import { parseArgv } from "./lib/args.js";
@@ -42,6 +43,7 @@ import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
 import { generateContextPack } from "./lib/context-engine.js";
 import { formatImpactMermaid, formatImpactTerminal, generateImpact } from "./lib/impact.js";
+import { formatAxMarkdown, generateAxScore } from "./lib/ax.js";
 import { evaluateLocal, formatPassMarkdown, formatPassTerminal } from "./lib/pass-local.js";
 import { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } from "./lib/pass-pr.js";
 import { formatReviewMermaid, formatReviewTerminal, generateReview } from "./lib/review.js";
@@ -67,6 +69,7 @@ const commandHandlers = {
   search: handleSearch,
   context: handleContext,
   impact: handleImpact,
+  ax: handleAx,
   pass: handlePass,
   "pass-pr": handlePassPr,
   gate: handleGate,
@@ -320,6 +323,37 @@ async function handleImpact(parsed) {
       createRenderer({ ...opts, emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }),
     ),
   );
+}
+
+/** @param {CliArgs} parsed */
+async function handleAx(parsed) {
+  // Mirror `impact` arg parsing: `ax "<task>" --path .` or `ax <repo> "<task>"`.
+  let repoPath;
+  let query;
+  if (parsed.flags.path) {
+    repoPath = parsed.flags.path;
+    query = parsed.positionals.join(" ").trim();
+  } else {
+    repoPath = parsed.positionals[0] ?? ".";
+    query = parsed.positionals.slice(1).join(" ").trim();
+  }
+  if (!query) {
+    throw new Error('ax requires a change request, e.g. `repoctx ax "add a new MCP tool" --path .`');
+  }
+  const data = generateAxScore(query, { path: repoPath, top: parsed.flags.top });
+
+  if (parsed.flags.json) {
+    printJson(data);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, formatAxMarkdown(data));
+    printText(`AX score written: ${artifact.path}`);
+    return;
+  }
+
+  printText(formatAxMarkdown(data));
 }
 
 /** @param {CliArgs} parsed */
@@ -953,7 +987,22 @@ function formatRepoSummary(result) {
   ].join("\n");
 }
 
-export { main };
+/**
+ * Warn when the CLI is invoked through the legacy `dev-context` bin. The alias
+ * is deprecated and scheduled for removal in v3.0.0; `repoctx` is canonical.
+ * The bin name is read from argv[1]'s basename (the symlink npm created), which
+ * is `dev-context` for the legacy bin and `repoctx`/`cli.js` otherwise. Goes to
+ * stderr so it never pollutes `--json` stdout or piped output.
+ * @returns {void}
+ */
+function warnIfLegacyAlias() {
+  const invokedName = process.argv[1] ? basename(process.argv[1]) : "";
+  if (invokedName === "dev-context") {
+    console.error("repoctx: `dev-context` is a deprecated alias and will be removed in v3.0.0. Use `repoctx` instead.");
+  }
+}
+
+export { main, warnIfLegacyAlias };
 
 // npm bin shims invoke this file through a symlink, so argv[1] is the symlink
 // path while import.meta.url is already realpath-resolved by the ESM loader.
@@ -970,5 +1019,6 @@ const invokedAsScript = (() => {
   }
 })();
 if (invokedAsScript) {
+  warnIfLegacyAlias();
   main();
 }

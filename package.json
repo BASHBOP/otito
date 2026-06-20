@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "start": "node src/cli.js",
+    "postinstall": "node scripts/postinstall.mjs",
     "mcp": "node src/cli.js mcp",
     "doctor": "node src/cli.js doctor",
     "lint": "eslint .",

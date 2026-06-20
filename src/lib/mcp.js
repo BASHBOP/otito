@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "./catalog.js";
 import { generateContextPack } from "./context-engine.js";
 import { generateImpact } from "./impact.js";
+import { generateAxScore, formatAxMarkdown } from "./ax.js";
 import { evaluateLocal } from "./pass-local.js";
 import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
@@ -174,6 +175,23 @@ export const tools = [
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         top: { type: "number", description: "Number of files to return. Defaults to 10." },
         diffBase: { type: "string", description: "Optional git ref to validate predictions against (e.g. origin/main, HEAD)." },
+        includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "agent_experience",
+    title: "Agent Experience (AX)",
+    description:
+      'Score Agent Experience (AX): a single 0–100 number answering "how cheap and safe is it for an agent to make this change here?", blending Changeability (token cost), Containment (blast radius), Guardrails (tests / validation / CODEOWNERS / CI), and Clarity (task groundedness). Deterministic and composed from the change_impact, token-estimate, and CODEOWNERS engines — no new analysis. Returns sub-scores, drivers, and concrete recommendations for raising AX. Writes a local .dev-context/index.json cache into the target repo; the call is idempotent and does not change source files.',
+    annotations: { readOnlyHint: true },
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: 'Plain-English change request to score, e.g. "add a new MCP tool".' },
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        top: { type: "number", description: "Number of impact files to consider when scoring blast radius. Defaults to 8." },
         includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
       },
       required: ["query"],
@@ -502,6 +520,13 @@ async function dispatchTool(name, args) {
         diffBase: args.diffBase,
       });
       return args.includeMarkdown ? result : result.data;
+    }
+    case "agent_experience": {
+      const data = generateAxScore(requiredString(args.query, "query"), {
+        path: args.path ?? ".",
+        top: args.top,
+      });
+      return args.includeMarkdown ? { data, markdown: formatAxMarkdown(data) } : data;
     }
     case "review_gate": {
       // pr set → GitHub gate (evaluatePR); pr absent → local gate (evaluateLocal).
