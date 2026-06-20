@@ -63,10 +63,10 @@ npm install -g @nugehs/repoctx
 repoctx doctor
 ```
 
-The package also exposes the legacy alias:
+The package also exposes a deprecated legacy alias (`dev-context`), scheduled for removal in v3.0.0. It still runs but prints a deprecation warning; prefer `repoctx`:
 
 ```bash
-dev-context doctor
+dev-context doctor   # deprecated — use `repoctx doctor`
 ```
 
 ---

@@ -11,4 +11,4 @@
 | PullPass          | The companion merge-safety gate that checks PR readiness before merge                              |
 | repoctx           | The canonical CLI and MCP server name for this project                                             |
 | `.dev-context/`   | Local artifact directory for generated reports, indexes, harnesses, and context packets            |
-| `dev-context`     | Legacy command alias retained for compatibility                                                    |
+| `dev-context`     | Deprecated command alias; prints a warning and is removed in v3.0.0 — use `repoctx`                 |

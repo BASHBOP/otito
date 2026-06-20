@@ -13,7 +13,9 @@
 !!! info "About repoctx"
     repoctx is a local-first context system. It inspects repositories, builds code maps, creates task-aware context packs, prepares PR review harnesses, and exposes the same workflow through an MCP server.
 
-    It keeps the legacy `dev-context` command as an alias while making `repoctx` the canonical product name.
+    It keeps the legacy `dev-context` command as a deprecated alias (removed in v3.0.0) while making `repoctx` the canonical product name.
+
+    :material-animation-play: See the [**How It Works** visual walkthrough](assets/repoctx-how-it-works.html) — a layered diagram of the discover → index → context → gate flow.
 
 ---
 

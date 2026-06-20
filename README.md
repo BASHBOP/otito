@@ -16,13 +16,15 @@
 |_| \_\|_____| |_|     \___/  \____|   |_|   /_/\_\
 ```
 
-`repoctx` is a local-first code context system. It discovers repositories, builds local indexes, maintains a catalog, searches code context, and generates lightweight harnesses for coding agents and reviewers.
+An agent's output is bounded by two things: the **model** and the **harness** around it — the prompts, the context it's given, the codebase it works in, and the gates it must pass before code merges. You don't control the model. You control the harness, and a tighter harness lets a cheaper model do the same work with fewer wasted tokens.
 
-The legacy `dev-context` command remains available as an alias.
+`repoctx` is that harness layer. It is local-first, deterministic, and model-agnostic: it discovers repositories, builds local indexes, generates task-aware context before an agent edits, scores how much a change actually touches, and gates merge readiness — the same way every time, with no server, no account, and no code leaving the machine. Because it depends on software fundamentals rather than any one model, the harness you build today keeps working as models change underneath it.
+
+The legacy `dev-context` command still works but is **deprecated** and will be removed in v3.0.0; use `repoctx`. Invoking `dev-context` prints a deprecation warning to stderr.
 
 It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. It gives developers and coding agents a single CLI that can:
 
-Deterministic merge gates — the differentiated core:
+Deterministic merge gates — the differentiated core. This is the human-in-the-loop checkpoint that a model cannot grade for itself:
 
 - score merge readiness for local changes and pull requests with one `review_gate` tool (`gate` on the CLI)
 - resolve CODEOWNERS to required reviewers and surface owner-decision warnings
@@ -57,6 +59,7 @@ repoctx now includes a publishable MkDocs documentation site, shaped as a practi
 - [Release Readiness](docs/04-release-readiness/README.md)
 - [Trust-Layer Demo](docs/05-trust-layer-demo/README.md)
 - [Builder-Founder Operating Loop](docs/06-builder-founder-operating-loop/README.md)
+- [Harness Thesis & Agent Experience](docs/07-harness-thesis/README.md)
 - [Glossary](docs/GLOSSARY.md)
 
 When GitHub Pages is enabled for the repository, the published site is configured for:
@@ -273,7 +276,7 @@ node src/cli.js install --global
 node src/cli.js install --json
 ```
 
-After installation, use `repoctx` as the primary command. `dev-context` is kept as a legacy alias.
+After installation, use `repoctx` as the primary command. `dev-context` remains as a deprecated alias and will be removed in v3.0.0.
 
 ### `repo <path>`
 
