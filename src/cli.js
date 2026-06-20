@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
-import { basename } from "node:path";
+import { basename, join } from "node:path";
+import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import readline from "node:readline/promises";
 import { parseArgv } from "./lib/args.js";
@@ -44,6 +45,7 @@ import { startMcpServer } from "./lib/mcp.js";
 import { generateContextPack } from "./lib/context-engine.js";
 import { formatImpactMermaid, formatImpactTerminal, generateImpact } from "./lib/impact.js";
 import { formatAxMarkdown, generateAxScore } from "./lib/ax.js";
+import { formatConvergenceMarkdown, generateConvergence } from "./lib/converge.js";
 import { evaluateLocal, formatPassMarkdown, formatPassTerminal } from "./lib/pass-local.js";
 import { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } from "./lib/pass-pr.js";
 import { formatReviewMermaid, formatReviewTerminal, generateReview } from "./lib/review.js";
@@ -58,6 +60,8 @@ import { getAgentTools } from "./lib/agent-tools.js";
 import { formatCodeMapMermaid, formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
 import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
+import { appendEvent, clearTelemetryLog, noteResult, redactError, takePendingSignals, telemetryStatus } from "./lib/telemetry.js";
+import { generateDashboard } from "./lib/dashboard.js";
 
 /** @type {Record<string, ((parsed: CliArgs) => void | Promise<void>) | undefined>} */
 const commandHandlers = {
@@ -70,6 +74,9 @@ const commandHandlers = {
   context: handleContext,
   impact: handleImpact,
   ax: handleAx,
+  converge: handleConverge,
+  dashboard: handleDashboard,
+  telemetry: handleTelemetry,
   pass: handlePass,
   "pass-pr": handlePassPr,
   gate: handleGate,
@@ -125,9 +132,22 @@ async function main(argv = process.argv.slice(2)) {
     return;
   }
 
+  // Opt-in usage telemetry: the long-lived `mcp` server records a single
+  // start-only event here (per-tool events come from mcp.js), every other
+  // command records once in the finally below. `argsShape` is keys only —
+  // never flag values — so no paths or queries reach the log.
+  const argsShape = { positionals: parsed.positionals.length, flags: Object.keys(parsed.flags).sort() };
+  if (command === "mcp") {
+    appendEvent({ surface: "cli", cmd: "mcp", argsShape, outcome: "ok", durationMs: null, repoRoot: process.cwd() });
+  }
+
+  const startedAt = performance.now();
+  /** @type {unknown} */
+  let caughtError = null;
   try {
     await handler(parsed);
   } catch (error) {
+    caughtError = error;
     const message = error instanceof Error ? error.message : String(error);
     if (parsed.flags.json) {
       printJson({ ok: false, error: message });
@@ -135,6 +155,20 @@ async function main(argv = process.argv.slice(2)) {
       console.error(`repoctx: ${message}`);
     }
     process.exitCode = 1;
+  } finally {
+    if (command !== "mcp") {
+      const outcome = caughtError ? "error" : process.exitCode ? "fail" : "ok";
+      appendEvent({
+        surface: "cli",
+        cmd: command,
+        argsShape,
+        outcome,
+        error: caughtError ? redactError(caughtError) : null,
+        durationMs: performance.now() - startedAt,
+        signals: takePendingSignals(),
+        repoRoot: process.cwd(),
+      });
+    }
   }
 }
 
@@ -302,6 +336,7 @@ async function handleImpact(parsed) {
     top: parsed.flags.top,
     diffBase: parsed.flags.diff_base,
   });
+  noteResult(result.data);
 
   if (parsed.flags.json) {
     printJson(result.data);
@@ -341,6 +376,7 @@ async function handleAx(parsed) {
     throw new Error('ax requires a change request, e.g. `repoctx ax "add a new MCP tool" --path .`');
   }
   const data = generateAxScore(query, { path: repoPath, top: parsed.flags.top });
+  noteResult(data);
 
   if (parsed.flags.json) {
     printJson(data);
@@ -357,6 +393,48 @@ async function handleAx(parsed) {
 }
 
 /** @param {CliArgs} parsed */
+async function handleConverge(parsed) {
+  // Mirror `impact` arg parsing: `converge "<task>" --path . --base <ref>` or
+  // `converge <repo> "<task>" --base <ref>`.
+  let repoPath;
+  let query;
+  if (parsed.flags.path) {
+    repoPath = parsed.flags.path;
+    query = parsed.positionals.join(" ").trim();
+  } else if (parsed.positionals.length >= 2) {
+    // `converge <repo> "<task>"` form.
+    repoPath = parsed.positionals[0];
+    query = parsed.positionals.slice(1).join(" ").trim();
+  } else {
+    // `converge "<task>"` form — repo defaults to cwd.
+    repoPath = ".";
+    query = parsed.positionals.join(" ").trim();
+  }
+  if (!query) {
+    throw new Error('converge requires a task, e.g. `repoctx converge "add Stripe refunds" --base origin/main`');
+  }
+  const data = generateConvergence(query, {
+    path: repoPath,
+    base: parsed.flags.base ?? parsed.flags.diff_base,
+    top: parsed.flags.top,
+  });
+  noteResult(data);
+
+  if (parsed.flags.json) {
+    printJson(data);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, formatConvergenceMarkdown(data));
+    printText(`Convergence report written: ${artifact.path}`);
+    return;
+  }
+
+  printText(formatConvergenceMarkdown(data));
+}
+
+/** @param {CliArgs} parsed */
 async function handlePass(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   // evaluateLocal returns a loosely-typed record; it is a PassData at runtime.
@@ -368,6 +446,7 @@ async function handlePass(parsed) {
       request: parsed.flags.request,
     })
   );
+  noteResult(data);
 
   if (parsed.flags.json) {
     printJson(data);
@@ -401,6 +480,7 @@ async function handlePassPr(parsed) {
       request: parsed.flags.request,
     })
   );
+  noteResult(data);
 
   if (parsed.flags.json) {
     printJson(data);
@@ -453,6 +533,7 @@ async function handleReview(parsed) {
     governance: parsed.flags.governance,
     impactTop: parsed.flags.top,
   });
+  noteResult(data);
 
   if (parsed.flags.json) {
     printJson(data);
@@ -778,6 +859,7 @@ async function handleEval(parsed) {
   // when the scoreboard falls below the corpus thresholds so CI can gate on it.
   if (parsed.flags.accuracy) {
     const result = runRetrievalEval({ corpusPath: parsed.flags.corpus });
+    noteResult(result.data);
     if (parsed.flags.json) {
       printJson(result.data);
     } else if (parsed.flags.out) {
@@ -798,6 +880,7 @@ async function handleEval(parsed) {
   if (parsed.flags.query) options.query = parsed.flags.query;
   if (parsed.flags.naive_cap) options.naiveFileCap = Number(parsed.flags.naive_cap);
   const result = runEval(repoPath, options);
+  noteResult(result.data);
 
   if (parsed.flags.json) {
     printJson(result.data);
@@ -809,6 +892,72 @@ async function handleEval(parsed) {
     return;
   }
   printText(result.markdown);
+}
+
+/** @param {CliArgs} parsed */
+async function handleDashboard(parsed) {
+  // `--clear` purges the local usage log (the "delete your own data" path) and
+  // does nothing else.
+  if (parsed.flags.clear) {
+    const { removed, path: logPath } = clearTelemetryLog();
+    printText(removed.length ? `Usage log cleared: ${removed.join(", ")}` : `No usage log to clear at ${logPath}`);
+    return;
+  }
+
+  const repoPath = parsed.positionals[0] ?? ".";
+  const { data, html } = generateDashboard(repoPath, {
+    includeArtifacts: !parsed.flags.no_artifacts,
+    includeGit: !parsed.flags.no_git,
+  });
+
+  if (parsed.flags.json) {
+    printJson(data);
+    return;
+  }
+
+  const target = parsed.flags.out ?? join(repoPath, ".dev-context", "dashboard.html");
+  const artifact = writeArtifact(target, html);
+  printText(`Dashboard written: ${artifact.path}`);
+  if (!data.totals.events) {
+    printText("No usage events recorded yet. Enable capture with `repoctx config set telemetry true`, then run some commands.");
+  }
+}
+
+/** @param {CliArgs} parsed */
+async function handleTelemetry(parsed) {
+  const sub = parsed.positionals[0] ?? "status";
+
+  if (sub === "on" || sub === "off") {
+    const scope = parsed.flags.local ? "local" : "user";
+    writeConfig({ telemetry: sub === "on" }, scope);
+    printText(`Telemetry ${sub} (${getConfigPath(scope)}).`);
+    return;
+  }
+
+  if (sub === "clear") {
+    const { removed, path: logPath } = clearTelemetryLog();
+    printText(removed.length ? `Usage log cleared: ${removed.join(", ")}` : `No usage log to clear at ${logPath}`);
+    return;
+  }
+
+  // Default: status.
+  const status = telemetryStatus();
+  if (parsed.flags.json) {
+    printJson(status);
+    return;
+  }
+  printText(
+    [
+      `Telemetry:   ${status.enabled ? "on" : "off"}`,
+      `Log:         ${status.path}`,
+      `Exists:      ${status.exists ? "yes" : "no"}`,
+      `Size:        ${status.sizeBytes} bytes`,
+      `Events:      ${status.events}`,
+      "",
+      status.enabled ? "Disable with `repoctx telemetry off`." : "Enable with `repoctx telemetry on` (or `repoctx config set telemetry true`).",
+      "Clear the log with `repoctx telemetry clear`.",
+    ].join("\n"),
+  );
 }
 
 /** @param {CliArgs} parsed */

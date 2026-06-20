@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 
 /** Keys accepted in a config file or via env. */
-const VALID_KEYS = new Set(["emoji", "color", "theme", "width", "policy", "governance"]);
+const VALID_KEYS = new Set(["emoji", "color", "theme", "width", "policy", "governance", "telemetry"]);
 
 /**
  * Built-in defaults. Only keys with stable defaults are listed; undefined keys
@@ -13,6 +13,8 @@ const DEFAULTS = {
   theme: "default",
   policy: "standard",
   governance: "team",
+  // Usage telemetry is strictly opt-in: off until the user turns it on.
+  telemetry: false,
 };
 
 /**
@@ -23,6 +25,7 @@ const DEFAULTS = {
  * @property {number | undefined} width
  * @property {string | undefined} policy
  * @property {string | undefined} governance
+ * @property {boolean | undefined} telemetry
  */
 
 /**
@@ -99,6 +102,10 @@ function applyEnv(cfg, env) {
   // NO_COLOR spec: any value (including empty string) disables color.
   if (env.NO_COLOR !== undefined) cfg.color = false;
   if (env.REPOCTX_THEME !== undefined) cfg.theme = env.REPOCTX_THEME;
+  if (env.REPOCTX_TELEMETRY !== undefined) {
+    const v = coerceBool(env.REPOCTX_TELEMETRY);
+    if (v !== undefined) cfg.telemetry = v;
+  }
   if (env.REPOCTX_WIDTH !== undefined) {
     const n = Number(env.REPOCTX_WIDTH);
     if (!isNaN(n) && n > 0) cfg.width = n;
