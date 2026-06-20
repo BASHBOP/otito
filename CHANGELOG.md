@@ -6,6 +6,15 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Deprecated
+
+- **The `dev-context` command alias is deprecated and will be removed in v3.0.0.** Use `repoctx`. Invoking the CLI through the `dev-context` bin now prints a deprecation warning to stderr (never on `--json` stdout). The `.dev-context/` output directory is unaffected — it is not part of the deprecation.
+
+### Added
+
+- **`repoctx ax "<task>" --path .` scores Agent Experience (AX).** A single 0–100 number for "how cheap and safe is it for an agent to make this change here?", blending Changeability (token cost), Containment (blast radius), Guardrails (tests/validation/CODEOWNERS/CI), and Clarity. Deterministic and composed from the existing `impact`, `tokens`, and `codeowners` engines — no new analysis. Supports `--json` and `--out`, and is exposed over MCP as the `agent_experience` tool (the MCP surface bumps from 11 to 12 tools). See [docs/07-harness-thesis/ax-score-spec.md](docs/07-harness-thesis/ax-score-spec.md).
+- **`postinstall` runs `repoctx doctor` after a global install.** `npm install -g @nugehs/repoctx` now prints an environment readiness summary. The hook is guarded: it runs only for global installs (`npm_config_global=true`), skips in CI and when `REPOCTX_SKIP_POSTINSTALL` is set, and always exits 0 so it can never fail an install.
+
 ## [2.2.0] - 2026-06-17
 
 ### Added

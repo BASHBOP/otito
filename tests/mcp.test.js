@@ -55,8 +55,8 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
   assert.equal(exitCode, 0);
   assert.equal(messages[0].result.serverInfo.name, "@nugehs/repoctx");
   const listedNames = messages[1].result.tools.map((tool) => tool.name);
-  assert.equal(listedNames.length, 11, `tools/list must expose exactly 11 tools, got ${listedNames.length}: ${listedNames.join(", ")}`);
-  for (const expected of ["repo_map", "repo_index", "repo_search", "context_pack", "review_context", "repo_harness"]) {
+  assert.equal(listedNames.length, 12, `tools/list must expose exactly 12 tools, got ${listedNames.length}: ${listedNames.join(", ")}`);
+  for (const expected of ["repo_map", "repo_index", "repo_search", "context_pack", "agent_experience", "review_context", "repo_harness"]) {
     assert.ok(listedNames.includes(expected), `missing tool: ${expected}`);
   }
   // Retired names must not appear in tools/list (they remain callable via tools/call).

@@ -88,7 +88,7 @@ export function formatInstallSummary(result) {
     `${result.productName} installer`,
     "",
     `Binary: ${result.binaryName}`,
-    `Legacy alias: ${result.legacyBinaryName}`,
+    `Legacy alias: ${result.legacyBinaryName} (deprecated, removed in v3.0.0)`,
     `Repository: ${result.repository}`,
     `Current checkout: ${result.packageRoot}`,
     `Installed: ${result.installed ? `yes (${result.binaryPath})` : "no"}`,
