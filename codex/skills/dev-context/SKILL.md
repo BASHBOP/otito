@@ -85,22 +85,21 @@ Run:
 node /path/to/repoctx/src/cli.js mcp
 ```
 
-MCP tools exposed by the server:
+MCP tools exposed by the server (13 canonical; legacy names forward until v3.0):
 
 - `repo_inspect`: repository shape, scripts, package managers, entrypoints, git metadata
-- `repo_map`: compact JSON code map with optional `domain` and `kind` filters
-- `repo_discover`: local repository discovery under workspace roots
-- `repo_index`: local `.dev-context/index.json` generation and catalog registration
-- `repo_catalog`: local catalog listing
-- `repo_search`: local catalog search across paths, domains, routes, imports, exports, and symbols
+- `repo_map`: compact JSON code map with optional `domain`, `kind`, and `route` filters
+- `repo_index`: local `.dev-context/index.json` generation and catalog registration; `dryRun:true` discovers read-only
+- `repo_search`: local catalog search across paths, domains, routes, imports, exports, and symbols; omit `query` to list the catalog
 - `context_pack`: task-aware local context packet with primary files, related files, tests, patterns, validation commands, and source evidence
-- `repo_harness`: setup, validation, runtime, and context commands
+- `change_impact`: rank files most likely to own a plain-English change request
+- `agent_experience`: Agent Experience (AX 0–100) score for a change
+- `convergence_score`: intent vs. execution score (0–100) with a recomputable receipt
+- `review_context`: diff-aware PR review context (no verdict)
+- `review_gate`: PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`
+- `review_verdict`: composite verdict (impact + review context + gate)
 - `workspace_report`: product-level context across multiple repos
-- `pr_review`: diff-aware PR review context and optional GitHub comment support
-- `find_domain`: domain files across one or more repos
-- `find_file_kind`: route, controller, service, component, hook, api client, DTO, schema, test, or source files
-- `find_backend_route`: Nest controller route lookup
-- `find_frontend_api_client`: frontend API client lookup by domain or query
+- `repo_harness`: setup, validation, runtime, and context commands
 
 ## Interpretation Rules
 

@@ -45,7 +45,13 @@ try {
     throw new Error("installed bin returned non-JSON repo output");
   }
 
-  console.log(`tarball smoke OK: installed bin produced ${helpOutput.length} bytes of help and valid repo JSON`);
+  const evalOutput = run(bin, ["eval", "--accuracy", "--json"], { cwd: projectDir });
+  const evalParsed = JSON.parse(evalOutput);
+  if (!evalParsed?.ok || evalParsed.evalKind !== "accuracy" || !evalParsed.passed) {
+    throw new Error(`installed bin eval --accuracy failed: passed=${evalParsed?.passed} exitCode=${evalParsed?.exitCode}`);
+  }
+
+  console.log(`tarball smoke OK: installed bin produced ${helpOutput.length} bytes of help, valid repo JSON, and eval --accuracy passed`);
 } finally {
   fs.rmSync(workDir, { recursive: true, force: true });
 }

@@ -1,16 +1,17 @@
 # Migration to repoctx 2.0
 
-repoctx 2.0 consolidates the MCP tool surface from **18 tools to 11**. The change
-is **fully backwards compatible**: every legacy tool name still works through
-`tools/call`. `tools/list` advertises only the 11 canonical tools, but calls to
-the old names are transparently forwarded (with argument translation) to their
-successors.
+repoctx 2.0 consolidates the MCP tool surface from **18 tools to 11**; v2.3 adds
+`agent_experience` and `convergence_score` for a current total of **13** canonical
+tools. The change is **fully backwards compatible**: every legacy tool name still
+works through `tools/call`. `tools/list` advertises only the 13 canonical tools,
+but calls to the old names are transparently forwarded (with argument translation)
+to their successors.
 
 > **Alias guarantee:** the legacy tool names keep working via `tools/call` until
 > **repoctx 3.0**. They are hidden from `tools/list` in 2.0 and will be removed in
 > 3.0. Migrate to the canonical names at your convenience before then.
 
-## The 11 canonical tools
+## The 13 canonical tools
 
 | Tool               | Purpose                                                                                  |
 | ------------------ | ---------------------------------------------------------------------------------------- |
@@ -20,6 +21,8 @@ successors.
 | `repo_search`      | Search the catalog; omit `query` to return the catalog listing                           |
 | `context_pack`     | Build a task-aware context packet                                                        |
 | `change_impact`    | Rank files most likely to own a plain-English change request                             |
+| `agent_experience` | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity (v2.3+) |
+| `convergence_score`| Score intent vs. execution (0–100) with a recomputable receipt (v2.3+)                   |
 | `review_context`   | Diff/comment review context (no verdict)                                                 |
 | `review_gate`      | PASS/WARN/FAIL merge gate; local without `pr`, GitHub PR gate with `pr`                  |
 | `review_verdict`   | Composite verdict: impact + review_context + review_gate, with a confidence score        |

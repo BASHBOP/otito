@@ -96,6 +96,19 @@ PullPass can report `PASS`, `WARN`, or `FAIL`, but the maintainer still owns the
 | `WARN` | A maintainer should inspect a non-blocking risk |
 | `FAIL` | The PR should not merge until the blocking signal is resolved |
 
+### 6. Post-merge attestation (audit layer)
+
+After merge, bind the review verdict to the merge commit as tamper-evident evidence:
+
+```bash
+repoctx review . --pr 123 --json > verdict.json
+node audit-pilot/attest.mjs --verdict verdict.json --merge <sha> --prev <base> \
+     --pr 123 --author "Name" --committed <iso>
+node audit-pilot/attest.mjs --verify
+```
+
+See [audit-pilot/README.md](../../audit-pilot/README.md) for the hash-chained ledger pilot and production notes.
+
 ---
 
 ## Proof Checklist

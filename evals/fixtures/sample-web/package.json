@@ -1,0 +1,7 @@
+{
+  "name": "sample-web",
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run"
+  }
+}

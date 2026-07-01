@@ -472,24 +472,25 @@ If you prefer a globally installed binary:
 
 Ollama can provide the local model, but it does not call MCP tools by itself. To use repoctx through MCP with a local model, use an MCP-capable agent client that supports Ollama as the model provider and configure the `repoctx` server above.
 
-repoctx 2.0 exposes **11** MCP tools (down from 18). All legacy names still work through `tools/call` until 3.0 — see [Migration to 2.0](docs/MIGRATION-2.0.md).
+repoctx 2.3 exposes **13** MCP tools (consolidated from 18 in 2.0; `agent_experience` and `convergence_score` added in 2.3). All legacy names still work through `tools/call` until 3.0 — see [Migration to 2.0](docs/MIGRATION-2.0.md).
 
-| Tool               | Purpose                                                                              |
-| ------------------ | ------------------------------------------------------------------------------------ |
-| `repo_inspect`     | Inspect repository shape, scripts, package managers, entrypoints, and git state      |
-| `repo_map`         | Compact JSON code map, filterable by `domain`, `kind`, and `route`                   |
-| `repo_index`       | Generate `.dev-context` indexes + catalog entries; `dryRun:true` discovers read-only |
-| `repo_search`      | Search the catalog; omit `query` to return the catalog listing                       |
-| `context_pack`     | Build a task-aware context packet                                                    |
-| `change_impact`    | Rank files most likely to own a plain-English change request                         |
-| `agent_experience` | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity   |
-| `review_context`   | Diff/comment review context (no verdict)                                             |
-| `review_gate`      | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`             |
-| `review_verdict`   | Composite verdict: impact + review_context + review_gate                             |
-| `workspace_report` | Product-level report across multiple repos                                           |
-| `repo_harness`     | Setup, validation, runtime, and context commands for an agent or CI harness          |
+| Tool                | Purpose                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| `repo_inspect`      | Inspect repository shape, scripts, package managers, entrypoints, and git state      |
+| `repo_map`          | Compact JSON code map, filterable by `domain`, `kind`, and `route`                   |
+| `repo_index`        | Generate `.dev-context` indexes + catalog entries; `dryRun:true` discovers read-only |
+| `repo_search`       | Search the catalog; omit `query` to return the catalog listing                       |
+| `context_pack`      | Build a task-aware context packet                                                    |
+| `change_impact`     | Rank files most likely to own a plain-English change request                         |
+| `agent_experience`  | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity   |
+| `convergence_score` | Score intent vs. execution (0–100) with a recomputable receipt                       |
+| `review_context`    | Diff/comment review context (no verdict)                                             |
+| `review_gate`       | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`             |
+| `review_verdict`    | Composite verdict: impact + review_context + review_gate                             |
+| `workspace_report`  | Product-level report across multiple repos                                           |
+| `repo_harness`      | Setup, validation, runtime, and context commands for an agent or CI harness          |
 
-The retired `repo_discover`, `repo_catalog`, `find_domain`, `find_file_kind`, `find_backend_route`, `find_frontend_api_client`, `pr_review`, `review_pr`, `merge_readiness`, and `pr_merge_readiness` names remain callable via `tools/call` and forward to the tools above. See [Migration to 2.0](docs/MIGRATION-2.0.md) for the full mapping and param translations.
+The retired `repo_discover`, `repo_catalog`, `find_domain`, `find_file_kind`, `find_backend_route`, `find_frontend_api_client`, `pr_review`, `review_pr`, `merge_readiness`, and `pr_merge_readiness` names remain callable via `tools/call` and forward to the tools above. See [Migration to 2.0](docs/MIGRATION-2.0.md) for the full mapping and param translations. Plan for [Migration to 3.0](docs/MIGRATION-3.0.md) before the alias removal release.
 
 ### `matrix`
 

@@ -1,0 +1,6 @@
+{
+  "name": "sample-api",
+  "scripts": {
+    "test": "jest"
+  }
+}
