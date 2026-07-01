@@ -1,6 +1,6 @@
 {
   "name": "@nugehs/repoctx",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "mcpName": "io.github.nugehs/repoctx",
   "description": "repoctx: local repo discovery, indexing, catalog search, and agent harnesses.",
   "type": "module",
@@ -10,6 +10,7 @@
   },
   "files": [
     "assets",
+    "evals",
     "src",
     "scripts",
     "CHANGELOG.md",

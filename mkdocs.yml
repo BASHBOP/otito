@@ -88,6 +88,8 @@ nav:
       - Overview: 03-contributor-governance/README.md
   - Release Readiness:
       - Overview: 04-release-readiness/README.md
+      - Migration to 2.0: MIGRATION-2.0.md
+      - Migration to 3.0: MIGRATION-3.0.md
   - Trust-Layer Demo:
       - Overview: 05-trust-layer-demo/README.md
   - Builder-Founder Loop:

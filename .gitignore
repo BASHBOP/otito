@@ -3,6 +3,7 @@ node_modules/
 dist/
 coverage/
 site/
+audit-pilot/verdict-latest.json
 .DS_Store
 .claude/
 ~$*

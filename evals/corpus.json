@@ -14,10 +14,10 @@
     }
   },
   "fixtureRoots": {
-    "comment": "Logical fixture name -> directory relative to repo root. 'existing/*' reuse the codex dev-context eval fixtures; 'fixtures/*' are richer synthetic repos added for this corpus.",
-    "sample-api": "codex/skills/dev-context/evals/files/sample-api",
-    "sample-web": "codex/skills/dev-context/evals/files/sample-web",
-    "sample-node-api": "codex/skills/dev-context/evals/files/sample-node-api",
+    "comment": "Logical fixture name -> directory relative to repo root under evals/fixtures/.",
+    "sample-api": "evals/fixtures/sample-api",
+    "sample-web": "evals/fixtures/sample-web",
+    "sample-node-api": "evals/fixtures/sample-node-api",
     "shop-api": "evals/fixtures/shop-api",
     "polyglot-svc": "evals/fixtures/polyglot-svc",
     "web-client": "evals/fixtures/web-client"

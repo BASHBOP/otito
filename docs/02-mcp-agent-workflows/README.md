@@ -154,27 +154,23 @@ Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 
 ## MCP Tool Surface
 
+repoctx 2.3 exposes **13** canonical MCP tools. Legacy names (`pr_review`, `merge_readiness`, `find_*`, etc.) still work via `tools/call` until v3.0 — see [Migration to 2.0](../MIGRATION-2.0.md).
+
 | Tool               | Purpose                                                                               |
 | ------------------ | ------------------------------------------------------------------------------------- |
 | `repo_inspect`     | Inspect repository shape, scripts, package managers, entrypoints, and git state       |
-| `repo_map`         | Build a compact JSON code map with optional domain and kind filters (TS/JS, Go, C#, Python, Java, Ruby, Rust) |
-| `repo_discover`    | Discover local repositories under workspace roots                                     |
-| `repo_index`       | Generate local `.dev-context/index.json` files and catalog entries                    |
-| `repo_catalog`     | List cataloged local repositories                                                     |
-| `repo_search`      | Search cataloged repositories by path, route, import, export, symbol, or domain       |
+| `repo_map`         | Build a compact JSON code map with optional domain, kind, and route filters (TS/JS, Go, C#, Python, Java, Ruby, Rust) |
+| `repo_index`       | Generate local `.dev-context/index.json` files and catalog entries; `dryRun:true` discovers read-only |
+| `repo_search`      | Search cataloged repositories by path, route, import, export, symbol, or domain; omit `query` to list the catalog |
 | `context_pack`     | Build a task-aware context packet                                                     |
-| `change_impact`    | Rank files most likely to own a plain-English change request (v1.0+)                  |
-| `agent_experience` | Score Agent Experience (AX 0–100) for a change: changeability, containment, guardrails, clarity (v2.3+) |
-| `repo_harness`     | Generate setup, validation, runtime, and context commands                             |
+| `change_impact`    | Rank files most likely to own a plain-English change request                          |
+| `agent_experience` | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity (v2.3+) |
+| `convergence_score`| Score intent vs. execution (0–100) with a recomputable receipt (v2.3+)                |
+| `review_context`   | Diff/comment review context (no verdict)                                              |
+| `review_gate`      | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`              |
+| `review_verdict`   | Composite verdict: impact + review_context + review_gate                              |
 | `workspace_report` | Build product-level context across multiple repos                                     |
-| `pr_review`        | Generate diff-aware PR review context                                                 |
-| `merge_readiness`  | Local PASS/WARN/FAIL merge gate against a base ref (v1.0+)                            |
-| `pr_merge_readiness` | GitHub PR merge gate using `gh` (review decision, CODEOWNERS, branch protection, status checks) (v1.0+) |
-| `review_pr`        | Composite: impact + pr_review + pass in one call, with derived confidence score (v1.0+) |
-| `find_domain`      | Find domain files across one or more repos (reads the multi-domain tag set; v1.2+)    |
-| `find_file_kind`   | Locate routes, controllers, services, hooks, clients, schemas, tests, or source files |
-| `find_backend_route` | Locate backend route definitions by method + path                                   |
-| `find_frontend_api_client` | Locate frontend HTTP client calls that target a backend route                 |
+| `repo_harness`     | Generate setup, validation, runtime, and context commands                             |
 
 ---
 
@@ -192,7 +188,7 @@ sequenceDiagram
     repoctx->>Repo: Inspect files and git state
     repoctx-->>Agent: Primary files, related files, tests, patterns
     Agent->>Repo: Edit scoped files
-    Agent->>repoctx: pr_review(base, head)
+    Agent->>repoctx: review_context(base, head)
     repoctx-->>Agent: Review prompts and risk flags
     Agent->>User: Verified change summary
 ```
