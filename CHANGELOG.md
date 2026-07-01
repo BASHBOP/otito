@@ -6,6 +6,8 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [2.3.1] - 2026-07-01
+
 ### Fixed
 
 - **Ship `evals/` in the npm package** so `repoctx eval --accuracy` works from a global install; tarball smoke now verifies it.
