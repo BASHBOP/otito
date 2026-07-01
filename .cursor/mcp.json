@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "repoctx": {
+      "command": "npm",
+      "args": ["run", "mcp", "--silent"],
+      "env": {}
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "sample-node-api",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js"
+  }
+}

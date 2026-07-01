@@ -10,6 +10,7 @@
   },
   "files": [
     "assets",
+    "evals",
     "src",
     "scripts",
     "CHANGELOG.md",

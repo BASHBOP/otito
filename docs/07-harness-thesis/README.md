@@ -105,7 +105,7 @@ model cannot do for itself**, framed as the durable half of the stack.
 | **P0** | Harness + gate positioning (lessons 1, 6) | Low cost, reframes the whole product around a thesis going viral | Low — README done; carry into docs site + landing |
 | **P1** | Tool-surface / context-leak audit (lesson 4) | Keeps repoctx lean enough to survive the "blank slate" test | Low–Medium |
 | **P1** | Scheduled cheap-model review mode (lesson 7) | Turns the gate into a self-improving loop | Medium |
-| **P2** | Procedure skills package (lesson 5) | Distribution via the `skills` ecosystem | Medium |
+| **P2** | Procedure skills package (lesson 5) | Shipped under `codex/skills/repoctx-{context,review,scope}/` | Done |
 | **P2** | Richer single-glance review artifact (lesson 8) | Builds on existing Mermaid/theme rendering | Medium |
 
 ## Sources

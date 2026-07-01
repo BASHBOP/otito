@@ -6,6 +6,18 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Ship `evals/` in the npm package** so `repoctx eval --accuracy` works from a global install; tarball smoke now verifies it.
+- **Consolidate accuracy eval fixtures under `evals/fixtures/`** so the published tarball is self-contained (no dependency on `codex/skills/.../evals/files`).
+- **Sync MCP docs to 13 canonical tools** (`agent_experience`, `convergence_score` added in 2.3); README, migration doc, and MCP workflow guide updated.
+- **Add project `.cursor/mcp.json`** so Cursor loads repoctx MCP from a local checkout without a global install.
+- **Link audit-pilot** from the trust-layer demo walkthrough as the post-merge attestation example.
+- **Post-merge attestation CI** on pushes to `main` via `scripts/post-merge-attest.sh`.
+- **`tests/gh.test.js`** and **`tests/attest.test.js`** for `gh.js` and audit-chain verification.
+- **Procedure skills** under `codex/skills/repoctx-{context,review,scope}/`.
+- **`docs/MIGRATION-3.0.md`** pre-migration checklist for the v3.0 alias removal.
+
 ## [2.3.0] - 2026-06-20
 
 ### Deprecated

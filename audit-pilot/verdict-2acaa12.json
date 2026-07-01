@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "generatedAt": "2026-06-21T16:51:27.944Z",
+  "reviewEngineVersion": 1,
+  "request": "attest last merged commit for audit layer pilot",
+  "verdict": "WARN",
+  "confidence": 65,
+  "repo": { "root": "/Users/segzy/dev/repoctx", "name": "repoctx" },
+  "impactSummary": {
+    "concepts": [],
+    "topFiles": [
+      { "path": "src/lib/converge.js", "score": 10, "riskFlags": [] },
+      { "path": "src/lib/pass-local.js", "score": 5, "riskFlags": [] },
+      { "path": "tests/pass-local.test.js", "score": 4.5, "riskFlags": [] },
+      { "path": "src/lib/agent-tools.js", "score": 3.1, "riskFlags": [] },
+      { "path": "src/lib/args.js", "score": 3.1, "riskFlags": [] }
+    ],
+    "risks": ["No obvious high-risk domain detected. Main risk is missing a caller or test outside the matched files."]
+  },
+  "prReviewSummary": {
+    "changedFiles": 25,
+    "additions": 0,
+    "deletions": 0,
+    "riskLevel": "medium",
+    "riskFlags": ["configuration", "large PR", "large file diff"],
+    "reviewTargetsCount": 0
+  },
+  "pass": {
+    "verdict": "WARN",
+    "policy": "standard",
+    "governance": "team",
+    "checks": [
+      { "name": "Changed files", "status": "PASS", "summary": "25 changed files found." },
+      { "name": "Secret safety", "status": "PASS", "summary": "No obvious secret file changes found." },
+      { "name": "Risk review", "status": "WARN", "summary": "Risk-sensitive files changed; maintainer review should be explicit." },
+      { "name": "Release discipline", "status": "PASS", "summary": "Version metadata is SemVer and changelog was updated." },
+      { "name": "Validation commands", "status": "PASS", "summary": "Validation commands are available." },
+      { "name": "Dependency audit", "status": "PASS", "summary": "Dependency audit commands are available." },
+      {
+        "name": "Review state",
+        "status": "WARN",
+        "summary": "Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet."
+      },
+      { "name": "Policy profile", "status": "PASS", "summary": "Standard policy profile active." }
+    ]
+  }
+}
