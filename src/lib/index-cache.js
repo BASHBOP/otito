@@ -7,7 +7,7 @@ import { listRepoFiles } from "./repo.js";
 /**
  * A single declaration extracted from a source file.
  * @typedef {object} CodeMapSymbol
- * @property {string} type - Declaration kind ("class", "function", "const", "interface", "type", "enum", "let", "var").
+ * @property {string} type - Declaration kind ("class", "function", "method", "const", "interface", "type", "enum", "let", "var").
  * @property {string} name
  * @property {number} line - 1-based line number of the declaration.
  */
@@ -118,7 +118,7 @@ import { listRepoFiles } from "./repo.js";
  * @property {CodeMapCacheInfo} [cache]
  */
 
-const cacheVersion = 4;
+const cacheVersion = 5;
 
 // Bound on the in-process memo. MCP hosts call repo-map tools repeatedly for the
 // same repo; without this we re-read and re-JSON.parse the on-disk index every call.
