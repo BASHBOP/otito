@@ -107,7 +107,7 @@ node audit-pilot/attest.mjs --verdict verdict.json --merge <sha> --prev <base> \
 node audit-pilot/attest.mjs --verify
 ```
 
-See [audit-pilot/README.md](../../audit-pilot/README.md) for the hash-chained ledger pilot and production notes.
+See [audit-pilot/README.md](https://github.com/nugehs/repoctx/blob/main/audit-pilot/README.md) for the hash-chained ledger pilot and production notes.
 
 ---
 
