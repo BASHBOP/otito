@@ -35,6 +35,7 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @property {string[]} [imports]
  * @property {string[]} [exports]
  * @property {CodeMapSymbol[]} [symbols]
+ * @property {Array<{ type: string, name: string, line?: number, matchedTokens: string[], score: number }>} [matchedSymbols]
  */
 
 /**
@@ -62,7 +63,7 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @property {string} [path]
  */
 
-const contextEngineVersion = 1;
+const contextEngineVersion = 2;
 const defaultLimit = 8;
 const stopWords = new Set([
   "a",
@@ -122,10 +123,11 @@ export function generateContextPack(query, options = {}) {
   const primaryFiles = stripEvidence(usedFallback ? selectFallbackPrimaryFiles(maps, limit) : matchedPrimaryFiles, includeEvidence);
   const relatedFiles = stripEvidence(selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, limit), includeEvidence);
   const tests = stripEvidence(selectTests(maps, graphs, scoredFiles, primaryFiles, limit), includeEvidence);
+  const hotspots = buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens);
   const commands = inferCommands(repoPaths, normalizedQuery);
   const patterns = inferPatterns(primaryFiles, relatedFiles, tests, intent);
   const conflicts = inferConflicts(maps);
-  const openQuestions = inferOpenQuestions(primaryFiles, commands, intent, usedFallback);
+  const openQuestions = inferOpenQuestions(primaryFiles, commands, intent, usedFallback, hotspots);
   const sources = inferSources(maps, commands);
 
   const data = /** @type {Record<string, any> & { tokenEstimate?: any }} */ ({
@@ -135,6 +137,7 @@ export function generateContextPack(query, options = {}) {
     query: normalizedQuery,
     intent,
     repos: maps.map(summarizeRepo),
+    hotspots,
     primaryFiles,
     relatedFiles,
     tests,
@@ -143,13 +146,14 @@ export function generateContextPack(query, options = {}) {
     conflicts,
     openQuestions,
     sources,
-    agentPrompt: formatAgentPrompt(normalizedQuery, primaryFiles, relatedFiles, tests, commands),
+    agentPrompt: formatAgentPrompt(normalizedQuery, primaryFiles, relatedFiles, tests, commands, hotspots),
   });
 
   data.tokenEstimate = {
     ...estimateTokenSections([
       { name: "intent", value: data.intent },
       { name: "repos", value: data.repos },
+      { name: "hotspots", value: data.hotspots },
       { name: "primaryFiles", value: data.primaryFiles },
       { name: "relatedFiles", value: data.relatedFiles },
       { name: "tests", value: data.tests },
@@ -187,6 +191,10 @@ export function formatContextPackMarkdown(data) {
     ...data.repos.map(
       (/** @type {{ name: string, root: string, sourceFileCount: number }} */ repo) => `- ${repo.name}: ${repo.root} (${repo.sourceFileCount} source file(s))`,
     ),
+    "",
+    "## Hotspots",
+    "",
+    ...formatHotspots(data.hotspots),
     "",
     "## Primary Files",
     "",
@@ -269,18 +277,21 @@ function scoreFile(map, file, tokens, intent) {
   score += scoreField(map.repo.name, tokens, 3, "repo", reasons);
   score += scoreField(map.repo.package?.name, tokens, 3, "package", reasons);
 
+  let httpScore = 0;
   for (const method of file.httpMethods ?? []) {
-    score += scoreField(`${method.method} ${method.path}`, tokens, 7, "http", reasons);
+    httpScore += scoreField(`${method.method} ${method.path}`, tokens, 7, "http", reasons);
   }
+  score += Math.min(httpScore, 56);
   for (const value of file.imports ?? []) {
     score += scoreField(value, tokens, 3, "import", reasons);
   }
   for (const value of file.exports ?? []) {
     score += scoreField(value, tokens, 8, "export", reasons);
   }
-  for (const symbol of file.symbols ?? []) {
-    score += scoreField(`${symbol.type} ${symbol.name}`, tokens, 9, "symbol", reasons);
-  }
+
+  const symbolMatch = scoreSymbols(file.symbols ?? [], tokens);
+  score += symbolMatch.score;
+  reasons.push(...symbolMatch.reasons);
 
   if ((file.dataAccess?.length ?? 0) > 0) {
     score += Math.min(15, 3 + (file.dataAccess?.length ?? 0));
@@ -294,7 +305,9 @@ function scoreFile(map, file, tokens, intent) {
     reasons.push("test");
   }
 
-  return summarizeFile(map, file, score, reasons);
+  const summarized = summarizeFile(map, file, score, reasons);
+  summarized.matchedSymbols = symbolMatch.matches;
+  return summarized;
 }
 
 /**
@@ -331,7 +344,161 @@ function scoreIntentHints(file, intent, reasons) {
     }
   }
 
+  const domain = normalizeText(file.domain || "");
+  if (domain && intent.topics.includes(domain)) {
+    score += 18;
+    reasons.push("topic domain");
+    if (file.kind === "service" || file.kind === "source" || file.kind === "hook") {
+      score += 12;
+      reasons.push("implementation surface");
+    }
+  }
+
   return score;
+}
+
+/**
+ * Prefer multi-token method/symbol hits over flooding score from every weak
+ * single-token symbol match in large Nest services.
+ * @param {CodeMapSymbol[]} symbols
+ * @param {string[]} tokens
+ * @returns {{ score: number, matches: Array<{ type: string, name: string, line?: number, matchedTokens: string[], score: number }>, reasons: string[] }}
+ */
+function scoreSymbols(symbols, tokens) {
+  if (!symbols.length || !tokens.length) {
+    return { score: 0, matches: [], reasons: [] };
+  }
+
+  /** @type {Array<{ type: string, name: string, line?: number, matchedTokens: string[], score: number }>} */
+  const matches = [];
+  let score = 0;
+
+  for (const symbol of symbols) {
+    const nameTokens = new Set(tokenize(symbol.name));
+    const matchedTokens = tokens.filter((token) => tokenVariants(token).some((variant) => nameTokens.has(variant)));
+    if (!matchedTokens.length) {
+      continue;
+    }
+
+    let hitScore = matchedTokens.length * 9;
+    if (symbol.type === "method" && matchedTokens.length >= 2) {
+      hitScore += matchedTokens.length * 12;
+    }
+    if (symbol.type === "method" && matchedTokens.length >= 3) {
+      hitScore += 24;
+    }
+
+    score += hitScore;
+    matches.push({
+      type: symbol.type,
+      name: symbol.name,
+      line: symbol.line,
+      matchedTokens,
+      score: hitScore,
+    });
+  }
+
+  matches.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  return {
+    score: Math.min(score, 180),
+    matches: matches.slice(0, 8),
+    reasons: matches.length ? ["symbol"] : [],
+  };
+}
+
+/**
+ * Keep primary packs useful across domains instead of filling the budget with
+ * one controller-heavy domain (e.g. booking) when the task spans email too.
+ * @param {ScoredFile[]} files
+ * @param {number} limit
+ * @param {number} maxPerDomain
+ * @returns {ScoredFile[]}
+ */
+function diversifyByDomain(files, limit, maxPerDomain = 3) {
+  /** @type {Map<string, number>} */
+  const counts = new Map();
+  /** @type {ScoredFile[]} */
+  const picked = [];
+
+  for (const file of files) {
+    const domain = file.domain || "unknown";
+    const count = counts.get(domain) ?? 0;
+    if (count >= maxPerDomain) {
+      continue;
+    }
+    counts.set(domain, count + 1);
+    picked.push(file);
+    if (picked.length >= limit) {
+      return picked;
+    }
+  }
+
+  if (picked.length >= limit) {
+    return picked;
+  }
+
+  for (const file of files) {
+    if (picked.some((item) => fileKey(item) === fileKey(file))) {
+      continue;
+    }
+    picked.push(file);
+    if (picked.length >= limit) {
+      break;
+    }
+  }
+
+  return picked;
+}
+
+/**
+ * @param {ScoredFile[]} scoredFiles
+ * @param {ScoredFile[]} primaryFiles
+ * @param {ScoredFile[]} relatedFiles
+ * @param {string[]} tokens
+ */
+function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens) {
+  const focusKeys = new Set([...primaryFiles, ...relatedFiles].map(fileKey));
+  /** @type {Array<{ repo: string, path: string, kind: string, domain: string, symbol: string, type: string, line?: number, matchedTokens: string[], score: number }>} */
+  const hotspots = [];
+
+  for (const file of scoredFiles) {
+    if (!focusKeys.has(fileKey(file)) || !file.matchedSymbols?.length) {
+      continue;
+    }
+    for (const match of file.matchedSymbols) {
+      if (match.matchedTokens.length < 2 && !tokens.some((token) => token === normalizeText(file.domain))) {
+        continue;
+      }
+      hotspots.push({
+        repo: file.repo.name,
+        path: file.path,
+        kind: file.kind,
+        domain: file.domain,
+        symbol: match.name,
+        type: match.type,
+        line: match.line,
+        matchedTokens: match.matchedTokens,
+        score: match.score,
+      });
+    }
+  }
+
+  return hotspots.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path) || a.symbol.localeCompare(b.symbol)).slice(0, 10);
+}
+
+/**
+ * @param {Array<{ repo: string, path: string, symbol: string, type: string, line?: number, matchedTokens: string[], score: number }>|undefined} hotspots
+ * @returns {string[]}
+ */
+function formatHotspots(hotspots) {
+  if (!hotspots?.length) {
+    return ["- No multi-token symbol hotspots matched; start with primary files."];
+  }
+
+  return hotspots.map((item) => {
+    const line = item.line ? `:${item.line}` : "";
+    return `- \`${item.repo}:${item.path}${line}\` \`${item.type} ${item.symbol}\` (tokens: ${item.matchedTokens.join(", ")}; score ${item.score})`;
+  });
 }
 
 /**
@@ -342,7 +509,8 @@ function scoreIntentHints(file, intent, reasons) {
 function selectPrimaryFiles(scoredFiles, limit) {
   const files = uniqueFiles(scoredFiles.filter((file) => file.kind !== "test"));
   const strong = files.filter((file) => file.score >= 25);
-  return (strong.length ? strong : files.slice(0, Math.min(limit, 3))).slice(0, limit);
+  const pool = strong.length ? strong : files.slice(0, Math.min(limit, 3));
+  return diversifyByDomain(pool, limit, 2);
 }
 
 const fallbackEntryStems = new Map([
@@ -614,9 +782,10 @@ function inferConflicts(maps) {
  * @param {EngineCommand[]} commands
  * @param {Intent} intent
  * @param {boolean} usedFallback
+ * @param {Array<{ path: string }>|undefined} [hotspots]
  * @returns {string[]}
  */
-function inferOpenQuestions(primaryFiles, commands, intent, usedFallback) {
+function inferOpenQuestions(primaryFiles, commands, intent, usedFallback, hotspots = []) {
   /** @type {string[]} */
   const questions = [];
   if (!primaryFiles.length) {
@@ -632,7 +801,19 @@ function inferOpenQuestions(primaryFiles, commands, intent, usedFallback) {
   if (intent.action === "unknown") {
     questions.push("The requested action is ambiguous; clarify whether this is implementation, review, debugging, or exploration.");
   }
-  return questions;
+  if (!hotspots.length && primaryFiles.length && !usedFallback) {
+    questions.push("No multi-token symbol hotspots matched; confirm the exact methods or types to change.");
+  }
+  const primaryDomains = new Set(primaryFiles.map((file) => normalizeText(file.domain || "")).filter(Boolean));
+  for (const topic of intent.topics) {
+    if (
+      ["email", "branding", "payment", "fees", "booking", "organisation", "organization", "auth"].includes(topic) &&
+      ![...primaryDomains].some((domain) => domain.includes(topic) || topic.includes(domain))
+    ) {
+      questions.push(`Query topic "${topic}" is not represented in primary file domains; consider narrowing path or re-indexing.`);
+    }
+  }
+  return questions.slice(0, 6);
 }
 
 /**
@@ -688,9 +869,15 @@ function inferIntent(query, tokens) {
  * @param {ScoredFile[]} relatedFiles
  * @param {ScoredFile[]} tests
  * @param {EngineCommand[]} commands
+ * @param {Array<{ repo: string, path: string, symbol: string, type: string, line?: number }>|undefined} [hotspots]
  * @returns {string}
  */
-function formatAgentPrompt(query, primaryFiles, relatedFiles, tests, commands) {
+function formatAgentPrompt(query, primaryFiles, relatedFiles, tests, commands, hotspots = []) {
+  const hotspotList =
+    hotspots
+      .slice(0, 6)
+      .map((item) => `${item.repo}:${item.path}${item.line ? `:${item.line}` : ""}#${item.symbol}`)
+      .join(", ") || "none";
   const fileList =
     [...primaryFiles, ...relatedFiles]
       .slice(0, 12)
@@ -709,6 +896,7 @@ function formatAgentPrompt(query, primaryFiles, relatedFiles, tests, commands) {
       .join(", ") || "none detected";
   return [
     `Task: ${query}`,
+    `Start at these hotspots: ${hotspotList}.`,
     `Read these files first: ${fileList}.`,
     `Check these tests: ${testList}.`,
     `Use the selected patterns before adding new structure.`,
@@ -813,7 +1001,7 @@ function summarizeFile(map, file, score, reasons) {
 // useful when an agent wants the evidence trail. They are dropped by default
 // (includeEvidence:false) so the packet stays compact; path/kind/score/reasons
 // and routing fields are always kept.
-const evidenceFields = ["imports", "exports", "symbols"];
+const evidenceFields = ["imports", "exports", "symbols", "matchedSymbols"];
 
 /**
  * @param {ScoredFile[]} files
@@ -848,11 +1036,13 @@ function scoreField(value, tokens, weight, reason, reasons) {
   }
 
   const normalized = normalizeText(String(value));
+  const normalizedTokens = new Set(tokenize(String(value)));
   let score = 0;
   for (const token of tokens) {
-    if (normalized === token) {
+    const variants = tokenVariants(token);
+    if (variants.some((variant) => normalized === variant)) {
       score += weight * 2;
-    } else if (normalized.includes(token)) {
+    } else if (variants.some((variant) => normalizedTokens.has(variant) || normalized.includes(variant))) {
       score += weight;
     }
   }
@@ -973,6 +1163,33 @@ function tokenize(value) {
     .split(" ")
     .map((token) => token.trim())
     .filter((token) => token.length > 1 && !stopWords.has(token));
+}
+
+/**
+ * Lightweight plural / British spelling variants so query tokens like
+ * "emails" still hit symbols named `...Email` / `organisation` ↔ `organization`.
+ * @param {string} token
+ * @returns {string[]}
+ */
+function tokenVariants(token) {
+  /** @type {Set<string>} */
+  const variants = new Set([token]);
+  if (token.endsWith("ies") && token.length > 4) {
+    variants.add(`${token.slice(0, -3)}y`);
+  }
+  if (token.endsWith("s") && !token.endsWith("ss") && token.length > 3) {
+    variants.add(token.slice(0, -1));
+  }
+  if (token === "organisation") {
+    variants.add("organization");
+  }
+  if (token === "organization") {
+    variants.add("organisation");
+  }
+  if (token === "branding") {
+    variants.add("brand");
+  }
+  return [...variants];
 }
 
 /**

@@ -188,6 +188,20 @@ function symbolForNode(sourceFile, node) {
   if (ts.isClassDeclaration(node) && node.name) {
     return symbol(sourceFile, node, "class", node.name.text);
   }
+  if (ts.isMethodDeclaration(node) && node.name && ts.isIdentifier(node.name)) {
+    const name = node.name.text;
+    if (name === "constructor") {
+      return undefined;
+    }
+    return symbol(sourceFile, node, "method", name);
+  }
+  // Nest/TS services often use field initializers for helpers:
+  // `private resolveX = async () => {}` or `foo = function() {}`.
+  if (ts.isPropertyDeclaration(node) && node.name && ts.isIdentifier(node.name) && node.initializer) {
+    if (ts.isArrowFunction(node.initializer) || ts.isFunctionExpression(node.initializer)) {
+      return symbol(sourceFile, node, "method", node.name.text);
+    }
+  }
   if (ts.isFunctionDeclaration(node) && node.name) {
     return symbol(sourceFile, node, "function", node.name.text);
   }
