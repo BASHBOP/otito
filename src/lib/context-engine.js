@@ -35,6 +35,7 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @property {string[]} [imports]
  * @property {string[]} [exports]
  * @property {CodeMapSymbol[]} [symbols]
+ * @property {Array<{ type: string, name: string, line?: number, matchedTokens: string[], score: number }>} [matchedSymbols]
  */
 
 /**

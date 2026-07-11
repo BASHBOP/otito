@@ -174,10 +174,7 @@ test("generateContextPack ranks email service methods as hotspots over booking c
     ].join("\n"),
   );
 
-  const result = generateContextPack(
-    "extend organisation branding to RSVP confirmation booking cancellation abandonment recovery emails",
-    { path: root },
-  );
+  const result = generateContextPack("extend organisation branding to RSVP confirmation booking cancellation abandonment recovery emails", { path: root });
 
   assert.equal(result.data.contextEngineVersion, 2);
   assert.ok(result.data.primaryFiles.some((file) => file.path === "src/email/email.service.ts"));
