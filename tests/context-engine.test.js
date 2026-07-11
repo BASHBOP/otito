@@ -139,3 +139,50 @@ test("generateContextPack falls back to low-scored matches for narrow symbol que
   assert.equal(result.data.ok, true);
   assert.ok(result.data.primaryFiles.some((file) => file.path === "src/services/events-service.ts"));
 });
+
+test("generateContextPack ranks email service methods as hotspots over booking controllers", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-hotspots-"));
+  fs.mkdirSync(path.join(root, "src", "email"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src", "booking"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "hotspot-fixture", scripts: { test: "node --test" } }));
+  fs.writeFileSync(
+    path.join(root, "src", "email", "email.service.ts"),
+    [
+      "import { Injectable } from '@nestjs/common';",
+      "@Injectable()",
+      "export class EmailService {",
+      "  async sendRsvpConfirmationEmail() {}",
+      "  async sendBookingCancellation() {}",
+      "  async sendBookingAbandonmentRecovery() {}",
+      "  private async resolveEventEmailBranding() {}",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "booking", "booking.controller.ts"),
+    [
+      "import { Controller, Post } from '@nestjs/common';",
+      "@Controller('bookings')",
+      "export class BookingController {",
+      "  @Post('cancel')",
+      "  cancel() {}",
+      "  @Post('recover/:id')",
+      "  recover() {}",
+      "}",
+      "",
+    ].join("\n"),
+  );
+
+  const result = generateContextPack(
+    "extend organisation branding to RSVP confirmation booking cancellation abandonment recovery emails",
+    { path: root },
+  );
+
+  assert.equal(result.data.contextEngineVersion, 2);
+  assert.ok(result.data.primaryFiles.some((file) => file.path === "src/email/email.service.ts"));
+  assert.ok(result.data.hotspots.some((item) => item.path === "src/email/email.service.ts" && item.symbol === "resolveEventEmailBranding"));
+  assert.ok(result.data.hotspots.some((item) => item.symbol === "sendRsvpConfirmationEmail"));
+  assert.ok(result.data.agentPrompt.includes("Start at these hotspots"));
+  assert.match(result.markdown, /## Hotspots/);
+});

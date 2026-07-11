@@ -30,6 +30,39 @@ test("generateCodeMap classifies Nest controllers and methods", () => {
   assert.equal(result.summary.controllers, 1);
   assert.equal(result.files[0].controllerBasePath, "events");
   assert.deepEqual(result.files[0].httpMethods, [{ method: "GET", path: ":id" }]);
+  assert.ok(result.files[0].symbols.some((symbol) => symbol.type === "class" && symbol.name === "EventsController"));
+  assert.ok(result.files[0].symbols.some((symbol) => symbol.type === "method" && symbol.name === "findOne"));
+});
+
+test("generateCodeMap extracts Nest service class methods for context ranking", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-service-methods-"));
+  fs.mkdirSync(path.join(root, "src", "email"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ main: "dist/main" }));
+  fs.writeFileSync(
+    path.join(root, "src", "email", "email.service.ts"),
+    [
+      "import { Injectable } from '@nestjs/common';",
+      "@Injectable()",
+      "export class EmailService {",
+      "  async sendRsvpConfirmationEmail() {}",
+      "  async sendBookingCancellation() {}",
+      "  private async resolveEventEmailBranding() {}",
+      "  private buildFromAddress = (name?: string) => name;",
+      "  constructor() {}",
+      "}",
+      "",
+    ].join("\n"),
+  );
+
+  const result = generateCodeMap(root);
+  const file = result.files.find((item) => item.path === "src/email/email.service.ts");
+  assert.ok(file);
+  assert.ok(file.symbols.some((symbol) => symbol.type === "class" && symbol.name === "EmailService"));
+  assert.ok(file.symbols.some((symbol) => symbol.type === "method" && symbol.name === "sendRsvpConfirmationEmail"));
+  assert.ok(file.symbols.some((symbol) => symbol.type === "method" && symbol.name === "sendBookingCancellation"));
+  assert.ok(file.symbols.some((symbol) => symbol.type === "method" && symbol.name === "resolveEventEmailBranding"));
+  assert.ok(file.symbols.some((symbol) => symbol.type === "method" && symbol.name === "buildFromAddress"));
+  assert.ok(!file.symbols.some((symbol) => symbol.name === "constructor"));
 });
 
 test("generateCodeMap ignores code-like strings in fixtures", () => {

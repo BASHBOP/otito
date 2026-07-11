@@ -6,6 +6,12 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **TypeScript/JavaScript class methods in the code map** so Nest services expose `sendX` / `resolveY` symbols (including arrow property methods), not only top-level classes/types.
+- **Context engine v2 answer-shaped packs**: multi-token method hotspots, domain diversification in primary files, plural/British spelling token variants, and topic→domain implementation boosts so queries like email branding land on `email.service.ts` instead of flooding with booking controllers.
+- **Index cache version bump to 5** so existing `.dev-context/index.json` files regenerate and pick up method symbols.
+
 ## [2.3.1] - 2026-07-01
 
 ### Fixed
