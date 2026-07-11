@@ -39,7 +39,7 @@ Plan the upgrade before 3.0 ships.
 
 ## Canonical MCP tools (3.0)
 
-Same 13 tools as 2.3 — see [README](../README.md#mcp) and [MCP workflows](./02-mcp-agent-workflows/README.md).
+Same 13 tools as 2.3 — see [MCP and Agent Workflows](./02-mcp-agent-workflows/README.md).
 
 ## Timeline guidance
 
@@ -47,4 +47,4 @@ Same 13 tools as 2.3 — see [README](../README.md#mcp) and [MCP workflows](./02
 - **3.0.0-rc:** legacy MCP names removed from `tools/call`; migration window closes.
 - **3.0.0:** `dev-context` bin removed; breaking semver bump.
 
-Track release notes in [CHANGELOG.md](../CHANGELOG.md) for the exact 3.0 ship date.
+Track release notes in [CHANGELOG.md](https://github.com/nugehs/repoctx/blob/main/CHANGELOG.md) for the exact 3.0 ship date.
