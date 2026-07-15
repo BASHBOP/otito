@@ -1,0 +1,118 @@
+{
+  "ok": true,
+  "generatedAt": "2026-07-15T22:40:53.173Z",
+  "reviewEngineVersion": 1,
+  "request": "review this change",
+  "verdict": "FAIL",
+  "confidence": 35,
+  "repo": {
+    "root": "/home/runner/work/repoctx/repoctx",
+    "name": "repoctx"
+  },
+  "impactSummary": {
+    "concepts": [],
+    "topFiles": [
+      {
+        "path": "src/lib/review.js",
+        "score": 41,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/pr-review.js",
+        "score": 36,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/agent-tools.js",
+        "score": 22,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/args.js",
+        "score": 22,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/ax.js",
+        "score": 22,
+        "riskFlags": []
+      }
+    ],
+    "risks": [
+      "No obvious high-risk domain detected. Main risk is missing a caller or test outside the matched files."
+    ]
+  },
+  "prReviewSummary": {
+    "changedFiles": 0,
+    "additions": 0,
+    "deletions": 0,
+    "riskLevel": "low",
+    "riskFlags": [],
+    "reviewTargetsCount": 0
+  },
+  "pass": {
+    "verdict": "FAIL",
+    "policy": "standard",
+    "governance": "team",
+    "checks": [
+      {
+        "name": "PR state",
+        "status": "WARN",
+        "summary": "GitHub mergeability is not settled yet."
+      },
+      {
+        "name": "Changed files",
+        "status": "PASS",
+        "summary": "16 changed files reported."
+      },
+      {
+        "name": "Secret safety",
+        "status": "PASS",
+        "summary": "No obvious secret file changes found."
+      },
+      {
+        "name": "Risk review",
+        "status": "WARN",
+        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+      },
+      {
+        "name": "Release discipline",
+        "status": "PASS",
+        "summary": "Version metadata changed but the project version is unchanged (dependency or lockfile update)."
+      },
+      {
+        "name": "Review decision",
+        "status": "WARN",
+        "summary": "GitHub did not return a review decision; verify required reviewers manually."
+      },
+      {
+        "name": "CODEOWNERS",
+        "status": "FAIL",
+        "summary": "CODEOWNERS approval is missing for one or more changed files."
+      },
+      {
+        "name": "Review conversations",
+        "status": "PASS",
+        "summary": "No unresolved PR review conversations found."
+      },
+      {
+        "name": "Branch protection",
+        "status": "WARN",
+        "summary": "Could not inspect branch protection: gh api repos/nugehs/repoctx/branches/main/protection: gh: Resource not accessible by integration (HTTP 403)"
+      },
+      {
+        "name": "Status checks",
+        "status": "PASS",
+        "summary": "All returned status checks passed."
+      },
+      {
+        "name": "Policy profile",
+        "status": "PASS",
+        "summary": "Standard policy profile active."
+      }
+    ]
+  },
+  "tokenEstimate": {
+    "fullJson": 525
+  }
+}
