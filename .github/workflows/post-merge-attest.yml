@@ -1,0 +1,162 @@
+name: Post-merge audit attestation
+
+# Run only after repoctx CI has completed successfully. For ordinary main
+# pushes, the completed push workflow supplies the exact commit. Dependabot
+# auto-merges performed with GITHUB_TOKEN do not emit another push workflow,
+# so the completed PR workflow is also reconciled once GitHub reports it merged.
+on:
+  workflow_run:
+    workflows: ["repoctx CI"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Main commit to reconcile through (defaults to origin/main)
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: repoctx-post-merge-audit-ledger
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: >-
+      github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' &&
+        (github.event.workflow_run.event == 'pull_request' ||
+          (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')))
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve merged main commit
+        id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
+          RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ACTOR: ${{ github.event.workflow_run.actor.login }}
+          PR_NUMBER: ${{ github.event.workflow_run.pull_requests[0].number }}
+          REQUESTED_SHA: ${{ inputs.target_sha }}
+        run: |
+          set -euo pipefail
+          echo "should_run=false" >> "$GITHUB_OUTPUT"
+
+          TARGET_SHA=""
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TARGET_SHA="${REQUESTED_SHA:-main}"
+          elif [ "$RUN_EVENT" = "push" ] && [ "$RUN_HEAD_BRANCH" = "main" ]; then
+            TARGET_SHA="$RUN_HEAD_SHA"
+          elif [ "$RUN_EVENT" = "pull_request" ] && [ -n "${PR_NUMBER:-}" ]; then
+            ATTEMPTS=1
+            if [ "$RUN_ACTOR" = "dependabot[bot]" ]; then
+              ATTEMPTS=6
+            fi
+            for attempt in $(seq 1 "$ATTEMPTS"); do
+              MERGED_AT="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.merged_at // ""')"
+              if [ -n "$MERGED_AT" ]; then
+                TARGET_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.merge_commit_sha')"
+                break
+              fi
+              if [ "$attempt" -lt "$ATTEMPTS" ]; then
+                sleep 5
+              fi
+            done
+          fi
+
+          if [ -z "$TARGET_SHA" ]; then
+            echo "No merged main commit is associated with this completed workflow."
+            exit 0
+          fi
+
+          TARGET_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TARGET_SHA}" --jq '.sha')"
+          SHORT_SHA="$(printf '%s' "$TARGET_SHA" | cut -c1-12)"
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout merged main commit
+        if: steps.resolve.outputs.should_run == 'true'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.resolve.outputs.target_sha }}
+          fetch-depth: 0
+
+      - name: Restore durable audit ledger
+        if: steps.resolve.outputs.should_run == 'true'
+        run: |
+          set -euo pipefail
+          if git fetch origin audit-ledger:refs/remotes/origin/audit-ledger; then
+            git show origin/audit-ledger:audit-pilot/ledger.jsonl > audit-pilot/ledger.jsonl
+            git show origin/audit-ledger:audit-pilot/verdict-latest.json > audit-pilot/verdict-latest.json || true
+          else
+            echo "No audit-ledger branch exists yet; starting from the committed pilot ledger."
+          fi
+
+      - name: Set up Node.js
+        if: steps.resolve.outputs.should_run == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.resolve.outputs.should_run == 'true'
+        run: npm ci
+
+      - name: Reconcile missing main attestations
+        if: steps.resolve.outputs.should_run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ steps.resolve.outputs.target_sha }}
+        run: bash scripts/reconcile-attestations.sh
+
+      - name: Persist ledger on audit-ledger branch
+        if: steps.resolve.outputs.should_run == 'true'
+        env:
+          TARGET_SHA: ${{ steps.resolve.outputs.target_sha }}
+          SHORT_SHA: ${{ steps.resolve.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+          LEDGER_DIR="$RUNNER_TEMP/repoctx-audit-ledger"
+          rm -rf "$LEDGER_DIR"
+
+          if git show-ref --verify --quiet refs/remotes/origin/audit-ledger; then
+            git worktree add --detach "$LEDGER_DIR" origin/audit-ledger
+          else
+            git worktree add --detach "$LEDGER_DIR" "$TARGET_SHA"
+            git -C "$LEDGER_DIR" switch --orphan audit-ledger
+            git -C "$LEDGER_DIR" rm -rf . || true
+          fi
+
+          mkdir -p "$LEDGER_DIR/audit-pilot"
+          cp audit-pilot/ledger.jsonl "$LEDGER_DIR/audit-pilot/ledger.jsonl"
+          cp audit-pilot/verdict-latest.json "$LEDGER_DIR/audit-pilot/verdict-latest.json"
+
+          git -C "$LEDGER_DIR" config user.name "github-actions[bot]"
+          git -C "$LEDGER_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$LEDGER_DIR" add audit-pilot/ledger.jsonl audit-pilot/verdict-latest.json
+
+          if git -C "$LEDGER_DIR" diff --cached --quiet; then
+            echo "Audit ledger already contains $TARGET_SHA."
+            exit 0
+          fi
+
+          git -C "$LEDGER_DIR" commit -m "audit: attest main through $SHORT_SHA"
+          git -C "$LEDGER_DIR" push origin HEAD:refs/heads/audit-ledger
+
+      - name: Upload attestation evidence
+        if: always() && steps.resolve.outputs.should_run == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: repoctx-audit-attestation-${{ steps.resolve.outputs.short_sha }}
+          path: |
+            audit-pilot/ledger.jsonl
+            audit-pilot/verdict-latest.json
+          retention-days: 90

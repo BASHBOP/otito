@@ -23,20 +23,52 @@ if [ -f "$LEDGER" ] && grep -q "\"mergeSha\":\"$MERGE_SHA\"" "$LEDGER"; then
   exit 0
 fi
 
-PR="$(git log -1 --format=%s | sed -n 's/.*(#\([0-9][0-9]*\)).*/\1/p' || true)"
-AUTHOR="$(git log -1 --format=%an)"
-COMMITTED="$(git log -1 --format=%aI)"
+PR="$(git log -1 --format=%s "$MERGE_SHA" | sed -n 's/.*(#\([0-9][0-9]*\)).*/\1/p' || true)"
+AUTHOR="$(git log -1 --format=%an "$MERGE_SHA")"
+COMMITTED="$(git log -1 --format=%aI "$MERGE_SHA")"
 VERDICT="$ROOT/audit-pilot/verdict-latest.json"
 
-if [ -n "$PR" ] && command -v gh >/dev/null 2>&1; then
+is_valid_verdict() {
+  node -e '
+    const fs = require("node:fs");
+    try {
+      const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+      process.exit(value.ok === true && ["PASS", "WARN", "FAIL"].includes(value.verdict) ? 0 : 1);
+    } catch {
+      process.exit(1);
+    }
+  ' "$VERDICT"
+}
+
+capture_review() {
+  set +e
+  "$@" > "$VERDICT" 2>/dev/null
+  local status=$?
+  set -e
+  if is_valid_verdict; then
+    if [ "$status" -ne 0 ]; then
+      echo "post-merge-attest: review returned a blocking verdict (exit $status); recording it"
+    fi
+    return 0
+  fi
+  return 1
+}
+
+if [ "${REPOCTX_ATTEST_MODE:-auto}" != "diff" ] && [ -n "$PR" ] && command -v gh >/dev/null 2>&1; then
   echo "post-merge-attest: review via PR #$PR"
-  if ! node src/cli.js review . --pr "$PR" --json > "$VERDICT" 2>/dev/null; then
+  if ! capture_review node src/cli.js review . --pr "$PR" --json; then
     echo "post-merge-attest: PR review unavailable; falling back to diff $BASE_SHA..$MERGE_SHA"
-    node src/cli.js review . --base "$BASE_SHA" --head "$MERGE_SHA" --json > "$VERDICT"
+    if ! capture_review node src/cli.js review . --base "$BASE_SHA" --head "$MERGE_SHA" --json; then
+      echo "post-merge-attest: no valid review verdict was produced" >&2
+      exit 1
+    fi
   fi
 else
   echo "post-merge-attest: review via diff $BASE_SHA..$MERGE_SHA"
-  node src/cli.js review . --base "$BASE_SHA" --head "$MERGE_SHA" --json > "$VERDICT"
+  if ! capture_review node src/cli.js review . --base "$BASE_SHA" --head "$MERGE_SHA" --json; then
+    echo "post-merge-attest: no valid review verdict was produced" >&2
+    exit 1
+  fi
 fi
 
 node audit-pilot/attest.mjs \

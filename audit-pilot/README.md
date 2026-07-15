@@ -33,14 +33,28 @@ node attest.mjs --verify        # exits non-zero if any record was altered
 
 ## CI on main
 
-Pushes to `main` run `scripts/post-merge-attest.sh` via the **Post-merge audit attestation** job in `.github/workflows/repoctx-ci.yml`. The job:
+Successful `repoctx CI` runs trigger `.github/workflows/post-merge-attest.yml`. Keeping attestation in a separate `workflow_run` workflow provides two important guarantees:
 
-1. Runs `repoctx review` (PR mode when the merge commit references `#NNN`, otherwise diff mode).
-2. Appends a hash-chained record to `audit-pilot/ledger.jsonl` (skips if the merge SHA is already attested).
-3. Verifies the full chain with `attest.mjs --verify`.
-4. Uploads `ledger.jsonl` and `verdict-latest.json` as artifacts.
+- ordinary pushes are attested only after the main quality gate passes;
+- Dependabot auto-merges are still detected from the completed PR workflow even though merges performed with `GITHUB_TOKEN` do not trigger another push workflow.
+
+The workflow:
+
+1. Resolves the exact merged main commit, ignoring completed PR workflows that have not merged.
+2. Restores the latest ledger from the dedicated `audit-ledger` branch.
+3. Runs `scripts/reconcile-attestations.sh` to backfill every missing first-parent commit in chronological order.
+4. Runs exact diff-mode review for historical gaps and PR-mode review for the newly merged target when its subject references `#NNN`.
+5. Appends and verifies the hash chain with `attest.mjs`.
+6. Commits the ledger and latest verdict to `audit-ledger`, keeping bot-generated evidence commits off `main`.
+7. Uploads commit-specific evidence artifacts for convenient review.
+
+The reconciliation job is serialized, idempotent by merge SHA, and fails if the stored ledger tip is not an ancestor of the requested main commit. A maintainer can also run it manually with the workflow's optional `target_sha` input.
+
+Review exit codes are not verdict validity: a blocking `FAIL` intentionally exits nonzero. The attestation script validates the JSON envelope and records PASS, WARN, or FAIL faithfully; it falls back only when PR review produces no valid verdict.
+
+`ledger-v1.jsonl` preserves the original pilot chain before first-parent completeness was enforced. The canonical `ledger.jsonl` was rebuilt from its unchanged genesis record so the previously skipped `bebc24d` commit and every later main commit are represented in order.
 
 ## Notes / next steps
 
 - This run used **local mode** (`policy: standard`). Production wants **PR mode** (`--pr`) so the gate can verify approvals, CODEOWNERS, and status checks — the "Review state" WARN above is local mode telling you exactly that.
-- Sink: POST each record into the existing `audit` domain. Confirm that table is **append-only / immutable** — that single property is what makes this an audit trail rather than just logs.
+- The `audit-ledger` branch is the durable pilot sink. Protect it from force-pushes and deletions; production should additionally POST each record into an append-only audit store.

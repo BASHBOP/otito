@@ -17,6 +17,12 @@ function runAttest(args, options = {}) {
   });
 }
 
+function git(cwd, args) {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return result.stdout.trim();
+}
+
 test("attest --verify passes on the committed pilot ledger", () => {
   const result = runAttest(["--verify"]);
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -44,4 +50,61 @@ test("attest --verify fails when a ledger record is tampered", () => {
   });
   assert.equal(result.status, 1);
   assert.match(result.stdout, /TAMPERED|CHAIN BROKEN/);
+});
+
+test("post-merge attestation records a valid FAIL verdict even when review exits nonzero", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "post-merge-attest-fail-"));
+  const scriptsDir = path.join(root, "scripts");
+  const pilotDir = path.join(root, "audit-pilot");
+  const srcDir = path.join(root, "src");
+  const binDir = path.join(root, "bin");
+  for (const dir of [scriptsDir, pilotDir, srcDir, binDir]) fs.mkdirSync(dir, { recursive: true });
+
+  fs.copyFileSync(path.join(repoRoot, "scripts", "post-merge-attest.sh"), path.join(scriptsDir, "post-merge-attest.sh"));
+  fs.copyFileSync(attest, path.join(pilotDir, "attest.mjs"));
+  fs.writeFileSync(
+    path.join(srcDir, "cli.js"),
+    [
+      "console.log(JSON.stringify({",
+      "  ok: true, generatedAt: '2026-07-15T00:00:00.000Z', reviewEngineVersion: 1,",
+      "  verdict: 'FAIL', confidence: 42,",
+      "  pass: { policy: 'standard', governance: 'team', checks: [] },",
+      "  prReviewSummary: { changedFiles: 1, riskLevel: 'low', riskFlags: [] },",
+      "  impactSummary: { topFiles: [] }",
+      "}));",
+      "process.exit(1);",
+      "",
+    ].join("\n"),
+  );
+  const fakeGh = path.join(binDir, "gh");
+  fs.writeFileSync(fakeGh, "#!/bin/sh\nexit 0\n");
+  fs.chmodSync(fakeGh, 0o755);
+
+  git(root, ["init", "-q"]);
+  git(root, ["config", "user.name", "Repoctx Test"]);
+  git(root, ["config", "user.email", "repoctx@example.test"]);
+  git(root, ["add", "."]);
+  git(root, ["commit", "-qm", "base"]);
+  const base = git(root, ["rev-parse", "HEAD"]);
+  fs.writeFileSync(path.join(root, "change.txt"), "change\n");
+  git(root, ["add", "."]);
+  git(root, ["commit", "-qm", "fix: guarded merge (#12)"]);
+  const merge = git(root, ["rev-parse", "HEAD"]);
+
+  const result = spawnSync("bash", [path.join(scriptsDir, "post-merge-attest.sh")], {
+    cwd: root,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: `${binDir}:${process.env.PATH}`,
+      GITHUB_SHA: merge,
+      GITHUB_EVENT_BEFORE: base,
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /blocking verdict/);
+  const row = JSON.parse(fs.readFileSync(path.join(pilotDir, "ledger.jsonl"), "utf8"));
+  assert.equal(row.verdict, "FAIL");
+  assert.equal(row.mergeSha, merge);
 });
