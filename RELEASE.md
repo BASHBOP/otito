@@ -6,7 +6,7 @@ repoctx follows Semantic Versioning.
 - Minor: new commands, new MCP tools, new report fields, or backward-compatible behavior.
 - Major: removed commands, renamed fields, incompatible output changes, or changed runtime requirements.
 
-While repoctx is pre-1.0, preserve the same discipline: use patch releases for compatible fixes and minor releases for new or intentionally incompatible development milestones. Reserve `1.0.0` for the first stable CLI/MCP contract.
+Preserve this discipline across the stable 2.x line. Reserve the next major version for intentional CLI, MCP, cache, or runtime incompatibilities with an explicit migration guide.
 
 ## Checklist
 
@@ -19,11 +19,13 @@ While repoctx is pre-1.0, preserve the same discipline: use patch releases for c
 7. Run `npm run version:check`.
 8. Commit the release changes.
 9. Tag the release as `vX.Y.Z` and push the tag.
-10. Pushing the tag triggers the `Release` workflow, which runs the quality gate and publishes to npm with provenance. (Requires the `NPM_TOKEN` repository secret.)
-11. Verify the installed binary:
+10. Confirm npm Trusted Publishing is configured for `nugehs/repoctx` and `.github/workflows/release.yml`. The workflow uses GitHub OIDC (`id-token: write`) for provenance and does not require an `NPM_TOKEN` secret.
+11. Confirm MCP Registry GitHub OIDC access is configured for `io.github.nugehs/repoctx`.
+12. Push the tag. The `Release` workflow runs the full quality gate, publishes npm first, then creates the GitHub release and publishes `server.json` to the MCP Registry.
+13. Verify the published binary:
 
 ```bash
-npm install -g github:nugehs/repoctx
+npm install -g @nugehs/repoctx@2.4.0
 repoctx doctor
 ```
 

@@ -6,12 +6,25 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-07-15
+
 ### Added
 
 - **TypeScript/JavaScript class methods in the code map** so Nest services expose `sendX` / `resolveY` symbols (including arrow property methods), not only top-level classes/types.
 - **Context engine v2 answer-shaped packs**: multi-token method hotspots, domain diversification in primary files, plural/British spelling token variants, and topic→domain implementation boosts so queries like email branding land on `email.service.ts` instead of flooding with booking controllers.
 - **Index cache version bump to 5** so existing `.dev-context/index.json` files regenerate and pick up method symbols.
 - **`repoctx-self-improve` skill** (gated self-eval loop): score context gaps, add corpus/fixture cases, fix ranking/extractors, verify with `score-gap.mjs` — commit/PR only when asked.
+
+### Changed
+
+- **Durable post-merge audit reconciliation** now runs after successful CI, recovers Dependabot auto-merges that suppress push workflows, validates and backfills missing first-parent commits, archives the incomplete pilot v1 ledger, and persists the verified canonical hash chain on an `audit-ledger` branch plus per-commit artifacts.
+- **CI trigger and dependency maintenance policy** now runs branch validation once per PR, reserves push validation for `main`, adopts `actions/setup-node@v7`, and requires explicit migration work for TypeScript major upgrades.
+
+### Fixed
+
+- **Historical attestation metadata** now resolves the PR, author, and commit time from the commit being attested instead of whichever commit happens to be checked out.
+- **Blocking audit verdicts** are now recorded faithfully instead of treating a valid nonzero `FAIL` result as unavailable and silently replacing it with diff fallback.
+- **Release documentation** now matches npm and MCP Registry OIDC trusted publishing instead of referring to a removed `NPM_TOKEN` flow.
 
 ## [2.3.1] - 2026-07-01
 
