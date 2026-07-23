@@ -444,6 +444,8 @@ async function handlePass(parsed) {
       policy: parsed.flags.policy,
       governance: parsed.flags.governance,
       request: parsed.flags.request,
+      minConvergence: parsed.flags.min_convergence,
+      receipt: parsed.flags.receipt,
     })
   );
   noteResult(data);
@@ -478,6 +480,8 @@ async function handlePassPr(parsed) {
       policy: parsed.flags.policy,
       governance: parsed.flags.governance,
       request: parsed.flags.request,
+      minConvergence: parsed.flags.min_convergence,
+      receipt: parsed.flags.receipt,
     })
   );
   noteResult(data);
@@ -531,6 +535,8 @@ async function handleReview(parsed) {
     prSelector: parsed.flags.pr,
     policy: parsed.flags.policy,
     governance: parsed.flags.governance,
+    minConvergence: parsed.flags.min_convergence,
+    receipt: parsed.flags.receipt,
     impactTop: parsed.flags.top,
   });
   noteResult(data);
@@ -1083,8 +1089,8 @@ function handleHelp(_parsed) {
   printText(
     [
       "Merge gate (v2):",
-      "  repoctx gate <repo> [--base ref] [--policy x] [--governance x] [--request text] [--json]   # local gate",
-      "  repoctx gate --pr <selector> [--path repo] [--policy x] [--governance x] [--json]            # GitHub PR gate",
+      "  repoctx gate <repo> [--base ref] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt id|file] [--json]   # local gate",
+      "  repoctx gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt id|file] [--json]            # GitHub PR gate",
       "",
       "Accuracy eval (v2):",
       "  repoctx eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",

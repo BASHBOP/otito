@@ -24,6 +24,8 @@ const reviewEngineVersion = 1;
  * @property {string} [head]
  * @property {string} [policy]
  * @property {string} [governance]
+ * @property {number | string} [minConvergence]
+ * @property {string} [receipt]
  * @property {Runner} [runner]
  */
 
@@ -48,6 +50,8 @@ export async function generateReview(repoPath, options = {}) {
       policy: options.policy,
       governance: options.governance,
       request,
+      minConvergence: options.minConvergence,
+      receipt: options.receipt,
       runner: options.runner,
     });
   } else {
@@ -56,6 +60,8 @@ export async function generateReview(repoPath, options = {}) {
       policy: options.policy,
       governance: options.governance,
       request,
+      minConvergence: options.minConvergence,
+      receipt: options.receipt,
     });
   }
 
