@@ -167,7 +167,7 @@ repoctx 2.3 exposes **13** canonical MCP tools. Legacy names (`pr_review`, `merg
 | `agent_experience` | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity (v2.3+) |
 | `convergence_score`| Score intent vs. execution (0–100) with a recomputable receipt (v2.3+)                |
 | `review_context`   | Diff/comment review context (no verdict)                                              |
-| `review_gate`      | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`              |
+| `review_gate`      | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`; optionally enforces a convergence floor/receipt |
 | `review_verdict`   | Composite verdict: impact + review_context + review_gate                              |
 | `workspace_report` | Build product-level context across multiple repos                                     |
 | `repo_harness`     | Generate setup, validation, runtime, and context commands                             |

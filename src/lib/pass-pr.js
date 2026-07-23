@@ -7,11 +7,12 @@
 import path from "node:path";
 import * as codeowners from "./codeowners.js";
 import { defaultGhRunner } from "./gh.js";
-import { gitRoot, gitShowContent } from "./pass-local.js";
+import { convergenceCheck, gitRoot, gitShowContent } from "./pass-local.js";
 import { aggregateVerdict, normalizeGovernance, normalizeProfile, policyCheck, STATUS } from "./policy.js";
 import { checkRelease } from "./release-check.js";
 import { matchRiskPaths, matchSecretPaths } from "./risk-paths.js";
 import { estimateTokens } from "./tokens.js";
+import { runCommand } from "./tools.js";
 
 /** @typedef {import('./pass-local.js').Check} Check */
 /** @typedef {import('./pass-local.js').Verdict} Verdict */
@@ -90,7 +91,7 @@ const PR_BASE_LABEL = "GitHub PR";
 /**
  * @param {string} repoPath
  * @param {string} selector
- * @param {{ policy?: unknown, governance?: unknown, runner?: Runner, request?: string }} [options]
+ * @param {{ policy?: unknown, governance?: unknown, runner?: Runner, request?: string, minConvergence?: number | string, receipt?: string }} [options]
  */
 export async function evaluatePR(repoPath, selector, options = {}) {
   const profile = normalizeProfile(options.policy);
@@ -115,6 +116,8 @@ export async function evaluatePR(repoPath, selector, options = {}) {
     branchProtectionCheck(root, pr.baseRefName, runner),
     statusChecksCheck(pr.statusCheckRollup ?? []),
   ];
+  const convergence = convergenceCheck(root, localBaseRef(root, pr.baseRefName), options.request, options.minConvergence, options.receipt);
+  if (convergence) checks.push(convergence);
   checks.push(policyCheck({ profile, governance, files, checks, remote: true }));
 
   /** @type {Record<string, unknown> & { tokenEstimate?: { fullJson: number } }} */
@@ -144,6 +147,24 @@ export async function evaluatePR(repoPath, selector, options = {}) {
   };
   data.tokenEstimate = { fullJson: estimateTokens(data) };
   return data;
+}
+
+/**
+ * Resolve a locally available ref for the PR base so convergence can compare
+ * the checked-out diff with the same branch the PR targets.
+ * @param {string} root
+ * @param {string | undefined} baseRefName
+ * @returns {string | null}
+ */
+function localBaseRef(root, baseRefName) {
+  const candidates = [];
+  if (baseRefName) candidates.push(`origin/${baseRefName}`, baseRefName);
+  candidates.push("origin/main", "main", "HEAD");
+  for (const candidate of candidates) {
+    const result = runCommand("git", ["rev-parse", "--verify", candidate], { cwd: root });
+    if (result.ok) return candidate;
+  }
+  return null;
 }
 
 // Resolve version-file content at the PR base for release-discipline scoping.

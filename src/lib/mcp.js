@@ -233,6 +233,14 @@ export const tools = [
         policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
         governance: { type: "string", description: "Governance: team (default) or solo." },
         request: { type: "string", description: "Optional change request for context evidence output." },
+        minConvergence: {
+          type: "number",
+          description: "Optional minimum convergence score (0–100). Enables a failing gate when the task/diff score is below this floor.",
+        },
+        receipt: {
+          type: "string",
+          description: "Optional convergence receipt id, hash, JSON object, or path to a JSON receipt artifact. Must match the current task, base, and commit.",
+        },
       },
     },
   },
@@ -252,6 +260,8 @@ export const tools = [
         policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
         governance: { type: "string", description: "Governance: team (default) or solo." },
         impactTop: { type: "number", description: "Number of impact files. Defaults to 8." },
+        minConvergence: { type: "number", description: "Optional minimum convergence score (0–100) enforced by the merge gate." },
+        receipt: { type: "string", description: "Optional convergence receipt id, hash, JSON object, or path to a JSON receipt artifact." },
       },
     },
   },
@@ -607,6 +617,8 @@ async function dispatchTool(name, args) {
           policy: args.policy,
           governance: args.governance,
           request: args.request,
+          minConvergence: args.minConvergence,
+          receipt: args.receipt,
         });
       }
       return evaluateLocal(args.path ?? ".", {
@@ -614,6 +626,8 @@ async function dispatchTool(name, args) {
         policy: args.policy,
         governance: args.governance,
         request: args.request,
+        minConvergence: args.minConvergence,
+        receipt: args.receipt,
       });
     }
     case "review_verdict": {
@@ -623,6 +637,8 @@ async function dispatchTool(name, args) {
         prSelector: args.pr,
         policy: args.policy,
         governance: args.governance,
+        minConvergence: args.minConvergence,
+        receipt: args.receipt,
         impactTop: args.impactTop,
       });
       return data;

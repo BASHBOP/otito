@@ -136,11 +136,27 @@ Pure pieces are unit-tested (`tests/converge.test.js`): receipt determinism, ord
 independence, sensitivity to load-bearing inputs, and band thresholds. The git/diff path is
 exercised through the CLI and MCP-dispatch suites.
 
-## 8. Open questions
+## 8. Gate integration
+
+Convergence can now be made load-bearing by passing a task plus either a minimum
+score, a receipt, or both to the local/PR gate:
+
+```bash
+repoctx gate . --base origin/main --request "update the greeting" --min-convergence 80
+repoctx converge . "update the greeting" --base origin/main --json > .dev-context/convergence.json
+repoctx gate . --base origin/main --request "update the greeting" --receipt .dev-context/convergence.json
+```
+
+The gate recomputes the score from the selected diff and fails when the score is
+below the requested floor or when the supplied receipt id/hash does not match the
+current task, base, and commit. Receipt enforcement is opt-in so existing gate
+verdicts remain backward-compatible.
+
+## 9. Open questions
 
 - **Weights & risk penalties**: defaults are placeholders; calibrate against known-good and
   known-drifted PRs before locking, then move into `config.js`.
 - **Ungrounded tasks**: Coverage 0 is harsh for a real change with a vague task description;
   consider a separate `ungrounded` band rather than folding it into `drift`.
-- **Gate integration**: wire a convergence floor into `review_gate` (thesis lesson 5) so the
-  score becomes load-bearing, plus a `--verify-receipt` mode that recomputes and compares.
+- **Calibration**: tune the score weights and risk penalties against known-good and
+  known-drifted PRs before making a default floor part of a policy profile.

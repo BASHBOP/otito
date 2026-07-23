@@ -13,6 +13,7 @@ import { matchRiskPaths, matchSecretPaths, classifyPath, glyphFor } from "./risk
 import { checkRelease } from "./release-check.js";
 import { aggregateVerdict, normalizeGovernance, normalizeProfile, policyCheck, STATUS } from "./policy.js";
 import { estimateTokens } from "./tokens.js";
+import { generateConvergence } from "./converge.js";
 
 /**
  * A single check produced by the local/PR merge-readiness gates.
@@ -32,7 +33,7 @@ const passEngineVersion = 1;
 
 /**
  * @param {string} repoPath
- * @param {{ policy?: unknown, governance?: unknown, base?: string, request?: string }} [options]
+ * @param {{ policy?: unknown, governance?: unknown, base?: string, request?: string, minConvergence?: number | string, receipt?: string }} [options]
  */
 export function evaluateLocal(repoPath, options = {}) {
   const profile = normalizeProfile(options.policy);
@@ -55,6 +56,8 @@ export function evaluateLocal(repoPath, options = {}) {
   if (audit) checks.push(audit);
   const drift = contractDriftCheck(root);
   if (drift) checks.push(drift);
+  const convergence = convergenceCheck(root, base, options.request, options.minConvergence, options.receipt);
+  if (convergence) checks.push(convergence);
   checks.push(localReviewCheck());
   checks.push(policyCheck({ profile, governance, files, checks, remote: false }));
 
@@ -77,6 +80,88 @@ export function evaluateLocal(repoPath, options = {}) {
   };
   data.tokenEstimate = { fullJson: estimateTokens(data) };
   return data;
+}
+
+/**
+ * Optionally make the deterministic convergence score load-bearing. The check
+ * is opt-in so existing gates retain their current behaviour until a task owner
+ * supplies a threshold and/or receipt.
+ *
+ * @param {string} root
+ * @param {string | null} base
+ * @param {string | undefined} request
+ * @param {number | string | undefined} minConvergence
+ * @param {string | undefined} receipt
+ * @returns {Check | null}
+ */
+export function convergenceCheck(root, base, request, minConvergence, receipt) {
+  const hasThreshold = minConvergence !== undefined && minConvergence !== null && String(minConvergence).trim() !== "";
+  const receiptValue = typeof receipt === "string" ? receipt.trim() : "";
+  if (!hasThreshold && !receiptValue) return null;
+
+  const task = String(request ?? "").trim();
+  if (!task) {
+    return { name: "Convergence", status: STATUS.fail, summary: "A task request is required when convergence enforcement is enabled." };
+  }
+  if (!base) {
+    return { name: "Convergence", status: STATUS.fail, summary: "A locally available base ref is required to verify convergence." };
+  }
+
+  const threshold = hasThreshold ? Number(minConvergence) : undefined;
+  if (threshold !== undefined && (!Number.isFinite(threshold) || threshold < 0 || threshold > 100)) {
+    return { name: "Convergence", status: STATUS.fail, summary: "Minimum convergence must be a number from 0 to 100." };
+  }
+
+  let data;
+  try {
+    data = generateConvergence(task, { path: root, base });
+  } catch (/** @type {any} */ error) {
+    return { name: "Convergence", status: STATUS.fail, summary: `Could not compute convergence: ${error.message ?? String(error)}` };
+  }
+
+  const failures = [];
+  if (threshold !== undefined && data.convergence < threshold) {
+    failures.push(`score ${data.convergence}/100 is below the required minimum of ${threshold}`);
+  }
+  if (receiptValue) {
+    const supplied = readReceiptValue(root, receiptValue);
+    const matches = supplied && (supplied === data.receipt.id || supplied === data.receipt.inputsHash);
+    if (!matches) failures.push("supplied receipt does not match the recomputed receipt for this task, base, and commit");
+  }
+
+  const details = [`Score: ${data.convergence}/100 (${data.band})`, `Receipt: ${data.receipt.id}`];
+  if (threshold !== undefined) details.push(`Minimum: ${threshold}`);
+  if (receiptValue) details.push(`Supplied receipt: ${receiptValue}`);
+  if (failures.length > 0) {
+    return { name: "Convergence", status: STATUS.fail, summary: `Convergence enforcement failed: ${failures.join("; ")}.`, details };
+  }
+  return { name: "Convergence", status: STATUS.pass, summary: "Task and diff satisfy the convergence requirement.", details };
+}
+
+/**
+ * Accept a receipt id/hash directly, a JSON receipt object, or a path to a JSON
+ * artifact produced from `repoctx converge --json`.
+ * @param {string} root
+ * @param {string} value
+ * @returns {string | null}
+ */
+function readReceiptValue(root, value) {
+  let raw = value;
+  const candidate = path.resolve(root, value);
+  if (exists(candidate)) {
+    try {
+      raw = fs.readFileSync(candidate, "utf8").trim();
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    const receipt = parsed?.receipt ?? parsed;
+    return typeof receipt?.id === "string" ? receipt.id : typeof receipt?.inputsHash === "string" ? receipt.inputsHash : null;
+  } catch {
+    return raw || null;
+  }
 }
 
 /**
