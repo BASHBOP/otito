@@ -498,6 +498,33 @@ test("review_gate (local), review_context, and review_verdict work against a rea
   assert.ok(review.verdict || review.summary || review.impact);
 });
 
+test("review_gate enforces a convergence floor and receipt through MCP", async () => {
+  const fixture = makeGitRepoFixture("merge-convergence");
+  const scored = await runRequests([
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "convergence_score", arguments: { path: fixture, base: "HEAD~1", query: "update the greeting" } },
+    },
+  ]);
+  const receipt = structured(scored, 1).receipt.id;
+  const gated = await runRequests([
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "review_gate",
+        arguments: { path: fixture, base: "HEAD~1", request: "update the greeting", minConvergence: 0, receipt },
+      },
+    },
+  ]);
+  const check = structured(gated, 2).checks.find((entry) => entry.name === "Convergence");
+  assert.equal(check.status, "PASS");
+  assert.match(check.details.join(" "), /Receipt: rcpt_/);
+});
+
 test("convergence_score scores intent vs diff against a real git fixture, with a recomputable receipt", async () => {
   const fixture = makeGitRepoFixture("converge");
   const messages = await runRequests([

@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { evaluateLocal, formatPassMarkdown } from "../src/lib/pass-local.js";
+import { generateConvergence } from "../src/lib/converge.js";
 
 function git(cwd, ...args) {
   const result = spawnSync("git", args, {
@@ -57,6 +58,49 @@ test("evaluateLocal returns PASS when nothing risky changed and tests are presen
   assert.ok(checkNames.includes("Dependency audit"));
   assert.ok(checkNames.includes("Review state"));
   assert.ok(checkNames.includes("Policy profile"));
+});
+
+test("evaluateLocal enforces a convergence floor and matching receipt", () => {
+  const root = initRepo("convergence");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "package-lock.json": JSON.stringify({ name: "fixture", version: "1.0.0", lockfileVersion: 3 }),
+      "src/index.ts": "export const greet = () => 'hi';\n",
+    },
+    "init",
+  );
+  writeAndCommit(root, { "src/index.ts": "export const greet = () => 'hello';\n" }, "tweak");
+
+  const score = generateConvergence("update the greeting", { path: root, base: "HEAD~1" });
+  const result = evaluateLocal(root, {
+    base: "HEAD~1",
+    request: "update the greeting",
+    minConvergence: 0,
+    receipt: score.receipt.id,
+  });
+  const convergence = result.checks.find((check) => check.name === "Convergence");
+  assert.equal(convergence.status, "PASS");
+  assert.match(convergence.details.join(" "), /Receipt: rcpt_/);
+
+  const mismatch = evaluateLocal(root, {
+    base: "HEAD~1",
+    request: "update the greeting",
+    receipt: "rcpt_000000000000",
+  });
+  assert.equal(mismatch.checks.find((check) => check.name === "Convergence").status, "FAIL");
+});
+
+test("evaluateLocal fails convergence enforcement when no task request is supplied", () => {
+  const root = initRepo("convergence-no-task");
+  writeAndCommit(root, { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }), "src/index.ts": "export const hi = 1;\n" }, "init");
+  writeAndCommit(root, { "src/index.ts": "export const hi = 2;\n" }, "tweak");
+
+  const result = evaluateLocal(root, { base: "HEAD~1", minConvergence: 50 });
+  const convergence = result.checks.find((check) => check.name === "Convergence");
+  assert.equal(convergence.status, "FAIL");
+  assert.match(convergence.summary, /task request is required/);
 });
 
 test("evaluateLocal FAILS when a .env file is in the diff", () => {
