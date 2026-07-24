@@ -8,6 +8,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { runCommand } from "./tools.js";
 import { matchRiskPaths, matchSecretPaths, classifyPath, glyphFor } from "./risk-paths.js";
 import { checkRelease } from "./release-check.js";
@@ -29,7 +30,7 @@ import { generateConvergence } from "./converge.js";
  * @typedef {"PASS" | "WARN" | "FAIL"} Verdict
  */
 
-const passEngineVersion = 1;
+const passEngineVersion = 2;
 
 /**
  * @param {string} repoPath
@@ -56,6 +57,10 @@ export function evaluateLocal(repoPath, options = {}) {
   if (audit) checks.push(audit);
   const drift = contractDriftCheck(root);
   if (drift) checks.push(drift);
+  const compliance = complianceControlsCheck(root);
+  if (compliance) checks.push(compliance);
+  const aiGovernance = aiGovernanceCheck(root);
+  if (aiGovernance) checks.push(aiGovernance);
   const convergence = convergenceCheck(root, base, options.request, options.minConvergence, options.receipt);
   if (convergence) checks.push(convergence);
   checks.push(localReviewCheck());
@@ -328,7 +333,7 @@ function contractDriftCheck(root) {
   const cfg = findTielineConfig(root);
   if (!cfg) return null;
   const cwd = path.dirname(cfg);
-  const bin = resolveTielineBin(cwd, root);
+  const bin = resolveToolBin("tieline", cwd, root);
   if (!bin) {
     return {
       name: "Contract drift",
@@ -363,15 +368,124 @@ function contractDriftCheck(root) {
 }
 
 /**
+ * Optional compliance-controls gate, powered by bouncer. A config explicitly
+ * opts a repository into the applicable regulation packs.
+ * @param {string} root
+ * @returns {Check | null}
+ */
+function complianceControlsCheck(root) {
+  const cfg = findToolConfig(root, "bouncer.config.json", "REPOCTX_BOUNCER_CONFIG");
+  if (!cfg) return null;
+  const cwd = path.dirname(cfg);
+  const bin = resolveToolBin("bouncer", cwd, root);
+  if (!bin) {
+    return {
+      name: "Compliance controls",
+      status: STATUS.warn,
+      summary: "bouncer config found but the bouncer binary could not be resolved.",
+      details: [cfg],
+    };
+  }
+  const result = runCommand(bin, ["check", "--json", "--no-fail", "--config", cfg], { cwd, timeout: 60000 });
+  const parsed = parseToolJson(result.stdout);
+  if (!parsed) {
+    return {
+      name: "Compliance controls",
+      status: STATUS.warn,
+      summary: "bouncer did not return readable evidence.",
+      details: [result.stderr.trim()].filter(Boolean),
+    };
+  }
+  const failed = Number(parsed?.totals?.fail ?? 0);
+  const unknown = Number(parsed?.totals?.unknown ?? 0);
+  const passed = Number(parsed?.totals?.pass ?? 0);
+  const details = (parsed?.findings ?? [])
+    .filter((/** @type {{ status?: string }} */ finding) => finding.status !== "pass")
+    .slice(0, 10)
+    .map(
+      (/** @type {{ ruleId?: string, status?: string, fix?: string }} */ finding) =>
+        `${finding.ruleId ?? "control"}: ${finding.status ?? "unknown"}${finding.fix ? ` · ${finding.fix}` : ""}`,
+    );
+  if (failed > 0) {
+    return {
+      name: "Compliance controls",
+      status: STATUS.fail,
+      summary: `${failed} required control${failed === 1 ? " is" : "s are"} missing (bouncer).`,
+      details,
+    };
+  }
+  if (unknown > 0) {
+    return {
+      name: "Compliance controls",
+      status: STATUS.warn,
+      summary: `${unknown} control${unknown === 1 ? " could" : "s could"} not be determined (bouncer).`,
+      details,
+    };
+  }
+  return { name: "Compliance controls", status: STATUS.pass, summary: `${passed} configured compliance control${passed === 1 ? "" : "s"} found (bouncer).` };
+}
+
+/**
+ * Optional AI-governance gate, powered by aiglare. When the binary is bundled,
+ * it checks every JS/TS repository and stays green when no AI surfaces exist.
+ * @param {string} root
+ * @returns {Check | null}
+ */
+function aiGovernanceCheck(root) {
+  if (process.env.REPOCTX_AIGLARE !== "1") return null;
+  const bin = resolveToolBin("aiglare", root, root);
+  if (!bin) return null;
+  const result = runCommand(bin, [root, "--json", "--ci"], { cwd: root, timeout: 60000 });
+  const parsed = parseToolJson(result.stdout);
+  if (!parsed) {
+    return {
+      name: "AI governance",
+      status: STATUS.warn,
+      summary: "aiglare did not return readable evidence.",
+      details: [result.stderr.trim()].filter(Boolean),
+    };
+  }
+  const blocking = Number(parsed?.gate?.blocking ?? 0);
+  const surfaces = Number(parsed?.surfaceCount ?? 0);
+  const details = (parsed?.surfaces ?? [])
+    .filter((/** @type {{ severity?: string }} */ surface) => surface.severity === "red")
+    .slice(0, 10)
+    .map((/** @type {{ file?: string, sink?: string }} */ surface) => `${surface.file ?? "AI surface"}: ${surface.sink ?? "unclassified sink"}`);
+  if (blocking > 0 || parsed?.gate?.passed === false) {
+    return {
+      name: "AI governance",
+      status: STATUS.fail,
+      summary: `${blocking} irreversible AI surface${blocking === 1 ? " lacks" : "s lack"} required guardrails (aiglare).`,
+      details,
+    };
+  }
+  return {
+    name: "AI governance",
+    status: STATUS.pass,
+    summary: `${surfaces} AI surface${surfaces === 1 ? "" : "s"} inspected with no blocking governance gap (aiglare).`,
+  };
+}
+
+/**
  * @param {string} root
  * @returns {string | null}
  */
 function findTielineConfig(root) {
-  const envCfg = process.env.REPOCTX_TIELINE_CONFIG;
-  if (envCfg && exists(envCfg)) return path.resolve(envCfg);
+  return findToolConfig(root, "tieline.config.json", "REPOCTX_TIELINE_CONFIG");
+}
+
+/**
+ * @param {string} root
+ * @param {string} fileName
+ * @param {string} environmentVariable
+ * @returns {string | null}
+ */
+function findToolConfig(root, fileName, environmentVariable) {
+  const configured = process.env[environmentVariable];
+  if (configured && exists(configured)) return path.resolve(configured);
   let dir = root;
   for (let i = 0; i < 3; i++) {
-    const candidate = path.join(dir, "tieline.config.json");
+    const candidate = path.join(dir, fileName);
     if (exists(candidate)) return candidate;
     const parent = path.dirname(dir);
     if (parent === dir) break;
@@ -381,18 +495,39 @@ function findTielineConfig(root) {
 }
 
 /**
+ * Resolve a configured, workspace-local, repoctx-local, IDE-bundled, or PATH
+ * tool binary without invoking a shell.
+ * @param {string} name
  * @param {string} cwd
  * @param {string} root
  * @returns {string | null}
  */
-function resolveTielineBin(cwd, root) {
-  for (const base of [cwd, root]) {
-    const local = path.join(base, "node_modules", ".bin", "tieline");
-    if (exists(local)) return local;
+function resolveToolBin(name, cwd, root) {
+  const environmentVariable = `REPOCTX_${name.toUpperCase()}_BIN`;
+  const configured = process.env[environmentVariable];
+  if (configured && exists(configured)) return path.resolve(configured);
+  const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+  const candidates = [
+    path.join(cwd, "node_modules", ".bin", name),
+    path.join(root, "node_modules", ".bin", name),
+    path.join(packageRoot, "node_modules", ".bin", name),
+    path.resolve(packageRoot, "../..", ".bin", name),
+  ];
+  for (const candidate of candidates) {
+    if (exists(candidate)) return candidate;
   }
-  const probe = runCommand("tieline", ["--help"], { cwd, timeout: 10000 });
-  if (probe.ok || /tieline/i.test(`${probe.stdout}${probe.stderr}`)) return "tieline";
+  const probe = runCommand(name, ["--help"], { cwd, timeout: 10000 });
+  if (probe.ok || new RegExp(name, "i").test(`${probe.stdout}${probe.stderr}`)) return name;
   return null;
+}
+
+/** @param {string} value */
+function parseToolJson(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
 /**
