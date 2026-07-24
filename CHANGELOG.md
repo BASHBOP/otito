@@ -6,10 +6,18 @@ This project follows SemVer.
 
 ## [Unreleased]
 
-## [2.4.0] - 2026-07-15
+## [2.5.0] - 2026-07-24
+
+### Release note
+
+- Version 2.4.0 was prepared in source but was never tagged or published. Version 2.5.0 is the first public package since 2.3.1 and includes the complete change set below.
 
 ### Added
 
+- **Load-bearing convergence evidence in merge gates.** `repoctx gate` can now recompute a task-to-diff convergence score, enforce `--min-convergence`, and verify a supplied `--receipt`; the same options are available through the MCP review gate so agents and humans can require matching intent before merge.
+- **Tieline contract evidence in local gates.** Repositories with `tieline.config.json` now receive deterministic frontend-to-backend contract-drift results as first-class Gate evidence.
+- **Bouncer compliance evidence in local gates.** Repositories with `bouncer.config.json` now receive configured compliance-control findings with explicit pass, warning, or fail status.
+- **Aiglare AI-governance evidence in local gates.** Setting `REPOCTX_AIGLARE=1` adds irreversible AI-surface checks to the Gate receipt, including blocking guardrail failures.
 - **TypeScript/JavaScript class methods in the code map** so Nest services expose `sendX` / `resolveY` symbols (including arrow property methods), not only top-level classes/types.
 - **Context engine v2 answer-shaped packs**: multi-token method hotspots, domain diversification in primary files, plural/British spelling token variants, and topic→domain implementation boosts so queries like email branding land on `email.service.ts` instead of flooding with booking controllers.
 - **Index cache version bump to 5** so existing `.dev-context/index.json` files regenerate and pick up method symbols.
@@ -17,6 +25,7 @@ This project follows SemVer.
 
 ### Changed
 
+- **Gate evidence engine v2** resolves configured, workspace-local, Repoctx-local, IDE-bundled, or PATH tool binaries without shell-composed commands and records their structured evidence in the durable Gate report.
 - **Durable post-merge audit reconciliation** now runs after successful CI, recovers Dependabot auto-merges that suppress push workflows, validates and backfills missing first-parent commits, archives the incomplete pilot v1 ledger, and persists the verified canonical hash chain on an `audit-ledger` branch plus per-commit artifacts.
 - **CI trigger and dependency maintenance policy** now runs branch validation once per PR, reserves push validation for `main`, adopts `actions/setup-node@v7`, and requires explicit migration work for TypeScript major upgrades.
 
