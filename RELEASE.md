@@ -25,7 +25,7 @@ Preserve this discipline across the stable 2.x line. Reserve the next major vers
 13. Verify the published binary:
 
 ```bash
-npm install -g @nugehs/repoctx@2.4.0
+npm install -g @nugehs/repoctx@2.5.0
 repoctx doctor
 ```
 
