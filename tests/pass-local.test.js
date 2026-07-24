@@ -60,6 +60,99 @@ test("evaluateLocal returns PASS when nothing risky changed and tests are presen
   assert.ok(checkNames.includes("Policy profile"));
 });
 
+test("evaluateLocal includes configured tieline contract evidence", () => {
+  const root = initRepo("tieline");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "package-lock.json": JSON.stringify({ name: "fixture", version: "1.0.0", lockfileVersion: 3 }),
+      "src/index.ts": "export const hi = 1;\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "tieline.config.json"), JSON.stringify({ frontend: ".", backend: "." }));
+  const bin = path.join(root, "fake-tieline");
+  fs.writeFileSync(bin, `#!/usr/bin/env node\nconsole.log(JSON.stringify({ totals: { drift: 0 }, drift: [] }));\n`);
+  fs.chmodSync(bin, 0o755);
+  const previous = process.env.REPOCTX_TIELINE_BIN;
+  process.env.REPOCTX_TIELINE_BIN = bin;
+  try {
+    const result = evaluateLocal(root, { base: "HEAD" });
+    const contracts = result.checks.find((check) => check.name === "Contract drift");
+    assert.equal(contracts.status, "PASS");
+    assert.match(contracts.summary, /No frontend↔backend contract drift/);
+  } finally {
+    if (previous === undefined) delete process.env.REPOCTX_TIELINE_BIN;
+    else process.env.REPOCTX_TIELINE_BIN = previous;
+  }
+});
+
+test("evaluateLocal includes configured bouncer compliance evidence", () => {
+  const root = initRepo("bouncer");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "package-lock.json": JSON.stringify({ name: "fixture", version: "1.0.0", lockfileVersion: 3 }),
+      "src/index.ts": "export const hi = 1;\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "bouncer.config.json"), JSON.stringify({ target: { adapter: "next", repo: "." }, packs: ["uk-osa"] }));
+  const bin = path.join(root, "fake-bouncer");
+  fs.writeFileSync(
+    bin,
+    `#!/usr/bin/env node\nconsole.log(JSON.stringify({ totals: { pass: 2, fail: 1, unknown: 0 }, findings: [{ ruleId: 'osa.report', status: 'fail', fix: 'Add report controls.' }] }));\n`,
+  );
+  fs.chmodSync(bin, 0o755);
+  const previous = process.env.REPOCTX_BOUNCER_BIN;
+  process.env.REPOCTX_BOUNCER_BIN = bin;
+  try {
+    const result = evaluateLocal(root, { base: "HEAD" });
+    const compliance = result.checks.find((check) => check.name === "Compliance controls");
+    assert.equal(compliance.status, "FAIL");
+    assert.match(compliance.summary, /1 required control is missing/);
+  } finally {
+    if (previous === undefined) delete process.env.REPOCTX_BOUNCER_BIN;
+    else process.env.REPOCTX_BOUNCER_BIN = previous;
+  }
+});
+
+test("evaluateLocal includes opted-in aiglare governance evidence", () => {
+  const root = initRepo("aiglare");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "package-lock.json": JSON.stringify({ name: "fixture", version: "1.0.0", lockfileVersion: 3 }),
+      "src/index.ts": "export const hi = 1;\n",
+    },
+    "init",
+  );
+  const bin = path.join(root, "fake-aiglare");
+  fs.writeFileSync(
+    bin,
+    `#!/usr/bin/env node\nconsole.log(JSON.stringify({ surfaceCount: 1, surfaces: [{ file: 'src/ai.ts', sink: 'side-effectful', severity: 'red' }], gate: { passed: false, blocking: 1 } }));\n`,
+  );
+  fs.chmodSync(bin, 0o755);
+  const previousBin = process.env.REPOCTX_AIGLARE_BIN;
+  const previousOptIn = process.env.REPOCTX_AIGLARE;
+  process.env.REPOCTX_AIGLARE_BIN = bin;
+  process.env.REPOCTX_AIGLARE = "1";
+  try {
+    const result = evaluateLocal(root, { base: "HEAD" });
+    const governance = result.checks.find((check) => check.name === "AI governance");
+    assert.equal(governance.status, "FAIL");
+    assert.match(governance.summary, /1 irreversible AI surface lacks/);
+  } finally {
+    if (previousBin === undefined) delete process.env.REPOCTX_AIGLARE_BIN;
+    else process.env.REPOCTX_AIGLARE_BIN = previousBin;
+    if (previousOptIn === undefined) delete process.env.REPOCTX_AIGLARE;
+    else process.env.REPOCTX_AIGLARE = previousOptIn;
+  }
+});
+
 test("evaluateLocal enforces a convergence floor and matching receipt", () => {
   const root = initRepo("convergence");
   writeAndCommit(
