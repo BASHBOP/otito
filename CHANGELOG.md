@@ -6,6 +6,12 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-07-27
+
+### Added
+
+- **Automatic staged pre-commit Gate.** `repoctx gate --staged` now evaluates exactly the files already staged for commit, provides an opt-in Git hook installer, and records scope-aware receipts. The same staged safety check is available through the built-in MCP server for IDE and agent integrations.
+
 ## [2.5.0] - 2026-07-24
 
 ### Release note
