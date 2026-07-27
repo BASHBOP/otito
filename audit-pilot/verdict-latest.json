@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-24T11:10:26.188Z",
+  "generatedAt": "2026-07-27T20:13:13.648Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "FAIL",
@@ -65,7 +65,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "5 changed files reported."
+        "summary": "9 changed files reported."
       },
       {
         "name": "Secret safety",
@@ -74,13 +74,13 @@
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata changed but the project version is unchanged (dependency or lockfile update)."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Review decision",
@@ -104,8 +104,8 @@
       },
       {
         "name": "Status checks",
-        "status": "FAIL",
-        "summary": "One or more status checks failed."
+        "status": "PASS",
+        "summary": "All returned status checks passed."
       },
       {
         "name": "Policy profile",
@@ -115,6 +115,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 531
+    "fullJson": 510
   }
 }
