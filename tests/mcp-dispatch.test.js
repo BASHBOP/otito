@@ -498,6 +498,20 @@ test("review_gate (local), review_context, and review_verdict work against a rea
   assert.ok(review.verdict || review.summary || review.impact);
 });
 
+test("review_gate supports a staged pre-commit scope", async () => {
+  const fixture = makeGitRepoFixture("staged-gate");
+  fs.writeFileSync(path.join(fixture, "src", "index.ts"), "export const hello = 'staged';\n");
+  git(fixture, "add", "src/index.ts");
+
+  const messages = await runRequests([
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, base: "HEAD", staged: true } } },
+  ]);
+
+  const gate = structured(messages, 1);
+  assert.equal(gate.scope, "staged");
+  assert.ok(gate.changedFiles.includes("src/index.ts"));
+});
+
 test("review_gate enforces a convergence floor and receipt through MCP", async () => {
   const fixture = makeGitRepoFixture("merge-convergence");
   const scored = await runRequests([

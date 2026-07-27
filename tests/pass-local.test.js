@@ -60,6 +60,30 @@ test("evaluateLocal returns PASS when nothing risky changed and tests are presen
   assert.ok(checkNames.includes("Policy profile"));
 });
 
+test("evaluateLocal evaluates only the Git index when staged mode is enabled", () => {
+  const root = initRepo("staged");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "package-lock.json": JSON.stringify({ name: "fixture", version: "1.0.0", lockfileVersion: 3 }),
+      "src/index.ts": "export const greet = () => 'hi';\n",
+      "src/unstaged.ts": "export const unstaged = false;\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "src/index.ts"), "export const greet = () => 'hello';\n");
+  git(root, "add", "src/index.ts");
+  fs.writeFileSync(path.join(root, "src/unstaged.ts"), "export const unstaged = true;\n");
+  fs.writeFileSync(path.join(root, ".env"), "SECRET=not-staged\n");
+
+  const result = evaluateLocal(root, { base: "HEAD", staged: true });
+  assert.equal(result.scope, "staged");
+  assert.deepEqual(result.changedFiles, ["src/index.ts"]);
+  assert.equal(result.verdict, "PASS");
+  assert.equal(result.checks.find((check) => check.name === "Review state").status, "PASS");
+  assert.equal(result.checks.find((check) => check.name === "Secret safety").status, "PASS");
+});
 test("evaluateLocal includes configured tieline contract evidence", () => {
   const root = initRepo("tieline");
   writeAndCommit(

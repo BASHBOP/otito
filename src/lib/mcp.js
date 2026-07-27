@@ -228,6 +228,7 @@ export const tools = [
       type: "object",
       properties: {
         pr: { type: "string", description: "Optional PR selector (number, URL, or branch). When set, runs the GitHub gate; when absent, runs the local gate." },
+        staged: { type: "boolean", description: "Inspect only the Git index. Use this for automatic pre-commit readiness; ignored in GitHub PR mode." },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         base: { type: "string", description: "Base ref for the local gate. Defaults to origin/main, then HEAD. Ignored in PR mode." },
         policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
@@ -628,6 +629,7 @@ async function dispatchTool(name, args) {
         request: args.request,
         minConvergence: args.minConvergence,
         receipt: args.receipt,
+        staged: args.staged,
       });
     }
     case "review_verdict": {

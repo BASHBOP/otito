@@ -8,8 +8,8 @@ const defaultToolRef = "main";
 const workflowPath = ".github/workflows/repoctx-ci.yml";
 const hookPath = ".githooks/pre-commit";
 
-// Pre-commit runs only the fast, deterministic static checks — never the slow
-// (test/build/audit/smoke) gates, which belong in CI. A harness validate
+// Pre-commit runs the staged Repoctx gate plus fast static checks — never the
+// slow (test/build/audit/smoke) gates, which belong in CI. A harness validate
 // command qualifies when its npm script name is a known static check.
 const staticPrecommitScripts = new Set(["lint", "format:check", "typecheck", "type-check", "tsc", "check:type"]);
 
@@ -89,7 +89,7 @@ export function initProject(targetPath = ".", options = {}) {
   const gatesStatus = gatesApplied ? "applied" : wantGates ? "none" : "disabled";
 
   const precommitCommands = wantPrecommit ? selectPrecommitCommands(validate) : [];
-  const precommitApplied = precommitCommands.length > 0;
+  const precommitApplied = wantPrecommit;
   const precommitStatus = precommitApplied ? "applied" : wantPrecommit ? "none" : "disabled";
 
   writeScaffoldFile(root, ".dev-context/README.md", contextReadme(toolRepo, toolRef, { gatesApplied, precommitApplied }), { force, operations });
@@ -180,7 +180,7 @@ function formatPrecommitSummary(result) {
   if (result.precommitStatus === "disabled") {
     return "skipped (--no-precommit)";
   }
-  return "none (no static-check scripts detected)";
+  return "none";
 }
 
 /**
@@ -566,17 +566,27 @@ function hasBunLockfile(root) {
 }
 
 /**
- * Render a POSIX-sh pre-commit hook that runs the given static-check commands.
+ * Render a POSIX-sh pre-commit hook that runs the staged Repoctx gate and the
+ * given static-check commands. The gate is intentionally tied to the Git index
+ * so the receipt describes the commit that is about to be created.
  * @param {HarnessCommand[]} commands
  * @returns {string}
  */
 function buildPrecommitHook(commands) {
   const body = commands.map((command) => command.command).join("\n");
   return `#!/bin/sh
-# Managed by repoctx (\`repoctx init\`). Runs fast static checks before each commit.
+# Managed by repoctx (\`repoctx init\`). Runs the staged safety gate and fast static checks before each commit.
 # Bypass a single commit with: git commit --no-verify
 # Slower gates (tests, build, audit) run in CI, not here.
 set -e
+
+if ! command -v repoctx >/dev/null 2>&1; then
+  echo "repoctx pre-commit: repoctx is required for the staged safety gate. Install it before committing." >&2
+  exit 1
+fi
+
+echo "repoctx pre-commit: checking staged changes"
+repoctx gate . --staged --out .dev-context/gate.md
 
 echo "repoctx pre-commit: running static checks"
 ${body}

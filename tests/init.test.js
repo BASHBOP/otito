@@ -11,7 +11,7 @@ test("initProject scaffolds repoctx files without overwriting by default", () =>
   const result = initProject(fixture, { toolRepo: "example/repoctx", toolRef: "stable" });
 
   assert.equal(result.ok, true);
-  assert.deepEqual(result.created.sort(), [".dev-context/README.md", ".github/workflows/repoctx-ci.yml", ".gitignore"].sort());
+  assert.deepEqual(result.created.sort(), [".dev-context/README.md", ".githooks/pre-commit", ".github/workflows/repoctx-ci.yml", ".gitignore"].sort());
 
   const generatedWorkflowPath = path.join(fixture, ".github", "workflows", "repoctx-ci.yml");
   const workflow = fs.readFileSync(generatedWorkflowPath, "utf8");
@@ -125,6 +125,7 @@ test("initProject injects a harness-driven quality job and pre-commit hook from 
   assert.match(hook, /^#!\/bin\/sh/);
   assert.match(hook, /npm run lint/);
   assert.match(hook, /npm run typecheck/);
+  assert.match(hook, /repoctx gate \. --staged --out \.dev-context\/gate\.md/);
   // slow gates (test/build/audit) never run in the pre-commit hook
   assert.doesNotMatch(hook, /npm test/);
   // the hook must be executable
@@ -148,15 +149,16 @@ test("initProject omits gates and pre-commit when disabled", () => {
   assert.match(workflow, /name: Generate PR review context/);
 });
 
-test("initProject leaves gates and pre-commit off when no scripts are detected", () => {
+test("initProject installs the staged safety hook even when no static scripts are detected", () => {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-bare-"));
   const result = initProject(fixture);
 
   assert.equal(result.gatesApplied, false);
   assert.equal(result.gatesStatus, "none");
-  assert.equal(result.precommitApplied, false);
-  assert.equal(result.precommitStatus, "none");
-  assert.equal(fs.existsSync(path.join(fixture, ".githooks", "pre-commit")), false);
+  assert.equal(result.precommitApplied, true);
+  assert.equal(result.precommitStatus, "applied");
+  const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
+  assert.match(hook, /repoctx gate \. --staged --out \.dev-context\/gate\.md/);
 });
 
 test("initProject uses npm ci when package-lock.json is present", () => {
@@ -182,6 +184,7 @@ test("initProject excludes non-static script names from the pre-commit hook", ()
 
   assert.equal(result.precommitApplied, true);
   const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
+  assert.match(hook, /repoctx gate \. --staged --out \.dev-context\/gate\.md/);
   assert.match(hook, /npm run lint/);
   assert.doesNotMatch(hook, /prototype/);
   assert.doesNotMatch(hook, /npm test/);

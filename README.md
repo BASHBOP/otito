@@ -220,6 +220,7 @@ Merge gate (`gate` is the canonical v2 command; `pass` / `pass-pr` remain as leg
 
 ```bash
 node src/cli.js gate . --base origin/main          # local gate (no GitHub)
+node src/cli.js gate . --staged --base origin/main # exact staged change, suitable for pre-commit hooks
 node src/cli.js gate . --base origin/main --request "update the greeting" --min-convergence 80
 node src/cli.js gate --pr 123 --path .             # GitHub PR gate via gh
 ```
