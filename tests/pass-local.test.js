@@ -84,7 +84,6 @@ test("evaluateLocal evaluates only the Git index when staged mode is enabled", (
   assert.equal(result.checks.find((check) => check.name === "Review state").status, "PASS");
   assert.equal(result.checks.find((check) => check.name === "Secret safety").status, "PASS");
 });
-
 test("evaluateLocal includes configured tieline contract evidence", () => {
   const root = initRepo("tieline");
   writeAndCommit(
