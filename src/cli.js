@@ -446,6 +446,7 @@ async function handlePass(parsed) {
       request: parsed.flags.request,
       minConvergence: parsed.flags.min_convergence,
       receipt: parsed.flags.receipt,
+      staged: parsed.flags.staged,
     })
   );
   noteResult(data);
