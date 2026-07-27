@@ -34,7 +34,7 @@ const passEngineVersion = 2;
 
 /**
  * @param {string} repoPath
- * @param {{ policy?: unknown, governance?: unknown, base?: string, request?: string, minConvergence?: number | string, receipt?: string }} [options]
+ * @param {{ policy?: unknown, governance?: unknown, base?: string, request?: string, minConvergence?: number | string, receipt?: string, staged?: boolean }} [options]
  */
 export function evaluateLocal(repoPath, options = {}) {
   const profile = normalizeProfile(options.policy);
@@ -42,7 +42,8 @@ export function evaluateLocal(repoPath, options = {}) {
 
   const root = gitRoot(repoPath);
   const base = options.base ?? defaultBase(root);
-  const files = changedFiles(root, base);
+  const staged = Boolean(options.staged);
+  const files = changedFiles(root, base, { staged });
 
   /** @param {string} file */
   const baseContent = (file) => gitShowContent(root, base, file);
@@ -63,7 +64,7 @@ export function evaluateLocal(repoPath, options = {}) {
   if (aiGovernance) checks.push(aiGovernance);
   const convergence = convergenceCheck(root, base, options.request, options.minConvergence, options.receipt);
   if (convergence) checks.push(convergence);
-  checks.push(localReviewCheck());
+  checks.push(localReviewCheck({ staged }));
   checks.push(policyCheck({ profile, governance, files, checks, remote: false }));
 
   const verdict = aggregateVerdict(checks);
@@ -76,6 +77,7 @@ export function evaluateLocal(repoPath, options = {}) {
     verdict,
     repo: { root, name: path.basename(root) },
     base,
+    scope: staged ? "staged" : "working-tree",
     request: options.request ?? "",
     policy: profile,
     governance,
@@ -172,9 +174,13 @@ function readReceiptValue(root, value) {
 /**
  * @param {string} root
  * @param {string} base
+ * @param {{ staged?: boolean }} [options]
  * @returns {string[]}
  */
-export function changedFiles(root, base) {
+export function changedFiles(root, base, options = {}) {
+  if (options.staged) {
+    return runGit(root, ["diff", "--cached", "--name-only", "--relative", base, "--"]);
+  }
   const tracked = runGit(root, ["diff", "--name-only", "--relative", base, "--"]);
   const staged = runGit(root, ["diff", "--cached", "--name-only", "--relative", "--"]);
   const untracked = runGit(root, ["ls-files", "--others", "--exclude-standard"]);
@@ -312,8 +318,15 @@ function dependencyAuditCheck(root) {
   return { name: "Dependency audit", status: STATUS.pass, summary: "Dependency audit commands are available.", details: commands };
 }
 
-/** @returns {Check} */
-function localReviewCheck() {
+/** @param {{ staged: boolean }} options @returns {Check} */
+function localReviewCheck(options) {
+  if (options.staged) {
+    return {
+      name: "Review state",
+      status: STATUS.pass,
+      summary: "Staged changes are ready for a local commit; GitHub review controls are verified after a PR exists.",
+    };
+  }
   return {
     name: "Review state",
     status: STATUS.warn,
@@ -664,6 +677,7 @@ const STATUS_TO_RENDER = {
  * @property {Verdict} verdict
  * @property {{ root: string, name: string }} repo
  * @property {string} base
+ * @property {"staged" | "working-tree"} scope
  * @property {string} policy
  * @property {string} governance
  * @property {string[]} changedFiles
@@ -681,7 +695,10 @@ export function formatPassTerminal(data, rendererFactory) {
   const lines = [];
   const sub = [
     { text: data.repo.root, glyph: "📂" },
-    { text: `${data.base} · ${data.changedFiles.length} changed file${data.changedFiles.length === 1 ? "" : "s"} · policy: ${data.policy}`, glyph: "🔀" },
+    {
+      text: `${data.scope} · ${data.base} · ${data.changedFiles.length} changed file${data.changedFiles.length === 1 ? "" : "s"} · policy: ${data.policy}`,
+      glyph: "🔀",
+    },
   ];
   lines.push(renderer.header({ text: "repoctx pass · merge readiness", glyph: "📋" }, sub));
   lines.push("");
@@ -740,7 +757,8 @@ function nextStepFor(data, blocked, warning) {
     if (warning.name === "Review state") return "verify the missing review evidence";
     return "review the warning before merge";
   }
-  return data.changedFiles.length === 0 ? "no changes vs base" : "ready to merge";
+  if (data.changedFiles.length === 0) return data.scope === "staged" ? "stage changes before committing" : "no changes vs base";
+  return data.scope === "staged" ? "ready to commit" : "ready to merge";
 }
 
 /**
@@ -754,6 +772,7 @@ export function formatPassMarkdown(data) {
     `Verdict: **${data.verdict}**`,
     `Repository: \`${data.repo.root}\``,
     `Base: \`${data.base}\``,
+    `Scope: \`${data.scope}\``,
     `Policy: \`${data.policy}\``,
     `Governance: \`${data.governance}\``,
     "",
