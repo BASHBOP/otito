@@ -240,6 +240,21 @@ test("impact accepts both positional and --path forms and writes artifacts", asy
   fs.unlinkSync(out);
 });
 
+test("converge --staged emits an exact Git-index subject", async () => {
+  const fixture = makeGitFixture("converge-staged");
+  fs.writeFileSync(path.join(fixture, "src", "index.ts"), "export const greet = () => 'staged';\n");
+  git(fixture, "add", "src/index.ts");
+  const expectedTree = git(fixture, "write-tree").trim();
+
+  const result = await runCli(["converge", "update the greeting", "--path", fixture, "--base", "HEAD", "--staged", "--json"]);
+  const payload = parseJsonOutput(result.stdout);
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(payload.subject.kind, "git-index");
+  assert.equal(payload.subject.treeSha, expectedTree);
+  assert.deepEqual(payload.receipt.subject, payload.subject);
+});
+
 test("pass evaluates merge readiness on a git fixture", async () => {
   const fixture = makeGitFixture("pass");
   const json = await runCli(["pass", fixture, "--base", "HEAD~1", "--json"]);

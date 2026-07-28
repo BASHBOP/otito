@@ -417,6 +417,7 @@ async function handleConverge(parsed) {
     path: repoPath,
     base: parsed.flags.base ?? parsed.flags.diff_base,
     top: parsed.flags.top,
+    staged: parsed.flags.staged,
   });
   noteResult(data);
 
@@ -1090,8 +1091,8 @@ function handleHelp(_parsed) {
   printText(
     [
       "Merge gate (v2):",
-      "  repoctx gate <repo> [--base ref] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt id|file] [--json]   # local gate",
-      "  repoctx gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt id|file] [--json]            # GitHub PR gate",
+      "  repoctx gate <repo> [--base ref] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
+      "  repoctx gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
       "",
       "Accuracy eval (v2):",
       "  repoctx eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",

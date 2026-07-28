@@ -536,7 +536,7 @@ test("review_gate enforces a convergence floor and receipt through MCP", async (
   ]);
   const check = structured(gated, 2).checks.find((entry) => entry.name === "Convergence");
   assert.equal(check.status, "PASS");
-  assert.match(check.details.join(" "), /Receipt: rcpt_/);
+  assert.match(check.details.join(" "), /Receipt handle: rcpt_/);
 });
 
 test("convergence_score scores intent vs diff against a real git fixture, with a recomputable receipt", async () => {
@@ -576,6 +576,26 @@ test("convergence_score scores intent vs diff against a real git fixture, with a
 
   assert.equal(byId(messages, 3).error?.code, -32602, "missing base is rejected");
   assert.equal(byId(messages, 4).error?.code, -32602, "missing query is rejected");
+});
+
+test("convergence_score staged mode returns a Git-index-bound receipt", async () => {
+  const fixture = makeGitRepoFixture("converge-staged");
+  fs.writeFileSync(path.join(fixture, "src", "index.ts"), "export const greet = () => 'staged';\n");
+  git(fixture, "add", "src/index.ts");
+  const expectedTree = git(fixture, "write-tree").trim();
+  const messages = await runRequests([
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "convergence_score", arguments: { path: fixture, base: "HEAD", query: "update the greeting", staged: true } },
+    },
+  ]);
+  const convergence = structured(messages, 1);
+
+  assert.equal(convergence.subject.kind, "git-index");
+  assert.equal(convergence.subject.treeSha, expectedTree);
+  assert.deepEqual(convergence.receipt.subject, convergence.subject);
 });
 
 test("review_gate with a pr selector runs the GitHub gate path (vs local without one)", async () => {
@@ -806,8 +826,11 @@ test("every MCP tool declares an explicit readOnlyHint annotation", () => {
   assert.equal(byName.get("review_context").annotations.readOnlyHint, false, "review_context can post a GitHub comment");
   assert.equal(byName.get("repo_inspect").annotations.readOnlyHint, true);
   assert.equal(byName.get("context_pack").annotations.readOnlyHint, true);
-  // review_gate with pr unset is a read-only local gate.
-  assert.equal(byName.get("review_gate").annotations.readOnlyHint, true, "review_gate (local mode) is read-only");
+  // Staged convergence uses `git write-tree`, which may write Git object/cache
+  // metadata even though it never changes source files. MCP annotations cannot
+  // vary by input, so these tools are conservatively non-read-only.
+  assert.equal(byName.get("convergence_score").annotations.readOnlyHint, false);
+  assert.equal(byName.get("review_gate").annotations.readOnlyHint, false);
 });
 
 test("the review_* tool descriptions are verb-first and state when to use each vs its siblings", () => {

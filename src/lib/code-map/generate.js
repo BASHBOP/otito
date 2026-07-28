@@ -9,6 +9,11 @@ import { isVendorFile } from "./vendor.js";
 
 const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go", ".cs", ".py", ".java", ".rb", ".rs"]);
 
+/** @param {string} file @returns {boolean} */
+export function isSourceFilePath(file) {
+  return sourceExtensions.has(path.posix.extname(file));
+}
+
 /**
  * @typedef {import('./data-access.js').DataAccessHit} DataAccessHit
  * @typedef {import('./ast.js').CodeSymbol} CodeSymbol
@@ -74,9 +79,52 @@ const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", 
  */
 export function generateCodeMap(repoPath = ".", options = {}) {
   const repo = inspectRepo(repoPath);
-  const files = listRepoFiles(repo.root).filter((file) => sourceExtensions.has(path.extname(file)));
+  const files = listRepoFiles(repo.root).filter(isSourceFilePath);
   const maxSymbols = Number(options.maxSymbols ?? 5000);
   const sourceFiles = /** @type {FileRecord[]} */ (files.map((file) => analyzeFile(repo.root, file, maxSymbols)).filter(Boolean));
+  return assembleCodeMap(repo, sourceFiles);
+}
+
+/**
+ * Build the same scoring map from caller-supplied immutable source text. This
+ * avoids filesystem checkout semantics (filters, case folding, Unicode path
+ * normalisation) when a Git tree is the exact receipt subject.
+ * @param {string} repoRoot
+ * @param {Iterable<{ path: string, text: string }>} sources
+ * @param {{ maxSymbols?: number, name?: string }} [options]
+ * @returns {CodeMap}
+ */
+export function generateCodeMapFromSources(repoRoot, sources, options = {}) {
+  const root = path.resolve(repoRoot);
+  const maxSymbols = Number(options.maxSymbols ?? 5000);
+  /** @type {FileRecord[]} */
+  const sourceFiles = [];
+  let sourceCount = 0;
+  for (const source of sources) {
+    sourceCount += 1;
+    const record = analyzeSource(source.path, source.text, maxSymbols);
+    if (record) sourceFiles.push(record);
+  }
+  return assembleCodeMap(
+    {
+      root,
+      name: options.name ?? path.basename(root),
+      package: null,
+      git: null,
+      fileCount: sourceCount,
+      languages: [],
+      entrypoints: [],
+    },
+    sourceFiles,
+  );
+}
+
+/**
+ * @param {any} repo
+ * @param {FileRecord[]} sourceFiles
+ * @returns {CodeMap}
+ */
+function assembleCodeMap(repo, sourceFiles) {
   const domains = summarizeDomains(sourceFiles);
 
   /** @type {CodeMap} */
@@ -84,7 +132,7 @@ export function generateCodeMap(repoPath = ".", options = {}) {
     ok: true,
     repo: {
       root: repo.root,
-      name: repo.package?.name ?? path.basename(repo.root),
+      name: repo.package?.name ?? repo.name ?? path.basename(repo.root),
       package: repo.package,
       git: repo.git,
       fileCount: repo.fileCount,
@@ -173,6 +221,16 @@ function summarizeFiles(sourceFiles) {
 function analyzeFile(root, relativePath, maxSymbols) {
   const absolute = path.join(root, relativePath);
   const text = safeRead(absolute);
+  return analyzeSource(relativePath, text, maxSymbols);
+}
+
+/**
+ * @param {string} relativePath
+ * @param {string} text
+ * @param {number} maxSymbols
+ * @returns {FileRecord | undefined}
+ */
+function analyzeSource(relativePath, text, maxSymbols) {
   if (!text) {
     return undefined;
   }
