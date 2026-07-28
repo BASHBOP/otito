@@ -22,6 +22,12 @@ function gitInit(prefix, files = {}) {
   return root;
 }
 
+function git(cwd, ...args) {
+  const result = spawnSync("git", args, { cwd, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr || result.stdout}`);
+  return result.stdout.trim();
+}
+
 function fakeRunner(map) {
   return {
     run(_cwd, args) {
@@ -43,6 +49,9 @@ const baselineCanned = {
     title: "Add Stripe refunds",
     url: "https://github.com/org/repo/pull/42",
     baseRefName: "main",
+    baseRefOid: "a".repeat(40),
+    headRefOid: "b".repeat(40),
+    changedFiles: 1,
     isDraft: false,
     mergeStateStatus: "CLEAN",
     mergeable: "MERGEABLE",
@@ -81,6 +90,105 @@ test("evaluatePR returns PASS-grade checks when approved with clean CI and prote
   assert.equal(data.checks.find((c) => c.name === "PR state").status, "PASS");
   assert.equal(data.checks.find((c) => c.name === "Status checks").status, "PASS");
   assert.equal(data.checks.find((c) => c.name === "Branch protection").status, "PASS");
+});
+
+test("PR convergence receipt is bound to GitHub's exact base and head commits", async () => {
+  const root = gitInit("exact-subject", {
+    ".gitignore": ".dev-context/\n",
+    "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+    "src/index.ts": "export const greeting = 'hi';\n",
+  });
+  const mergeBase = git(root, "rev-parse", "HEAD");
+  git(root, "checkout", "-q", "-b", "feature");
+  fs.writeFileSync(path.join(root, "src/index.ts"), "export const greeting = 'hello';\n");
+  git(root, "add", "src/index.ts");
+  git(root, "commit", "-q", "-m", "update greeting");
+  const headSha = git(root, "rev-parse", "HEAD");
+  git(root, "checkout", "-q", "main");
+  fs.writeFileSync(path.join(root, "src/base-only.ts"), "export const baseOnly = true;\n");
+  git(root, "add", "src/base-only.ts");
+  git(root, "commit", "-q", "-m", "advance base");
+  const baseSha = git(root, "rev-parse", "HEAD");
+  git(root, "checkout", "-q", "feature");
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({
+      ...JSON.parse(baselineCanned["pr view"]),
+      baseRefOid: baseSha,
+      headRefOid: headSha,
+      files: [{ path: "src/index.ts" }],
+      changedFiles: 1,
+    }),
+  };
+  git(root, "replace", headSha, baseSha);
+
+  const data = await evaluatePR(root, "42", {
+    runner: fakeRunner(canned),
+    request: "update the greeting",
+    minConvergence: 0,
+  });
+  const convergence = data.checks.find((check) => check.name === "Convergence");
+
+  assert.equal(data.checks.find((check) => check.name === "PR snapshot").status, "PASS");
+  assert.deepEqual(data.subject, {
+    kind: "github-pr",
+    repository: "org/repo",
+    number: 42,
+    baseSha,
+    headSha,
+  });
+  assert.equal(data.pr.baseSha, baseSha);
+  assert.equal(data.pr.headSha, headSha);
+  assert.deepEqual(data.changedFiles, ["src/index.ts"], "base-only changes must not enter GitHub's three-dot PR scope");
+  assert.notEqual(baseSha, mergeBase, "fixture must exercise an advanced base branch");
+  assert.equal(convergence.status, "PASS");
+  assert.deepEqual(convergence.receipt.subject, data.subject);
+  assert.equal(convergence.receipt.commit, headSha);
+  assert.deepEqual(data.receipt, convergence.receipt);
+});
+
+test("PR convergence fails closed when the local checkout is not the GitHub head", async () => {
+  const root = gitInit("head-mismatch", {
+    ".gitignore": ".dev-context/\n",
+    "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
+    "src/index.ts": "export const greeting = 'hi';\n",
+  });
+  const canned = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({
+      ...JSON.parse(baselineCanned["pr view"]),
+      baseRefOid: git(root, "rev-parse", "HEAD"),
+      headRefOid: "c".repeat(40),
+      files: [{ path: "src/index.ts" }],
+      changedFiles: 1,
+    }),
+  };
+
+  const data = await evaluatePR(root, "42", { runner: fakeRunner(canned), request: "update the greeting", minConvergence: 0 });
+  const convergence = data.checks.find((check) => check.name === "Convergence");
+  assert.equal(convergence.status, "FAIL");
+  assert.match(convergence.summary, /not the exact GitHub PR head/);
+});
+
+test("PR convergence fails closed when GitHub omits exact OIDs or a complete file list", async () => {
+  const root = gitInit("incomplete-subject", {
+    ".gitignore": ".dev-context/\n",
+    "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
+  });
+  const missingOid = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({ ...JSON.parse(baselineCanned["pr view"]), baseRefOid: undefined }),
+  };
+  const incompleteFiles = {
+    ...baselineCanned,
+    "pr view": JSON.stringify({ ...JSON.parse(baselineCanned["pr view"]), changedFiles: 2 }),
+  };
+
+  for (const canned of [missingOid, incompleteFiles]) {
+    const data = await evaluatePR(root, "42", { runner: fakeRunner(canned), request: "review the change", minConvergence: 0 });
+    assert.equal(data.checks.find((check) => check.name === "PR snapshot").status, "WARN");
+    assert.equal(data.checks.find((check) => check.name === "Convergence").status, "FAIL");
+  }
 });
 
 test("evaluatePR FAILS when PR is a draft", async () => {
@@ -171,6 +279,7 @@ test("evaluatePR FAILs under high-risk policy when sensitive paths change withou
     "pr view": JSON.stringify({
       ...JSON.parse(baselineCanned["pr view"]),
       files: [{ path: "prisma/schema.prisma" }, { path: "src/payment.ts" }],
+      changedFiles: 2,
     }),
   };
   const data = await evaluatePR(root, "42", { policy: "high-risk", runner: fakeRunner(canned) });
@@ -187,6 +296,7 @@ test("evaluatePR does not warn Risk review when only a test file and a doc chang
     "pr view": JSON.stringify({
       ...JSON.parse(baselineCanned["pr view"]),
       files: [{ path: "tests/checkout.spec.ts" }, { path: "docs/git-checkout-guide.md" }],
+      changedFiles: 2,
     }),
   };
   const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });

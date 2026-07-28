@@ -197,6 +197,25 @@ test("generateImpact validates against a real diff base using the arg-array git 
   assert.ok(result.data.validation.changedFiles.includes("src/payment/processors/stripe.processor.ts"));
 });
 
+test("generateImpact fixes rename semantics independently of local Git config", () => {
+  const root = gitFixture("rename-config", {
+    "package.json": JSON.stringify({ name: "rename-fixture" }),
+    "src/old-name.ts": "export const renamed = true;\n",
+  });
+  fs.renameSync(path.join(root, "src/old-name.ts"), path.join(root, "src/new-name.ts"));
+  spawnSync("git", ["add", "-A"], { cwd: root });
+
+  spawnSync("git", ["config", "diff.renames", "false"], { cwd: root });
+  const disabled = generateImpact("rename the source file", { path: root, diffBase: "HEAD" });
+  spawnSync("git", ["config", "diff.renames", "copies"], { cwd: root });
+  spawnSync("git", ["config", "diff.renameLimit", "1"], { cwd: root });
+  spawnSync("git", ["config", "diff.algorithm", "histogram"], { cwd: root });
+  const copies = generateImpact("rename the source file", { path: root, diffBase: "HEAD" });
+
+  assert.deepEqual(disabled.data.validation.changedFiles, ["src/new-name.ts"]);
+  assert.deepEqual(copies.data.validation.changedFiles, disabled.data.validation.changedFiles);
+});
+
 test("generateImpact reports a clean validation error for a bad diff base instead of throwing", () => {
   const root = gitFixture("validate-bad", {
     "package.json": JSON.stringify({ name: "validate-bad-fixture", scripts: { test: "node --test" } }),

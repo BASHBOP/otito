@@ -14,7 +14,7 @@ import { matchRiskPaths, matchSecretPaths, classifyPath, glyphFor } from "./risk
 import { checkRelease } from "./release-check.js";
 import { aggregateVerdict, normalizeGovernance, normalizeProfile, policyCheck, STATUS } from "./policy.js";
 import { estimateTokens } from "./tokens.js";
-import { generateConvergence } from "./converge.js";
+import { captureStagedSubject, generateConvergence } from "./converge.js";
 
 /**
  * A single check produced by the local/PR merge-readiness gates.
@@ -23,6 +23,10 @@ import { generateConvergence } from "./converge.js";
  * @property {Verdict} status
  * @property {string} summary
  * @property {string[]} [details]
+ * @property {number} [convergence]
+ * @property {string} [band]
+ * @property {Record<string, any>} [receipt]
+ * @property {Record<string, any>} [subject]
  */
 
 /**
@@ -43,12 +47,27 @@ export function evaluateLocal(repoPath, options = {}) {
   const root = gitRoot(repoPath);
   const base = options.base ?? defaultBase(root);
   const staged = Boolean(options.staged);
-  const files = changedFiles(root, base, { staged });
+  let files;
+  let subject = null;
+  let subjectError = "";
+  if (staged) {
+    try {
+      const captured = captureStagedSubject(root, base);
+      subject = captured.subject;
+      files = captured.changedFiles;
+    } catch (/** @type {any} */ error) {
+      subjectError = error.message ?? String(error);
+      files = changedFiles(root, base, { staged: true });
+    }
+  } else {
+    files = changedFiles(root, base);
+  }
 
   /** @param {string} file */
-  const baseContent = (file) => gitShowContent(root, base, file);
+  const baseContent = (file) => gitShowContent(root, subject?.baseSha ?? base, file);
   const checks = [
     changedFilesCheck(files),
+    ...(staged ? [changeSubjectCheck(subject, subjectError)] : []),
     secretCheck(files),
     riskCheck(files),
     checkRelease(root, files, { baseContent, governance }),
@@ -62,7 +81,12 @@ export function evaluateLocal(repoPath, options = {}) {
   if (compliance) checks.push(compliance);
   const aiGovernance = aiGovernanceCheck(root);
   if (aiGovernance) checks.push(aiGovernance);
-  const convergence = convergenceCheck(root, base, options.request, options.minConvergence, options.receipt);
+  const convergence = convergenceCheck(root, base, options.request, options.minConvergence, options.receipt, {
+    staged,
+    subject,
+    subjectError,
+    diffFiles: staged ? files : undefined,
+  });
   if (convergence) checks.push(convergence);
   checks.push(localReviewCheck({ staged }));
   checks.push(policyCheck({ profile, governance, files, checks, remote: false }));
@@ -85,6 +109,12 @@ export function evaluateLocal(repoPath, options = {}) {
     contextEvidence: contextEvidence(base, options.request),
     checks,
   };
+  if (subject) data.subject = subject;
+  if (convergence?.receipt) {
+    data.convergence = convergence.convergence;
+    data.band = convergence.band;
+    data.receipt = convergence.receipt;
+  }
   data.tokenEstimate = { fullJson: estimateTokens(data) };
   return data;
 }
@@ -99,9 +129,10 @@ export function evaluateLocal(repoPath, options = {}) {
  * @param {string | undefined} request
  * @param {number | string | undefined} minConvergence
  * @param {string | undefined} receipt
+ * @param {{ staged?: boolean, subject?: Record<string, unknown> | null, subjectError?: string, diffFiles?: string[], expectedHead?: string, requireClean?: boolean }} [options]
  * @returns {Check | null}
  */
-export function convergenceCheck(root, base, request, minConvergence, receipt) {
+export function convergenceCheck(root, base, request, minConvergence, receipt, options = {}) {
   const hasThreshold = minConvergence !== undefined && minConvergence !== null && String(minConvergence).trim() !== "";
   const receiptValue = typeof receipt === "string" ? receipt.trim() : "";
   if (!hasThreshold && !receiptValue) return null;
@@ -113,6 +144,12 @@ export function convergenceCheck(root, base, request, minConvergence, receipt) {
   if (!base) {
     return { name: "Convergence", status: STATUS.fail, summary: "A locally available base ref is required to verify convergence." };
   }
+  if (options.subjectError) {
+    return { name: "Convergence", status: STATUS.fail, summary: `Could not identify the exact change subject: ${options.subjectError}` };
+  }
+
+  const checkoutMismatch = exactCheckoutFailure(root, options.expectedHead, options.requireClean);
+  if (checkoutMismatch) return checkoutMismatch;
 
   const threshold = hasThreshold ? Number(minConvergence) : undefined;
   if (threshold !== undefined && (!Number.isFinite(threshold) || threshold < 0 || threshold > 100)) {
@@ -121,7 +158,13 @@ export function convergenceCheck(root, base, request, minConvergence, receipt) {
 
   let data;
   try {
-    data = generateConvergence(task, { path: root, base });
+    data = generateConvergence(task, {
+      path: root,
+      base,
+      staged: options.staged,
+      subject: options.subject ?? undefined,
+      diffFiles: options.diffFiles,
+    });
   } catch (/** @type {any} */ error) {
     return { name: "Convergence", status: STATUS.fail, summary: `Could not compute convergence: ${error.message ?? String(error)}` };
   }
@@ -132,17 +175,92 @@ export function convergenceCheck(root, base, request, minConvergence, receipt) {
   }
   if (receiptValue) {
     const supplied = readReceiptValue(root, receiptValue);
-    const matches = supplied && (supplied === data.receipt.id || supplied === data.receipt.inputsHash);
-    if (!matches) failures.push("supplied receipt does not match the recomputed receipt for this task, base, and commit");
+    const exactSubjectReceipt = data.receipt.receiptVersion === 2;
+    const matches =
+      supplied && (exactSubjectReceipt ? supplied === data.receipt.inputsHash : supplied === data.receipt.id || supplied === data.receipt.inputsHash);
+    if (!matches) {
+      failures.push(
+        exactSubjectReceipt && supplied === data.receipt.id
+          ? "exact-subject receipt enforcement requires the full inputs hash, not the abbreviated display ID"
+          : "supplied receipt does not match the recomputed receipt for this task, base, and exact change subject",
+      );
+    }
   }
 
-  const details = [`Score: ${data.convergence}/100 (${data.band})`, `Receipt: ${data.receipt.id}`];
+  const details = [`Score: ${data.convergence}/100 (${data.band})`, `Receipt handle: ${data.receipt.id}`];
+  if (data.receipt.receiptVersion === 2) details.push(`Inputs hash: ${data.receipt.inputsHash}`);
+  if (data.subject?.treeSha) details.push(`Subject tree: ${data.subject.treeSha}`);
+  if (data.subject?.baseSha) details.push(`Base commit: ${data.subject.baseSha}`);
+  if (data.subject?.parentSha) details.push(`Parent commit: ${data.subject.parentSha}`);
+  if (data.subject?.headSha) details.push(`Head commit: ${data.subject.headSha}`);
   if (threshold !== undefined) details.push(`Minimum: ${threshold}`);
   if (receiptValue) details.push(`Supplied receipt: ${receiptValue}`);
+  const evidence = { convergence: data.convergence, band: data.band, receipt: data.receipt, subject: data.subject };
   if (failures.length > 0) {
-    return { name: "Convergence", status: STATUS.fail, summary: `Convergence enforcement failed: ${failures.join("; ")}.`, details };
+    return { name: "Convergence", status: STATUS.fail, summary: `Convergence enforcement failed: ${failures.join("; ")}.`, details, ...evidence };
   }
-  return { name: "Convergence", status: STATUS.pass, summary: "Task and diff satisfy the convergence requirement.", details };
+  return { name: "Convergence", status: STATUS.pass, summary: "Task and diff satisfy the convergence requirement.", details, ...evidence };
+}
+
+/**
+ * @param {Record<string, any> | null} subject
+ * @param {string} error
+ * @returns {Check}
+ */
+function changeSubjectCheck(subject, error) {
+  if (!subject) {
+    return { name: "Staged snapshot", status: STATUS.fail, summary: `Could not identify the exact staged Git tree: ${error || "unknown error"}` };
+  }
+  return {
+    name: "Staged snapshot",
+    status: STATUS.pass,
+    summary: "Changed-file scope and convergence evidence are captured from the exact staged Git tree.",
+    details: [
+      `Tree: ${subject.treeSha}`,
+      `Parent: ${subject.parentSha}`,
+      `Base: ${subject.baseSha}`,
+      "Release, validation-command, and optional analyzer checks still inspect the working tree and are not bound by this convergence receipt.",
+    ],
+  };
+}
+
+/**
+ * PR convergence uses local analysis, so refuse to mix GitHub evidence with a
+ * different or dirty checkout.
+ * @param {string} root
+ * @param {string | undefined} expectedHead
+ * @param {boolean | undefined} requireClean
+ * @returns {Check | null}
+ */
+function exactCheckoutFailure(root, expectedHead, requireClean) {
+  const expected = String(expectedHead ?? "").trim();
+  if (expected) {
+    const head = runCommand("git", ["--no-replace-objects", "rev-parse", "--verify", "HEAD^{commit}"], { cwd: root });
+    const actual = head.ok ? head.stdout.trim() : "";
+    if (!actual || actual !== expected) {
+      return {
+        name: "Convergence",
+        status: STATUS.fail,
+        summary: "Local convergence cannot run because the checkout is not the exact GitHub PR head.",
+        details: [`Expected head: ${expected}`, `Local HEAD: ${actual || "unavailable"}`],
+      };
+    }
+  }
+  if (requireClean) {
+    const status = runCommand("git", ["--no-replace-objects", "status", "--porcelain"], { cwd: root });
+    if (!status.ok) {
+      return { name: "Convergence", status: STATUS.fail, summary: "Could not verify that the PR checkout is clean." };
+    }
+    if (status.stdout.trim()) {
+      return {
+        name: "Convergence",
+        status: STATUS.fail,
+        summary: "Local convergence cannot run against a dirty PR checkout.",
+        details: status.stdout.trim().split("\n").slice(0, 20),
+      };
+    }
+  }
+  return null;
 }
 
 /**
@@ -165,7 +283,7 @@ function readReceiptValue(root, value) {
   try {
     const parsed = JSON.parse(raw);
     const receipt = parsed?.receipt ?? parsed;
-    return typeof receipt?.id === "string" ? receipt.id : typeof receipt?.inputsHash === "string" ? receipt.inputsHash : null;
+    return typeof receipt?.inputsHash === "string" ? receipt.inputsHash : typeof receipt?.id === "string" ? receipt.id : null;
   } catch {
     return raw || null;
   }
@@ -683,6 +801,8 @@ const STATUS_TO_RENDER = {
  * @property {string[]} changedFiles
  * @property {string[]} contextEvidence
  * @property {Check[]} checks
+ * @property {{ kind?: string, baseSha?: string, parentSha?: string, treeSha?: string }} [subject]
+ * @property {Record<string, any>} [receipt]
  */
 
 /**
@@ -700,6 +820,7 @@ export function formatPassTerminal(data, rendererFactory) {
       glyph: "🔀",
     },
   ];
+  if (data.subject?.treeSha) sub.push({ text: `staged tree: ${data.subject.treeSha.slice(0, 12)}`, glyph: "🧾" });
   lines.push(renderer.header({ text: "repoctx pass · merge readiness", glyph: "📋" }, sub));
   lines.push("");
 
@@ -775,6 +896,7 @@ export function formatPassMarkdown(data) {
     `Scope: \`${data.scope}\``,
     `Policy: \`${data.policy}\``,
     `Governance: \`${data.governance}\``,
+    ...(data.subject?.treeSha ? [`Staged tree: \`${data.subject.treeSha}\``, `Parent commit: \`${data.subject.parentSha ?? ""}\``] : []),
     "",
     "## Context Evidence",
     "",
