@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [1.0.3] - 2026-07-29
+
+### Fixed
+
+- **Trustworthy impact evidence.** Change impact now surfaces every mapped file from the requested Git diff as exact evidence, preserves the heuristic-only scorecard, and reports unmapped files explicitly.
+- **Read-only repository inspection.** Code-map caching now lives in a per-user external cache rather than creating `.otito/index.json` inside inspected repositories.
+- **Composite review statistics.** Review summaries now report the actual additions and deletions from the PR comparison.
+- **Generated artifact hygiene.** Formatting ignores legacy generated context reports so source validation reflects the checked-in source.
+
 ## [1.0.2] - 2026-07-29
 
 ### Fixed
