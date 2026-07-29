@@ -210,7 +210,8 @@ test("context command emits json, text, and writes an artifact", async () => {
 
   const text = await runCli(["context", "add events tool", "--path", fixture]);
   assert.equal(text.exitCode, 0);
-  assert.match(text.stdout, /Context Pack/);
+  assert.match(text.stdout, /otito context · repository guide/);
+  assert.match(text.stdout, /Primary files/);
 
   const out = path.join(os.tmpdir(), `otito-cli-context-${Date.now()}.md`);
   const written = await runCli(["context", "add events tool", "--path", fixture, "--out", out]);
