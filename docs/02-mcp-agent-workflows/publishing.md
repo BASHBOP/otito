@@ -49,8 +49,8 @@ Add or update these fields:
 ```json
 {
   "name": "@bashbop/otito",
-  "version": "1.0.0",
-  "mcpName": "io.github.bashbop/otito",
+  "version": "1.0.2",
+  "mcpName": "io.github.BASHBOP/otito",
   "bin": {
     "otito": "src/cli.js"
   },
@@ -148,7 +148,7 @@ npx -y @bashbop/otito --help          # after publication: downloads fresh and r
 
 !!! warning "npm versions are immutable"
     You **cannot** republish `1.0.0` after it's live. If you spot a typo,
-    you ship `1.0.1`. You have a 72-hour window to `npm unpublish` a
+    you ship the next patch release. You have a 72-hour window to `npm unpublish` a
     version; after that it's permanent. So always `npm publish --dry-run`
     immediately before the real publish.
 
@@ -176,7 +176,7 @@ your repo (next to `package.json`). Minimal valid example:
 ```json
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.bashbop/otito",
+  "name": "io.github.BASHBOP/otito",
   "title": "otito",
   "description": "Local-first code context, impact analysis, and merge-readiness verdicts for AI agents.",
   "websiteUrl": "https://bashbop.github.io/otito/",
@@ -185,12 +185,12 @@ your repo (next to `package.json`). Minimal valid example:
     "source": "github",
     "id": "1242199320"
   },
-  "version": "1.0.0",
+  "version": "1.0.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@bashbop/otito",
-      "version": "1.0.0",
+      "version": "1.0.2",
       "transport": {
         "type": "stdio"
       },
@@ -239,7 +239,7 @@ mcp-publisher login github
 
 Device-code OAuth flow opens your browser. The GitHub account you log in
 with **must own** the `<your-username>` namespace in `server.json.name`.
-For `io.github.bashbop/otito` the GitHub account must be `bashbop`.
+For `io.github.BASHBOP/otito` the GitHub organization must be `BASHBOP`; preserve the exact casing the registry grants to its GitHub OIDC publisher.
 
 ---
 
@@ -256,7 +256,7 @@ The CLI reads `server.json` from the current directory and submits it.
     ```
     HTTP 400 Bad Request
     NPM package '@bashbop/otito' is missing required 'mcpName' field.
-    Add this to your package.json: "mcpName": "io.github.bashbop/otito"
+    Add this to your package.json: "mcpName": "io.github.BASHBOP/otito"
     ```
     This is the registry's **ownership-proof** check: it downloads the
     `package.json` from the published npm tarball and looks for
@@ -274,7 +274,7 @@ Success looks like:
 ```
 Publishing to https://registry.modelcontextprotocol.io...
 ✓ Successfully published
-✓ Server io.github.bashbop/otito version 1.0.1
+✓ Server io.github.BASHBOP/otito version 1.0.2
 ```
 
 ---

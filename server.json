@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.bashbop/otito",
+  "name": "io.github.BASHBOP/otito",
   "title": "Òtítọ́",
   "description": "Deterministic local repository context, impact analysis, and merge-readiness evidence for AI agents.",
   "websiteUrl": "https://bashbop.github.io/otito/",
@@ -9,12 +9,12 @@
     "source": "github",
     "id": "1242199320"
   },
-  "version": "1.0.1",
+  "version": "1.0.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@bashbop/otito",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "transport": {
         "type": "stdio"
       },
