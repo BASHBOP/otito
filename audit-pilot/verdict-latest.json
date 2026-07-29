@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-29T17:18:16.048Z",
+  "generatedAt": "2026-07-29T17:38:14.103Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 65,
+  "confidence": 70,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -13,28 +13,28 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "src/lib/review.js",
-        "score": 41,
+        "path": "evals/fixtures/harness-node/scripts/build.mjs",
+        "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/pr-review.js",
-        "score": 36,
+        "path": "evals/fixtures/harness-node/src/index.js",
+        "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/agent-tools.js",
-        "score": 22,
+        "path": "evals/fixtures/harness-node/test/index.test.js",
+        "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/args.js",
-        "score": 22,
+        "path": "src/cli.js",
+        "score": 15,
         "riskFlags": []
       },
       {
-        "path": "src/lib/ax.js",
-        "score": 22,
+        "path": "src/lib/eval.js",
+        "score": 0,
         "riskFlags": []
       }
     ],
@@ -43,13 +43,12 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 4,
-    "additions": 14,
-    "deletions": 5,
-    "riskLevel": "medium",
+    "changedFiles": 15,
+    "additions": 511,
+    "deletions": 20,
+    "riskLevel": "low",
     "riskFlags": [
-      "configuration",
-      "no test files changed"
+      "configuration"
     ],
     "reviewTargetsCount": 0
   },
@@ -61,7 +60,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "5 changed files found."
+        "summary": "16 changed files found."
       },
       {
         "name": "Secret safety",
@@ -101,6 +100,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 426
+    "fullJson": 437
   }
 }
