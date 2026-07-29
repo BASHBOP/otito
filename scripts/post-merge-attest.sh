@@ -54,7 +54,7 @@ capture_review() {
   return 1
 }
 
-if [ "${REPOCTX_ATTEST_MODE:-auto}" != "diff" ] && [ -n "$PR" ] && command -v gh >/dev/null 2>&1; then
+if [ "${OTITO_ATTEST_MODE:-auto}" != "diff" ] && [ -n "$PR" ] && command -v gh >/dev/null 2>&1; then
   echo "post-merge-attest: review via PR #$PR"
   if ! capture_review node src/cli.js review . --pr "$PR" --json; then
     echo "post-merge-attest: PR review unavailable; falling back to diff $BASE_SHA..$MERGE_SHA"

@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible repoctx problem.
+description: Report a reproducible otito problem.
 title: "bug: "
 labels:
   - bug
@@ -30,7 +30,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: repoctx Version or Commit
+      label: otito Version or Commit
       placeholder: "0.2.0 or git SHA"
   - type: textarea
     id: environment

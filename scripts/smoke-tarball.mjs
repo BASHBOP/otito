@@ -4,7 +4,7 @@
  *
  * The unit suite imports main() in-process and the CLI smoke runs
  * `node src/cli.js` directly — neither crosses the npm bin-shim seam, which is
- * how v1.4.0–1.4.2 shipped with a silently broken `repoctx` executable
+ * how v1.4.0–1.4.2 shipped with a silently broken `otito` executable
  * (entrypoint guard never fired through the bin symlink). This script packs
  * the real tarball, installs it into a temp project, and runs the installed
  * bin the way npx / npm i -g users do.
@@ -16,14 +16,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-tarball-smoke-"));
+const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-tarball-smoke-"));
+const npmCache = path.join(workDir, "npm-cache");
 
 function run(command, args, options = {}) {
   return execFileSync(command, args, { encoding: "utf8", ...options });
 }
 
 try {
-  const packOutput = run("npm", ["pack", "--silent", "--pack-destination", workDir], {
+  const packOutput = run("npm", ["pack", "--silent", "--pack-destination", workDir, "--cache", npmCache], {
     cwd: packageRoot,
   });
   const tarball = path.join(workDir, packOutput.trim().split("\n").pop());
@@ -31,11 +32,11 @@ try {
   const projectDir = path.join(workDir, "consumer");
   fs.mkdirSync(projectDir);
   fs.writeFileSync(path.join(projectDir, "package.json"), JSON.stringify({ name: "smoke", private: true }));
-  run("npm", ["install", "--no-audit", "--no-fund", "--prefer-offline", tarball], { cwd: projectDir });
+  run("npm", ["install", "--no-audit", "--no-fund", "--prefer-offline", "--cache", npmCache, tarball], { cwd: projectDir });
 
-  const bin = path.join(projectDir, "node_modules", ".bin", "repoctx");
+  const bin = path.join(projectDir, "node_modules", ".bin", "otito");
   const helpOutput = run(bin, ["help"], { cwd: projectDir });
-  if (!helpOutput.includes("repoctx")) {
+  if (!helpOutput.includes("otito")) {
     throw new Error(`installed bin produced unexpected help output: ${JSON.stringify(helpOutput.slice(0, 200))}`);
   }
 

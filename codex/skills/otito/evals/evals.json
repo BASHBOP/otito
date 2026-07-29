@@ -1,14 +1,14 @@
 {
-  "skill_name": "dev-context",
+  "skill_name": "otito",
   "evals": [
     {
       "id": "repo-harness-before-editing",
-      "prompt": "Use $dev-context to prepare an agent harness for the sample Node API at evals/files/sample-node-api before editing. Do not modify application files.",
+      "prompt": "Use $otito to prepare an agent harness for the sample Node API at evals/files/sample-node-api before editing. Do not modify application files.",
       "expected_output": "A repo harness workflow that inspects the sample Node API, writes or reports setup/validation/runtime/context commands, and avoids application code changes.",
       "files": ["evals/files/sample-node-api/package.json", "evals/files/sample-node-api/src/server.js", "evals/files/sample-node-api/tests/server.test.js"],
       "assertions": [
         "The output identifies evals/files/sample-node-api as the target repo.",
-        "The output uses dev-context harness or the node src/cli.js harness fallback.",
+        "The output uses otito harness or the node src/cli.js harness fallback.",
         "The output includes setup, validation, runtime, or context commands from the generated harness.",
         "The output writes generated artifacts under .dev-context/ or explains why it is reporting inline instead.",
         "The output does not edit application source files."
@@ -16,7 +16,7 @@
     },
     {
       "id": "workspace-cross-repo",
-      "prompt": "Use $dev-context to generate cross-repo context for the sample web app at evals/files/sample-web and sample API at evals/files/sample-api.",
+      "prompt": "Use $otito to generate cross-repo context for the sample web app at evals/files/sample-web and sample API at evals/files/sample-api.",
       "expected_output": "A workspace report workflow that treats the sample web/API repos as one product surface and records the output as a durable context artifact or JSON summary.",
       "files": [
         "evals/files/sample-web/package.json",
@@ -34,7 +34,7 @@
     },
     {
       "id": "route-and-client-discovery",
-      "prompt": "Use $dev-context to find the event RSVP backend route in evals/files/sample-api and matching web API client in evals/files/sample-web. Do not guess paths.",
+      "prompt": "Use $otito to find the event RSVP backend route in evals/files/sample-api and matching web API client in evals/files/sample-web. Do not guess paths.",
       "expected_output": "A discovery workflow using backend route and frontend API-client lookup, with uncertainty clearly reported if no route or client is found.",
       "files": ["evals/files/sample-api/src/events/events.controller.ts", "evals/files/sample-web/src/api/events.ts"],
       "assertions": [
@@ -47,7 +47,7 @@
     },
     {
       "id": "local-catalog-search",
-      "prompt": "Use $dev-context to discover, index, catalog, and search the sample repos under evals/files for event RSVP code. Keep everything local.",
+      "prompt": "Use $otito to discover, index, catalog, and search the sample repos under evals/files for event RSVP code. Keep everything local.",
       "expected_output": "A local workflow using discover, index, catalog, and search commands or matching MCP tools, without cloud storage or model-provider requirements.",
       "files": [
         "evals/files/sample-web/package.json",
@@ -56,19 +56,19 @@
         "evals/files/sample-api/src/events/events.controller.ts"
       ],
       "assertions": [
-        "The output uses dev-context discover or repo_discover.",
-        "The output uses dev-context index or repo_index.",
-        "The output uses dev-context catalog or repo_catalog.",
-        "The output uses dev-context search or repo_search for an RSVP/event query.",
+        "The output uses otito discover or repo_discover.",
+        "The output uses otito index or repo_index.",
+        "The output uses otito catalog or repo_catalog.",
+        "The output uses otito search or repo_search for an RSVP/event query.",
         "The output keeps the workflow local and does not require cloud storage or an LLM provider."
       ]
     },
     {
       "id": "task-aware-context-pack",
-      "prompt": "Use $dev-context to generate a task-aware context packet for adding an MCP tool to the current repo. Keep it local and do not edit application files.",
-      "expected_output": "A context-engine workflow using repoctx context or the context_pack MCP tool that reports primary files, related files, tests, patterns, and validation commands.",
+      "prompt": "Use $otito to generate a task-aware context packet for adding an MCP tool to the current repo. Keep it local and do not edit application files.",
+      "expected_output": "A context-engine workflow using otito context or the context_pack MCP tool that reports primary files, related files, tests, patterns, and validation commands.",
       "assertions": [
-        "The output uses dev-context context, repoctx context, node src/cli.js context, or the context_pack MCP tool.",
+        "The output uses otito context, otito context, node src/cli.js context, or the context_pack MCP tool.",
         "The output includes primary files or explicitly says no strong primary files matched.",
         "The output includes related files, matching tests, implementation patterns, or validation commands.",
         "The output cites local source evidence such as code-map/index or harness data.",
@@ -77,10 +77,10 @@
     },
     {
       "id": "pr-review-context",
-      "prompt": "Use $dev-context to generate PR review context for the current repo against HEAD. Summarize risks and verification commands.",
-      "expected_output": "A diff-aware PR review context using dev-context pr with --base HEAD, focused on changed files, risks, and validation commands.",
+      "prompt": "Use $otito to generate PR review context for the current repo against HEAD. Summarize risks and verification commands.",
+      "expected_output": "A diff-aware PR review context using otito pr with --base HEAD, focused on changed files, risks, and validation commands.",
       "assertions": [
-        "The output uses dev-context pr or node src/cli.js pr with --base HEAD.",
+        "The output uses otito pr or node src/cli.js pr with --base HEAD.",
         "The output includes changed files or states there are no changes.",
         "The output includes risk flags, review targets, or targeted review prompts when changes exist.",
         "The output includes suggested verification commands.",
@@ -89,10 +89,10 @@
     },
     {
       "id": "maintainer-quality-gates",
-      "prompt": "Use $dev-context to identify the current repo's maintainer quality gates before changing package scripts or CI.",
+      "prompt": "Use $otito to identify the current repo's maintainer quality gates before changing package scripts or CI.",
       "expected_output": "A local maintainer workflow that inspects the repo harness or package scripts and reports the full npm run ci gate.",
       "assertions": [
-        "The output uses dev-context harness, repoctx harness, node src/cli.js harness, or package script inspection.",
+        "The output uses otito harness, otito harness, node src/cli.js harness, or package script inspection.",
         "The output includes npm run ci as the full gate for this repo.",
         "The output includes at least one focused fallback such as npm test or npm run smoke.",
         "The output keeps generated artifacts under .dev-context/ or reports inline.",

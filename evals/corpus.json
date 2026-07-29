@@ -1,6 +1,6 @@
 {
   "$schema": "./corpus.schema.note",
-  "description": "Labeled accuracy corpus for repoctx retrieval (generateContextPack) and risk classification (risk-paths). Retrieval cases score precision@k / recall@k / MRR of expectedPrimary within primaryFiles. Risk cases assert conceptsFromQuery / classifyPath / isGateRiskPath / isSecretPath against expected and notExpected labels. See docs/EVALS.md for how to add a case and how thresholds work.",
+  "description": "Labeled accuracy corpus for otito retrieval (generateContextPack) and risk classification (risk-paths). Retrieval cases score precision@k / recall@k / MRR of expectedPrimary within primaryFiles. Risk cases assert conceptsFromQuery / classifyPath / isGateRiskPath / isSecretPath against expected and notExpected labels. See docs/EVALS.md for how to add a case and how thresholds work.",
   "k": 5,
   "thresholds": {
     "comment": "Floors set to current-baseline-minus-slack so the suite is green today but a regression trips it. Baseline (2026-06-10): retrieval p@5=0.933 r@5=1.0 mrr=1.0; risk accuracy=1.0 (16/16). Aggregate metrics must be >= these floors for exit code 0. Re-record both baseline and floors in docs/EVALS.md after any intentional behavior change.",

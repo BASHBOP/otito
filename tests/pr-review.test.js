@@ -21,14 +21,14 @@ test("generatePrReview summarizes branch diff with risk and test hints", () => {
   assert.match(result.markdown, /## Changed Files/);
 
   const comment = formatPrCommentMarkdown(result.data);
-  assert.match(comment, /<!-- repoctx-pr-review -->/);
-  assert.match(comment, /repoctx PR Review/);
+  assert.match(comment, /<!-- otito-pr-review -->/);
+  assert.match(comment, /otito PR Review/);
   assert.match(comment, /Risky Files/);
 });
 
 test("generatePrReview can create a sticky PR comment through gh", () => {
   const fixture = createPrFixture();
-  const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-gh-"));
+  const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gh-"));
   const fakeGh = path.join(fakeBin, "gh");
   fs.writeFileSync(
     fakeGh,
@@ -41,23 +41,23 @@ test("generatePrReview can create a sticky PR comment through gh", () => {
       "  process.exit(0);",
       "}",
       "if (args[0] === 'repo' && args[1] === 'view') {",
-      "  console.log(JSON.stringify({ nameWithOwner: 'example/repoctx' }));",
+      "  console.log(JSON.stringify({ nameWithOwner: 'example/otito' }));",
       "  process.exit(0);",
       "}",
       "if (args[0] === 'api') {",
       "  const endpoint = args[1];",
-      "  if (endpoint === 'repos/example/repoctx/pulls/123/comments') {",
+      "  if (endpoint === 'repos/example/otito/pulls/123/comments') {",
       "    console.log('[]');",
       "    process.exit(0);",
       "  }",
-      "  if (endpoint === 'repos/example/repoctx/issues/123/comments?per_page=100') {",
+      "  if (endpoint === 'repos/example/otito/issues/123/comments?per_page=100') {",
       "    console.log('[]');",
       "    process.exit(0);",
       "  }",
-      "  if (endpoint === 'repos/example/repoctx/issues/123/comments') {",
+      "  if (endpoint === 'repos/example/otito/issues/123/comments') {",
       "    const inputPath = args[args.indexOf('--input') + 1];",
       "    const payload = JSON.parse(fs.readFileSync(inputPath, 'utf8'));",
-      "    if (!payload.body.includes('<!-- repoctx-pr-review -->')) process.exit(2);",
+      "    if (!payload.body.includes('<!-- otito-pr-review -->')) process.exit(2);",
       "    console.log(JSON.stringify({ id: 77, html_url: 'https://example.test/comment' }));",
       "    process.exit(0);",
       "  }",
@@ -146,7 +146,7 @@ test("generatePrReview omits the raw package.json scripts map from the result pa
 });
 
 function createSubstringRiskFixture() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-pr-tokens-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-tokens-"));
   fs.mkdirSync(path.join(fixture, "src", "lib"), { recursive: true });
   fs.writeFileSync(
     path.join(fixture, "package.json"),
@@ -168,7 +168,7 @@ function createSubstringRiskFixture() {
 }
 
 function createAuthRiskFixture() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-pr-auth-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-auth-"));
   fs.mkdirSync(path.join(fixture, "src", "auth"), { recursive: true });
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
   fs.writeFileSync(
@@ -187,7 +187,7 @@ function createAuthRiskFixture() {
 }
 
 function createPrFixture() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-pr-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-"));
   fs.mkdirSync(path.join(fixture, "src", "booking"), { recursive: true });
   fs.writeFileSync(
     path.join(fixture, "package.json"),
@@ -225,7 +225,7 @@ function createPrFixture() {
 }
 
 function createGoPrFixture() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-pr-go-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-go-"));
   fs.mkdirSync(path.join(fixture, "internal", "githubpr"), { recursive: true });
   fs.writeFileSync(path.join(fixture, "go.mod"), "module example.com/pullpass\n\ngo 1.22\n");
   fs.writeFileSync(
@@ -250,7 +250,7 @@ function createGoPrFixture() {
 }
 
 function createDeletedGoTestFixture() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-pr-go-deleted-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-go-deleted-"));
   fs.mkdirSync(path.join(fixture, "internal", "githubpr"), { recursive: true });
   fs.writeFileSync(path.join(fixture, "go.mod"), "module example.com/pullpass\n\ngo 1.22\n");
   fs.writeFileSync(path.join(fixture, "internal", "githubpr", "evaluate.go"), "package githubpr\n");

@@ -1,6 +1,6 @@
 # Release Process
 
-repoctx follows Semantic Versioning.
+otito follows Semantic Versioning.
 
 - Patch: bug fixes, docs corrections, low-risk test or CI improvements.
 - Minor: new commands, new MCP tools, new report fields, or backward-compatible behavior.
@@ -19,16 +19,16 @@ Preserve this discipline across the stable 2.x line. Reserve the next major vers
 7. Run `npm run version:check`.
 8. Commit the release changes.
 9. Tag the release as `vX.Y.Z` and push the tag.
-10. Confirm npm Trusted Publishing is configured for `nugehs/repoctx` and `.github/workflows/release.yml`. The workflow uses GitHub OIDC (`id-token: write`) for provenance and does not require an `NPM_TOKEN` secret.
-11. Confirm MCP Registry GitHub OIDC access is configured for `io.github.nugehs/repoctx`.
+10. Confirm npm Trusted Publishing is configured for `BASHBOP/otito` and `.github/workflows/release.yml`. The workflow uses GitHub OIDC (`id-token: write`) for provenance and does not require an `NPM_TOKEN` secret.
+11. Confirm MCP Registry GitHub OIDC access is configured for `io.github.bashbop/otito`.
 12. Push the tag. The `Release` workflow runs the full quality gate, publishes npm first, then creates the GitHub release and publishes `server.json` to the MCP Registry.
 13. Verify the published binary:
 
 ```bash
-npm install -g @nugehs/repoctx@2.5.0
-repoctx doctor
+npm install -g @bashbop/otito@2.5.0
+otito doctor
 ```
 
 ## Compatibility Notes
 
-The package exposes both `repoctx` and the legacy `dev-context` binary. Release notes must call out any CLI output, JSON schema, MCP tool schema, generated workflow, cache format, Node.js engine, or package entrypoint changes.
+The package exposes the `otito` binary. Release notes must call out any CLI output, JSON schema, MCP tool schema, generated workflow, cache format, Node.js engine, or package entrypoint changes.

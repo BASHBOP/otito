@@ -43,7 +43,7 @@ test("formatDoctorReport renders a missing gh as a warn line", () => {
 
 test("formatDoctorReport renders fancy header and status lines", () => {
   const output = formatDoctorReport(sampleReport, { emoji: true });
-  assert.match(output, /repoctx doctor/);
+  assert.match(output, /otito doctor/);
   assert.match(output, /✅/);
   assert.match(output, /node/);
   assert.match(output, /v22\.12\.0/);

@@ -6,7 +6,7 @@ import { tools } from "../src/lib/mcp.js";
 test("getAgentTools derives its catalog from the MCP tools array", () => {
   const catalog = getAgentTools();
   assert.equal(catalog.ok, true);
-  assert.equal(catalog.protocol, "repoctx-agent-tools/v0");
+  assert.equal(catalog.protocol, "otito-agent-tools/v1");
   assert.equal(catalog.tools.length, tools.length);
 
   const names = catalog.tools.map((tool) => tool.name).sort();
@@ -53,6 +53,6 @@ test("every v2 tool has a dedicated CLI command, so none are flagged mcpOnly", (
   const catalog = getAgentTools();
   for (const tool of catalog.tools) {
     assert.equal(tool.mcpOnly, false, `${tool.name} should map to a CLI command`);
-    assert.match(tool.command, /^repoctx /, `${tool.name} command should be a repoctx invocation`);
+    assert.match(tool.command, /^otito /, `${tool.name} command should be a otito invocation`);
   }
 });

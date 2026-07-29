@@ -6,7 +6,7 @@ import path from "node:path";
 import { inspectRepo, gateInspectScripts } from "../src/lib/repo.js";
 
 test("inspectRepo detects TypeScript repo basics", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-repo-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-repo-"));
   fs.mkdirSync(path.join(root, "src"));
   fs.writeFileSync(
     path.join(root, "package.json"),
@@ -42,7 +42,7 @@ test("inspectRepo detects TypeScript repo basics", () => {
 });
 
 test("inspectRepo caps the returned file list and flags truncation", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-repo-cap-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-repo-cap-"));
   fs.mkdirSync(path.join(root, "src"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "cap-fixture" }));
   for (let i = 0; i < 260; i += 1) {
@@ -56,7 +56,7 @@ test("inspectRepo caps the returned file list and flags truncation", () => {
 });
 
 test("gateInspectScripts drops script bodies but keeps names unless opted in", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-repo-scripts-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-repo-scripts-"));
   fs.writeFileSync(
     path.join(root, "package.json"),
     JSON.stringify({ name: "scripts-fixture", scripts: { build: "tsc -p tsconfig.json", test: "node --test" } }),

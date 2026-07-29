@@ -1,4 +1,4 @@
-// repoctx convergence: a deterministic 0–100 measure of the distance between a
+// otito convergence: a deterministic 0–100 measure of the distance between a
 // stated task (intent) and the actual git diff (execution). It is the buildable
 // core of the "prove software sanity" argument (docs/09-convergence-thesis):
 // not a proof, a *measurement*, computed out-of-band where the agent cannot fake
@@ -59,11 +59,11 @@ export function generateConvergence(query, options = {}) {
   const top = options.top ?? 10;
   const normalizedQuery = String(query ?? "").trim();
   if (!normalizedQuery) {
-    throw new Error('converge requires a task, e.g. `repoctx converge "add Stripe refunds" --base origin/main`');
+    throw new Error('converge requires a task, e.g. `otito converge "add Stripe refunds" --base origin/main`');
   }
   const base = String(options.base ?? "").trim();
   if (!base) {
-    throw new Error('converge requires a --base git ref to diff against, e.g. `repoctx converge "<task>" --base origin/main`');
+    throw new Error('converge requires a --base git ref to diff against, e.g. `otito converge "<task>" --base origin/main`');
   }
 
   const suppliedSubject = options.subject !== undefined && options.subject !== null;
@@ -575,7 +575,7 @@ function buildRecommendations({ grounded, unconfirmedCandidates, missedChangedFi
   /** @type {string[]} */
   const recs = [];
   if (!grounded) {
-    recs.push("The task did not ground to any predicted owner files; rephrase it or run `repoctx impact` to check grounding before trusting this score.");
+    recs.push("The task did not ground to any predicted owner files; rephrase it or run `otito impact` to check grounding before trusting this score.");
   }
   if (riskyDrift.length) {
     recs.push(

@@ -1,6 +1,6 @@
-// repoctx impact: given a free-text change request, rank the files most likely
+// otito impact: given a free-text change request, rank the files most likely
 // to own the change. Ports impact-map's scoring (text.py + scoring.py +
-// validation.py) onto repoctx's AST code map. The substrate change is the
+// validation.py) onto otito's AST code map. The substrate change is the
 // point — code-map already filters to source extensions, so the documentation/
 // false-positive class from the field test cannot enter the candidate set.
 
@@ -962,7 +962,7 @@ export function formatImpactTerminal(data, rendererFactory) {
     { text: `"${data.query}"`, glyph: "💬" },
     { text: `${data.repo.root} · ${data.repo.sourceFileCount} source file(s)`, glyph: "📂" },
   ];
-  lines.push(renderer.header({ text: "repoctx impact · change blast radius", glyph: "🎯" }, headlines));
+  lines.push(renderer.header({ text: "otito impact · change blast radius", glyph: "🎯" }, headlines));
   lines.push("");
   if (data.concepts.length) {
     lines.push(

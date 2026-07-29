@@ -42,11 +42,11 @@ const DEFAULTS = {
 function getUserConfigPath(env = process.env) {
   const xdg = env.XDG_CONFIG_HOME;
   const base = xdg ? xdg : path.join(os.homedir(), ".config");
-  return path.join(base, "repoctx", "config.json");
+  return path.join(base, "otito", "config.json");
 }
 
 /**
- * Walk up from cwd looking for .repoctxrc.json, stopping at the home dir.
+ * Walk up from cwd looking for .otitorc.json, stopping at the home dir.
  * @param {string} cwd
  * @returns {string | null}
  */
@@ -54,7 +54,7 @@ function findLocalConfigPath(cwd) {
   const home = os.homedir();
   let dir = cwd;
   for (;;) {
-    const candidate = path.join(dir, ".repoctxrc.json");
+    const candidate = path.join(dir, ".otitorc.json");
     if (fs.existsSync(candidate)) return candidate;
     const parent = path.dirname(dir);
     if (parent === dir || dir === home) return null;
@@ -86,28 +86,28 @@ function coerceBool(value) {
 }
 
 /**
- * Apply REPOCTX_* and NO_COLOR env vars into the config object in-place.
+ * Apply OTITO_* and NO_COLOR env vars into the config object in-place.
  * @param {Partial<ResolvedConfig>} cfg
  * @param {NodeJS.ProcessEnv} env
  */
 function applyEnv(cfg, env) {
-  if (env.REPOCTX_EMOJI !== undefined) {
-    const v = coerceBool(env.REPOCTX_EMOJI);
+  if (env.OTITO_EMOJI !== undefined) {
+    const v = coerceBool(env.OTITO_EMOJI);
     if (v !== undefined) cfg.emoji = v;
   }
-  if (env.REPOCTX_COLOR !== undefined) {
-    const v = coerceBool(env.REPOCTX_COLOR);
+  if (env.OTITO_COLOR !== undefined) {
+    const v = coerceBool(env.OTITO_COLOR);
     if (v !== undefined) cfg.color = v;
   }
   // NO_COLOR spec: any value (including empty string) disables color.
   if (env.NO_COLOR !== undefined) cfg.color = false;
-  if (env.REPOCTX_THEME !== undefined) cfg.theme = env.REPOCTX_THEME;
-  if (env.REPOCTX_TELEMETRY !== undefined) {
-    const v = coerceBool(env.REPOCTX_TELEMETRY);
+  if (env.OTITO_THEME !== undefined) cfg.theme = env.OTITO_THEME;
+  if (env.OTITO_TELEMETRY !== undefined) {
+    const v = coerceBool(env.OTITO_TELEMETRY);
     if (v !== undefined) cfg.telemetry = v;
   }
-  if (env.REPOCTX_WIDTH !== undefined) {
-    const n = Number(env.REPOCTX_WIDTH);
+  if (env.OTITO_WIDTH !== undefined) {
+    const n = Number(env.OTITO_WIDTH);
     if (!isNaN(n) && n > 0) cfg.width = n;
   }
 }
@@ -152,11 +152,11 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
  * @returns {string}
  */
 export function getConfigPath(scope, cwd = process.cwd()) {
-  return scope === "local" ? path.join(cwd, ".repoctxrc.json") : getUserConfigPath();
+  return scope === "local" ? path.join(cwd, ".otitorc.json") : getUserConfigPath();
 }
 
 /**
- * Merge partial config into the target file (user or local .repoctxrc.json).
+ * Merge partial config into the target file (user or local .otitorc.json).
  * @param {Partial<ResolvedConfig>} config
  * @param {"user" | "local"} [scope]
  * @param {string} [cwd]

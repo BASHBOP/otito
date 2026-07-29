@@ -46,7 +46,7 @@ export function generateAxScore(query, options = {}) {
   const top = options.top ?? 8;
   const normalizedQuery = String(query ?? "").trim();
   if (!normalizedQuery) {
-    throw new Error('ax requires a change request, e.g. `repoctx ax "add a new MCP tool" --path .`');
+    throw new Error('ax requires a change request, e.g. `otito ax "add a new MCP tool" --path .`');
   }
 
   /** @type {any} */
@@ -171,7 +171,7 @@ function buildRecommendations({ guardrails, tokens, meanFanOut, concepts }) {
   if (!guardrails.tests) recs.push("Add a `test` script or a tests/ directory so changes are verifiable before merge (+6 AX).");
   if (!guardrails.validation) recs.push("Add lint/typecheck/test/build scripts agents can run as guardrails (+6 AX).");
   if (!guardrails.owners) recs.push("Add a CODEOWNERS file so required reviewers resolve automatically (+6 AX).");
-  if (!guardrails.ci) recs.push("Add a CI workflow under .github/workflows to gate merges — `repoctx init` scaffolds one (+6 AX).");
+  if (!guardrails.ci) recs.push("Add a CI workflow under .github/workflows to gate merges — `otito init` scaffolds one (+6 AX).");
   if (tokens > TOKEN_FLOOR * 3) {
     recs.push(`Context pack is large (~${tokens} tokens); tighten module boundaries and docs so agents load less to make this change.`);
   }

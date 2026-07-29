@@ -1,9 +1,9 @@
 ---
-name: repoctx-scope
+name: otito-scope
 description: Scope a change before implementation — impact ranking, AX score, and adversarial questions. Invoke when the task is ambiguous or blast radius matters.
 ---
 
-# repoctx scope (procedure)
+# otito scope (procedure)
 
 Use this **after** context, **before** editing — especially for risky or vague tasks.
 
@@ -12,13 +12,13 @@ Use this **after** context, **before** editing — especially for risky or vague
 1. Rank likely owner files:
 
    ```bash
-   repoctx impact . "<task>" --json
+   otito impact . "<task>" --json
    ```
 
 2. Score agent experience for the task:
 
    ```bash
-   repoctx ax "<task>" --path . --json
+   otito ax "<task>" --path . --json
    ```
 
 3. Ask the user (or yourself) adversarially:
@@ -26,14 +26,14 @@ Use this **after** context, **before** editing — especially for risky or vague
    - Which tests prove this worked?
    - What would a maintainer reject?
 
-4. Only then run `repoctx context` and start edits.
+4. Only then run `otito context` and start edits.
 
 ## After implementation
 
 Measure intent vs execution:
 
 ```bash
-repoctx converge "<task>" --base origin/main --path .
+otito converge "<task>" --base origin/main --path .
 ```
 
 ## MCP equivalents

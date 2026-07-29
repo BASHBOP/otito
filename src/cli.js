@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import readline from "node:readline/promises";
@@ -39,7 +39,7 @@ import {
   searchCatalog,
 } from "./lib/catalog.js";
 import { formatInitSummary, initProject } from "./lib/init.js";
-import { formatInstallSummary, installDevContext } from "./lib/install.js";
+import { formatInstallSummary, installOtito } from "./lib/install.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
 import { generateContextPack } from "./lib/context-engine.js";
@@ -152,7 +152,7 @@ async function main(argv = process.argv.slice(2)) {
     if (parsed.flags.json) {
       printJson({ ok: false, error: message });
     } else {
-      console.error(`repoctx: ${message}`);
+      console.error(`otito: ${message}`);
     }
     process.exitCode = 1;
   } finally {
@@ -329,7 +329,7 @@ async function handleImpact(parsed) {
     query = parsed.positionals.slice(1).join(" ").trim();
   }
   if (!query) {
-    throw new Error('impact requires a change request, e.g. `repoctx impact . "add Stripe refunds"`');
+    throw new Error('impact requires a change request, e.g. `otito impact . "add Stripe refunds"`');
   }
   const result = generateImpact(query, {
     path: repoPath,
@@ -373,7 +373,7 @@ async function handleAx(parsed) {
     query = parsed.positionals.slice(1).join(" ").trim();
   }
   if (!query) {
-    throw new Error('ax requires a change request, e.g. `repoctx ax "add a new MCP tool" --path .`');
+    throw new Error('ax requires a change request, e.g. `otito ax "add a new MCP tool" --path .`');
   }
   const data = generateAxScore(query, { path: repoPath, top: parsed.flags.top });
   noteResult(data);
@@ -411,7 +411,7 @@ async function handleConverge(parsed) {
     query = parsed.positionals.join(" ").trim();
   }
   if (!query) {
-    throw new Error('converge requires a task, e.g. `repoctx converge "add Stripe refunds" --base origin/main`');
+    throw new Error('converge requires a task, e.g. `otito converge "add Stripe refunds" --base origin/main`');
   }
   const data = generateConvergence(query, {
     path: repoPath,
@@ -565,7 +565,7 @@ async function handleReview(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleInstall(parsed) {
-  const result = installDevContext({
+  const result = installOtito({
     global: parsed.flags.global,
     link: parsed.flags.link,
   });
@@ -645,7 +645,7 @@ async function handleStructure(parsed) {
 async function handleDeps(parsed) {
   const packageName = parsed.positionals[0];
   if (!packageName) {
-    throw new Error("deps requires a package name, for example: repoctx deps zod --query parse");
+    throw new Error("deps requires a package name, for example: otito deps zod --query parse");
   }
 
   // inspectDependency is declared to return an opaque `object`; describe the
@@ -816,7 +816,7 @@ async function handleReport(parsed) {
 /** @param {CliArgs} parsed */
 async function handleWorkspace(parsed) {
   if (parsed.positionals.length < 2) {
-    throw new Error("workspace requires at least two repo paths, for example: repoctx workspace ../web ../api");
+    throw new Error("workspace requires at least two repo paths, for example: otito workspace ../web ../api");
   }
 
   const result = generateWorkspaceReport(parsed.positionals);
@@ -927,7 +927,7 @@ async function handleDashboard(parsed) {
   const artifact = writeArtifact(target, html);
   printText(`Dashboard written: ${artifact.path}`);
   if (!data.totals.events) {
-    printText("No usage events recorded yet. Enable capture with `repoctx config set telemetry true`, then run some commands.");
+    printText("No usage events recorded yet. Enable capture with `otito config set telemetry true`, then run some commands.");
   }
 }
 
@@ -962,8 +962,8 @@ async function handleTelemetry(parsed) {
       `Size:        ${status.sizeBytes} bytes`,
       `Events:      ${status.events}`,
       "",
-      status.enabled ? "Disable with `repoctx telemetry off`." : "Enable with `repoctx telemetry on` (or `repoctx config set telemetry true`).",
-      "Clear the log with `repoctx telemetry clear`.",
+      status.enabled ? "Disable with `otito telemetry off`." : "Enable with `otito telemetry on` (or `otito config set telemetry true`).",
+      "Clear the log with `otito telemetry clear`.",
     ].join("\n"),
   );
 }
@@ -1010,7 +1010,7 @@ async function handleConfig(parsed) {
     const key = parsed.positionals[1];
     const rawValue = parsed.positionals[2];
     if (!key || rawValue === undefined) {
-      throw new Error("config set requires a key and a value, e.g. repoctx config set color true");
+      throw new Error("config set requires a key and a value, e.g. otito config set color true");
     }
     if (!CONFIG_KEYS.includes(key)) {
       throw new Error(`config set: unknown key "${key}". Valid keys: ${CONFIG_KEYS.join(", ")}`);
@@ -1052,7 +1052,7 @@ async function handleConfig(parsed) {
     printJson(sources);
     return;
   }
-  printText("repoctx config");
+  printText("otito config");
   printText("");
   for (const { key, value, source } of sources) {
     const annotation = source === "default" ? "" : `  [${source}]`;
@@ -1091,11 +1091,11 @@ function handleHelp(_parsed) {
   printText(
     [
       "Merge gate (v2):",
-      "  repoctx gate <repo> [--base ref] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
-      "  repoctx gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
+      "  otito gate <repo> [--base ref] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
+      "  otito gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
       "",
       "Accuracy eval (v2):",
-      "  repoctx eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",
+      "  otito eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",
       "",
       "Canonical vs legacy commands:",
       "  gate                 canonical merge gate; `pass` (local) and `pass-pr` (PR) remain as legacy aliases",
@@ -1144,22 +1144,7 @@ function formatRepoSummary(result) {
   ].join("\n");
 }
 
-/**
- * Warn when the CLI is invoked through the legacy `dev-context` bin. The alias
- * is deprecated and scheduled for removal in v3.0.0; `repoctx` is canonical.
- * The bin name is read from argv[1]'s basename (the symlink npm created), which
- * is `dev-context` for the legacy bin and `repoctx`/`cli.js` otherwise. Goes to
- * stderr so it never pollutes `--json` stdout or piped output.
- * @returns {void}
- */
-function warnIfLegacyAlias() {
-  const invokedName = process.argv[1] ? basename(process.argv[1]) : "";
-  if (invokedName === "dev-context") {
-    console.error("repoctx: `dev-context` is a deprecated alias and will be removed in v3.0.0. Use `repoctx` instead.");
-  }
-}
-
-export { main, warnIfLegacyAlias };
+export { main };
 
 // npm bin shims invoke this file through a symlink, so argv[1] is the symlink
 // path while import.meta.url is already realpath-resolved by the ESM loader.
@@ -1176,6 +1161,5 @@ const invokedAsScript = (() => {
   }
 })();
 if (invokedAsScript) {
-  warnIfLegacyAlias();
   main();
 }
