@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-29T07:16:05.401Z",
+  "generatedAt": "2026-07-29T17:11:42.730Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -13,28 +13,28 @@
     "concepts": [],
     "topFiles": [
       {
+        "path": "src/lib/impact.js",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/index-cache.js",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/init.js",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/mcp.js",
+        "score": 5,
+        "riskFlags": []
+      },
+      {
         "path": "src/lib/review.js",
         "score": 41,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/pr-review.js",
-        "score": 36,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/agent-tools.js",
-        "score": 22,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/args.js",
-        "score": 22,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/ax.js",
-        "score": 22,
         "riskFlags": []
       }
     ],
@@ -43,13 +43,11 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 7,
-    "additions": 0,
-    "deletions": 0,
+    "changedFiles": 11,
+    "additions": 234,
+    "deletions": 47,
     "riskLevel": "low",
-    "riskFlags": [
-      "configuration"
-    ],
+    "riskFlags": [],
     "reviewTargetsCount": 0
   },
   "pass": {
@@ -60,7 +58,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "8 changed files found."
+        "summary": "12 changed files found."
       },
       {
         "name": "Secret safety",
@@ -69,13 +67,13 @@
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
@@ -100,6 +98,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 419
+    "fullJson": 405
   }
 }
