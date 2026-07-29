@@ -231,7 +231,7 @@ function viewPR(root, selector, runner) {
   try {
     return JSON.parse(out);
   } catch (/** @type {any} */ error) {
-    throw new Error(`parse gh pr view response: ${error.message ?? String(error)}`);
+    throw new Error(`parse gh pr view response: ${error.message ?? String(error)}`, { cause: error });
   }
 }
 
@@ -295,7 +295,7 @@ function nameWithOwner(root, runner) {
     if (!value) throw new Error("gh repo view returned empty nameWithOwner");
     return value;
   } catch (/** @type {any} */ error) {
-    throw new Error(`parse gh repo view response: ${error.message ?? String(error)}`);
+    throw new Error(`parse gh repo view response: ${error.message ?? String(error)}`, { cause: error });
   }
 }
 
@@ -544,7 +544,7 @@ function teamMembership(root, team, login, runner) {
         .toLowerCase() === "active"
     );
   } catch (/** @type {any} */ error) {
-    throw new Error(`parse gh team membership response: ${error.message ?? String(error)}`);
+    throw new Error(`parse gh team membership response: ${error.message ?? String(error)}`, { cause: error });
   }
 }
 
@@ -620,7 +620,7 @@ function reviewThreads(root, prNumber, runner) {
     try {
       parsed = JSON.parse(out);
     } catch (/** @type {any} */ error) {
-      throw new Error(`parse gh review threads response: ${error.message ?? String(error)}`);
+      throw new Error(`parse gh review threads response: ${error.message ?? String(error)}`, { cause: error });
     }
     const page = parsed?.data?.repository?.pullRequest?.reviewThreads ?? { nodes: [], pageInfo: { hasNextPage: false } };
     threads.push(...(page.nodes ?? []));
@@ -721,7 +721,7 @@ function branchProtection(root, branch, runner) {
   try {
     return { protection: JSON.parse(out), exists: true };
   } catch (/** @type {any} */ error) {
-    throw new Error(`parse gh branch protection response: ${error.message ?? String(error)}`);
+    throw new Error(`parse gh branch protection response: ${error.message ?? String(error)}`, { cause: error });
   }
 }
 

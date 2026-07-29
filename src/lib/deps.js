@@ -116,7 +116,7 @@ function fallbackSearch(sourcePath, query, limit) {
       return;
     }
 
-    let entries = [];
+    let entries;
     try {
       entries = fs.readdirSync(current, { withFileTypes: true });
     } catch {

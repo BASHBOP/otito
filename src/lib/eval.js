@@ -601,13 +601,13 @@ function loadCorpus(corpusPath) {
   try {
     raw = fs.readFileSync(corpusPath, "utf8");
   } catch (err) {
-    throw new Error(`corpus not found: ${corpusPath} (${err instanceof Error ? err.message : String(err)})`);
+    throw new Error(`corpus not found: ${corpusPath} (${err instanceof Error ? err.message : String(err)})`, { cause: err });
   }
   let parsed;
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    throw new Error(`corpus is not valid JSON: ${corpusPath} (${err instanceof Error ? err.message : String(err)})`);
+    throw new Error(`corpus is not valid JSON: ${corpusPath} (${err instanceof Error ? err.message : String(err)})`, { cause: err });
   }
   if (!Array.isArray(parsed.retrieval) || !Array.isArray(parsed.risk)) {
     throw new Error(`corpus must define retrieval[] and risk[] arrays: ${corpusPath}`);
