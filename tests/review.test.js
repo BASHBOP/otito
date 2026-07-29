@@ -37,6 +37,20 @@ test("generateReview returns unified verdict + confidence + summaries", async ()
   assert.ok(Array.isArray(data.pass.checks) && data.pass.checks.length >= 5);
 });
 
+test("generateReview reports the PR comparison statistics instead of zeroes", async () => {
+  const root = gitInit("comparison-stats", {
+    "package.json": JSON.stringify({ name: "review-fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+    "src/index.ts": "export const initial = true;\n",
+  });
+  fs.writeFileSync(path.join(root, "src/index.ts"), "export const initial = true;\nexport const changed = true;\n");
+
+  const { data } = await generateReview(root, { request: "add the changed export", base: "HEAD" });
+
+  assert.equal(data.prReviewSummary.changedFiles, 1);
+  assert.equal(data.prReviewSummary.additions, 1);
+  assert.equal(data.prReviewSummary.deletions, 0);
+});
+
 test("formatReviewTerminal renders a verdict line with bars in fancy mode", async () => {
   const root = gitInit("fancy", {
     "package.json": JSON.stringify({ name: "review-fixture", version: "1.0.0", scripts: { test: "node --test" } }),

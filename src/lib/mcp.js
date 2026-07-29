@@ -84,7 +84,7 @@ export const tools = [
     name: "repo_map",
     title: "Map Repository",
     description:
-      "Map a repository into a compact JSON code map, optionally narrowed by domain, file kind, or controller route. Pass domain to find files for a feature, kind to find files of a type (route, controller, service, apiClient, component, test), or route to match Nest controller routes by substring/regex. Replaces the old find_domain, find_file_kind, find_backend_route, and find_frontend_api_client tools. Writes a local .otito/index.json cache into the target repo; the call is idempotent and does not change source files.",
+      "Map a repository into a compact JSON code map, optionally narrowed by domain, file kind, or controller route. Pass domain to find files for a feature, kind to find files of a type (route, controller, service, apiClient, component, test), or route to match Nest controller routes by substring/regex. Replaces the old find_domain, find_file_kind, find_backend_route, and find_frontend_api_client tools. Uses a per-user external cache and leaves the target repository unchanged.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
@@ -106,7 +106,7 @@ export const tools = [
     name: "repo_index",
     title: "Index Repositories",
     description:
-      "Index local repositories: generate .otito indexes and add them to the local catalog. Pass discover:true to find repository roots under the given paths first. Pass dryRun:true to discover and report without writing any indexes or catalog (read-only); this replaces the old repo_discover tool. Without dryRun this mutates the persistent local catalog, so it is not a pure read.",
+      "Index local repositories: generate per-user external indexes and add them to the local catalog. Pass discover:true to find repository roots under the given paths first. Pass dryRun:true to discover and report without writing any indexes or catalog (read-only); this replaces the old repo_discover tool. Without dryRun this mutates the persistent local catalog, so it is not a pure read.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object",
@@ -144,7 +144,7 @@ export const tools = [
     name: "context_pack",
     title: "Context Pack",
     description:
-      "Generate a task-aware local context packet with primary files, related files, tests, patterns, and validation commands. Writes a local .otito/index.json cache into the target repo; the call is idempotent and does not change source files.",
+      "Generate a task-aware local context packet with primary files, related files, tests, patterns, and validation commands. Uses a per-user external cache and leaves the target repository unchanged.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
@@ -169,7 +169,7 @@ export const tools = [
     name: "change_impact",
     title: "Change Impact",
     description:
-      "Given a plain-English change request, rank the files most likely to own the change, with risk flags, suggested tests, and an implementation plan. Optional diff base validates predictions against actual changed files. Writes a local .otito/index.json cache into the target repo; the call is idempotent and does not change source files.",
+      "Given a plain-English change request, rank the files most likely to own the change, with risk flags, suggested tests, and an implementation plan. Optional diff base surfaces exact changed-file evidence alongside the heuristic. Uses a per-user external cache and leaves the target repository unchanged.",
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
@@ -187,7 +187,7 @@ export const tools = [
     name: "agent_experience",
     title: "Agent Experience (AX)",
     description:
-      'Score Agent Experience (AX): a single 0–100 number answering "how cheap and safe is it for an agent to make this change here?", blending Changeability (token cost), Containment (blast radius), Guardrails (tests / validation / CODEOWNERS / CI), and Clarity (task groundedness). Deterministic and composed from the change_impact, token-estimate, and CODEOWNERS engines — no new analysis. Returns sub-scores, drivers, and concrete recommendations for raising AX. Writes a local .otito/index.json cache into the target repo; the call is idempotent and does not change source files.',
+      'Score Agent Experience (AX): a single 0–100 number answering "how cheap and safe is it for an agent to make this change here?", blending Changeability (token cost), Containment (blast radius), Guardrails (tests / validation / CODEOWNERS / CI), and Clarity (task groundedness). Deterministic and composed from the change_impact, token-estimate, and CODEOWNERS engines — no new analysis. Returns sub-scores, drivers, and concrete recommendations for raising AX. Uses a per-user external cache and leaves the target repository unchanged.',
     annotations: { readOnlyHint: true },
     inputSchema: {
       type: "object",
