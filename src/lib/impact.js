@@ -44,7 +44,7 @@ export const DIFF_RENAME_LIMIT = 1000;
  * @property {string[]} reasons
  */
 
-const impactEngineVersion = 1;
+const impactEngineVersion = 2;
 const defaultTop = 10;
 
 const STOP_WORDS = new Set([
@@ -199,16 +199,23 @@ export function generateImpact(query, options = {}) {
 
   const scored = scoreFiles(map.files, weightedQuery, concepts, { wantsTests, wantsDocs });
   const withBoosts = applyDependencyBoosts(map.files, scored);
-  const ranked = [...withBoosts.values()].sort((a, b) => b.score - a.score).slice(0, top);
+  const heuristicRanked = [...withBoosts.values()].sort((a, b) => b.score - a.score).slice(0, top);
+  const diffSnapshot = captureDiffSnapshot(map.repo.root, options.diffBase, options.diffFiles);
+  const exactDiffFiles = diffSnapshot?.ok ? (diffSnapshot.files ?? []) : [];
+  const diffEvidence = diffSnapshot?.ok ? buildDiffEvidence(exactDiffFiles, map.files, withBoosts, diffSnapshot.base) : null;
+  // A requested Git diff is evidence, not another fuzzy ranking signal. Put every
+  // mapped changed file ahead of heuristic candidates and label it as such, so an
+  // agent cannot silently overlook the source files that actually changed.
+  const ranked = diffEvidence ? mergeDiffEvidence(diffEvidence.entries, heuristicRanked) : heuristicRanked;
 
   const testSuggestions = suggestTests(map.files, ranked, map.repo);
   const implementationPlan = buildPlan(normalized, ranked);
   const risks = identifyRisks(normalized, ranked, concepts);
-  const validation = Array.isArray(options.diffFiles)
-    ? validateChangedFiles(options.diffBase ?? "", options.diffFiles, ranked, map.files)
-    : options.diffBase
-      ? validateAgainstDiff(map.repo.root, options.diffBase, ranked, map.files)
-      : null;
+  const validation = diffSnapshot
+    ? diffSnapshot.ok
+      ? validateChangedFiles(diffSnapshot.base, exactDiffFiles, ranked, map.files, heuristicRanked)
+      : diffSnapshot
+    : null;
 
   const data = /** @type {Record<string, any> & { tokenEstimate?: any }} */ ({
     ok: true,
@@ -221,6 +228,14 @@ export function generateImpact(query, options = {}) {
       sourceFileCount: map.repo.sourceFileCount,
     },
     concepts,
+    diffEvidence: diffEvidence
+      ? {
+          base: diffEvidence.base,
+          changedFileCount: diffEvidence.files.length,
+          mappedFiles: diffEvidence.entries.map((entry) => entry.file.path),
+          unmappedFiles: diffEvidence.unmappedFiles,
+        }
+      : null,
     topFiles: ranked.map((entry) => ({
       path: entry.file.path,
       kind: entry.file.kind,
@@ -239,6 +254,7 @@ export function generateImpact(query, options = {}) {
   data.tokenEstimate = {
     ...estimateTokenSections([
       { name: "concepts", value: data.concepts },
+      { name: "diffEvidence", value: data.diffEvidence },
       { name: "topFiles", value: data.topFiles },
       { name: "testSuggestions", value: data.testSuggestions },
       { name: "implementationPlan", value: data.implementationPlan },
@@ -653,12 +669,22 @@ function riskSentence(flag) {
 }
 
 /**
+ * Capture the changed-file subject once before it is used for both evidence and
+ * validation. Supplied diff files come from an immutable Git subject in the
+ * convergence path; direct CLI use captures the current diff plus untracked
+ * user files.
  * @param {string} root
- * @param {string} base
- * @param {ScoredEntry[]} ranked
- * @param {CodeMapFile[]} allFiles
+ * @param {string | undefined} base
+ * @param {string[] | undefined} suppliedFiles
  */
-function validateAgainstDiff(root, base, ranked, allFiles) {
+function captureDiffSnapshot(root, base, suppliedFiles) {
+  if (Array.isArray(suppliedFiles)) {
+    return { base: base ?? "", ok: true, files: normalizeChangedFiles(suppliedFiles) };
+  }
+  if (!base) {
+    return null;
+  }
+
   // Resolve user input before passing it to `git diff`. The resolved value is
   // a hex object ID, so a ref beginning with `-` cannot be parsed as an option.
   const resolved = runCommand("git", ["--no-replace-objects", "rev-parse", "--verify", "--end-of-options", `${base}^{commit}`], { cwd: root });
@@ -696,20 +722,85 @@ function validateAgainstDiff(root, base, ranked, allFiles) {
       error: `git diff failed: ${message}`,
     };
   }
-  const changedFiles = result.stdout.split("\0").filter(Boolean);
+  const untracked = runCommand("git", ["ls-files", "--others", "--exclude-standard", "-z"], { cwd: root });
+  if (!untracked.ok) {
+    const message = (untracked.stderr || untracked.error?.message || "command failed").trim();
+    return {
+      base,
+      ok: false,
+      error: `git ls-files failed: ${message}`,
+    };
+  }
 
-  return validateChangedFiles(base, changedFiles, ranked, allFiles);
+  return {
+    base,
+    ok: true,
+    files: normalizeChangedFiles([...result.stdout.split("\0"), ...untracked.stdout.split("\0")]),
+  };
 }
 
 /**
- * Compare an already-captured immutable file set with the predicted owners.
+ * @param {string[]} files
+ * @returns {string[]}
+ */
+function normalizeChangedFiles(files) {
+  return [...new Set(files.map(String).filter(Boolean))].sort();
+}
+
+/**
+ * Build exact changed-file entries. A file absent from the code map can be a
+ * deletion, a binary, or an unsupported file type; keep it visible separately
+ * instead of pretending the map knows its owner.
+ * @param {string[]} files
+ * @param {CodeMapFile[]} allFiles
+ * @param {Map<string, ScoredEntry>} scored
+ * @param {string} base
+ */
+function buildDiffEvidence(files, allFiles, scored, base) {
+  const byPath = new Map(allFiles.map((file) => [file.path, file]));
+  /** @type {ScoredEntry[]} */
+  const entries = [];
+  /** @type {string[]} */
+  const unmappedFiles = [];
+  for (const filePath of files) {
+    const file = byPath.get(filePath);
+    if (!file) {
+      unmappedFiles.push(filePath);
+      continue;
+    }
+    const candidate = scored.get(filePath);
+    entries.push({
+      file,
+      score: candidate?.score ?? 0,
+      reasons: [...(candidate?.reasons ?? []), `exact Git diff evidence against ${base}`],
+      relatedFiles: candidate?.relatedFiles ?? [],
+    });
+  }
+  return { base, files, entries, unmappedFiles };
+}
+
+/**
+ * @param {ScoredEntry[]} evidence
+ * @param {ScoredEntry[]} heuristic
+ * @returns {ScoredEntry[]}
+ */
+function mergeDiffEvidence(evidence, heuristic) {
+  const changed = new Set(evidence.map((entry) => entry.file.path));
+  return [...evidence, ...heuristic.filter((entry) => !changed.has(entry.file.path))];
+}
+
+/**
+ * Compare the surfaced result with the exact changed-file subject. Preserve the
+ * heuristic-only scorecard too, so evidence inclusion never masquerades as a
+ * successful prediction.
  * @param {string} base
  * @param {string[]} files
  * @param {ScoredEntry[]} ranked
  * @param {CodeMapFile[]} allFiles
+ * @param {ScoredEntry[]} heuristicRanked
  */
-function validateChangedFiles(base, files, ranked, allFiles) {
-  const changedFiles = [...new Set(files.map(String).filter(Boolean))].sort();
+function validateChangedFiles(base, files, ranked, allFiles, heuristicRanked) {
+  const changedFiles = normalizeChangedFiles(files);
 
   const predictedDirect = new Set(ranked.map((entry) => entry.file.path));
   const predictedRelated = new Set();
@@ -719,6 +810,15 @@ function validateChangedFiles(base, files, ranked, allFiles) {
   const confirmedRelated = changedFiles.filter((file) => !predictedDirect.has(file) && predictedRelated.has(file));
   const unconfirmedCandidates = [...predictedDirect].filter((file) => !changedFiles.includes(file));
   const missedChangedFiles = changedFiles.filter((file) => !predictedDirect.has(file) && !predictedRelated.has(file) && allFiles.some((f) => f.path === file));
+
+  const heuristicDirect = new Set(heuristicRanked.map((entry) => entry.file.path));
+  const heuristicRelated = new Set();
+  for (const entry of heuristicRanked) for (const related of entry.relatedFiles) heuristicRelated.add(related);
+  const heuristicConfirmedDirect = changedFiles.filter((file) => heuristicDirect.has(file));
+  const heuristicConfirmedRelated = changedFiles.filter((file) => !heuristicDirect.has(file) && heuristicRelated.has(file));
+  const heuristicMissedChangedFiles = changedFiles.filter(
+    (file) => !heuristicDirect.has(file) && !heuristicRelated.has(file) && allFiles.some((candidate) => candidate.path === file),
+  );
 
   let verdict = "partial";
   if (confirmedDirect.length && missedChangedFiles.length === 0) verdict = "confirmed";
@@ -733,6 +833,11 @@ function validateChangedFiles(base, files, ranked, allFiles) {
     unconfirmedCandidates,
     missedChangedFiles,
     verdict,
+    heuristic: {
+      confirmedDirect: heuristicConfirmedDirect,
+      confirmedRelated: heuristicConfirmedRelated,
+      missedChangedFiles: heuristicMissedChangedFiles,
+    },
   };
 }
 
@@ -752,9 +857,15 @@ export function formatImpactMarkdown(data) {
     `- ${data.repo.name}: ${data.repo.root} (${data.repo.sourceFileCount} source file(s))`,
     `- Inferred concepts: ${data.concepts.join(", ") || "none"}`,
     "",
-    "## Top Impacted Files",
-    "",
   ];
+  if (data.diffEvidence) {
+    lines.push("## Exact Changed-File Evidence", "");
+    lines.push(`- Base: ${data.diffEvidence.base}`);
+    lines.push(`- Mapped changed files: ${formatList(data.diffEvidence.mappedFiles)}`);
+    lines.push(`- Unmapped changed files: ${formatList(data.diffEvidence.unmappedFiles)}`);
+    lines.push("");
+  }
+  lines.push("## Top Impacted Files", "");
   for (const [index, file] of data.topFiles.entries()) {
     const rank = index + 1;
     lines.push(`### ${rank}. \`${file.path}\``);
@@ -783,6 +894,7 @@ export function formatImpactMarkdown(data) {
       lines.push(`- Confirmed related: ${formatList(data.validation.confirmedRelated)}`);
       lines.push(`- Unconfirmed candidates: ${formatList(data.validation.unconfirmedCandidates)}`);
       lines.push(`- Missed changed files: ${formatList(data.validation.missedChangedFiles)}`);
+      lines.push(`- Heuristic-only missed files: ${formatList(data.validation.heuristic.missedChangedFiles)}`);
     }
   }
   return lines.join("\n");
