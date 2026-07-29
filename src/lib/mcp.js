@@ -205,7 +205,7 @@ export const tools = [
     title: "Convergence Score",
     description:
       "Score convergence: a deterministic 0–100 measure of the distance between a stated task (intent) and the actual git diff (execution), with sub-scores for Coverage (did the intent happen?), Scope (did only the intent happen?), and Risk alignment (did unrequested drift land on risk-sensitive paths?). Composed from the change_impact diff comparison and the shared risk vocabulary — no model, no new analysis. Emits a recomputable receipt (a timestamp-free hash anyone can regenerate and verify) as durable evidence. Requires a base git ref to diff against.",
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object",
       properties: {
@@ -213,6 +213,11 @@ export const tools = [
         base: { type: "string", description: "Git ref to diff against (e.g. origin/main, HEAD~1). Required." },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         top: { type: "number", description: "Number of predicted owner files to consider. Defaults to 10." },
+        staged: {
+          type: "boolean",
+          description:
+            "Measure only the exact Git index tree and bind the receipt to its tree SHA. May create Git object or index-cache metadata; source files are unchanged.",
+        },
         includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
       },
       required: ["query", "base"],
@@ -223,12 +228,16 @@ export const tools = [
     title: "Review Gate",
     description:
       "Gate a change for merge and return a PASS / WARN / FAIL verdict. Omit pr to run the local, no-GitHub gate against a base ref (changed files, secret safety, risk-sensitive paths, release discipline, validation commands, dependency audit, policy profile). Set pr to gate an open GitHub PR via `gh` (PR state, review decision, CODEOWNERS approvals, unresolved conversations, branch protection, status checks). Merges the old merge_readiness and pr_merge_readiness tools. Use review_verdict instead when you want the full impact + review + gate composite, or review_context when you want diff/comment context with no verdict.",
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object",
       properties: {
         pr: { type: "string", description: "Optional PR selector (number, URL, or branch). When set, runs the GitHub gate; when absent, runs the local gate." },
-        staged: { type: "boolean", description: "Inspect only the Git index. Use this for automatic pre-commit readiness; ignored in GitHub PR mode." },
+        staged: {
+          type: "boolean",
+          description:
+            "Use the exact Git index for changed-path, risk, secret, and convergence evidence. Release, validation-command, and optional analyzer checks still inspect the working tree. May create Git object or index-cache metadata; source files are unchanged. Ignored in GitHub PR mode.",
+        },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         base: { type: "string", description: "Base ref for the local gate. Defaults to origin/main, then HEAD. Ignored in PR mode." },
         policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
@@ -240,7 +249,8 @@ export const tools = [
         },
         receipt: {
           type: "string",
-          description: "Optional convergence receipt id, hash, JSON object, or path to a JSON receipt artifact. Must match the current task, base, and commit.",
+          description:
+            "Optional convergence inputs hash, JSON object, or path to a JSON receipt artifact. Exact-subject v2 receipts require the full hash; legacy v1 display IDs remain accepted.",
         },
       },
     },
@@ -262,7 +272,11 @@ export const tools = [
         governance: { type: "string", description: "Governance: team (default) or solo." },
         impactTop: { type: "number", description: "Number of impact files. Defaults to 8." },
         minConvergence: { type: "number", description: "Optional minimum convergence score (0–100) enforced by the merge gate." },
-        receipt: { type: "string", description: "Optional convergence receipt id, hash, JSON object, or path to a JSON receipt artifact." },
+        receipt: {
+          type: "string",
+          description:
+            "Optional convergence inputs hash, JSON object, or path to a JSON receipt artifact. Exact-subject v2 receipts require the full hash; legacy v1 display IDs remain accepted.",
+        },
       },
     },
   },
@@ -606,6 +620,7 @@ async function dispatchTool(name, args) {
         path: args.path ?? ".",
         base: requiredString(args.base, "base"),
         top: args.top,
+        staged: args.staged,
       });
       return args.includeMarkdown ? { data, markdown: formatConvergenceMarkdown(data) } : data;
     }

@@ -6,6 +6,14 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **Exact change-subject convergence receipts.** Receipt v2 binds staged convergence to the resolved base, parent commit, and immutable Git index tree; GitHub PR convergence binds to the target repository, PR number, and exact base/head OIDs. Legacy subject-less receipt IDs remain unchanged.
+
+### Changed
+
+- `repoctx converge --staged` and the MCP `convergence_score` staged option now measure the captured index tree. Snapshot scoring streams raw Git blobs without executing checkout filters, caps exact-subject analysis at 5,000 source files or 64 MiB, ignores local replace refs, and preserves NUL-delimited paths. Diff comparisons force changed gitlinks to remain visible and fix rename detection at 50% with a 1,000-candidate ceiling. PR verification uses GitHub's merge-base-to-head file semantics and fails closed on missing OIDs, an incomplete file list, a mismatched local head, or a dirty checkout. Subject-bound enforcement uses the full SHA-256 inputs hash; the 12-hex `rcpt_` value remains a display handle.
+
 ## [2.6.0] - 2026-07-27
 
 ### Added

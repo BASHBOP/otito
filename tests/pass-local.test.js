@@ -83,6 +83,192 @@ test("evaluateLocal evaluates only the Git index when staged mode is enabled", (
   assert.equal(result.verdict, "PASS");
   assert.equal(result.checks.find((check) => check.name === "Review state").status, "PASS");
   assert.equal(result.checks.find((check) => check.name === "Secret safety").status, "PASS");
+  assert.match(result.checks.find((check) => check.name === "Staged snapshot").details.join(" "), /not bound by this convergence receipt/);
+});
+
+test("staged convergence receipt is bound to the captured Git index tree", () => {
+  const root = initRepo("staged-receipt");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "package-lock.json": JSON.stringify({ name: "fixture", version: "1.0.0", lockfileVersion: 3 }),
+      ".gitattributes": "*.ts filter=repoctx-test\n",
+      "src/index.ts": "export const greet = () => 'hi';\n",
+      "src/later.ts": "export const later = false;\n",
+    },
+    "init",
+  );
+  const filterSentinel = path.join(root, "smudge-filter-ran");
+  const filterScript = path.join(root, "smudge-filter.cjs");
+  const cleanFilterScript = path.join(root, "clean-filter.cjs");
+  fs.writeFileSync(
+    filterScript,
+    `const fs = require("node:fs"); fs.writeFileSync(${JSON.stringify(filterSentinel)}, "ran"); process.stdin.pipe(process.stdout);\n`,
+  );
+  fs.writeFileSync(cleanFilterScript, "process.stdin.pipe(process.stdout);\n");
+  git(root, "config", "filter.repoctx-test.clean", `${process.execPath} ${cleanFilterScript}`);
+  git(root, "config", "filter.repoctx-test.smudge", `${process.execPath} ${filterScript}`);
+  git(root, "config", "filter.repoctx-test.required", "true");
+  fs.writeFileSync(path.join(root, "src/index.ts"), "export const greet = () => 'hello';\n");
+  git(root, "add", "src/index.ts");
+  fs.writeFileSync(path.join(root, "src/later.ts"), "export const later = true;\n");
+  fs.writeFileSync(path.join(root, ".env"), "SECRET=not-staged\n");
+
+  const first = evaluateLocal(root, { base: "HEAD", staged: true, request: "update the greeting", minConvergence: 0 });
+  const expectedTree = git(root, "write-tree").trim();
+  const expectedParent = git(root, "rev-parse", "HEAD").trim();
+  const convergence = first.checks.find((check) => check.name === "Convergence");
+
+  assert.deepEqual(first.changedFiles, ["src/index.ts"]);
+  assert.equal(first.subject.kind, "git-index");
+  assert.equal(first.subject.treeSha, expectedTree);
+  assert.equal(first.subject.parentSha, expectedParent);
+  assert.deepEqual(convergence.subject, first.subject);
+  assert.deepEqual(convergence.receipt.subject, first.subject);
+  assert.deepEqual(first.receipt, convergence.receipt);
+  assert.equal(fs.existsSync(filterSentinel), false, "receipt scoring must not execute configured checkout filters");
+
+  fs.writeFileSync(path.join(root, "src/index.ts"), "export const greet = () => 'replacement-content';\n");
+  git(root, "add", "src/index.ts");
+  const replacementTree = git(root, "write-tree").trim();
+  fs.writeFileSync(path.join(root, "src/index.ts"), "export const greet = () => 'hello';\n");
+  git(root, "add", "src/index.ts");
+  git(root, "replace", first.subject.treeSha, replacementTree);
+  const replaceRefIgnored = evaluateLocal(root, { base: "HEAD", staged: true, request: "update the greeting", minConvergence: 0 });
+  assert.equal(replaceRefIgnored.receipt.inputsHash, first.receipt.inputsHash, "local replace refs must not change exact-subject scoring");
+  git(root, "replace", "-d", first.subject.treeSha);
+
+  assert.throws(
+    () => generateConvergence("update the greeting", { path: root, base: "HEAD", subject: first.subject }),
+    /subject and diff files must be supplied together/,
+  );
+  assert.throws(
+    () => generateConvergence("update the greeting", { path: root, base: "HEAD", diffFiles: first.changedFiles }),
+    /subject and diff files must be supplied together/,
+  );
+  assert.throws(
+    () => generateConvergence("update the greeting", { path: root, base: "HEAD", subject: first.subject, diffFiles: ["src/later.ts"] }),
+    /do not match the staged Git tree subject/,
+  );
+
+  fs.writeFileSync(path.join(root, "src/later.ts"), "export function updateGreetingForTheGreetingTask() { return 'highly-relevant-but-unstaged'; }\n");
+  const sameIndex = evaluateLocal(root, { base: "HEAD", staged: true, request: "update the greeting", minConvergence: 0 });
+  assert.equal(sameIndex.subject.treeSha, first.subject.treeSha);
+  assert.equal(sameIndex.receipt.inputsHash, first.receipt.inputsHash, "unstaged source edits must not change a staged-tree receipt");
+
+  const abbreviated = evaluateLocal(root, {
+    base: "HEAD",
+    staged: true,
+    request: "update the greeting",
+    receipt: first.receipt.id,
+  });
+  assert.equal(abbreviated.checks.find((check) => check.name === "Convergence").status, "FAIL");
+  assert.match(abbreviated.checks.find((check) => check.name === "Convergence").summary, /full inputs hash/);
+
+  const verified = evaluateLocal(root, {
+    base: "HEAD",
+    staged: true,
+    request: "update the greeting",
+    receipt: first.receipt.inputsHash,
+  });
+  assert.equal(verified.checks.find((check) => check.name === "Convergence").status, "PASS");
+
+  git(root, "add", "src/later.ts");
+  const second = evaluateLocal(root, { base: "HEAD", staged: true, request: "update the greeting", minConvergence: 0 });
+  assert.notEqual(second.subject.treeSha, first.subject.treeSha);
+  assert.notEqual(second.receipt.inputsHash, first.receipt.inputsHash);
+});
+
+test("staged receipt preserves legal whitespace and newline characters in paths", () => {
+  const root = initRepo("staged-unusual-path");
+  const unusualPath = "src/ leading\ntrailing .ts";
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
+      [unusualPath]: "export const unusual = 'before';\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, unusualPath), "export const unusual = 'after';\n");
+  git(root, "add", "--", unusualPath);
+
+  const result = evaluateLocal(root, { base: "HEAD", staged: true, request: "update the unusual path", minConvergence: 0 });
+
+  assert.deepEqual(result.changedFiles, [unusualPath]);
+  assert.deepEqual(result.receipt.subject, result.subject);
+});
+
+test("staged receipt fixes rename detection independently of local Git config", () => {
+  const root = initRepo("staged-rename-config");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
+      "src/old-name.ts": "export const renamed = true;\n",
+    },
+    "init",
+  );
+  git(root, "mv", "src/old-name.ts", "src/new-name.ts");
+
+  git(root, "config", "diff.renames", "false");
+  const disabled = evaluateLocal(root, { base: "HEAD", staged: true, request: "rename the source file", minConvergence: 0 });
+  git(root, "config", "diff.renames", "copies");
+  git(root, "config", "diff.renameLimit", "1");
+  git(root, "config", "diff.algorithm", "histogram");
+  const copies = evaluateLocal(root, { base: "HEAD", staged: true, request: "rename the source file", minConvergence: 0 });
+
+  assert.deepEqual(disabled.changedFiles, ["src/new-name.ts"]);
+  assert.deepEqual(copies.changedFiles, disabled.changedFiles);
+  assert.equal(copies.receipt.inputsHash, disabled.receipt.inputsHash);
+});
+
+test("staged receipt includes a gitlink change despite submodule ignore config", () => {
+  const root = initRepo("staged-gitlink");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
+      "src/index.ts": "export const baseline = true;\n",
+    },
+    "init",
+  );
+  const firstNestedCommit = git(root, "rev-parse", "HEAD").trim();
+  git(root, "update-index", "--add", "--cacheinfo", `160000,${firstNestedCommit},vendor/sub`);
+  git(root, "commit", "-q", "-m", "add gitlink");
+  const baselineTree = git(root, "rev-parse", "HEAD^{tree}").trim();
+  const secondNestedCommit = git(root, "commit-tree", baselineTree, "-p", firstNestedCommit, "-m", "nested next").trim();
+  git(root, "update-index", "--cacheinfo", `160000,${secondNestedCommit},vendor/sub`);
+  git(root, "config", "diff.ignoreSubmodules", "all");
+
+  const result = evaluateLocal(root, { base: "HEAD", staged: true, request: "update the vendor submodule", minConvergence: 0 });
+
+  assert.deepEqual(result.changedFiles, ["vendor/sub"]);
+  assert.equal(result.receipt.receiptVersion, 2);
+  assert.deepEqual(result.receipt.subject, result.subject);
+});
+
+test("staged receipt fails closed before an oversized source tree is analyzed", () => {
+  const root = initRepo("staged-source-limit");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
+      "src/index.ts": "export const baseline = true;\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "large-source.ts"), "x".repeat(1024 * 1024));
+  const blob = git(root, "hash-object", "-w", "--", "large-source.ts").trim();
+  for (let index = 0; index < 65; index += 1) {
+    git(root, "update-index", "--add", "--cacheinfo", `100644,${blob},src/generated-${String(index).padStart(2, "0")}.ts`);
+  }
+
+  assert.throws(
+    () => generateConvergence("add generated sources", { path: root, base: "HEAD", staged: true }),
+    /exceeds the safe analysis limit \(5000 files or 64 MiB\)/,
+  );
 });
 test("evaluateLocal includes configured tieline contract evidence", () => {
   const root = initRepo("tieline");
@@ -199,7 +385,7 @@ test("evaluateLocal enforces a convergence floor and matching receipt", () => {
   });
   const convergence = result.checks.find((check) => check.name === "Convergence");
   assert.equal(convergence.status, "PASS");
-  assert.match(convergence.details.join(" "), /Receipt: rcpt_/);
+  assert.match(convergence.details.join(" "), /Receipt handle: rcpt_/);
 
   const mismatch = evaluateLocal(root, {
     base: "HEAD~1",
