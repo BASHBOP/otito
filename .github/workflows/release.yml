@@ -43,8 +43,12 @@ jobs:
           fi
 
       # prepublishOnly runs the full quality gate (npm run ci) before publish.
+      # NPM_TOKEN is a temporary bootstrap fallback until npm trusted publishing
+      # is configured for this first public package.
       - name: Publish
         run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   github-release:
     name: Create GitHub Release
