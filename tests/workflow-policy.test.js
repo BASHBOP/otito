@@ -66,9 +66,11 @@ test("workflow dependencies use setup-node v7 and TypeScript majors require migr
   assert.match(dependabot, /version-update:semver-major/);
 });
 
-test("release publishing receives the npm credential fallback", () => {
+test("release publishing uses GitHub OIDC without a stored npm token", () => {
   const workflow = read(".github/workflows/release.yml");
-  assert.match(workflow, /- name: Publish\n\s+run: npm publish\n\s+env:\n\s+NODE_AUTH_TOKEN: \$\{\{ secrets\.NPM_TOKEN \}\}/);
+  assert.match(workflow, /id-token: write/);
+  assert.match(workflow, /- name: Publish\n\s+run: npm publish/);
+  assert.doesNotMatch(workflow, /NPM_TOKEN|NODE_AUTH_TOKEN/);
 });
 
 test("reconciliation dry-run lists missing first-parent commits oldest-first", () => {

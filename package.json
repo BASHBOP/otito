@@ -1,6 +1,6 @@
 {
   "name": "@bashbop/otito",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "mcpName": "io.github.bashbop/otito",
   "description": "Òtítọ́: deterministic local repository context, impact analysis, and merge evidence.",
   "type": "module",
