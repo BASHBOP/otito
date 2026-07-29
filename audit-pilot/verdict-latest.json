@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-27T23:02:51.477Z",
+  "generatedAt": "2026-07-29T01:42:20.348Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 65,
+  "confidence": 70,
   "repo": {
     "root": "/home/runner/work/repoctx/repoctx",
     "name": "repoctx"
@@ -43,13 +43,13 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 4,
+    "changedFiles": 18,
     "additions": 0,
     "deletions": 0,
-    "riskLevel": "medium",
+    "riskLevel": "low",
     "riskFlags": [
-      "configuration",
-      "no test files changed"
+      "large PR",
+      "large file diff"
     ],
     "reviewTargetsCount": 0
   },
@@ -61,7 +61,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "5 changed files found."
+        "summary": "19 changed files found."
       },
       {
         "name": "Secret safety",
@@ -70,13 +70,13 @@
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
@@ -101,6 +101,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 428
+    "fullJson": 414
   }
 }
