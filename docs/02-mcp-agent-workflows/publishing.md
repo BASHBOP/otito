@@ -96,7 +96,7 @@ npm publish --dry-run
 ```
 
 Eyeball the file list. Your tarball should contain only what's in the
-`files` array. **If you see `tests/`, `node_modules/`, `.dev-context/`, or
+`files` array. **If you see `tests/`, `node_modules/`, `.otito/`, or
 `coverage/` listed, stop and tighten your `files` array.**
 
 A healthy CLI tarball is typically 50–200 kB.

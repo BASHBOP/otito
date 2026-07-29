@@ -867,9 +867,9 @@ function checkRunIdFromDetailsUrl(detailsUrl) {
 function contextEvidence(pr, request) {
   const subject = String(request ?? pr.title ?? "review this pull request").trim() || "review this pull request";
   const evidence = [`otito impact . ${JSON.stringify(subject)} --json`];
-  if (pr.number) evidence.push(`otito pr . --number ${pr.number} --out .dev-context/pr-review.md`);
-  else if (pr.baseRefName) evidence.push(`otito pr . --base ${pr.baseRefName} --out .dev-context/pr-review.md`);
-  else evidence.push("otito pr . --out .dev-context/pr-review.md");
+  if (pr.number) evidence.push(`otito pr . --number ${pr.number} --out .otito/pr-review.md`);
+  else if (pr.baseRefName) evidence.push(`otito pr . --base ${pr.baseRefName} --out .otito/pr-review.md`);
+  else evidence.push("otito pr . --out .otito/pr-review.md");
   return evidence;
 }
 

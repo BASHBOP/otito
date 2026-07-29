@@ -1,4 +1,4 @@
-// `otito dashboard`: aggregate the local usage log (plus existing .dev-context
+// `otito dashboard`: aggregate the local usage log (plus existing .otito
 // JSON artifacts and recent git history) into ONE self-contained HTML file —
 // no server, no chart library, no network. The HTML embeds its own data and
 // hand-rolled inline-SVG charts so it opens straight off disk via file://.
@@ -155,13 +155,13 @@ export function aggregate(events, extra = {}) {
 }
 
 /**
- * Classify each .dev-context/*.json artifact by its discriminating keys and pull
+ * Classify each .otito/*.json artifact by its discriminating keys and pull
  * the value signals it persisted. Best-effort and read-only.
  * @param {string} root
  * @returns {{ file: string, kind: string, signals: Record<string, any> | null }[]}
  */
 export function scanArtifacts(root) {
-  const dir = path.join(root, ".dev-context");
+  const dir = path.join(root, ".otito");
   /** @type {{ file: string, kind: string, signals: Record<string, any> | null }[]} */
   const out = [];
   let names;
@@ -355,7 +355,7 @@ export function renderDashboardHtml(d) {
     ? `<table class="grid-table"><thead><tr><th>artifact</th><th>kind</th><th>signal</th></tr></thead><tbody>${artifactRows
         .map((/** @type {any} */ a) => `<tr><td><code>${esc(a.file)}</code></td><td>${esc(a.kind)}</td><td>${esc(summarizeSignal(a.signals))}</td></tr>`)
         .join("")}</tbody></table>`
-    : `<p class="empty">No machine-readable artifacts in .dev-context yet.</p>`;
+    : `<p class="empty">No machine-readable artifacts in .otito yet.</p>`;
 
   const gitRows = (d.git ?? []).slice(0, 10);
   const gitHtml = gitRows.length
@@ -454,7 +454,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;}
     ${convHtml}
   </div>
   <div class="card">
-    <h2>Recent artifacts ${tip("Machine-readable JSON reports already written under .dev-context, classified by type with their headline signal. Independent of the usage log.")}</h2>
+    <h2>Recent artifacts ${tip("Machine-readable JSON reports already written under .otito, classified by type with their headline signal. Independent of the usage log.")}</h2>
     ${artifactsHtml}
   </div>
   <div class="card">

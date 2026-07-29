@@ -1,5 +1,5 @@
 // Opt-in, local-only usage telemetry. One JSONL line is appended per CLI run and
-// per MCP tool call to ~/.dev-context/usage.jsonl, but ONLY when the user has
+// per MCP tool call to ~/.otito/usage.jsonl, but ONLY when the user has
 // turned it on. The whole module is built to be invisible when off and harmless
 // when on:
 //
@@ -36,12 +36,12 @@ try {
 
 /**
  * Resolve the append-only log path. OTITO_TELEMETRY_PATH overrides (used by
- * tests and power users); otherwise it sits beside the catalog under ~/.dev-context.
+ * tests and power users); otherwise it sits beside the catalog under ~/.otito.
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {string}
  */
 export function telemetryLogPath(env = process.env) {
-  return path.resolve(env.OTITO_TELEMETRY_PATH ?? path.join(os.homedir(), ".dev-context", "usage.jsonl"));
+  return path.resolve(env.OTITO_TELEMETRY_PATH ?? path.join(os.homedir(), ".otito", "usage.jsonl"));
 }
 
 /**

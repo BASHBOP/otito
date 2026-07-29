@@ -13,7 +13,7 @@ function makeRepo(name) {
   return root;
 }
 
-const cachePathFor = (root) => path.join(root, ".dev-context", "index.json");
+const cachePathFor = (root) => path.join(root, ".otito", "index.json");
 
 test("getCachedCodeMap writes and reuses a repo index", () => {
   const root = makeRepo("otito-index-");
@@ -102,8 +102,8 @@ test("writes the cache atomically and leaves no temp files behind", () => {
 
 test("write failures do not throw and the call still returns a map", () => {
   const root = makeRepo("otito-index-writefail-");
-  // Make .dev-context a file so mkdir/write of the index underneath fails.
-  fs.writeFileSync(path.join(root, ".dev-context"), "not a directory");
+  // Make .otito a file so mkdir/write of the index underneath fails.
+  fs.writeFileSync(path.join(root, ".otito"), "not a directory");
 
   let result;
   assert.doesNotThrow(() => {

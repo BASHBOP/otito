@@ -9,7 +9,7 @@ This project follows SemVer.
 ### Changed
 
 - **Clean product cutover to Òtítọ́.** The package is now `@bashbop/otito`, the CLI is `otito`, and the MCP server identity is `io.github.bashbop/otito`.
-- **Fresh configuration namespace.** Configuration now uses `.otitorc.json`, `~/.config/otito/config.json`, and `OTITO_*` environment variables. Local evidence artifacts remain under `.dev-context/`.
+- **Fresh configuration and artifact namespaces.** Configuration uses `.otitorc.json`, `~/.config/otito/config.json`, and `OTITO_*` environment variables. Local evidence artifacts, indexes, catalog, and telemetry now live under `.otito/`.
 - **Bashbop stewardship.** Repository, documentation, release, and MCP metadata now point to Bashbop Ltd. The public contributor programme material has been removed while the protected-review rule remains owned by the Bashbop team.
 
 ## [Unreleased]

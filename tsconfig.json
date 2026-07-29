@@ -10,6 +10,6 @@
     "strict": true,
     "target": "ES2022"
   },
-  "exclude": ["coverage", "dist", ".dev-context", "node_modules", "tests", "codex", "evals"],
+  "exclude": ["coverage", "dist", ".otito", "node_modules", "tests", "codex", "evals"],
   "include": ["src/**/*.js"]
 }

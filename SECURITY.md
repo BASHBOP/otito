@@ -15,11 +15,11 @@ Please include:
 - Expected and actual impact.
 - Any logs, inputs, generated artifacts, or repository shapes needed to reproduce.
 
-The project avoids secrets in generated `.dev-context/` artifacts, but users should still review artifacts before sharing them outside their organization.
+The project avoids secrets in generated `.otito/` artifacts, but users should still review artifacts before sharing them outside their organization.
 
 ## Security Expectations
 
 - `npm run audit` must pass for production dependencies before release.
-- Generated artifacts must stay under `.dev-context/` and out of published package contents.
+- Generated artifacts must stay under `.otito/` and out of published package contents.
 - External command execution must use explicit argument arrays where possible.
 - Changes that touch git, GitHub, filesystem writes, dependency lookup, or MCP dispatch require focused tests and reviewer attention.

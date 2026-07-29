@@ -160,7 +160,7 @@ Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 | ------------------ | ------------------------------------------------------------------------------------- |
 | `repo_inspect`     | Inspect repository shape, scripts, package managers, entrypoints, and git state       |
 | `repo_map`         | Build a compact JSON code map with optional domain, kind, and route filters (TS/JS, Go, C#, Python, Java, Ruby, Rust) |
-| `repo_index`       | Generate local `.dev-context/index.json` files and catalog entries; `dryRun:true` discovers read-only |
+| `repo_index`       | Generate local `.otito/index.json` files and catalog entries; `dryRun:true` discovers read-only |
 | `repo_search`      | Search cataloged repositories by path, route, import, export, symbol, or domain; omit `query` to list the catalog |
 | `context_pack`     | Build a task-aware context packet                                                     |
 | `change_impact`    | Rank files most likely to own a plain-English change request                          |
