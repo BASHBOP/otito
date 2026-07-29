@@ -33,7 +33,7 @@ test("indexRepositories writes an index and catalog entry", () => {
   assert.equal(indexed.indexedCount, 1);
   assert.equal(catalog.repositoryCount, 1);
   assert.equal(catalog.repositories[0].name, "local-api");
-  assert.ok(fs.existsSync(path.join(root, ".dev-context", "index.json")));
+  assert.ok(fs.existsSync(path.join(root, ".otito", "index.json")));
 });
 
 test("searchCatalog searches indexed paths and symbols", () => {
@@ -61,6 +61,21 @@ test("defaultCatalogPath uses OTITO_CATALOG when set", () => {
   try {
     process.env.OTITO_CATALOG = otitoCatalog;
     assert.equal(defaultCatalogPath(), otitoCatalog);
+  } finally {
+    if (original === undefined) {
+      delete process.env.OTITO_CATALOG;
+    } else {
+      process.env.OTITO_CATALOG = original;
+    }
+  }
+});
+
+test("defaultCatalogPath defaults to the otito catalog", () => {
+  const original = process.env.OTITO_CATALOG;
+
+  try {
+    delete process.env.OTITO_CATALOG;
+    assert.equal(defaultCatalogPath(), path.join(os.homedir(), ".otito", "catalog.json"));
   } finally {
     if (original === undefined) {
       delete process.env.OTITO_CATALOG;

@@ -10,4 +10,4 @@
 | PR review context | A diff-aware report with changed files, risk prompts, review targets, and optional GitHub comments |
 | PullPass          | The companion merge-safety gate that checks PR readiness before merge                              |
 | otito           | The canonical CLI and MCP server name for this project                                             |
-| `.dev-context/`   | Local artifact directory for generated reports, indexes, harnesses, and context packets            |
+| `.otito/`   | Local artifact directory for generated reports, indexes, harnesses, and context packets            |

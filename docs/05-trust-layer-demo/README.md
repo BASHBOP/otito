@@ -37,7 +37,7 @@ The goal is not to replace review. The goal is to make review easier to trust.
 
 ```bash
 otito context "ship the change" --path . --json
-otito harness . --out .dev-context/harness.md
+otito harness . --out .otito/harness.md
 ```
 
 Evidence to expect:
@@ -59,7 +59,7 @@ Keep the PR easy to review:
 ### 3. Generate PR review context
 
 ```bash
-otito pr . --base origin/main --out .dev-context/pr-review.md
+otito pr . --base origin/main --out .otito/pr-review.md
 ```
 
 Evidence to expect:
@@ -156,7 +156,7 @@ Use this short version in a README, video, or issue comment:
 
 ```bash
 otito context "describe the change" --path . --json
-otito pr . --base origin/main --out .dev-context/pr-review.md
+otito pr . --base origin/main --out .otito/pr-review.md
 pullpass pr 123
 ```
 

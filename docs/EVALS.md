@@ -115,7 +115,7 @@ headroom rather than a defect.
 1. **Pick or add a fixture.** Reuse a name under `fixtureRoots` in
    `evals/corpus.json`, or add a small synthetic repo under `evals/fixtures/`
    and register it in `fixtureRoots`. Keep fixtures tiny and synthetic — a few
-   files that exercise one behavior. Do **not** add a `.dev-context/` cache to a
+   files that exercise one behavior. Do **not** add a `.otito/` cache to a
    fixture; the runner copies each fixture to a temp dir and regenerates the map
    from source so the committed fixtures are never mutated.
 

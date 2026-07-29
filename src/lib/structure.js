@@ -7,7 +7,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const defaultExcludes = [
   "node_modules/**",
   ".git/**",
-  ".dev-context/**",
+  ".otito/**",
   ".next/**",
   ".turbo/**",
   ".cache/**",
@@ -39,7 +39,7 @@ const defaultExcludes = [
  */
 export function generateStructure(repoPath = ".", options = {}) {
   const root = path.resolve(repoPath);
-  const outputPath = path.resolve(options.out ?? path.join(root, ".dev-context", "structure.html"));
+  const outputPath = path.resolve(options.out ?? path.join(root, ".otito", "structure.html"));
   const localBin = path.join(packageRoot, "node_modules", ".bin", "code-structure");
   const installed = resolveCodeStructure(localBin);
 

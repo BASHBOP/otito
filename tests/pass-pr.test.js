@@ -94,7 +94,7 @@ test("evaluatePR returns PASS-grade checks when approved with clean CI and prote
 
 test("PR convergence receipt is bound to GitHub's exact base and head commits", async () => {
   const root = gitInit("exact-subject", {
-    ".gitignore": ".dev-context/\n",
+    ".gitignore": ".otito/\n",
     "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
     "src/index.ts": "export const greeting = 'hi';\n",
   });
@@ -149,7 +149,7 @@ test("PR convergence receipt is bound to GitHub's exact base and head commits", 
 
 test("PR convergence fails closed when the local checkout is not the GitHub head", async () => {
   const root = gitInit("head-mismatch", {
-    ".gitignore": ".dev-context/\n",
+    ".gitignore": ".otito/\n",
     "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
     "src/index.ts": "export const greeting = 'hi';\n",
   });
@@ -172,7 +172,7 @@ test("PR convergence fails closed when the local checkout is not the GitHub head
 
 test("PR convergence fails closed when GitHub omits exact OIDs or a complete file list", async () => {
   const root = gitInit("incomplete-subject", {
-    ".gitignore": ".dev-context/\n",
+    ".gitignore": ".otito/\n",
     "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
   });
   const missingOid = {

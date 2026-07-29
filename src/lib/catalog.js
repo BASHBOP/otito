@@ -56,7 +56,7 @@ const ignoredDirectories = new Set([
   ".git",
   ".hg",
   ".svn",
-  ".dev-context",
+  ".otito",
   ".cache",
   ".next",
   ".turbo",
@@ -96,7 +96,7 @@ const stopWords = new Set([
 ]);
 
 export function defaultCatalogPath() {
-  return path.resolve(process.env.OTITO_CATALOG ?? path.join(os.homedir(), ".dev-context", "catalog.json"));
+  return path.resolve(process.env.OTITO_CATALOG ?? path.join(os.homedir(), ".otito", "catalog.json"));
 }
 
 /**
@@ -429,7 +429,7 @@ function catalogEntryFromMap(map, indexedAt) {
     sourceFileCount: map.repo.sourceFileCount,
     summary: map.summary,
     domains: map.domains,
-    indexPath: map.cache?.path ?? path.join(map.repo.root, ".dev-context", "index.json"),
+    indexPath: map.cache?.path ?? path.join(map.repo.root, ".otito", "index.json"),
     fingerprint: map.cache?.fingerprint,
     generatedAt: map.cache?.generatedAt ?? indexedAt,
     indexedAt,

@@ -25,7 +25,7 @@
 
 ## Review Notes
 
-- [ ] I kept generated artifacts under `.dev-context/` out of the commit.
+- [ ] I kept generated artifacts under `.otito/` out of the commit.
 - [ ] I updated README, skill docs, or eval metadata for command, package script, MCP tool, schema, or output changes.
 - [ ] I identified any skipped checks or follow-up work below.
 - [ ] I understand this PR needs maintainer/code-owner approval before merge.
