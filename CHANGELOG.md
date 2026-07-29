@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [1.1.1] - 2026-07-29
+
+### Fixed
+
+- **Plain-English signup verification context.** Questions such as “where is email verification implemented during signup?” now prioritise the registration controller, OTP verification, and unverified-login flow ahead of generic email operations.
+- **Readable terminal context reports.** `otito context` now presents its detailed report with colour-aware sections, emojis, ranked hotspots, focused route summaries, tests, commands, and an agent handoff. Markdown artifacts and JSON output remain unchanged.
+
+### Added
+
+- **Signup verification retrieval evaluation.** The scored corpus now protects the plain-English authentication query against future ranking regressions.
+
 ## [1.1.0] - 2026-07-29
 
 ### Added
