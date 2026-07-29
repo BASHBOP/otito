@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-29T06:13:46.064Z",
+  "generatedAt": "2026-07-29T06:45:45.227Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -43,13 +43,11 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 2,
+    "changedFiles": 1,
     "additions": 0,
     "deletions": 0,
     "riskLevel": "low",
-    "riskFlags": [
-      "configuration"
-    ],
+    "riskFlags": [],
     "reviewTargetsCount": 0
   },
   "pass": {
@@ -60,7 +58,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "3 changed files found."
+        "summary": "2 changed files found."
       },
       {
         "name": "Secret safety",
@@ -69,8 +67,8 @@
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
@@ -100,6 +98,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 415
+    "fullJson": 405
   }
 }
