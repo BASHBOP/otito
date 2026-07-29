@@ -1,4 +1,5 @@
 .otito/
+.dev-context/
 node_modules/
 dist/
 coverage/
