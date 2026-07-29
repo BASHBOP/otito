@@ -216,6 +216,45 @@ test("generateImpact fixes rename semantics independently of local Git config", 
   assert.deepEqual(copies.data.validation.changedFiles, disabled.data.validation.changedFiles);
 });
 
+test("generateImpact includes untracked files in diff validation before staging", () => {
+  const root = gitFixture("validate-untracked", {
+    "package.json": JSON.stringify({ name: "validate-untracked-fixture", scripts: { test: "node --test" } }),
+    "src/payment/processors/stripe.processor.ts": "export class StripeProcessor { refund() {} }\n",
+  });
+  fs.mkdirSync(path.join(root, "src/payment/refunds"), { recursive: true });
+  fs.writeFileSync(path.join(root, "src/payment/refunds/refund-policy.ts"), "export const refundPolicy = 'safe';\n");
+
+  const result = generateImpact("add a safe refund policy", { path: root, diffBase: "HEAD" });
+  assert.equal(result.data.validation.ok, true);
+  assert.ok(result.data.validation.changedFiles.includes("src/payment/refunds/refund-policy.ts"));
+});
+
+test("generateImpact surfaces every mapped changed file as exact diff evidence", () => {
+  const root = gitFixture("diff-evidence", {
+    "package.json": JSON.stringify({ name: "diff-evidence-fixture" }),
+    "src/access/permission.service.ts": "export const canAccess = () => false;\n",
+    "src/orders/order.service.ts": "export const findOrder = () => null;\n",
+    "src/ui/copy.ts": "export const heading = 'Welcome';\n",
+  });
+  fs.writeFileSync(path.join(root, "src/access/permission.service.ts"), "export const canAccess = () => true;\n");
+  fs.writeFileSync(path.join(root, "src/orders/order.service.ts"), "export const findOrder = (id) => id;\n");
+
+  const result = generateImpact("adjust the welcome message", { path: root, diffBase: "HEAD", top: 1 });
+  const exactFiles = ["src/access/permission.service.ts", "src/orders/order.service.ts"];
+
+  assert.deepEqual(result.data.diffEvidence?.mappedFiles, exactFiles);
+  for (const file of exactFiles) {
+    const entry = result.data.topFiles.find((candidate) => candidate.path === file);
+    assert.ok(entry, `changed file missing from surfaced impact: ${file}`);
+    assert.ok(
+      entry.reasons.some((reason) => reason.includes("exact Git diff evidence")),
+      `missing evidence label for ${file}`,
+    );
+  }
+  assert.deepEqual(result.data.validation.missedChangedFiles, []);
+  assert.deepEqual(result.data.validation.heuristic.missedChangedFiles, exactFiles, "heuristic misses remain visible instead of being concealed");
+});
+
 test("generateImpact reports a clean validation error for a bad diff base instead of throwing", () => {
   const root = gitFixture("validate-bad", {
     "package.json": JSON.stringify({ name: "validate-bad-fixture", scripts: { test: "node --test" } }),

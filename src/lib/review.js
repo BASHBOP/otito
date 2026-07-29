@@ -83,8 +83,8 @@ export async function generateReview(repoPath, options = {}) {
     },
     prReviewSummary: {
       changedFiles: prData.changedFiles.length,
-      additions: prData.diff?.additions ?? 0,
-      deletions: prData.diff?.deletions ?? 0,
+      additions: prData.comparison?.insertions ?? 0,
+      deletions: prData.comparison?.deletions ?? 0,
       riskLevel: prData.risk?.level,
       riskFlags: prData.risk?.flags ?? [],
       reviewTargetsCount: prData.reviewTargets?.routes?.length ?? 0,

@@ -33,7 +33,8 @@ test("indexRepositories writes an index and catalog entry", () => {
   assert.equal(indexed.indexedCount, 1);
   assert.equal(catalog.repositoryCount, 1);
   assert.equal(catalog.repositories[0].name, "local-api");
-  assert.ok(fs.existsSync(path.join(root, ".otito", "index.json")));
+  assert.ok(fs.existsSync(catalog.repositories[0].indexPath), "catalog should retain an external cache path for offline search");
+  assert.ok(!fs.existsSync(path.join(root, ".otito")), "indexing must not create an artifact in the target repository");
 });
 
 test("searchCatalog searches indexed paths and symbols", () => {

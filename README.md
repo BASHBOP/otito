@@ -39,7 +39,7 @@ Local-first context — feeds the gates:
 - generate a setup/validation/runtime harness for a repo
 - produce Markdown or JSON reports
 - estimate context-token size for generated artifacts
-- run an MCP server for agent hosts with a persisted repo index cache
+- run an MCP server for agent hosts with a persisted per-user index cache that never dirties an inspected repository
 - expose simple agent-friendly tool metadata
 - check tool availability
 - generate TypeScript structure HTML through `code-structure`
@@ -125,7 +125,7 @@ node src/cli.js structure . --out .otito/structure.html
 | Prepare task context | `otito context "add a new MCP tool" --path .` | Primary files, related files, tests, patterns, and validation commands |
 | Generate an agent harness | `otito harness . --out .otito/harness.md` | Setup, validation, runtime, and context commands |
 | Review local changes | `otito pr . --base origin/main --out .otito/pr-review.md` | Changed files, risk prompts, review targets, and test hints |
-| Index local projects | `otito index ~/projects --discover` | `.otito/index.json` files plus a local catalog |
+| Index local projects | `otito index ~/projects --discover` | External per-user indexes plus a local catalog |
 | Search indexed repos | `otito search "events controller"` | Ranked matches across paths, domains, routes, imports, exports, and symbols |
 | Run the MCP server | `otito mcp` | Stdio MCP server exposing otito tools |
 | Track usage & performance | `otito dashboard` | Self-contained HTML from an opt-in local usage log (off by default) |
@@ -297,7 +297,7 @@ Discovery stops at directories with common repo markers such as `package.json`, 
 
 ### `index <repo...>`
 
-Generates local `.otito/index.json` files and adds repositories to the local catalog.
+Generates per-user external indexes and adds repositories to the local catalog. The inspected repositories are not modified.
 
 ```bash
 node src/cli.js index .
@@ -326,7 +326,7 @@ node src/cli.js search "submit rsvp" --limit 10
 node src/cli.js search "api client" --offline --json
 ```
 
-By default, search refreshes repo indexes when fingerprints change. Use `--offline` to read only the stored `.otito/index.json` files.
+By default, search refreshes repo indexes when fingerprints change. Use `--offline` to read only the stored external indexes.
 
 ### `context <query>`
 
@@ -430,7 +430,7 @@ This repo includes `.github/workflows/otito-ci.yml`. The workflow installs depen
 
 ### `mcp`
 
-Starts a stdio MCP server exposing otito as agent-callable tools. MCP repo-map lookups cache `.otito/index.json` with a file fingerprint and automatically refresh when files change.
+Starts a stdio MCP server exposing otito as agent-callable tools. MCP repo-map lookups use an external per-user cache with a file fingerprint, refresh when files change, and never write into the inspected repository.
 
 ```bash
 node src/cli.js mcp
@@ -470,7 +470,7 @@ Ollama can provide the local model, but it does not call MCP tools by itself. To
 | ------------------- | ---------------------------------------------------------------------------------- |
 | `repo_inspect`      | Inspect repository shape, scripts, package managers, entrypoints, and git state    |
 | `repo_map`          | Compact JSON code map, filterable by `domain`, `kind`, and `route`                 |
-| `repo_index`        | Generate `.otito` indexes + catalog entries; `dryRun:true` discovers read-only     |
+| `repo_index`        | Generate external indexes + catalog entries; `dryRun:true` discovers read-only     |
 | `repo_search`       | Search the catalog; omit `query` to return the catalog listing                     |
 | `context_pack`      | Build a task-aware context packet                                                  |
 | `change_impact`     | Rank files most likely to own a plain-English change request                       |
