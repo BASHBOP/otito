@@ -1,8 +1,8 @@
 # Òtítọ́
 
-**Local-first code context for agents and reviewers — what does this change actually touch?**
+**Local-first code context for agents and reviewers: what does this change actually touch?**
 
-[![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/otito/otito-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/otito/actions/workflows/otito-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A522-339933?style=flat-square)](https://nodejs.org/)
+[![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/otito/otito-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/otito/actions/workflows/otito-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/otito?style=flat-square)](https://www.npmjs.com/package/@bashbop/otito) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/)
 
 ![otito demo](otito-demo.gif)
 
@@ -16,20 +16,20 @@
  \___/ |_| |___| |_| \___/
 ```
 
-An agent's output is bounded by two things: the **model** and the **harness** around it — the prompts, the context it's given, the codebase it works in, and the gates it must pass before code merges. You don't control the model. You control the harness, and a tighter harness lets a cheaper model do the same work with fewer wasted tokens.
+An agent's output is bounded by two things: the **model** and the **harness** around it. The harness includes the prompts, the context it's given, the codebase it works in, and the gates it must pass before code merges. You don't control the model. You control the harness, and a tighter harness lets a cheaper model do the same work with fewer wasted tokens.
 
-**Òtítọ́** is that harness layer. It is local-first, deterministic, and model-agnostic: it discovers repositories, builds local indexes, generates task-aware context before an agent edits, scores how much a change actually touches, and gates merge readiness — the same way every time, with no server, no account, and no code leaving the machine. Because it depends on software fundamentals rather than any one model, the harness you build today keeps working as models change underneath it.
+**Òtítọ́** is that harness layer. It is local-first, deterministic, and model-agnostic: it discovers repositories, builds local indexes, generates task-aware context before an agent edits, scores how much a change actually touches, and gates merge readiness. It works the same way every time, with no server, no account, and no code leaving the machine. Because it depends on software fundamentals rather than any one model, the harness you build today keeps working as models change underneath it.
 
 It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. It gives developers and coding agents a single CLI that can:
 
-Deterministic merge gates — the differentiated core. This is the human-in-the-loop checkpoint that a model cannot grade for itself:
+Deterministic merge gates are the differentiated core. This is the human-in-the-loop checkpoint that a model cannot grade for itself:
 
 - score merge readiness for local changes and pull requests with one `review_gate` tool (`gate` on the CLI)
 - resolve CODEOWNERS to required reviewers and surface owner-decision warnings
 - check branch-protection expectations and required checks before merge
 - generate actionable PR review context from git diffs and optional GitHub comments
 
-Local-first context — feeds the gates:
+Local-first context feeds the gates:
 
 - inspect a repository
 - discover and index local repositories
@@ -47,7 +47,7 @@ Local-first context — feeds the gates:
 
 ## Documentation
 
-otito now includes a publishable MkDocs documentation site, shaped as a practical discovery and delivery pack:
+The published MkDocs site is a practical discovery and delivery guide:
 
 - [Home](docs/index.md)
 - [Executive Summary](docs/EXECUTIVE-SUMMARY.md)
@@ -63,7 +63,7 @@ otito now includes a publishable MkDocs documentation site, shaped as a practica
 - [Usage & Performance Dashboard](docs/10-usage-dashboard/README.md)
 - [Glossary](docs/GLOSSARY.md)
 
-When GitHub Pages is enabled for the repository, the published site is configured for:
+Read it at:
 
 ```text
 https://bashbop.github.io/otito/
@@ -73,34 +73,50 @@ https://bashbop.github.io/otito/
 
 Code maps use the TypeScript compiler for JS/TS and dedicated language extractors for Go, C#, Python, Java, Ruby, and Rust (see `src/lib/code-map/ast-languages.js`). Optional external tools are only needed for dependency-source lookup and HTML structure reports.
 
-The npm package is not published yet. Use a local checkout:
+Install the published package from npm:
+
+```bash
+npm install -g @bashbop/otito
+otito doctor
+otito index ~/projects --discover
+otito context "add a new MCP tool" --path .
+```
+
+You can also run a command without a global install:
+
+```bash
+npx -y @bashbop/otito doctor
+```
+
+For source development:
 
 ```bash
 git clone https://github.com/BASHBOP/otito.git
 cd otito
-npm ci             # install dependencies
-npm run ci         # run the full quality gate
-npm install -g .   # install the otito CLI globally
-otito doctor       # verify the install
+npm ci
+npm run ci
+node src/cli.js doctor
 ```
 
+The current release is available through [npm](https://www.npmjs.com/package/@bashbop/otito), [GitHub Releases](https://github.com/BASHBOP/otito/releases), and the MCP Registry as `io.github.BASHBOP/otito`.
+
 ```bash
-node src/cli.js help
-node src/cli.js doctor
-node src/cli.js init /path/to/target-repo
-node src/cli.js repo . --json
-node src/cli.js discover ~/projects --depth 2 --json
-node src/cli.js index ~/projects --discover
-node src/cli.js catalog
-node src/cli.js search "events controller"
-node src/cli.js context "add a new MCP tool" --path .
-node src/cli.js map . --json
-node src/cli.js harness . --out .otito/harness.md
-node src/cli.js pr . --base origin/main --out .otito/pr-review.md
-node src/cli.js mcp
-node src/cli.js matrix
-node src/cli.js report . --out .otito/report.md
-node src/cli.js workspace /path/to/web /path/to/api --out .otito/workspace.md
+otito repo . --json
+otito discover ~/projects --depth 2 --json
+otito index ~/projects --discover
+otito catalog
+otito search "events controller"
+otito context "add a new MCP tool" --path .
+otito impact . "add a new MCP tool" --top 12
+otito ax . "add a new MCP tool"
+otito map . --json
+otito harness . --out .otito/harness.md
+otito pr . --base origin/main --out .otito/pr-review.md
+otito review . --request "add a new MCP tool" --base origin/main
+otito gate . --staged --base origin/main
+otito mcp
+otito report . --out .otito/report.md
+otito workspace /path/to/web /path/to/api --out .otito/workspace.md
 ```
 
 Optional external tools:
@@ -112,8 +128,8 @@ npm install -g opensrc code-structure
 Then:
 
 ```bash
-node src/cli.js deps zod --query parse
-node src/cli.js structure . --out .otito/structure.html
+otito deps zod --query parse
+otito structure . --out .otito/structure.html
 ```
 
 ## Usage Examples
@@ -138,7 +154,7 @@ For Claude Desktop, VS Code, Cursor, and generic stdio client snippets, see [MCP
 | --- | --- | --- |
 | Sourcegraph / Cody context | Powerful hosted code search and embedding-based context across an org | otito is local-first and deterministic: no server, no account, no code leaves the machine, and the same query always yields the same packet |
 | Hand-written `CLAUDE.md` / rules files | Curated, intent-rich guidance | Hand-written context goes stale; otito regenerates context from the actual code (symbols, imports, routes, tests) on every run and complements a short `CLAUDE.md` |
-| `grep` / `ripgrep` | Fast, universal text matching | otito ranks whole files by task intent across paths, symbols, exports, and tests, then adds patterns and validation commands — a context packet, not a list of matching lines |
+| `grep` / `ripgrep` | Fast, universal text matching | otito ranks whole files by task intent across paths, symbols, exports, and tests, then adds patterns and validation commands. The result is a context packet, not a list of matching lines |
 
 ## Quality Gates
 
@@ -156,10 +172,14 @@ The gate runs:
 - `npm run version:check`
 - `npm test`
 - `npm run test:coverage`
+- `npm run eval:accuracy`
+- `npm run eval:harness`
 - `npm run audit`
 - `npm run smoke`
 
 Coverage currently gates source files at 70% lines, 60% branches, and 75% functions. Generated artifacts under `.otito/` are ignored by git, linting, and formatting; keep durable reports there instead of committing them.
+
+The v1.1.0 harness execution evaluation runs only vetted install, test, typecheck, and build commands against committed fixtures. It disables install lifecycle scripts, applies timeouts, and never executes inferred commands from a customer repository.
 
 otito follows Semantic Versioning. Pull requests should identify whether they are no-version-impact, patch, minor, or major changes; maintainers apply the final package version during release.
 
@@ -176,41 +196,41 @@ All code changes must be reviewed by a maintainer/code owner before merge. The p
 Agent repo harness:
 
 ```bash
-node src/cli.js harness . --out .otito/harness.md
-node src/cli.js map . --json
+otito harness . --out .otito/harness.md
+otito map . --json
 ```
 
 Local discovery, indexing, catalog, and search:
 
 ```bash
-node src/cli.js discover ~/projects --depth 2
-node src/cli.js index ~/projects --discover
-node src/cli.js catalog
-node src/cli.js search "submit rsvp"
+otito discover ~/projects --depth 2
+otito index ~/projects --discover
+otito catalog
+otito search "submit rsvp"
 ```
 
 Task-aware agent context:
 
 ```bash
-node src/cli.js context "add a new MCP tool" --path . --json
-node src/cli.js context "add a new MCP tool" --path . --out .otito/context-pack.md
+otito context "add a new MCP tool" --path . --json
+otito context "add a new MCP tool" --path . --out .otito/context-pack.md
 ```
 
 PR review harness:
 
 ```bash
-node src/cli.js pr . --base origin/main --out .otito/pr-review.md
-node src/cli.js pr . --number 123 --comment
+otito pr . --base origin/main --out .otito/pr-review.md
+otito pr . --number 123 --comment
 ```
 
 Merge gate (`gate` is the canonical v2 command; `pass` / `pass-pr` remain as legacy aliases):
 
 ```bash
-node src/cli.js gate . --base origin/main          # local gate (no GitHub)
-node src/cli.js gate . --staged --base origin/main # staged-path evidence, suitable for pre-commit hooks
-node src/cli.js gate . --base origin/main --request "update the greeting" --min-convergence 80
-node src/cli.js converge "update the greeting" --path . --base HEAD --staged --json # exact change-subject receipt
-node src/cli.js gate --pr 123 --path .             # GitHub PR gate via gh
+otito gate . --base origin/main          # local gate (no GitHub)
+otito gate . --staged --base origin/main # staged-path evidence, suitable for pre-commit hooks
+otito gate . --base origin/main --request "update the greeting" --min-convergence 80
+otito converge "update the greeting" --path . --base HEAD --staged --json # exact change-subject receipt
+otito gate --pr 123 --path .             # GitHub PR gate via gh
 ```
 
 In staged mode, changed-path, risk, secret and convergence evidence use the exact Git index tree. Exact-subject source analysis streams raw Git blobs and fails closed above 5,000 source files or 64 MiB. Release, validation-command and optional analyzer checks still inspect the working tree and are reported outside the convergence receipt.
@@ -218,19 +238,19 @@ In staged mode, changed-path, risk, secret and convergence evidence use the exac
 Multi-repo product context:
 
 ```bash
-node src/cli.js workspace ../web ../api --out .otito/workspace.md
+otito workspace ../web ../api --out .otito/workspace.md
 ```
 
 GitHub Actions bootstrap:
 
 ```bash
-node src/cli.js init /path/to/target-repo
+otito init /path/to/target-repo
 ```
 
 Local Ollama review:
 
 ```bash
-node src/cli.js harness . --out .otito/harness.md
+otito harness . --out .otito/harness.md
 
 {
   echo "Use this repo harness to explain the project and suggest the next best engineering task."
@@ -242,7 +262,7 @@ node src/cli.js harness . --out .otito/harness.md
 Local Ollama PR review:
 
 ```bash
-node src/cli.js pr . --base origin/main --out .otito/pr-review.md
+otito pr . --base origin/main --out .otito/pr-review.md
 
 {
   echo "Review this PR context. Focus on bugs, missing tests, and risky changes."
@@ -258,7 +278,7 @@ node src/cli.js pr . --base origin/main --out .otito/pr-review.md
 Checks the local runtime and optional external tools.
 
 ```bash
-node src/cli.js doctor --json
+otito doctor --json
 ```
 
 ### `install` / `i`
@@ -266,10 +286,10 @@ node src/cli.js doctor --json
 Prints install commands and current binary status. From a local checkout, `--global` runs `npm install -g .`; `--link` runs `npm link`.
 
 ```bash
-node src/cli.js install
-node src/cli.js i
-node src/cli.js install --global
-node src/cli.js install --json
+otito install
+otito i
+otito install --global
+otito install --json
 ```
 
 After installation, use `otito` as the command.
@@ -279,7 +299,7 @@ After installation, use `otito` as the command.
 Inspects repo shape: files, package metadata, languages, package managers, scripts, likely entrypoints, git metadata, and ignored-heavy directories.
 
 ```bash
-node src/cli.js repo . --json
+otito repo . --json
 ```
 
 Git repositories are scanned through `git ls-files --cached --others --exclude-standard` so ignored files do not pollute harness context. Plain directories fall back to the built-in walker.
@@ -289,8 +309,8 @@ Git repositories are scanned through `git ls-files --cached --others --exclude-s
 Discovers repository roots under one or more local directories without indexing them.
 
 ```bash
-node src/cli.js discover ~/projects --depth 2
-node src/cli.js discover . --json
+otito discover ~/projects --depth 2
+otito discover . --json
 ```
 
 Discovery stops at directories with common repo markers such as `package.json`, `.git`, `pyproject.toml`, `go.mod`, `Cargo.toml`, and `Package.swift`.
@@ -300,9 +320,9 @@ Discovery stops at directories with common repo markers such as `package.json`, 
 Generates per-user external indexes and adds repositories to the local catalog. The inspected repositories are not modified.
 
 ```bash
-node src/cli.js index .
-node src/cli.js index ~/projects --discover
-node src/cli.js index . --catalog /tmp/otito-catalog.json --json
+otito index .
+otito index ~/projects --discover
+otito index . --catalog /tmp/otito-catalog.json --json
 ```
 
 The default catalog path is `~/.otito/catalog.json`. Set `OTITO_CATALOG` or pass `--catalog` to use a different file.
@@ -312,8 +332,8 @@ The default catalog path is `~/.otito/catalog.json`. Set `OTITO_CATALOG` or pass
 Lists repositories currently indexed in the local catalog.
 
 ```bash
-node src/cli.js catalog
-node src/cli.js catalog --json
+otito catalog
+otito catalog --json
 ```
 
 ### `search <query>`
@@ -321,9 +341,9 @@ node src/cli.js catalog --json
 Searches indexed local repositories by path, domain, kind, route, controller path, imports, exports, and symbols.
 
 ```bash
-node src/cli.js search "events controller"
-node src/cli.js search "submit rsvp" --limit 10
-node src/cli.js search "api client" --offline --json
+otito search "events controller"
+otito search "submit rsvp" --limit 10
+otito search "api client" --offline --json
 ```
 
 By default, search refreshes repo indexes when fingerprints change. Use `--offline` to read only the stored external indexes.
@@ -333,8 +353,8 @@ By default, search refreshes repo indexes when fingerprints change. Use `--offli
 Generates a local context-engine packet for a task. The packet includes inferred intent, primary files, related files, matching tests, implementation patterns, validation commands, conflicts, source evidence, and token estimates.
 
 ```bash
-node src/cli.js context "add a new MCP tool" --path . --json
-node src/cli.js context "add a new CLI command" --path . --out .otito/context-pack.md
+otito context "add a new MCP tool" --path . --json
+otito context "add a new CLI command" --path . --out .otito/context-pack.md
 ```
 
 Use this before handing work to a coding agent. It is deterministic and local-first: it relies on repo indexes, code maps, import relationships, tests, and harness commands rather than an external model.
@@ -344,8 +364,8 @@ Use this before handing work to a coding agent. It is deterministic and local-fi
 Generates a repo harness with setup commands, validation scripts, runtime scripts, context commands, focus areas, and estimated context-token usage.
 
 ```bash
-node src/cli.js harness . --out .otito/harness.md
-node src/cli.js harness . --json
+otito harness . --out .otito/harness.md
+otito harness . --json
 ```
 
 Use this as the first artifact an agent or CI workflow reads before touching code.
@@ -355,10 +375,10 @@ Use this as the first artifact an agent or CI workflow reads before touching cod
 Scaffolds otito into another repository.
 
 ```bash
-node src/cli.js init /path/to/target-repo
-node src/cli.js init /path/to/target-repo --force
-node src/cli.js init /path/to/target-repo --no-workflow
-node src/cli.js init /path/to/target-repo --tool-repo BASHBOP/otito --tool-ref main
+otito init /path/to/target-repo
+otito init /path/to/target-repo --force
+otito init /path/to/target-repo --no-workflow
+otito init /path/to/target-repo --tool-repo BASHBOP/otito --tool-ref main
 ```
 
 Generated files:
@@ -373,7 +393,7 @@ The generated workflow runs on pull requests and commit pushes. Pull request run
 Runs `code-structure` against TypeScript files.
 
 ```bash
-node src/cli.js structure . --pattern "app/**/*.tsx" --out .otito/structure.html
+otito structure . --pattern "app/**/*.tsx" --out .otito/structure.html
 ```
 
 If `code-structure` is missing, the command returns an install hint instead of failing mysteriously. If it is not installed globally but `npx` is available, otito can run it through `npx --yes code-structure`.
@@ -383,7 +403,7 @@ If `code-structure` is missing, the command returns an install hint instead of f
 Uses `opensrc path <package>` to resolve dependency source and optionally search it.
 
 ```bash
-node src/cli.js deps zod --query parse --limit 20
+otito deps zod --query parse --limit 20
 ```
 
 ### `report <path>`
@@ -391,9 +411,9 @@ node src/cli.js deps zod --query parse --limit 20
 Generates a shareable developer report.
 
 ```bash
-node src/cli.js report .
-node src/cli.js report . --out .otito/report.md
-node src/cli.js report . --json
+otito report .
+otito report . --out .otito/report.md
+otito report . --json
 ```
 
 The default output is formatted for terminal reading and ends with estimated token usage. Use `--out` for the Markdown artifact or `--json` for structured data.
@@ -403,8 +423,8 @@ The default output is formatted for terminal reading and ends with estimated tok
 Generates one product-level report across related repos.
 
 ```bash
-node src/cli.js workspace /path/to/web /path/to/api --out .otito/workspace.md
-node src/cli.js workspace /path/to/web /path/to/api --json
+otito workspace /path/to/web /path/to/api --out .otito/workspace.md
+otito workspace /path/to/web /path/to/api --json
 ```
 
 ### `pr <path>`
@@ -412,8 +432,8 @@ node src/cli.js workspace /path/to/web /path/to/api --json
 Generates a PR review context pack from local git diff metadata, code-map classification, review targets, targeted review prompts, risk flags, suggested verification commands, estimated tokens, and optional GitHub PR comments.
 
 ```bash
-node src/cli.js pr . --base origin/main --out .otito/pr-review.md
-node src/cli.js pr . --number 123 --comment
+otito pr . --base origin/main --out .otito/pr-review.md
+otito pr . --number 123 --comment
 ```
 
 Useful flags:
@@ -426,14 +446,16 @@ Useful flags:
 
 ### GitHub Actions
 
-This repo includes `.github/workflows/otito-ci.yml`. The workflow installs dependencies, runs `npm run ci`, then generates PR or push review context as an uploaded artifact. Use `node src/cli.js init /path/to/target-repo` to scaffold a otito review workflow into another repository.
+This repo includes `.github/workflows/otito-ci.yml`. The workflow installs dependencies, runs `npm run ci`, then generates PR or push review context as an uploaded artifact. Use `otito init /path/to/target-repo` to scaffold an Otito review workflow into another repository.
 
 ### `mcp`
 
 Starts a stdio MCP server exposing otito as agent-callable tools. MCP repo-map lookups use an external per-user cache with a file fingerprint, refresh when files change, and never write into the inspected repository.
 
+The server is published in the MCP Registry as `io.github.BASHBOP/otito`.
+
 ```bash
-node src/cli.js mcp
+otito mcp
 ```
 
 When wiring it into an MCP host (Claude Desktop, Claude Code, Codex CLI, Cursor, etc.):
@@ -477,7 +499,7 @@ Ollama can provide the local model, but it does not call MCP tools by itself. To
 | `agent_experience`  | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity |
 | `convergence_score` | Score intent vs. execution (0–100) with an exact change-subject receipt            |
 | `review_context`    | Diff/comment review context (no verdict)                                           |
-| `review_gate`       | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`           |
+| `review_gate`       | PASS/WARN/FAIL merge gate: local without `pr`, GitHub PR gate with `pr`            |
 | `review_verdict`    | Composite verdict: impact + review_context + review_gate                           |
 | `workspace_report`  | Product-level report across multiple repos                                         |
 | `repo_harness`      | Setup, validation, runtime, and context commands for an agent or CI harness        |
@@ -488,7 +510,7 @@ Prints the tool evaluation matrix for Greploop, `code-structure`, `opensrc`, Day
 
 ### `agent-tools`
 
-Prints JSON metadata for agent integrations. This is intentionally lightweight so it can become an MCP server later without changing command semantics.
+Prints JSON or Markdown metadata derived from the canonical MCP tool catalog, keeping CLI and MCP integrations aligned.
 
 ## Strategy
 
@@ -500,11 +522,11 @@ This keeps the project useful quickly while leaving room to replace weak adapter
 
 ## Part of the toolchain
 
-**otito** is one of four tools that form a deterministic trust layer for AI-assisted development. Each answers a question people keep handing to an LLM — with static analysis instead.
+**otito** is one of four tools that form a deterministic trust layer for AI-assisted development. Each uses static analysis to answer a question people keep handing to an LLM.
 
-- **otito** (this tool) — context: what does this change actually touch?
-- [tieline](https://www.npmjs.com/package/@bashbop/tieline) — contracts: did the front end and back end quietly stop agreeing?
-- [bouncer](https://www.npmjs.com/package/@bashbop/bouncer) — compliance: could you defend this to Ofcom?
-- [aiglare](https://www.npmjs.com/package/@bashbop/aiglare) — governance: where can the model do something you can't undo?
+- **otito** (this tool), for context: what does this change actually touch?
+- [tieline](https://www.npmjs.com/package/@bashbop/tieline), for contracts: did the front end and back end quietly stop agreeing?
+- [bouncer](https://www.npmjs.com/package/@bashbop/bouncer), for compliance: could you defend this to Ofcom?
+- [aiglare](https://www.npmjs.com/package/@bashbop/aiglare), for governance: where can the model do something you can't undo?
 
 More at [segunolumbe.com](https://segunolumbe.com). _static analysis, never the model._
