@@ -1,0 +1,10 @@
+{
+  "name": "otito-harness-node-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "typecheck": "node --check src/index.js",
+    "build": "node scripts/build.mjs"
+  }
+}
