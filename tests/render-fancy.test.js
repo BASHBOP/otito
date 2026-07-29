@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createRenderer, shouldUseEmoji } from "../src/lib/render/fancy.js";
+import { createRenderer, shouldUseColor, shouldUseEmoji } from "../src/lib/render/fancy.js";
 
 test("shouldUseEmoji respects explicit options first", () => {
   assert.equal(shouldUseEmoji({}, { emoji: true }), true);
@@ -13,8 +13,16 @@ test("shouldUseEmoji disables when NO_EMOJI=1 or CI=true", () => {
   assert.equal(shouldUseEmoji({}), true);
 });
 
+test("explicit color options keep renderer tests stable when color is forced", () => {
+  const env = { FORCE_COLOR: "1" };
+  assert.equal(shouldUseColor(env), true);
+  assert.equal(shouldUseColor(env, { color: false }), false);
+  assert.equal(shouldUseColor(env, { color: true }), true);
+});
+
 test("header uses Unicode box drawing and includes title text", () => {
-  const r = createRenderer({ emoji: true, width: 60 });
+  // The assertions describe visible box geometry, not terminal escape bytes.
+  const r = createRenderer({ emoji: true, color: false, width: 60 });
   const out = r.header({ text: "otito doctor", glyph: "📋" });
   assert.match(out, /^╭/);
   assert.match(out, /╯$/);
@@ -23,7 +31,7 @@ test("header uses Unicode box drawing and includes title text", () => {
 });
 
 test("header in plain mode strips glyphs and uses ASCII box", () => {
-  const r = createRenderer({ emoji: false, width: 60 });
+  const r = createRenderer({ emoji: false, color: false, width: 60 });
   const out = r.header({ text: "otito doctor", glyph: "📋" });
   assert.match(out, /^\+/);
   assert.match(out, /\+$/);
