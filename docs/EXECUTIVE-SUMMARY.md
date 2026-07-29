@@ -30,14 +30,14 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Local catalog         | Discovery, indexing, and search across local repositories                                                      |
 | PR review context     | Diff-aware review prompts, changed domains, risk flags, Go test-file detection, and optional GitHub comments   |
 | MCP support           | Agent-callable tools for repo inspection, maps, search, harnesses, workspaces, and PR review                   |
-| Governance            | CI gates, PullPass readiness, CODEOWNERS, SemVer guidance, security reporting, templates, and review policy    |
+| Governance            | CI gates, Òtítọ́ readiness, CODEOWNERS, SemVer guidance, security reporting, templates, and review policy      |
 | Demo packet           | Company-facing packet that links the executive summary, case study, proof run, launch note, and pilot checklist |
 | Pilot runbook         | Step-by-step first repository and pull request pilot with roles, evidence, stop conditions, and triage          |
 | Proof index           | Sanitized public evidence map plus private/internal evidence boundaries for company reviewers                  |
 | Review policy         | Branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision snapshot           |
 | Feedback loop         | Structured company pilot intake that turns reviewer concerns into docs, gates, proof, or roadmap work          |
 | Company adoption      | Screenshot-style case study for evaluation, pilot rollout, and governance decision records                     |
-| Public launch note    | Short external-facing story for otito, PullPass, proof runs, and next trust-layer gates                      |
+| Public launch note    | Short external-facing story for Òtítọ́, proof runs, and next trust-layer gates                                |
 | Operating loop        | Repeatable session rhythm for context, focused change, visible gates, human decisions, and durable evidence    |
 
 ---
@@ -48,7 +48,7 @@ otito is part of a larger trust layer:
 
 ```text
 otito  -> context before change
-PullPass -> validation before merge
+Òtítọ́ -> validation before merge
 Humans   -> accountability before release
 ```
 
@@ -64,13 +64,13 @@ This makes otito useful for maintainers who want AI-assisted development without
 | Unclear task scope            | `otito context` generates task-aware primary and related files                  |
 | Multi-repo context missing    | `otito workspace` builds a product-level context report                         |
 | PR review surface hidden      | `otito pr` summarizes changed files, risks, prompts, and comments               |
-| Merge readiness hidden        | PullPass PR readiness runs on pull requests and records owner-decision warnings   |
-| Context evidence disconnected | PullPass reports include otito `Context Evidence` commands for context packs and PR review reports |
+| Merge readiness hidden        | Òtítọ́ PR readiness runs on pull requests and records owner-decision warnings     |
+| Context evidence disconnected | Òtítọ́ reports include `Context Evidence` commands for context packs and PR review reports |
 | Agent tool integration needed | `otito mcp` exposes repository context through MCP                              |
 | MCP setup unclear             | MCP workflow docs include generic stdio, Claude Desktop, VS Code, and Cursor examples |
 | Contributor readiness         | CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
 | Review policy visibility      | Review-policy snapshot summarizes branch protection and owner/admin decision boundaries |
-| Trust-layer demo              | Public walkthrough for otito context, PR review context, PullPass, and human merge accountability |
+| Trust-layer demo              | Public walkthrough for Òtítọ́ context, PR review context, and human merge accountability |
 | Session continuity            | Builder-founder operating loop keeps proof, gates, and next actions outside chat memory |
 
 ---
@@ -87,7 +87,7 @@ This makes otito useful for maintainers who want AI-assisted development without
 
 ## Next Steps
 
-1. Keep the company adoption packet current as otito and PullPass evolve.
+1. Keep the company adoption packet current as Òtítọ́ evolves.
 2. Run one real repository and pull request through the company pilot runbook.
 3. Keep the proof index current as public artifacts and private proof boundaries evolve.
 4. Capture feedback from real company reviewers through the pilot feedback loop and turn it into docs, gates, proof, or roadmap work.

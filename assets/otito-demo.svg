@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <defs>
+    <linearGradient id="rainbow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff5c5c"/>
+      <stop offset="0.2" stop-color="#ffa657"/>
+      <stop offset="0.4" stop-color="#ffd866"/>
+      <stop offset="0.6" stop-color="#7ee787"/>
+      <stop offset="0.8" stop-color="#58a6ff"/>
+      <stop offset="1" stop-color="#d2a8ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="400" fill="#0d1117"/>
+  <rect x="16" y="16" width="768" height="368" rx="12" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+  <circle cx="39" cy="39" r="5" fill="#ff5c5c"/><circle cx="57" cy="39" r="5" fill="#ffa657"/><circle cx="75" cy="39" r="5" fill="#7ee787"/>
+  <text x="40" y="79" fill="url(#rainbow)" font-size="28" font-weight="700">ÒTÍTỌ́</text>
+  <text x="40" y="103" fill="#8b949e" font-size="13">deterministic repository evidence</text>
+  <line x1="40" x2="760" y1="122" y2="122" stroke="#30363d"/>
+  <text x="40" y="158" fill="#7ee787" font-size="17">›</text>
+  <text x="61" y="158" fill="#c9d1d9" font-size="17">otito context "prepare a release" --path .</text>
+  <text x="40" y="202" fill="#8b949e" font-size="15">intent</text>
+  <text x="174" y="202" fill="#c9d1d9" font-size="15">prepare a release</text>
+  <text x="40" y="233" fill="#8b949e" font-size="15">primary</text>
+  <text x="174" y="233" fill="#a5d6ff" font-size="15">package.json  ·  CHANGELOG.md  ·  CI</text>
+  <text x="40" y="264" fill="#8b949e" font-size="15">tests</text>
+  <text x="174" y="264" fill="#c9d1d9" font-size="15">npm test  ·  npm run typecheck</text>
+  <text x="40" y="295" fill="#8b949e" font-size="15">evidence</text>
+  <text x="174" y="295" fill="#c9d1d9" font-size="15">.otito/context-pack.md</text>
+  <text x="40" y="326" fill="#8b949e" font-size="15">next</text>
+  <text x="174" y="326" fill="#c9d1d9" font-size="15">review the exact staged tree before merge</text>
+  <rect x="40" y="342" width="315" height="26" rx="5" fill="#143321"/>
+  <text x="52" y="361" fill="#7ee787" font-size="14" font-weight="700">✓ READY FOR HUMAN REVIEW</text>
+</svg>

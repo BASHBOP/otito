@@ -2,18 +2,18 @@
 
 **Local-first code context for agents and reviewers — what does this change actually touch?**
 
-[![npm](https://img.shields.io/npm/v/@bashbop/otito?style=flat-square)](https://www.npmjs.com/package/@bashbop/otito) [![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/otito/otito-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/otito/actions/workflows/otito-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/node/v/@bashbop/otito?style=flat-square)](https://www.npmjs.com/package/@bashbop/otito)
+[![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/otito/otito-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/otito/actions/workflows/otito-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A522-339933?style=flat-square)](https://nodejs.org/)
 
 ![otito demo](otito-demo.gif)
 
 ![otito](assets/otito-design-print.svg)
 
 ```text
- ____   _____   ____    ___    ____   _____  __  __
-|  _ \ | ____| |  _ \  / _ \  / ___| |_   _| \ \/ /
-| |_) ||  _|   | |_) || | | || |       | |    \  /
-|  _ < | |___  |  __/ | |_| || |___    | |    /  \
-|_| \_\|_____| |_|     \___/  \____|   |_|   /_/\_\
+  ___ _____ ___ _____ ___
+ / _ \_   _|_ _|_   _/ _ \
+| | | || |  | |  | || | | |
+| |_| || |  | |  | || |_| |
+ \___/ |_| |___| |_| \___/
 ```
 
 An agent's output is bounded by two things: the **model** and the **harness** around it — the prompts, the context it's given, the codebase it works in, and the gates it must pass before code merges. You don't control the model. You control the harness, and a tighter harness lets a cheaper model do the same work with fewer wasted tokens.
@@ -73,26 +73,15 @@ https://bashbop.github.io/otito/
 
 Code maps use the TypeScript compiler for JS/TS and dedicated language extractors for Go, C#, Python, Java, Ruby, and Rust (see `src/lib/code-map/ast-languages.js`). Optional external tools are only needed for dependency-source lookup and HTML structure reports.
 
-Install from npm:
+The npm package is not published yet. Use a local checkout:
 
 ```bash
-npm install -g @bashbop/otito
-otito doctor
-```
-
-Or run without installing:
-
-```bash
-npx -y @bashbop/otito doctor
-```
-
-From a local checkout:
-
-```bash
+git clone https://github.com/BASHBOP/otito.git
+cd otito
 npm ci             # install dependencies
 npm run ci         # run the full quality gate
 npm install -g .   # install the otito CLI globally
-otito doctor     # verify the install
+otito doctor       # verify the install
 ```
 
 ```bash

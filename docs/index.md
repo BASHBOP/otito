@@ -22,9 +22,9 @@
 ## :material-sparkles: What's New
 
 !!! tip "v1.0.0 — Òtítọ́ clean cutover (2026-07-29)"
-    - Install with **`npm install -g @bashbop/otito`**.
+    - Start from a local checkout while npm publication is pending.
     - Run the deterministic CLI with **`otito`**.
-    - Configure MCP with **`npx -y @bashbop/otito mcp`**.
+    - Configure MCP with **`node /path/to/otito/src/cli.js mcp`**.
 
 See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for the full history.
 
@@ -38,7 +38,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 | 02 | [:material-lan-connect: MCP and Agents](./02-mcp-agent-workflows/README.md) | MCP tools and agent-facing workflows | :material-check-circle: Active |
 | 03 | Bashbop stewardship | Protected review, release discipline, and CODEOWNERS | :material-check-circle: Active |
 | 04 | [:material-tag-check: Release Readiness](./04-release-readiness/README.md) | SemVer, changelog discipline, CI, and release gates | :material-check-circle: Active |
-| 05 | [:material-play-circle: Trust-Layer Demo](./05-trust-layer-demo/README.md) | otito plus PullPass as a repeatable review workflow | :material-check-circle: Active |
+| 05 | [:material-play-circle: Trust-Layer Demo](./05-trust-layer-demo/README.md) | Òtítọ́ as a repeatable review workflow | :material-check-circle: Active |
 | 06 | [:material-repeat: Builder-Founder Loop](./06-builder-founder-operating-loop/README.md) | Session rhythm, evidence ledger, governance ladder, and next-action rule | :material-check-circle: Active |
 
 ---
@@ -54,7 +54,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
     - Data-access surface reports (inline SQL and Prisma) with per-file boosts in context-pack scoring
     - Local-vs-naïve eval suite for measuring otito's token savings
     - PR review context from git diffs and optional GitHub comments
-    - Go test-file detection for PullPass-style repositories
+    - Go test-file detection for review-ready repositories
     - MCP tools for repository context, search, maps, and review workflows
     - Contributor-ready governance: CI, CODEOWNERS, templates, security, and release guidance
 
@@ -70,7 +70,7 @@ flowchart LR
     D --> E[Agent or reviewer]
     E --> F[Change]
     F --> G[PR review context]
-    G --> H[PullPass gate]
+    G --> H[Otito gate]
 ```
 
 ---
@@ -80,8 +80,8 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito
-    otito doctor
+    git clone https://github.com/BASHBOP/otito.git
+    cd otito && npm ci && node src/cli.js doctor
     ```
 
 === "Local Checkout"
@@ -124,13 +124,13 @@ flowchart LR
 
     ---
 
-    Pair otito with PullPass for a repeatable trust layer: context before change, validation before merge.
+    Use Òtítọ́ as a repeatable trust layer: context before change, validation before merge.
 
 -   :material-play-circle:{ .lg .middle } **Public Demo Path**
 
     ---
 
-    Show the workflow end to end: context pack, focused change, PR review context, PullPass gate, human merge.
+    Show the workflow end to end: context pack, focused change, Òtítọ́ gate, human merge.
 
 -   :material-briefcase-check:{ .lg .middle } **Company Adoption Case Study**
 
