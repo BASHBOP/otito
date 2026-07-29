@@ -8,6 +8,7 @@ import { generateCodeMap } from "./code-map.js";
 import { generateHarness } from "./harness.js";
 import { generateContextPack } from "./context-engine.js";
 import { classifyPath, conceptsFromQuery, isGateRiskPath, isSecretPath } from "./risk-paths.js";
+import { runCommand } from "./tools.js";
 
 /**
  * Options for the token-savings eval.
@@ -78,6 +79,45 @@ import { classifyPath, conceptsFromQuery, isGateRiskPath, isSecretPath } from ".
  * @property {RetrievalCase[]} retrieval
  * @property {RiskCase[]} risk
  * @property {CorpusThresholds} [thresholds]
+ * @property {HarnessExecutionCase[]} [harnessExecution]
+ */
+
+/**
+ * A fixture-backed assertion that an inferred harness command is executable.
+ * @typedef {object} HarnessExecutionCase
+ * @property {string} name
+ * @property {string} repoFixture
+ * @property {HarnessExecutionExpectation[]} commands
+ */
+
+/**
+ * @typedef {object} HarnessExecutionExpectation
+ * @property {"install"|"test"|"typecheck"|"build"} kind
+ * @property {"setup"|"validate"} group
+ * @property {string} command
+ * @property {string} [script]
+ */
+
+/**
+ * @typedef {object} HarnessExecutionResult
+ * @property {"install"|"test"|"typecheck"|"build"} kind
+ * @property {string} command
+ * @property {boolean} inferred
+ * @property {boolean} executed
+ * @property {number|null} [status]
+ * @property {boolean} pass
+ * @property {string} [error]
+ * @property {string} [output]
+ */
+
+/**
+ * @typedef {object} ScoredHarnessExecutionCase
+ * @property {string} name
+ * @property {"harness_execution"} type
+ * @property {string} fixture
+ * @property {HarnessExecutionResult[]} commands
+ * @property {boolean} pass
+ * @property {string} [error]
  */
 
 /**
@@ -591,6 +631,194 @@ export function runRetrievalEval(options = {}) {
   return { data, markdown: formatRetrievalEvalMarkdown(data) };
 }
 
+// ---------------------------------------------------------------------------
+// Harness execution eval.
+//
+// Accuracy eval proves that Otito retrieves the right source context and labels
+// risk correctly. This runner proves a distinct claim: for reviewed, committed
+// fixture repositories, the setup and validation commands Otito inferred can
+// actually run. Fixtures are copied to a temp directory; no customer checkout
+// is executed. Command lines are deliberately constrained to package-manager
+// forms, and install lifecycle scripts are disabled.
+// ---------------------------------------------------------------------------
+
+/**
+ * Run the fixture-backed harness execution corpus.
+ *
+ * @param {object} [options]
+ * @param {string} [options.corpusPath] absolute path to a corpus.json (defaults to evals/corpus.json)
+ * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the otito repo root)
+ * @returns {{ data: object, markdown: string }}
+ */
+export function runHarnessExecutionEval(options = {}) {
+  const corpusPath = options.corpusPath ? path.resolve(options.corpusPath) : defaultCorpusPath;
+  const root = options.repoRoot ? path.resolve(options.repoRoot) : repoRoot;
+  const corpus = loadCorpus(corpusPath);
+  const fixtureRoots = corpus.fixtureRoots ?? {};
+  const cases = corpus.harnessExecution;
+
+  if (!Array.isArray(cases) || cases.length === 0) {
+    throw new Error(`corpus must define a non-empty harnessExecution[] array: ${corpusPath}`);
+  }
+
+  const results = cases.map((testCase) => scoreHarnessExecutionCase(testCase, { root, fixtureRoots }));
+  const commandCount = results.reduce((sum, result) => sum + result.commands.length, 0);
+  const passedCommands = results.reduce((sum, result) => sum + result.commands.filter((command) => command.pass).length, 0);
+  const passed = results.every((result) => result.pass);
+
+  const data = {
+    ok: true,
+    generatedAt: new Date().toISOString(),
+    evalKind: "harness-execution",
+    corpusPath,
+    counts: {
+      fixtures: results.length,
+      commands: commandCount,
+      passedCommands,
+    },
+    passed,
+    exitCode: passed ? 0 : 1,
+    cases: results,
+  };
+
+  return { data, markdown: formatHarnessExecutionEvalMarkdown(data) };
+}
+
+/**
+ * @param {HarnessExecutionCase} testCase
+ * @param {{ root: string, fixtureRoots: Record<string, string> }} context
+ * @returns {ScoredHarnessExecutionCase}
+ */
+function scoreHarnessExecutionCase(testCase, { root, fixtureRoots }) {
+  if (!testCase?.name || !testCase.repoFixture || !Array.isArray(testCase.commands) || testCase.commands.length === 0) {
+    throw new Error("each harnessExecution case needs name, repoFixture, and a non-empty commands[] array");
+  }
+
+  const source = resolveFixture(root, fixtureRoots, testCase.repoFixture);
+  assertHarnessFixtureRoot(root, source, testCase.repoFixture);
+  const temp = copyFixtureToTemp(source);
+  /** @type {HarnessExecutionResult[]} */
+  let commands = [];
+  /** @type {string|undefined} */
+  let error;
+
+  try {
+    const harness = generateHarness(temp.dir).data;
+    commands = testCase.commands.map((expected) => runHarnessExecutionCommand(expected, harness.commands, temp.dir));
+  } catch (err) {
+    error = err instanceof Error ? err.message : String(err);
+  } finally {
+    try {
+      fs.rmSync(temp.dir, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup; the temporary fixture has no durable state.
+    }
+  }
+
+  return {
+    name: testCase.name,
+    type: "harness_execution",
+    fixture: testCase.repoFixture,
+    commands,
+    pass: !error && commands.length === testCase.commands.length && commands.every((command) => command.pass),
+    error,
+  };
+}
+
+/**
+ * Harness execution is deliberately limited to this project's committed eval
+ * fixtures. A corpus may choose among them, but it cannot redirect execution
+ * to an arbitrary repository through an absolute fixtureRoots entry.
+ *
+ * @param {string} root
+ * @param {string} source
+ * @param {string} fixtureName
+ */
+function assertHarnessFixtureRoot(root, source, fixtureName) {
+  const fixtureBase = path.resolve(root, "evals", "fixtures");
+  const relative = path.relative(fixtureBase, source);
+  if (relative === "" || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`harness execution fixture "${fixtureName}" must be inside ${fixtureBase}`);
+  }
+}
+
+/**
+ * @param {HarnessExecutionExpectation} expected
+ * @param {{ setup?: Array<{ command: string, script?: string }>, validate?: Array<{ command: string, script?: string }> }} inferred
+ * @param {string} cwd
+ * @returns {HarnessExecutionResult}
+ */
+function runHarnessExecutionCommand(expected, inferred, cwd) {
+  const matchesGroup = expected.group === "setup" || expected.group === "validate";
+  const candidate = matchesGroup ? (inferred[expected.group] ?? []).find((command) => command.command === expected.command) : undefined;
+  const inferredMatch = Boolean(candidate) && (!expected.script || candidate?.script === expected.script);
+  const base = {
+    kind: expected.kind,
+    command: expected.command,
+    inferred: inferredMatch,
+    executed: false,
+    pass: false,
+  };
+
+  if (!inferredMatch) {
+    return { ...base, error: "expected command was not inferred from the fixture harness" };
+  }
+
+  const parsed = parseFixtureCommand(expected.command);
+  if (!parsed) {
+    return { ...base, error: "command is outside the fixture execution allowlist" };
+  }
+
+  /** @type {NodeJS.ProcessEnv} */
+  const env = {
+    ...process.env,
+    CI: "1",
+    NO_UPDATE_NOTIFIER: "1",
+    npm_config_audit: "false",
+    npm_config_fund: "false",
+  };
+  if (expected.kind === "install") {
+    env.npm_config_ignore_scripts = "true";
+  }
+
+  const result = runCommand(parsed.command, parsed.args, { cwd, env, timeout: 60000, maxBuffer: 1024 * 1024 });
+  const output = clipCommandOutput(`${result.stdout}\n${result.stderr}`);
+  return {
+    ...base,
+    executed: true,
+    status: result.status,
+    pass: result.ok,
+    error: result.ok ? undefined : (result.error?.message ?? `command exited ${result.status ?? "without a status"}`),
+    output: output || undefined,
+  };
+}
+
+/**
+ * Restrict fixture execution to normal Node package-manager invocation forms.
+ * The package scripts themselves stay within the reviewed fixture copy; no
+ * command supplied by an inspected customer repository is ever executed.
+ *
+ * @param {string} commandLine
+ * @returns {{ command: string, args: string[] }|undefined}
+ */
+function parseFixtureCommand(commandLine) {
+  const match = /^(npm|pnpm|yarn|bun) (install|ci|test|run [A-Za-z0-9:_-]+)$/.exec(commandLine);
+  if (!match) return undefined;
+  const parts = commandLine.split(" ");
+  const command = parts.shift();
+  return command ? { command: process.platform === "win32" && command === "npm" ? "npm.cmd" : command, args: parts } : undefined;
+}
+
+/**
+ * @param {string} output
+ * @returns {string}
+ */
+function clipCommandOutput(output) {
+  const trimmed = output.trim();
+  if (trimmed.length <= 2000) return trimmed;
+  return `${trimmed.slice(0, 1997)}...`;
+}
+
 /**
  * @param {string} corpusPath
  * @returns {Corpus}
@@ -901,7 +1129,7 @@ function resolveFixture(root, fixtureRoots, name) {
 function copyFixtureToTemp(source) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-fix-"));
   for (const ent of readDirEnts(source)) {
-    if (ent.name === ".otito") continue;
+    if (ent.name === ".otito" || ent.name === "node_modules") continue;
     fs.cpSync(path.join(source, ent.name), path.join(dir, ent.name), { recursive: true });
   }
   return { dir };
@@ -945,6 +1173,52 @@ export function formatRetrievalEvalMarkdown(data) {
     "",
   ];
   return lines.join("\n");
+}
+
+/**
+ * @param {{ generatedAt: string, corpusPath: string, counts: { fixtures: number, commands: number, passedCommands: number }, passed: boolean, exitCode: number, cases: ScoredHarnessExecutionCase[] }} data
+ * @returns {string}
+ */
+export function formatHarnessExecutionEvalMarkdown(data) {
+  const lines = [
+    "# otito Harness Execution Eval",
+    "",
+    `Generated: ${data.generatedAt}`,
+    `Corpus: ${data.corpusPath}`,
+    `Fixtures: ${data.counts.fixtures}`,
+    `Commands: ${data.counts.passedCommands}/${data.counts.commands} passed`,
+    "",
+    "## Results",
+    "",
+    "| Fixture | Command | Inferred | Exit | Pass |",
+    "|---|---|:---:|---:|:---:|",
+    ...data.cases.flatMap((testCase) =>
+      testCase.commands.map(
+        (command) =>
+          `| ${testCase.fixture} | ${command.command} | ${command.inferred ? "yes" : "NO"} | ${command.status ?? "-"} | ${command.pass ? "yes" : "NO"} |`,
+      ),
+    ),
+    "",
+    `Overall: ${data.passed ? "PASS" : "FAIL"} (exit ${data.exitCode})`,
+    "",
+    "The eval copies each reviewed fixture into a temporary directory before execution. It proves only the encoded install/test/typecheck/build commands, never commands inferred from a customer repository.",
+    "",
+    "## Failing commands",
+    "",
+    ...formatFailingHarnessCommands(data),
+    "",
+  ];
+  return lines.join("\n");
+}
+
+/**
+ * @param {{ cases: ScoredHarnessExecutionCase[] }} data
+ * @returns {string[]}
+ */
+function formatFailingHarnessCommands(data) {
+  const failures = data.cases.flatMap((testCase) => testCase.commands.filter((command) => !command.pass).map((command) => ({ testCase, command })));
+  if (failures.length === 0) return ["- none"];
+  return failures.map(({ testCase, command }) => `- [${testCase.fixture}] ${command.command}: ${command.error ?? "failed"}`);
 }
 
 /**

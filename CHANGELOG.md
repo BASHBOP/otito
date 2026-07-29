@@ -4,6 +4,16 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [1.1.0] - 2026-07-29
+
+### Added
+
+- **Harness execution eval.** `otito eval --harness` now proves that Otito infers and can run the encoded install, test, typecheck, and build commands against an isolated, committed fixture. `npm run eval:harness` is part of the release quality gate.
+
+### Safety
+
+- **Fixture-only execution boundary.** Harness execution accepts only vetted package-manager command forms, disables install lifecycle scripts, applies a timeout, and rejects corpus entries outside Otito's committed `evals/fixtures` directory. It never executes a command inferred from a customer repository.
+
 ## [1.0.3] - 2026-07-29
 
 ### Fixed

@@ -499,3 +499,12 @@ test("eval --accuracy runs the labeled corpus and reports a passing scoreboard",
   assert.ok(payload.scoreboard.retrieval.pAtK >= 0.85);
   assert.ok(payload.scoreboard.risk.accuracy >= 0.95);
 });
+
+test("eval --harness runs the isolated fixture command corpus", async () => {
+  const result = await runCli(["eval", "--harness", "--json"]);
+  assert.equal(result.exitCode, 0, "harness execution corpus must exit 0 at baseline");
+  const payload = parseJsonOutput(result.stdout);
+  assert.equal(payload.evalKind, "harness-execution");
+  assert.equal(payload.passed, true);
+  assert.equal(payload.counts.passedCommands, 4);
+});

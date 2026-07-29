@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runEval, runRetrievalEval } from "../src/lib/eval.js";
+import { runEval, runHarnessExecutionEval, runRetrievalEval } from "../src/lib/eval.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -79,6 +79,78 @@ test("runRetrievalEval scores the committed corpus and passes its thresholds", (
   assert.match(markdown, /# otito Accuracy Eval/);
   assert.match(markdown, /## Scoreboard/);
   assert.match(markdown, /Overall: PASS/);
+});
+
+test("runHarnessExecutionEval proves the committed install, test, typecheck, and build commands", () => {
+  const { data, markdown } = runHarnessExecutionEval();
+
+  assert.equal(data.evalKind, "harness-execution");
+  assert.equal(data.passed, true, "committed harness execution corpus must pass");
+  assert.equal(data.exitCode, 0);
+  assert.equal(data.counts.fixtures, 1);
+  assert.equal(data.counts.commands, 4);
+  assert.equal(data.counts.passedCommands, 4);
+
+  const commands = data.cases[0].commands;
+  assert.deepEqual(
+    commands.map((command) => command.kind),
+    ["install", "test", "typecheck", "build"],
+  );
+  assert.ok(commands.every((command) => command.inferred && command.executed && command.pass));
+  assert.match(markdown, /# otito Harness Execution Eval/);
+  assert.match(markdown, /Commands: 4\/4 passed/);
+});
+
+test("runHarnessExecutionEval fails closed when the fixture harness cannot infer a declared command", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-harness-corpus-"));
+  const corpusPath = path.join(dir, "corpus.json");
+  const fixture = path.join(repoRoot, "evals", "fixtures", "harness-node");
+  fs.writeFileSync(
+    corpusPath,
+    JSON.stringify({
+      fixtureRoots: { fixture },
+      retrieval: [],
+      risk: [],
+      harnessExecution: [
+        {
+          name: "missing-command",
+          repoFixture: "fixture",
+          commands: [{ kind: "build", group: "validate", command: "npm run missing", script: "missing" }],
+        },
+      ],
+    }),
+  );
+
+  const { data } = runHarnessExecutionEval({ corpusPath });
+  assert.equal(data.passed, false);
+  assert.equal(data.exitCode, 1);
+  assert.equal(data.cases[0].commands[0].inferred, false);
+  assert.equal(data.cases[0].commands[0].executed, false);
+  assert.match(data.cases[0].commands[0].error, /not inferred/);
+});
+
+test("runHarnessExecutionEval rejects a corpus that redirects execution outside committed fixtures", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-harness-unsafe-corpus-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-harness-unsafe-fixture-"));
+  const corpusPath = path.join(dir, "corpus.json");
+  fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
+  fs.writeFileSync(
+    corpusPath,
+    JSON.stringify({
+      fixtureRoots: { outside: fixture },
+      retrieval: [],
+      risk: [],
+      harnessExecution: [
+        {
+          name: "outside-fixture",
+          repoFixture: "outside",
+          commands: [{ kind: "test", group: "validate", command: "npm test", script: "test" }],
+        },
+      ],
+    }),
+  );
+
+  assert.throws(() => runHarnessExecutionEval({ corpusPath }), /must be inside/);
 });
 
 test("runRetrievalEval enforces the encoded risk false positives/negatives", () => {
