@@ -73,6 +73,13 @@ test("release publishing uses GitHub OIDC without a stored npm token", () => {
   assert.doesNotMatch(workflow, /NPM_TOKEN|NODE_AUTH_TOKEN/);
 });
 
+test("MCP Registry identity matches Bashbop's granted OIDC namespace", () => {
+  const manifest = JSON.parse(read("package.json"));
+  const server = JSON.parse(read("server.json"));
+  assert.equal(manifest.mcpName, "io.github.BASHBOP/otito");
+  assert.equal(server.name, manifest.mcpName);
+});
+
 test("reconciliation dry-run lists missing first-parent commits oldest-first", () => {
   const { root, commits } = createLinearRepo();
 
