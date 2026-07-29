@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-29T03:13:57.519Z",
+  "generatedAt": "2026-07-29T05:55:27.350Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 65,
+  "confidence": 70,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -43,17 +43,14 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 126,
+    "changedFiles": 3,
     "additions": 0,
     "deletions": 0,
-    "riskLevel": "medium",
+    "riskLevel": "low",
     "riskFlags": [
-      "configuration",
-      "data model",
-      "large PR",
-      "request surface"
+      "no test files changed"
     ],
-    "reviewTargetsCount": 1
+    "reviewTargetsCount": 0
   },
   "pass": {
     "verdict": "WARN",
@@ -63,7 +60,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "127 changed files found."
+        "summary": "4 changed files found."
       },
       {
         "name": "Secret safety",
@@ -72,13 +69,13 @@
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
@@ -103,6 +100,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 432
+    "fullJson": 411
   }
 }
