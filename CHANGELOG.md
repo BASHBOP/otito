@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [1.0.1] - 2026-07-29
+
+### Fixed
+
+- **Trusted npm publishing.** Releases now use GitHub Actions OIDC for provenance; the temporary bootstrap token path has been removed.
+- **Colour-stable release validation.** Terminal colour settings no longer block the release test suite.
+
 ## [1.0.0] - 2026-07-29
 
 ### Changed
