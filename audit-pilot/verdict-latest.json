@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-29T21:54:24.568Z",
+  "generatedAt": "2026-07-29T22:14:22.478Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -13,54 +13,45 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "evals/fixtures/auth-signup-api/src/authentication/auth.controller.ts",
-        "score": 0,
-        "riskFlags": [
-          "request surface",
-          "auth/security"
-        ]
-      },
-      {
-        "path": "evals/fixtures/auth-signup-api/src/authentication/auth.service.ts",
-        "score": 0,
-        "riskFlags": [
-          "auth/security"
-        ]
-      },
-      {
-        "path": "evals/fixtures/auth-signup-api/src/email/email.service.ts",
-        "score": 0,
-        "riskFlags": [
-          "auth/security"
-        ]
-      },
-      {
-        "path": "src/cli.js",
-        "score": 15,
+        "path": "src/lib/review.js",
+        "score": 41,
         "riskFlags": []
       },
       {
-        "path": "src/lib/context-engine.js",
-        "score": 0,
+        "path": "src/lib/pr-review.js",
+        "score": 36,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/agent-tools.js",
+        "score": 22,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/args.js",
+        "score": 22,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/ax.js",
+        "score": 22,
         "riskFlags": []
       }
     ],
     "risks": [
-      "Request-surface change: verify request/response shape, validation, client consumers, and backward compatibility.",
-      "Auth/security change: verify permissions, redirects, sessions, and unauthorized states."
+      "No obvious high-risk domain detected. Main risk is missing a caller or test outside the matched files."
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 10,
-    "additions": 321,
-    "deletions": 6,
+    "changedFiles": 4,
+    "additions": 16,
+    "deletions": 5,
     "riskLevel": "medium",
     "riskFlags": [
-      "auth/security",
       "configuration",
-      "request surface"
+      "no test files changed"
     ],
-    "reviewTargetsCount": 2
+    "reviewTargetsCount": 0
   },
   "pass": {
     "verdict": "WARN",
@@ -70,7 +61,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "11 changed files found."
+        "summary": "5 changed files found."
       },
       {
         "name": "Secret safety",
@@ -85,7 +76,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "No version metadata changes found."
+        "summary": "Version metadata is SemVer and changelog was updated."
       },
       {
         "name": "Validation commands",
@@ -110,6 +101,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 499
+    "fullJson": 426
   }
 }
