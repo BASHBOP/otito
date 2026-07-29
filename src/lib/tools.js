@@ -58,6 +58,7 @@ export function commandVersion(command, args = ["--version"]) {
 export function runCommand(command, args, options = {}) {
   const result = spawnSync(command, args, {
     cwd: options.cwd,
+    env: options.env ?? process.env,
     encoding: "utf8",
     timeout: options.timeout ?? 120000,
     maxBuffer: options.maxBuffer ?? 1024 * 1024 * 20,
