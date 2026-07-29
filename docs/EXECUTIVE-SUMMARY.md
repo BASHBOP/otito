@@ -1,4 +1,4 @@
-# repoctx - Executive Summary
+# otito - Executive Summary
 
 **Purpose:** Context foundation for AI-assisted software teams<br>
 **Maintainer:** Oluwasegun Olumbe<br>
@@ -8,7 +8,7 @@
 
 ## Overview
 
-repoctx answers one practical question:
+otito answers one practical question:
 
 ```text
 What should an agent or reviewer know before changing this repository?
@@ -26,7 +26,7 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Code maps             | JSON-first source maps with multi-domain tagging, imports, exports, symbols, routes, and language extractors for TS/JS, Go, C#, Python, Java, Ruby, Rust |
 | Context packs         | Task-aware file suggestions, related files, patterns, tests, validation commands, vendor-bundle filtering, and data-access boosts |
 | Data-access surface   | Detects inline SQL and Prisma ORM calls, aggregated by source / operation / table / file                       |
-| Eval suite            | `repoctx eval` measures token savings of repoctx output vs a deterministic naive-agent approximation           |
+| Eval suite            | `otito eval` measures token savings of otito output vs a deterministic naive-agent approximation           |
 | Local catalog         | Discovery, indexing, and search across local repositories                                                      |
 | PR review context     | Diff-aware review prompts, changed domains, risk flags, Go test-file detection, and optional GitHub comments   |
 | MCP support           | Agent-callable tools for repo inspection, maps, search, harnesses, workspaces, and PR review                   |
@@ -37,22 +37,22 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Review policy         | Branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision snapshot           |
 | Feedback loop         | Structured company pilot intake that turns reviewer concerns into docs, gates, proof, or roadmap work          |
 | Company adoption      | Screenshot-style case study for evaluation, pilot rollout, and governance decision records                     |
-| Public launch note    | Short external-facing story for repoctx, PullPass, proof runs, and next trust-layer gates                      |
+| Public launch note    | Short external-facing story for otito, PullPass, proof runs, and next trust-layer gates                      |
 | Operating loop        | Repeatable session rhythm for context, focused change, visible gates, human decisions, and durable evidence    |
 
 ---
 
 ## Product Position
 
-repoctx is part of a larger trust layer:
+otito is part of a larger trust layer:
 
 ```text
-repoctx  -> context before change
+otito  -> context before change
 PullPass -> validation before merge
 Humans   -> accountability before release
 ```
 
-This makes repoctx useful for maintainers who want AI-assisted development without losing the shape of the repository, test expectations, ownership boundaries, and review discipline.
+This makes otito useful for maintainers who want AI-assisted development without losing the shape of the repository, test expectations, ownership boundaries, and review discipline.
 
 ---
 
@@ -60,17 +60,17 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 
 | Signal                        | Current Handling                                                                  |
 | ----------------------------- | --------------------------------------------------------------------------------- |
-| Unknown repository shape      | `repoctx repo` surfaces package, language, script, and git state                  |
-| Unclear task scope            | `repoctx context` generates task-aware primary and related files                  |
-| Multi-repo context missing    | `repoctx workspace` builds a product-level context report                         |
-| PR review surface hidden      | `repoctx pr` summarizes changed files, risks, prompts, and comments               |
+| Unknown repository shape      | `otito repo` surfaces package, language, script, and git state                  |
+| Unclear task scope            | `otito context` generates task-aware primary and related files                  |
+| Multi-repo context missing    | `otito workspace` builds a product-level context report                         |
+| PR review surface hidden      | `otito pr` summarizes changed files, risks, prompts, and comments               |
 | Merge readiness hidden        | PullPass PR readiness runs on pull requests and records owner-decision warnings   |
-| Context evidence disconnected | PullPass reports include repoctx `Context Evidence` commands for context packs and PR review reports |
-| Agent tool integration needed | `repoctx mcp` exposes repository context through MCP                              |
+| Context evidence disconnected | PullPass reports include otito `Context Evidence` commands for context packs and PR review reports |
+| Agent tool integration needed | `otito mcp` exposes repository context through MCP                              |
 | MCP setup unclear             | MCP workflow docs include generic stdio, Claude Desktop, VS Code, and Cursor examples |
 | Contributor readiness         | CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
 | Review policy visibility      | Review-policy snapshot summarizes branch protection and owner/admin decision boundaries |
-| Trust-layer demo              | Public walkthrough for repoctx context, PR review context, PullPass, and human merge accountability |
+| Trust-layer demo              | Public walkthrough for otito context, PR review context, PullPass, and human merge accountability |
 | Session continuity            | Builder-founder operating loop keeps proof, gates, and next actions outside chat memory |
 
 ---
@@ -87,7 +87,7 @@ This makes repoctx useful for maintainers who want AI-assisted development witho
 
 ## Next Steps
 
-1. Keep the company adoption packet current as repoctx and PullPass evolve.
+1. Keep the company adoption packet current as otito and PullPass evolve.
 2. Run one real repository and pull request through the company pilot runbook.
 3. Keep the proof index current as public artifacts and private proof boundaries evolve.
 4. Capture feedback from real company reviewers through the pilot feedback loop and turn it into docs, gates, proof, or roadmap work.

@@ -1,4 +1,4 @@
-// Fancy terminal renderer used by repoctx commands that produce a verdict or
+// Fancy terminal renderer used by otito commands that produce a verdict or
 // ranked list. Returns strings (no I/O) so it stays testable. Plain mode
 // (emoji = false) replaces glyphs with bracketed tokens and box-drawing
 // characters with ASCII so output stays legible in CI logs.

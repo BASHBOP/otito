@@ -1,9 +1,9 @@
 # Spec: Agent Experience (AX) Score
 
-**Status:** Implemented — task mode (`repoctx ax`). Repo mode + `ax_score` MCP tool pending.
+**Status:** Implemented — task mode (`otito ax`). Repo mode + `ax_score` MCP tool pending.
 **Owner:** TBD
 **Depends on:** `src/lib/tokens.js`, `src/lib/impact.js`, `src/lib/review.js`, `src/lib/risk-paths.js`, `src/lib/codeowners.js`, `src/lib/policy.js`
-**Implementation:** `src/lib/ax.js` (`generateAxScore`), CLI `repoctx ax`, tests in `tests/ax.test.js`.
+**Implementation:** `src/lib/ax.js` (`generateAxScore`), CLI `otito ax`, tests in `tests/ax.test.js`.
 
 > **What shipped vs. this spec.** Task-mode scoring, the four sub-scores, drivers,
 > recommendations, and the JSON/markdown output are implemented. Two deliberate
@@ -28,8 +28,8 @@ harness improves and falls when the codebase is hard to change. No competing too
 
 Two framings, same engine:
 
-- **Task AX** — `repoctx ax "<task>" --path .` — how agent-friendly is _this change_?
-- **Repo AX** — `repoctx ax --path .` — aggregate agent-friendliness of the repo, sampled
+- **Task AX** — `otito ax "<task>" --path .` — how agent-friendly is _this change_?
+- **Repo AX** — `otito ax --path .` — aggregate agent-friendliness of the repo, sampled
   across representative tasks/paths.
 
 ## 2. Why this is low-risk to build
@@ -106,7 +106,7 @@ Clarity = 100
   "axEngineVersion": "0.1.0",
   "mode": "task",                  // "task" | "repo"
   "query": "add a new MCP tool",
-  "repo": { "name": "repoctx", "root": "/..." },
+  "repo": { "name": "otito", "root": "/..." },
   "ax": 78,                        // headline 0–100
   "band": "good",                  // poor | fair | good | excellent
   "subScores": {
@@ -140,9 +140,9 @@ matching `formatReviewTerminal`) and an optional Mermaid/HTML view for PR artifa
 ### CLI
 
 ```bash
-repoctx ax "add a new MCP tool" --path .        # task AX
-repoctx ax --path . --json                       # repo AX, machine-readable
-repoctx ax . --base origin/main                  # AX of the current diff
+otito ax "add a new MCP tool" --path .        # task AX
+otito ax --path . --json                       # repo AX, machine-readable
+otito ax . --base origin/main                  # AX of the current diff
 ```
 
 ### MCP tool

@@ -298,7 +298,7 @@ function warnWriteFailureOnce(cachePath, error) {
   }
   warnedPaths.add(cachePath);
   const reason = error instanceof Error ? error.message : String(error);
-  console.warn(`repoctx: could not write repo index cache at ${cachePath}: ${reason}`);
+  console.warn(`otito: could not write repo index cache at ${cachePath}: ${reason}`);
 }
 
 /**

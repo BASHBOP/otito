@@ -4,10 +4,9 @@ import { designPrint } from "./brand.js";
 import { commandExists, runCommand } from "./tools.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const productName = "repoctx";
-const binaryName = "repoctx";
-const legacyBinaryName = "dev-context";
-const repoUrl = "https://github.com/nugehs/repoctx";
+const productName = "Òtítọ́";
+const binaryName = "otito";
+const repoUrl = "https://github.com/BASHBOP/otito";
 
 /**
  * @typedef {object} InstallOptions
@@ -19,7 +18,7 @@ const repoUrl = "https://github.com/nugehs/repoctx";
  * @param {InstallOptions} [options]
  * @returns {ReturnType<typeof getInstallPlan> & { mode?: string, applied?: boolean, command?: string, stdout?: string, stderr?: string, error?: string }}
  */
-export function installDevContext(options = {}) {
+export function installOtito(options = {}) {
   // getInstallPlan() ignores its arguments; this passed `options` is dead and
   // has no effect at runtime. Suppressing the arity error rather than changing
   // the call (annotation-only pass). See suspected-bug report.
@@ -51,20 +50,16 @@ export function installDevContext(options = {}) {
 
 export function getInstallPlan() {
   const status = commandExists(binaryName);
-  const legacyStatus = commandExists(legacyBinaryName);
   return {
     ok: true,
     productName,
     binaryName,
-    legacyBinaryName,
     packageRoot,
     repository: repoUrl,
     installed: status.available,
     binaryPath: status.path,
-    legacyInstalled: legacyStatus.available,
-    legacyBinaryPath: legacyStatus.path,
     commands: {
-      fromGitHub: "npm install -g github:nugehs/repoctx",
+      fromNpm: "npm install -g @bashbop/otito",
       fromCheckout: "npm install -g .",
       developmentLink: "npm link",
       verify: `${binaryName} doctor`,
@@ -78,7 +73,7 @@ export function getInstallPlan() {
 }
 
 /**
- * @param {ReturnType<typeof installDevContext>} result
+ * @param {ReturnType<typeof installOtito>} result
  * @returns {string}
  */
 export function formatInstallSummary(result) {
@@ -88,14 +83,12 @@ export function formatInstallSummary(result) {
     `${result.productName} installer`,
     "",
     `Binary: ${result.binaryName}`,
-    `Legacy alias: ${result.legacyBinaryName} (deprecated, removed in v3.0.0)`,
     `Repository: ${result.repository}`,
     `Current checkout: ${result.packageRoot}`,
     `Installed: ${result.installed ? `yes (${result.binaryPath})` : "no"}`,
-    `Legacy installed: ${result.legacyInstalled ? `yes (${result.legacyBinaryPath})` : "no"}`,
     "",
     "Install commands:",
-    `- From GitHub: ${result.commands.fromGitHub}`,
+    `- From npm: ${result.commands.fromNpm}`,
     `- From this checkout: ${result.commands.fromCheckout}`,
     `- Development link: ${result.commands.developmentLink}`,
     "",

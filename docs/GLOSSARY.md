@@ -3,12 +3,11 @@
 | Term              | Meaning                                                                                            |
 | ----------------- | -------------------------------------------------------------------------------------------------- |
 | AI governance     | Rules, checks, review processes, and release practices that keep AI-assisted work accountable      |
-| Catalog           | A local index of repositories that repoctx can search across                                       |
+| Catalog           | A local index of repositories that otito can search across                                       |
 | Code map          | A JSON-first map of source files, domains, imports, exports, symbols, and routes                   |
 | Context pack      | A task-aware packet of likely files, related files, validation commands, and patterns              |
 | MCP               | Model Context Protocol, a standard way for agents to call tools                                    |
 | PR review context | A diff-aware report with changed files, risk prompts, review targets, and optional GitHub comments |
 | PullPass          | The companion merge-safety gate that checks PR readiness before merge                              |
-| repoctx           | The canonical CLI and MCP server name for this project                                             |
+| otito           | The canonical CLI and MCP server name for this project                                             |
 | `.dev-context/`   | Local artifact directory for generated reports, indexes, harnesses, and context packets            |
-| `dev-context`     | Deprecated command alias; prints a warning and is removed in v3.0.0 — use `repoctx`                 |

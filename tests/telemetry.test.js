@@ -22,18 +22,18 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "src", "cli.js");
 
 function tmpLog() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-telemetry-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-telemetry-"));
   return path.join(dir, "usage.jsonl");
 }
 
 function on(logPath) {
-  return { REPOCTX_TELEMETRY: "1", REPOCTX_TELEMETRY_PATH: logPath };
+  return { OTITO_TELEMETRY: "1", OTITO_TELEMETRY_PATH: logPath };
 }
 
 test("appendEvent writes nothing when telemetry is off", () => {
   resetTelemetryCache();
   const logPath = tmpLog();
-  appendEvent({ surface: "cli", cmd: "ax" }, { env: { REPOCTX_TELEMETRY: "0", REPOCTX_TELEMETRY_PATH: logPath } });
+  appendEvent({ surface: "cli", cmd: "ax" }, { env: { OTITO_TELEMETRY: "0", OTITO_TELEMETRY_PATH: logPath } });
   assert.equal(fs.existsSync(logPath), false, "no log file when disabled");
 });
 
@@ -66,12 +66,12 @@ test("appendEvent writes one stamped JSON line when on", () => {
   assert.equal(rec.repo.includes("/some/repo"), false, "raw path never stored");
 });
 
-test("CI forces telemetry off unless REPOCTX_TELEMETRY explicitly opts in", () => {
+test("CI forces telemetry off unless OTITO_TELEMETRY explicitly opts in", () => {
   resetTelemetryCache();
   assert.equal(isTelemetryEnabled({ env: { CI: "true" }, fresh: true }), false, "CI default is off");
-  assert.equal(isTelemetryEnabled({ env: { CI: "true", REPOCTX_TELEMETRY: "1" }, fresh: true }), true, "explicit opt-in wins in CI");
-  assert.equal(isTelemetryEnabled({ env: { REPOCTX_TELEMETRY: "1" }, fresh: true }), true, "env opt-in outside CI");
-  assert.equal(isTelemetryEnabled({ env: { REPOCTX_TELEMETRY: "0" }, fresh: true }), false, "env opt-out");
+  assert.equal(isTelemetryEnabled({ env: { CI: "true", OTITO_TELEMETRY: "1" }, fresh: true }), true, "explicit opt-in wins in CI");
+  assert.equal(isTelemetryEnabled({ env: { OTITO_TELEMETRY: "1" }, fresh: true }), true, "env opt-in outside CI");
+  assert.equal(isTelemetryEnabled({ env: { OTITO_TELEMETRY: "0" }, fresh: true }), false, "env opt-out");
 });
 
 test("redactError keeps a code/class, never the message", () => {
@@ -98,7 +98,7 @@ test("readTelemetryLog tolerates torn lines and skips newer schema versions", ()
   const logPath = tmpLog();
   fs.mkdirSync(path.dirname(logPath), { recursive: true });
   fs.writeFileSync(logPath, [JSON.stringify({ v: 1, cmd: "ax" }), "{ this is a torn line", JSON.stringify({ v: 999, cmd: "from-the-future" }), ""].join("\n"));
-  const { events, skipped, skippedNewerSchema } = readTelemetryLog({ env: { REPOCTX_TELEMETRY_PATH: logPath } });
+  const { events, skipped, skippedNewerSchema } = readTelemetryLog({ env: { OTITO_TELEMETRY_PATH: logPath } });
   assert.equal(events.length, 1);
   assert.equal(events[0].cmd, "ax");
   assert.equal(skipped, 1, "the torn line is skipped, not thrown");
@@ -110,7 +110,7 @@ test("clearTelemetryLog removes the log and its rotated generation", () => {
   fs.mkdirSync(path.dirname(logPath), { recursive: true });
   fs.writeFileSync(logPath, "x\n");
   fs.writeFileSync(`${logPath}.1`, "y\n");
-  const { removed } = clearTelemetryLog({ env: { REPOCTX_TELEMETRY_PATH: logPath } });
+  const { removed } = clearTelemetryLog({ env: { OTITO_TELEMETRY_PATH: logPath } });
   assert.equal(removed.length, 2);
   assert.equal(fs.existsSync(logPath), false);
   assert.equal(fs.existsSync(`${logPath}.1`), false);
@@ -123,11 +123,11 @@ test("CLI --json stdout is byte-identical with telemetry on vs off", () => {
   const onLog = tmpLog();
   const off = spawnSync(process.execPath, [cli, ...args], {
     encoding: "utf8",
-    env: { ...process.env, REPOCTX_TELEMETRY: "0", REPOCTX_TELEMETRY_PATH: offLog },
+    env: { ...process.env, OTITO_TELEMETRY: "0", OTITO_TELEMETRY_PATH: offLog },
   });
   const onRun = spawnSync(process.execPath, [cli, ...args], {
     encoding: "utf8",
-    env: { ...process.env, REPOCTX_TELEMETRY: "1", REPOCTX_TELEMETRY_PATH: onLog },
+    env: { ...process.env, OTITO_TELEMETRY: "1", OTITO_TELEMETRY_PATH: onLog },
   });
   assert.equal(onRun.stdout, off.stdout, "stdout must not change when telemetry is enabled");
   assert.equal(fs.existsSync(offLog), false, "off run writes no log");
@@ -146,7 +146,7 @@ async function runMcp(messages, env) {
     buffer = lines.pop() ?? "";
     for (const line of lines.filter(Boolean)) frames.push(line);
   });
-  const saved = { t: process.env.REPOCTX_TELEMETRY, p: process.env.REPOCTX_TELEMETRY_PATH };
+  const saved = { t: process.env.OTITO_TELEMETRY, p: process.env.OTITO_TELEMETRY_PATH };
   Object.assign(process.env, env);
   resetTelemetryCache();
   try {
@@ -155,8 +155,8 @@ async function runMcp(messages, env) {
     input.end();
     await done;
   } finally {
-    process.env.REPOCTX_TELEMETRY = saved.t;
-    process.env.REPOCTX_TELEMETRY_PATH = saved.p;
+    process.env.OTITO_TELEMETRY = saved.t;
+    process.env.OTITO_TELEMETRY_PATH = saved.p;
     resetTelemetryCache();
   }
   if (buffer.trim()) frames.push(buffer.trim());
@@ -170,12 +170,12 @@ test("MCP JSON-RPC frames are byte-identical with telemetry on vs off, and the o
   ];
   const offLog = tmpLog();
   const onLog = tmpLog();
-  const offFrames = await runMcp(calls, { REPOCTX_TELEMETRY: "0", REPOCTX_TELEMETRY_PATH: offLog });
-  const onFrames = await runMcp(calls, { REPOCTX_TELEMETRY: "1", REPOCTX_TELEMETRY_PATH: onLog });
+  const offFrames = await runMcp(calls, { OTITO_TELEMETRY: "0", OTITO_TELEMETRY_PATH: offLog });
+  const onFrames = await runMcp(calls, { OTITO_TELEMETRY: "1", OTITO_TELEMETRY_PATH: onLog });
 
   assert.deepEqual(onFrames, offFrames, "the JSON-RPC channel must be unchanged by telemetry");
   assert.equal(fs.existsSync(offLog), false, "off run writes no log");
-  const { events } = readTelemetryLog({ env: { REPOCTX_TELEMETRY_PATH: onLog } });
+  const { events } = readTelemetryLog({ env: { OTITO_TELEMETRY_PATH: onLog } });
   const toolEvent = events.find((e) => e.surface === "mcp" && e.cmd === "repo_inspect");
   assert.ok(toolEvent, "the tool call was recorded on the MCP surface");
   assert.equal(typeof toolEvent.durationMs, "number");

@@ -1,42 +1,32 @@
-# :material-source-branch: repoctx
+# :material-source-branch: Òtítọ́
 
 ## Local repo intelligence for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.3.1 — npm and MCP manifest versions are aligned; documentation and MCP surface are current with the v1.1/v1.2 capability set; ships `eval`, `data-access`, multi-domain code maps, and the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`)<br>
+**Status:** v1.0.0 — clean Òtítọ́ product cutover, ready for Bashbop publication<br>
 **Category:** Practical AI governance for developers
 
-> Built and maintained by **Oluwasegun Olumbe** for teams that want context before code changes, review prompts before merge, and less guessing in agent workflows.
+> A Bashbop Ltd product for teams that want context before code changes, review prompts before merge, and less guessing in agent workflows.
 
 ---
 
-!!! info "About repoctx"
-    repoctx is a local-first context system. It inspects repositories, builds code maps, creates task-aware context packs, prepares PR review harnesses, and exposes the same workflow through an MCP server.
+!!! info "About Òtítọ́"
+    Òtítọ́ is a local-first context system. It inspects repositories, builds code maps, creates task-aware context packs, prepares PR review harnesses, and exposes the same workflow through an MCP server.
 
-    It keeps the legacy `dev-context` command as a deprecated alias (removed in v3.0.0) while making `repoctx` the canonical product name.
+    Its command-line and package identity is `otito`.
 
-    :material-animation-play: See the [**How It Works** visual walkthrough](assets/repoctx-how-it-works.html) — a layered diagram of the discover → index → context → gate flow.
+    :material-animation-play: See the [**How It Works** visual walkthrough](assets/otito-how-it-works.html) — a layered diagram of the discover → index → context → gate flow.
 
 ---
 
 ## :material-sparkles: What's New
 
-!!! tip "v1.3.1 — release-readiness cleanup (2026-06-02)"
-    npm package metadata, `package-lock.json`, MCP registry manifest versions, and public docs are aligned. The operating loop now treats `repoctx impact` as the canonical analyzer after absorbing the standalone `impact-map` work.
+!!! tip "v1.0.0 — Òtítọ́ clean cutover (2026-07-29)"
+    - Install with **`npm install -g @bashbop/otito`**.
+    - Run the deterministic CLI with **`otito`**.
+    - Configure MCP with **`npx -y @bashbop/otito mcp`**.
 
-!!! tip "v1.3.0 — docs and MCP surface alignment (2026-06-02)"
-    Documentation reflects the current `repoctx eval`, `repoctx data-access`, multi-language code maps, multi-domain tagging, and MCP tool surface, including `find_backend_route` and `find_frontend_api_client`.
-
-!!! tip "v1.2.0 — multi-domain discoverability (2026-06-01)"
-    Files in feature subdirs are now tagged under both their root domain *and* the feature name. `components/livestream/RecordingsPanel.tsx` matches both `find_domain('components')` and `find_domain('livestream')`. File records gain a `domains: string[]` field; `find_domain`, `filterFiles`, `findFrontendApiClient`, and `context_pack` scoring all read from the full set. Cache version bumped 3 → 4; existing `.dev-context/index.json` caches will rebuild on next access.
-
-!!! tip "v1.1.0 — eval, data-access, and five new languages (2026-05-30)"
-    - **`repoctx eval`** runs a fixed task suite (`repo_overview`, `code_map`, `harness`, `context_pack`) on any target repo and reports tokens of repoctx output vs a deterministic naive-agent approximation. `--json` output is CI-friendly for regression gating.
-    - **`repoctx data-access`** detects inline SQL strings (any language) and Prisma ORM calls; aggregates by source, operation, table, and file. New `dataAccess` field on file records; `context_pack` scoring boosts files that touch the DB by up to +15.
-    - **C#, Python, Java, Ruby, Rust** code-map extractors join the existing TS/JS/Go support.
-    - **Vendor-bundle filter** drops `*.min.js`, `Bootstrap.js`, `jquery.js`, etc. from `context_pack` scoring so they no longer surface as primary files.
-
-See [CHANGELOG.md](https://github.com/nugehs/repoctx/blob/main/CHANGELOG.md) for the full history.
+See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for the full history.
 
 ---
 
@@ -46,14 +36,14 @@ See [CHANGELOG.md](https://github.com/nugehs/repoctx/blob/main/CHANGELOG.md) for
 | :-: | --- | --- | :-: |
 | 01 | [:material-map-marker-path: Context Foundation](./01-context-foundation/README.md) | Repository inspection, maps, search, context packs, and harnesses | :material-check-circle: Active |
 | 02 | [:material-lan-connect: MCP and Agents](./02-mcp-agent-workflows/README.md) | MCP tools and agent-facing workflows | :material-check-circle: Active |
-| 03 | [:material-account-check: Contributor Governance](./03-contributor-governance/README.md) | Reviews, branch protection, CODEOWNERS, and contributor flow | :material-check-circle: Active |
+| 03 | Bashbop stewardship | Protected review, release discipline, and CODEOWNERS | :material-check-circle: Active |
 | 04 | [:material-tag-check: Release Readiness](./04-release-readiness/README.md) | SemVer, changelog discipline, CI, and release gates | :material-check-circle: Active |
-| 05 | [:material-play-circle: Trust-Layer Demo](./05-trust-layer-demo/README.md) | repoctx plus PullPass as a repeatable review workflow | :material-check-circle: Active |
+| 05 | [:material-play-circle: Trust-Layer Demo](./05-trust-layer-demo/README.md) | otito plus PullPass as a repeatable review workflow | :material-check-circle: Active |
 | 06 | [:material-repeat: Builder-Founder Loop](./06-builder-founder-operating-loop/README.md) | Session rhythm, evidence ledger, governance ladder, and next-action rule | :material-check-circle: Active |
 
 ---
 
-## :material-check-decagram: What repoctx Provides
+## :material-check-decagram: What otito Provides
 
 !!! success "Current Capabilities"
     - Repository inspection with languages, scripts, entrypoints, and git state
@@ -62,7 +52,7 @@ See [CHANGELOG.md](https://github.com/nugehs/repoctx/blob/main/CHANGELOG.md) for
     - Local discovery, indexing, catalog search, and workspace reports
     - Task-aware context packs before agents plan or edit, with vendor-bundle filtering
     - Data-access surface reports (inline SQL and Prisma) with per-file boosts in context-pack scoring
-    - Local-vs-naïve eval suite for measuring repoctx's token savings
+    - Local-vs-naïve eval suite for measuring otito's token savings
     - PR review context from git diffs and optional GitHub comments
     - Go test-file detection for PullPass-style repositories
     - MCP tools for repository context, search, maps, and review workflows
@@ -90,8 +80,8 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @nugehs/repoctx
-    repoctx doctor
+    npm install -g @bashbop/otito
+    otito doctor
     ```
 
 === "Local Checkout"
@@ -105,7 +95,7 @@ flowchart LR
 === "MCP"
 
     ```bash
-    repoctx mcp
+    otito mcp
     ```
 
 ---
@@ -134,7 +124,7 @@ flowchart LR
 
     ---
 
-    Pair repoctx with PullPass for a repeatable trust layer: context before change, validation before merge.
+    Pair otito with PullPass for a repeatable trust layer: context before change, validation before merge.
 
 -   :material-play-circle:{ .lg .middle } **Public Demo Path**
 

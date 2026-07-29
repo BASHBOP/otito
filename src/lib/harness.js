@@ -102,7 +102,7 @@ export function generateHarness(repoPath = ".", options = {}) {
  */
 export function formatHarnessMarkdown(data) {
   const lines = [
-    `# repoctx Harness: ${data.repo.name}`,
+    `# otito Harness: ${data.repo.name}`,
     "",
     `Generated: ${data.generatedAt}`,
     `Harness version: ${data.harnessVersion}`,
@@ -162,15 +162,15 @@ function inferCommands(repo) {
     runtime: inferScriptCommands(repo.scripts, runner, runtimeScripts),
     context: [
       {
-        command: "repoctx repo . --json",
+        command: "otito repo . --json",
         reason: "inspect repository facts",
       },
       {
-        command: "repoctx map . --json",
+        command: "otito map . --json",
         reason: "generate agent-readable code map",
       },
       {
-        command: "repoctx harness . --json",
+        command: "otito harness . --json",
         reason: "refresh harness commands and token estimates",
       },
     ],

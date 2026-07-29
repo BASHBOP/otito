@@ -1,12 +1,11 @@
 {
-  "name": "@nugehs/repoctx",
-  "version": "2.6.0",
-  "mcpName": "io.github.nugehs/repoctx",
-  "description": "repoctx: local repo discovery, indexing, catalog search, and agent harnesses.",
+  "name": "@bashbop/otito",
+  "version": "1.0.0",
+  "mcpName": "io.github.bashbop/otito",
+  "description": "Òtítọ́: deterministic local repository context, impact analysis, and merge evidence.",
   "type": "module",
   "bin": {
-    "repoctx": "src/cli.js",
-    "dev-context": "src/cli.js"
+    "otito": "src/cli.js"
   },
   "files": [
     "assets",
@@ -48,11 +47,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nugehs/repoctx.git"
+    "url": "git+https://github.com/BASHBOP/otito.git"
   },
-  "homepage": "https://nugehs.github.io/repoctx/",
+  "homepage": "https://bashbop.github.io/otito/",
   "bugs": {
-    "url": "https://github.com/nugehs/repoctx/issues"
+    "url": "https://github.com/BASHBOP/otito/issues"
   },
   "keywords": [
     "cli",

@@ -6,7 +6,7 @@ Security fixes are made against the default branch and the latest published pack
 
 ## Reporting a Vulnerability
 
-Do not open public issues for suspected vulnerabilities. Use GitHub private vulnerability reporting for `nugehs/repoctx` when available, or contact the maintainers privately before sharing exploit details.
+Do not open public issues for suspected vulnerabilities. Use GitHub private vulnerability reporting for `BASHBOP/otito` when available, or contact the maintainers privately before sharing exploit details.
 
 Please include:
 

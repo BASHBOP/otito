@@ -1,4 +1,4 @@
-name: repoctx CI
+name: otito CI
 
 on:
   pull_request:
@@ -119,7 +119,7 @@ jobs:
       - name: Upload PR review artifact
         uses: actions/upload-artifact@v7
         with:
-          name: repoctx-pr-review
+          name: otito-pr-review
           path: .dev-context/pr-review.md
 
   pullpass-readiness:
@@ -154,7 +154,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: git fetch origin "+${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}" --depth=1
 
-      # repoctx's own merge-readiness gate (impact + PR review + local pass).
+      # otito's own merge-readiness gate (impact + PR review + local pass).
       # Exits non-zero only on a blocking FAIL verdict; WARN does not block.
       - name: Evaluate merge readiness
         if: github.event_name == 'pull_request'

@@ -12,7 +12,7 @@
 
   <rect x="1" y="1" width="598" height="418" rx="14" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
 
-  <!-- REPOCTX wordmark -->
+  <!-- OTITO wordmark -->
   <g fill="url(#rainbow)" font-weight="bold">
     <text x="24" y="46" xml:space="preserve"> ____   _____   ____    ___    ____   _____  __  __</text>
     <text x="24" y="67" xml:space="preserve">|  _ \ | ____| |  _ \  / _ \  / ___| |_   _| \ \/ /</text>
@@ -24,7 +24,7 @@
   <!-- brand design print -->
   <g>
     <text x="24" y="168" fill="#6e7681" xml:space="preserve">+------------------------------------------------------+</text>
-    <text x="24" y="189" fill="#c9d1d9" xml:space="preserve">| Hello builder, welcome to repoctx                    |</text>
+    <text x="24" y="189" fill="#c9d1d9" xml:space="preserve">| Hello builder, welcome to otito                    |</text>
     <text x="24" y="210" fill="#6e7681" xml:space="preserve">+--------------------------.---------------------------+</text>
     <text x="24" y="231" fill="#58a6ff" xml:space="preserve">                           |</text>
     <text x="24" y="252" fill="#58a6ff" xml:space="preserve">              .------------+------------.</text>

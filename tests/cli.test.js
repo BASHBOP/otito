@@ -60,7 +60,7 @@ function writeFiles(root, files) {
 }
 
 function makeRepoFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-cli-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-"));
   writeFiles(root, {
     "package.json": JSON.stringify({
       name: "fixture-cli",
@@ -83,7 +83,7 @@ function makeRepoFixture() {
 }
 
 function makeGitFixture(prefix) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), `repoctx-cli-git-${prefix}-`));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), `otito-cli-git-${prefix}-`));
   git(root, "init", "-q", "-b", "main");
   git(root, "config", "commit.gpgsign", "false");
   writeFiles(root, {
@@ -117,7 +117,7 @@ test("unknown command prints help and exits 1", async () => {
 test("--help on known command prints help and exits 0", async () => {
   const result = await runCli(["doctor", "--help"]);
   assert.equal(result.exitCode, 0);
-  assert.match(result.stdout, /repoctx doctor/);
+  assert.match(result.stdout, /otito doctor/);
 });
 
 test("explicit help command exits 0", async () => {
@@ -137,7 +137,7 @@ test("error path prints JSON when --json flag is set", async () => {
 test("error path prints to stderr when no --json flag", async () => {
   const result = await runCli(["impact"]);
   assert.equal(result.exitCode, 1);
-  assert.match(result.stderr, /repoctx: /);
+  assert.match(result.stderr, /otito: /);
 });
 
 test("doctor renders text and json", async () => {
@@ -147,11 +147,11 @@ test("doctor renders text and json", async () => {
 
   const text = await runCli(["doctor", "--no-emoji"]);
   assert.equal(text.exitCode, 0);
-  assert.match(text.stdout, /repoctx doctor/);
+  assert.match(text.stdout, /otito doctor/);
 
   const emojiText = await runCli(["doctor", "--emoji"]);
   assert.equal(emojiText.exitCode, 0);
-  assert.match(emojiText.stdout, /repoctx doctor/);
+  assert.match(emojiText.stdout, /otito doctor/);
 });
 
 test("repo command renders json and text summary", async () => {
@@ -180,7 +180,7 @@ test("discover command lists discovered repositories", async () => {
 
 test("index, catalog, and search round-trip a catalog", async () => {
   const fixture = makeRepoFixture();
-  const catalogFile = path.join(os.tmpdir(), `repoctx-cli-catalog-${path.basename(fixture)}.json`);
+  const catalogFile = path.join(os.tmpdir(), `otito-cli-catalog-${path.basename(fixture)}.json`);
 
   const indexJson = await runCli(["index", fixture, "--catalog", catalogFile, "--json"]);
   assert.equal(indexJson.exitCode, 0);
@@ -212,7 +212,7 @@ test("context command emits json, text, and writes an artifact", async () => {
   assert.equal(text.exitCode, 0);
   assert.match(text.stdout, /Context Pack/);
 
-  const out = path.join(os.tmpdir(), `repoctx-cli-context-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `otito-cli-context-${Date.now()}.md`);
   const written = await runCli(["context", "add events tool", "--path", fixture, "--out", out]);
   assert.equal(written.exitCode, 0);
   assert.match(written.stdout, /Context pack written/);
@@ -233,7 +233,7 @@ test("impact accepts both positional and --path forms and writes artifacts", asy
   assert.equal(text.exitCode, 0);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `repoctx-cli-impact-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `otito-cli-impact-${Date.now()}.md`);
   const written = await runCli(["impact", fixture, "rename events controller", "--out", out]);
   assert.equal(written.exitCode, 0);
   assert.match(written.stdout, /Change impact written/);
@@ -265,7 +265,7 @@ test("pass evaluates merge readiness on a git fixture", async () => {
   const text = await runCli(["pass", fixture, "--base", "HEAD~1"]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `repoctx-cli-pass-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `otito-cli-pass-${Date.now()}.md`);
   const written = await runCli(["pass", fixture, "--base", "HEAD~1", "--out", out]);
   assert.match(written.stdout, /Pass report written/);
   fs.unlinkSync(out);
@@ -301,7 +301,7 @@ test("gate --pr routes to the GitHub PR gate (delegates to pass-pr)", async () =
 test("help lists the gate command and the canonical-vs-legacy guidance", async () => {
   const result = await runCli(["help"]);
   assert.equal(result.exitCode, 0);
-  assert.match(result.stdout, /repoctx gate/);
+  assert.match(result.stdout, /otito gate/);
   assert.match(result.stdout, /Canonical vs legacy/);
   assert.match(result.stdout, /MIGRATION-2\.0\.md/);
 });
@@ -325,7 +325,7 @@ test("map renders json, markdown, and writes an artifact", async () => {
   const text = await runCli(["map", fixture]);
   assert.match(text.stdout, /# /);
 
-  const out = path.join(os.tmpdir(), `repoctx-cli-map-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `otito-cli-map-${Date.now()}.md`);
   const written = await runCli(["map", fixture, "--out", out]);
   assert.match(written.stdout, /Code map written/);
   fs.unlinkSync(out);
@@ -374,7 +374,7 @@ test("matrix renders the tool matrix", async () => {
 });
 
 test("init scaffolds a project into a target directory", async () => {
-  const target = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-cli-init-"));
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-init-"));
   const json = await runCli(["init", target, "--force", "--no-workflow", "--json"]);
   assert.equal(json.exitCode, 0);
   const payload = parseJsonOutput(json.stdout);
@@ -394,7 +394,7 @@ test("pr renders json, text, and writes an artifact", async () => {
   const text = await runCli(["pr", fixture, "--base", "HEAD~1"]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `repoctx-cli-pr-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `otito-cli-pr-${Date.now()}.md`);
   const written = await runCli(["pr", fixture, "--base", "HEAD~1", "--out", out]);
   assert.match(written.stdout, /PR review context written/);
   fs.unlinkSync(out);
@@ -409,7 +409,7 @@ test("report renders json and text", async () => {
   const text = await runCli(["report", fixture]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `repoctx-cli-report-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `otito-cli-report-${Date.now()}.md`);
   const written = await runCli(["report", fixture, "--out", out]);
   assert.match(written.stdout, /Report written/);
   fs.unlinkSync(out);
@@ -429,7 +429,7 @@ test("workspace requires at least two repos and produces a multi-repo summary", 
   const text = await runCli(["workspace", fixtureA, fixtureB]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `repoctx-cli-workspace-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `otito-cli-workspace-${Date.now()}.md`);
   const written = await runCli(["workspace", fixtureA, fixtureB, "--out", out]);
   assert.match(written.stdout, /Workspace report written/);
   fs.unlinkSync(out);
@@ -443,7 +443,7 @@ test("harness renders json, text, and writes an artifact", async () => {
   const text = await runCli(["harness", fixture]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `repoctx-cli-harness-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `otito-cli-harness-${Date.now()}.md`);
   const written = await runCli(["harness", fixture, "--out", out]);
   assert.match(written.stdout, /Harness written/);
   fs.unlinkSync(out);
@@ -457,7 +457,7 @@ test("eval and data-access produce reports", async () => {
   const evalText = await runCli(["eval", fixture, "--query", "events"]);
   assert.ok(evalText.stdout.length > 0);
 
-  const evalOut = path.join(os.tmpdir(), `repoctx-cli-eval-${Date.now()}.md`);
+  const evalOut = path.join(os.tmpdir(), `otito-cli-eval-${Date.now()}.md`);
   const evalWritten = await runCli(["eval", fixture, "--out", evalOut]);
   assert.match(evalWritten.stdout, /Eval written/);
   fs.unlinkSync(evalOut);
@@ -468,7 +468,7 @@ test("eval and data-access produce reports", async () => {
   const daText = await runCli(["data-access", fixture]);
   assert.ok(daText.stdout.length > 0);
 
-  const daOut = path.join(os.tmpdir(), `repoctx-cli-data-${Date.now()}.md`);
+  const daOut = path.join(os.tmpdir(), `otito-cli-data-${Date.now()}.md`);
   const daWritten = await runCli(["data-access", fixture, "--out", daOut]);
   assert.match(daWritten.stdout, /Data-access report written/);
   fs.unlinkSync(daOut);

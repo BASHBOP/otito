@@ -6,7 +6,7 @@ import path from "node:path";
 import { generateWorkspaceReport } from "../src/lib/workspace.js";
 
 test("generateWorkspaceReport aggregates multiple repos", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-workspace-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-workspace-"));
   const web = path.join(root, "web");
   const api = path.join(root, "api");
   fs.mkdirSync(path.join(web, "app"), { recursive: true });
@@ -20,7 +20,7 @@ test("generateWorkspaceReport aggregates multiple repos", () => {
   assert.equal(result.data.ok, true);
   assert.equal(result.data.repoCount, 2);
   assert.equal(result.data.totalFiles, 4);
-  assert.match(result.markdown, /# repoctx Workspace Report/);
+  assert.match(result.markdown, /# otito Workspace Report/);
   assert.match(result.markdown, /web/);
   assert.match(result.markdown, /api/);
 });

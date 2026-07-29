@@ -6,7 +6,7 @@ import path from "node:path";
 import { generateCodeMap, isVendorFile } from "../src/lib/code-map.js";
 
 test("generateCodeMap classifies Next routes and symbols", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-web-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-web-"));
   fs.mkdirSync(path.join(root, "app", "events"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { next: "15.0.0" } }));
   fs.writeFileSync(path.join(root, "app", "events", "page.tsx"), "export default function EventsPage() { return null; }\nexport const count = 1;\n");
@@ -18,7 +18,7 @@ test("generateCodeMap classifies Next routes and symbols", () => {
 });
 
 test("generateCodeMap classifies Nest controllers and methods", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-api-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-api-"));
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ main: "dist/main" }));
   fs.writeFileSync(
@@ -35,7 +35,7 @@ test("generateCodeMap classifies Nest controllers and methods", () => {
 });
 
 test("generateCodeMap extracts Nest service class methods for context ranking", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-service-methods-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-service-methods-"));
   fs.mkdirSync(path.join(root, "src", "email"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ main: "dist/main" }));
   fs.writeFileSync(
@@ -66,7 +66,7 @@ test("generateCodeMap extracts Nest service class methods for context ranking", 
 });
 
 test("generateCodeMap ignores code-like strings in fixtures", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-fixture-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-fixture-"));
   fs.mkdirSync(path.join(root, "tests"), { recursive: true });
   fs.writeFileSync(
     path.join(root, "tests", "fixture.test.ts"),
@@ -87,7 +87,7 @@ test("generateCodeMap ignores code-like strings in fixtures", () => {
 });
 
 test("generateCodeMap classifies Go source and test files", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-go-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-go-"));
   fs.mkdirSync(path.join(root, "internal", "githubpr"), { recursive: true });
   fs.writeFileSync(path.join(root, "go.mod"), "module example.com/pullpass\n\ngo 1.22\n");
   fs.writeFileSync(
@@ -124,7 +124,7 @@ test("generateCodeMap classifies Go source and test files", () => {
 });
 
 test("generateCodeMap extracts C# namespace, class, interface, enum, methods, and using-directives", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-cs-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-cs-"));
   fs.writeFileSync(
     path.join(root, "booking.aspx.cs"),
     [
@@ -170,7 +170,7 @@ test("generateCodeMap extracts C# namespace, class, interface, enum, methods, an
 });
 
 test("generateCodeMap extracts Python classes, functions, imports, with comments/strings ignored", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-py-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-py-"));
   fs.writeFileSync(
     path.join(root, "service.py"),
     [
@@ -258,7 +258,7 @@ test("isVendorFile detects minified, library-named, and vendor-pathed files", ()
 });
 
 test("generateCodeMap extracts Java package, classes, interfaces, enums, records, and imports", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-java-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-java-"));
   fs.writeFileSync(
     path.join(root, "BookingService.java"),
     [
@@ -299,7 +299,7 @@ test("generateCodeMap extracts Java package, classes, interfaces, enums, records
 });
 
 test("generateCodeMap extracts Ruby modules, classes, methods, and require directives", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-rb-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-rb-"));
   fs.writeFileSync(
     path.join(root, "service.rb"),
     [
@@ -344,7 +344,7 @@ test("generateCodeMap extracts Ruby modules, classes, methods, and require direc
 });
 
 test("generateCodeMap extracts Rust use, mod, struct, enum, trait, fn with pub visibility", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-rs-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-rs-"));
   fs.writeFileSync(
     path.join(root, "lib.rs"),
     [
@@ -395,7 +395,7 @@ test("generateCodeMap extracts Rust use, mod, struct, enum, trait, fn with pub v
 });
 
 test("generateCodeMap tags files with feature subdir as a secondary domain", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-domains-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-domains-"));
   fs.mkdirSync(path.join(root, "components", "livestream"), { recursive: true });
   fs.mkdirSync(path.join(root, "app", "dashboard", "livestream"), { recursive: true });
   fs.mkdirSync(path.join(root, "components"), { recursive: true });
@@ -426,7 +426,7 @@ test("generateCodeMap tags files with feature subdir as a secondary domain", () 
 });
 
 test("generateCodeMap summary counts every kind, symbol, and data-access hit in one pass", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-summary-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-summary-"));
   fs.mkdirSync(path.join(root, "app", "events"), { recursive: true });
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { next: "15.0.0" } }));
@@ -474,7 +474,7 @@ test("generateCodeMap summary counts every kind, symbol, and data-access hit in 
 });
 
 test("generateCodeMap flags vendor files via isVendor and downstream filters them in context_pack", async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-map-vendor-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-vendor-"));
   fs.mkdirSync(path.join(root, "js"), { recursive: true });
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(path.join(root, "js", "jquery.min.js"), "// fake jquery\n");
