@@ -72,7 +72,7 @@ test("renderDashboardHtml escapes embedded strings", () => {
 });
 
 test("scanArtifacts classifies .dev-context JSON by its discriminating keys", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-dash-art-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-dash-art-"));
   const dir = path.join(root, ".dev-context");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "converge.json"), JSON.stringify({ convergence: 80, band: "aligned" }));
@@ -90,9 +90,9 @@ test("scanArtifacts classifies .dev-context JSON by its discriminating keys", ()
 });
 
 test("generateDashboard returns both the aggregate data and a renderable HTML string", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-dash-gen-"));
-  const { data, html } = generateDashboard(root, { env: { REPOCTX_TELEMETRY_PATH: path.join(root, "nope.jsonl") }, includeGit: false });
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-dash-gen-"));
+  const { data, html } = generateDashboard(root, { env: { OTITO_TELEMETRY_PATH: path.join(root, "nope.jsonl") }, includeGit: false });
   assert.equal(data.totals.events, 0);
-  assert.match(html, /repoctx · usage & performance/);
+  assert.match(html, /otito · usage & performance/);
   fs.rmSync(root, { recursive: true });
 });

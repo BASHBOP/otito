@@ -1,12 +1,12 @@
 name: Post-merge audit attestation
 
-# Run only after repoctx CI has completed successfully. For ordinary main
+# Run only after otito CI has completed successfully. For ordinary main
 # pushes, the completed push workflow supplies the exact commit. Dependabot
 # auto-merges performed with GITHUB_TOKEN do not emit another push workflow,
 # so the completed PR workflow is also reconciled once GitHub reports it merged.
 on:
   workflow_run:
-    workflows: ["repoctx CI"]
+    workflows: ["otito CI"]
     types: [completed]
   workflow_dispatch:
     inputs:
@@ -21,7 +21,7 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: repoctx-post-merge-audit-ledger
+  group: otito-post-merge-audit-ledger
   cancel-in-progress: false
 
 jobs:
@@ -124,7 +124,7 @@ jobs:
           SHORT_SHA: ${{ steps.resolve.outputs.short_sha }}
         run: |
           set -euo pipefail
-          LEDGER_DIR="$RUNNER_TEMP/repoctx-audit-ledger"
+          LEDGER_DIR="$RUNNER_TEMP/otito-audit-ledger"
           rm -rf "$LEDGER_DIR"
 
           if git show-ref --verify --quiet refs/remotes/origin/audit-ledger; then
@@ -155,7 +155,7 @@ jobs:
         if: always() && steps.resolve.outputs.should_run == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: repoctx-audit-attestation-${{ steps.resolve.outputs.short_sha }}
+          name: otito-audit-attestation-${{ steps.resolve.outputs.short_sha }}
           path: |
             audit-pilot/ledger.jsonl
             audit-pilot/verdict-latest.json

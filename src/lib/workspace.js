@@ -87,7 +87,7 @@ function pickKeyScripts(scripts) {
  */
 function formatWorkspaceReport(data) {
   const lines = [
-    "# repoctx Workspace Report",
+    "# otito Workspace Report",
     "",
     `Generated: ${data.generatedAt}`,
     "",

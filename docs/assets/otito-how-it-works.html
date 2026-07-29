@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>repoctx — How It Works</title>
+    <title>otito — How It Works</title>
     <style>
       :root {
         --bg: #0d1117;
@@ -321,7 +321,7 @@
   </head>
   <body>
     <header>
-      <h1>repoctx — layered diagram</h1>
+      <h1>otito — layered diagram</h1>
       <p>
         Local-first repository intelligence: discover code, build context for agents, predict impact, and gate merges — via CLI,
         MCP, or CI.
@@ -338,7 +338,7 @@
     </div>
 
     <div class="stage">
-      <svg class="mindmap" viewBox="0 0 1100 730" role="img" aria-label="repoctx layered diagram">
+      <svg class="mindmap" viewBox="0 0 1100 730" role="img" aria-label="otito layered diagram">
 
         <!-- layer background bands -->
         <rect x="90" y="38"  width="1005" height="74" rx="8" fill="#58a6ff" opacity="0.04" />
@@ -366,24 +366,24 @@
         </g>
 
         <!-- ENTRY -->
-        <g class="node" data-id="cli" data-group="entry" data-title="CLI" data-desc="Human and script entrypoint. Commands like context, impact, review, gate, init, harness, pr. Legacy alias: dev-context.">
+        <g class="node" data-id="cli" data-group="entry" data-title="CLI" data-desc="Human and script entrypoint. Commands include context, impact, review, gate, init, harness, and pr.">
           <rect x="155" y="49" width="130" height="52" rx="10" fill="#161b22" stroke="#58a6ff" color="#58a6ff" />
           <text x="220" y="73"  class="label">CLI</text>
-          <text x="220" y="89"  class="sub">repoctx …</text>
+          <text x="220" y="89"  class="sub">otito …</text>
         </g>
         <g class="node" data-id="mcp" data-group="entry" data-title="MCP server" data-desc="stdio MCP host for Cursor, VS Code, Claude Desktop. Exposes repo_inspect, context_pack, change_impact, review_gate, review_verdict, and 6 more v2 tools.">
           <rect x="485" y="49" width="130" height="52" rx="10" fill="#161b22" stroke="#58a6ff" color="#58a6ff" />
           <text x="550" y="73"  class="label">MCP</text>
-          <text x="550" y="89"  class="sub">repoctx mcp</text>
+          <text x="550" y="89"  class="sub">otito mcp</text>
         </g>
-        <g class="node" data-id="ci" data-group="entry" data-title="CI scaffold" data-desc="repoctx init writes .github/workflows/repoctx-ci.yml, optional harness-driven quality job, pre-commit hook, and .dev-context/ assets.">
+        <g class="node" data-id="ci" data-group="entry" data-title="CI scaffold" data-desc="otito init writes .github/workflows/otito-ci.yml, optional harness-driven quality job, pre-commit hook, and .dev-context/ assets.">
           <rect x="815" y="49" width="130" height="52" rx="10" fill="#161b22" stroke="#58a6ff" color="#58a6ff" />
           <text x="880" y="73"  class="label">CI</text>
           <text x="880" y="89"  class="sub">init scaffold</text>
         </g>
 
         <!-- DISCOVER -->
-        <g class="node" data-id="inspect" data-group="discover" data-title="repo_inspect" data-desc="Repository facts: languages, scripts, package managers, entrypoints, git state. CLI: repoctx repo.">
+        <g class="node" data-id="inspect" data-group="discover" data-title="repo_inspect" data-desc="Repository facts: languages, scripts, package managers, entrypoints, git state. CLI: otito repo.">
           <circle cx="220" cy="191" r="34" fill="#161b22" stroke="#79c0ff" color="#79c0ff" />
           <text x="220" y="187" class="label">inspect</text>
           <text x="220" y="201" class="sub">repo facts</text>
@@ -422,24 +422,24 @@
         </g>
 
         <!-- IMPACT -->
-        <g class="node" data-id="impact" data-group="change" data-title="change_impact" data-desc="Predicts likely impacted files, tests, and risks from a natural-language change request or git diff. CLI: repoctx impact.">
+        <g class="node" data-id="impact" data-group="change" data-title="change_impact" data-desc="Predicts likely impacted files, tests, and risks from a natural-language change request or git diff. CLI: otito impact.">
           <circle cx="550" cy="434" r="44" fill="#161b22" stroke="#ffd866" color="#ffd866" />
           <text x="550" y="430" class="label">impact</text>
           <text x="550" y="446" class="sub">blast radius</text>
         </g>
 
         <!-- REVIEW -->
-        <g class="node" data-id="reviewctx" data-group="review" data-title="review_context" data-desc="PR/commit review context from git diff plus optional GitHub metadata. CLI: repoctx pr.">
+        <g class="node" data-id="reviewctx" data-group="review" data-title="review_context" data-desc="PR/commit review context from git diff plus optional GitHub metadata. CLI: otito pr.">
           <circle cx="220" cy="556" r="38" fill="#161b22" stroke="#7ee787" color="#7ee787" />
           <text x="220" y="552" class="label">review ctx</text>
           <text x="220" y="568" class="sub">diff pack</text>
         </g>
-        <g class="node" data-id="verdict" data-group="review" data-title="review_verdict" data-desc="Composite verdict: impact + review context + local/PR gate. PASS / WARN / FAIL with confidence. CLI: repoctx review.">
+        <g class="node" data-id="verdict" data-group="review" data-title="review_verdict" data-desc="Composite verdict: impact + review context + local/PR gate. PASS / WARN / FAIL with confidence. CLI: otito review.">
           <circle cx="550" cy="556" r="38" fill="#161b22" stroke="#7ee787" color="#7ee787" />
           <text x="550" y="552" class="label">verdict</text>
           <text x="550" y="568" class="sub">composite</text>
         </g>
-        <g class="node" data-id="gate" data-group="review" data-title="review_gate" data-desc="Merge gate: secrets, risk paths, release discipline, validation commands, CODEOWNERS, checks. CLI: repoctx gate.">
+        <g class="node" data-id="gate" data-group="review" data-title="review_gate" data-desc="Merge gate: secrets, risk paths, release discipline, validation commands, CODEOWNERS, checks. CLI: otito gate.">
           <circle cx="880" cy="556" r="38" fill="#161b22" stroke="#7ee787" color="#7ee787" />
           <text x="880" y="552" class="label">gate</text>
           <text x="880" y="568" class="sub">merge ready</text>
@@ -451,7 +451,7 @@
           <text x="220" y="671" class="label">.dev-context</text>
           <text x="220" y="687" class="sub">artifacts</text>
         </g>
-        <g class="node" data-id="prcomment" data-group="output" data-title="PR comment" data-desc="CI review job posts structured context to the PR and uploads repoctx-pr-review artifact.">
+        <g class="node" data-id="prcomment" data-group="output" data-title="PR comment" data-desc="CI review job posts structured context to the PR and uploads otito-pr-review artifact.">
           <rect x="485" y="647" width="130" height="52" rx="10" fill="#161b22" stroke="#ffa657" color="#ffa657" />
           <text x="550" y="671" class="label">PR comment</text>
           <text x="550" y="687" class="sub">GitHub Actions</text>
@@ -502,7 +502,7 @@
           review_gate, review_verdict, and 6 more v2 tools.
         </p>
         <div class="chips" id="detail-chips">
-          <span class="chip">repoctx mcp</span>
+          <span class="chip">otito mcp</span>
           <span class="chip">context_pack</span>
           <span class="chip">review_gate</span>
         </div>
@@ -511,7 +511,7 @@
 
     <footer>
       Open this file in any browser ·
-      <a href="https://nugehs.github.io/repoctx/">nugehs.github.io/repoctx</a>
+      <a href="https://bashbop.github.io/otito/">bashbop.github.io/otito</a>
     </footer>
 
     <script>
@@ -523,21 +523,21 @@
       const detailChips = document.getElementById("detail-chips");
 
       const chipMap = {
-        center: ["repoctx doctor", "repoctx context", "repoctx review"],
-        cli: ["repoctx repo .", "repoctx init .", "repoctx harness ."],
-        mcp: ["repoctx mcp", "context_pack", "review_gate"],
-        ci: ["repoctx init --hooks-path", "repoctx-ci.yml"],
-        inspect: ["repo_inspect", "repoctx repo"],
-        index: ["repo_index", "repoctx index"],
-        search: ["repo_search", "repoctx search"],
-        map: ["repo_map", "repoctx map"],
-        context: ["context_pack", "repoctx context"],
-        harness: ["repo_harness", "repoctx harness"],
-        workspace: ["workspace_report", "repoctx workspace"],
-        impact: ["change_impact", "repoctx impact"],
-        reviewctx: ["review_context", "repoctx pr"],
-        verdict: ["review_verdict", "repoctx review"],
-        gate: ["review_gate", "repoctx gate"],
+        center: ["otito doctor", "otito context", "otito review"],
+        cli: ["otito repo .", "otito init .", "otito harness ."],
+        mcp: ["otito mcp", "context_pack", "review_gate"],
+        ci: ["otito init --hooks-path", "otito-ci.yml"],
+        inspect: ["repo_inspect", "otito repo"],
+        index: ["repo_index", "otito index"],
+        search: ["repo_search", "otito search"],
+        map: ["repo_map", "otito map"],
+        context: ["context_pack", "otito context"],
+        harness: ["repo_harness", "otito harness"],
+        workspace: ["workspace_report", "otito workspace"],
+        impact: ["change_impact", "otito impact"],
+        reviewctx: ["review_context", "otito pr"],
+        verdict: ["review_verdict", "otito review"],
+        gate: ["review_gate", "otito gate"],
         artifacts: [".dev-context/pr-review.md", ".dev-context/harness.md"],
         prcomment: ["GitHub Actions", "PR comment artifact"],
         verdictout: ["PASS", "WARN", "FAIL"],

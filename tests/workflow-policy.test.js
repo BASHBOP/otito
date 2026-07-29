@@ -20,14 +20,14 @@ function git(cwd, args) {
 }
 
 function createLinearRepo() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-attest-reconcile-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-attest-reconcile-"));
   fs.mkdirSync(path.join(root, "scripts"), { recursive: true });
   fs.mkdirSync(path.join(root, "audit-pilot"), { recursive: true });
   fs.copyFileSync(path.join(repoRoot, "scripts", "reconcile-attestations.sh"), path.join(root, "scripts", "reconcile-attestations.sh"));
 
   git(root, ["init", "-q"]);
-  git(root, ["config", "user.name", "Repoctx Test"]);
-  git(root, ["config", "user.email", "repoctx@example.test"]);
+  git(root, ["config", "user.name", "Òtítọ́ Test"]);
+  git(root, ["config", "user.email", "otito@example.test"]);
 
   const commits = [];
   for (const name of ["one", "two", "three"]) {
@@ -40,7 +40,7 @@ function createLinearRepo() {
 }
 
 test("CI validates PRs once and reserves push validation for main", () => {
-  const workflow = read(".github/workflows/repoctx-ci.yml");
+  const workflow = read(".github/workflows/otito-ci.yml");
   assert.match(workflow, /pull_request:\n\s+types:/);
   assert.match(workflow, /push:\n\s+branches: \[main\]/);
   assert.doesNotMatch(workflow, /attest-main:/);
@@ -49,7 +49,7 @@ test("CI validates PRs once and reserves push validation for main", () => {
 test("post-merge workflow reconciles successful CI into a durable audit branch", () => {
   const workflow = read(".github/workflows/post-merge-attest.yml");
   assert.match(workflow, /workflow_run:/);
-  assert.match(workflow, /workflows: \["repoctx CI"\]/);
+  assert.match(workflow, /workflows: \["otito CI"\]/);
   assert.match(workflow, /bash scripts\/reconcile-attestations\.sh/);
   assert.match(workflow, /HEAD:refs\/heads\/audit-ledger/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
@@ -76,7 +76,7 @@ test("reconciliation dry-run lists missing first-parent commits oldest-first", (
     env: {
       ...process.env,
       GITHUB_SHA: commits[2],
-      REPOCTX_ATTEST_DRY_RUN: "1",
+      OTITO_ATTEST_DRY_RUN: "1",
     },
   });
 
@@ -97,7 +97,7 @@ test("reconciliation rejects a cryptographically valid ledger with a first-paren
     env: {
       ...process.env,
       GITHUB_SHA: commits[2],
-      REPOCTX_ATTEST_DRY_RUN: "1",
+      OTITO_ATTEST_DRY_RUN: "1",
     },
   });
 

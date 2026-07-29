@@ -1,5 +1,5 @@
 name: Company pilot feedback
-description: Share structured feedback after reviewing the repoctx + PullPass packet or running the pilot runbook.
+description: Share structured feedback after reviewing the otito + PullPass packet or running the pilot runbook.
 title: "pilot: "
 labels:
   - enhancement
@@ -70,8 +70,8 @@ body:
       label: Most useful parts
       description: Which parts of the packet were strongest?
       options:
-        - label: repoctx context before change
-        - label: repoctx PR review context
+        - label: otito context before change
+        - label: otito PR review context
         - label: PullPass merge gate
         - label: Governance modes
         - label: Bashbop pilot proof

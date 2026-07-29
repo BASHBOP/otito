@@ -3,43 +3,9 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { warnIfLegacyAlias } from "../src/cli.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const postinstall = path.join(here, "..", "scripts", "postinstall.mjs");
-
-/**
- * Capture console.error while running `fn` with a given argv[1] basename.
- * @param {string} argv1
- * @param {() => void} fn
- * @returns {string[]}
- */
-function captureWarn(argv1, fn) {
-  const savedArgv1 = process.argv[1];
-  const savedError = console.error;
-  /** @type {string[]} */
-  const calls = [];
-  process.argv[1] = argv1;
-  console.error = (/** @type {unknown} */ msg) => calls.push(String(msg));
-  try {
-    fn();
-  } finally {
-    console.error = savedError;
-    process.argv[1] = savedArgv1;
-  }
-  return calls;
-}
-
-test("warnIfLegacyAlias warns when invoked as dev-context", () => {
-  const calls = captureWarn("/usr/local/bin/dev-context", warnIfLegacyAlias);
-  assert.equal(calls.length, 1);
-  assert.match(calls[0], /dev-context.*deprecated.*v3\.0\.0/);
-});
-
-test("warnIfLegacyAlias is silent when invoked as repoctx", () => {
-  assert.deepEqual(captureWarn("/usr/local/bin/repoctx", warnIfLegacyAlias), []);
-  assert.deepEqual(captureWarn("/some/path/cli.js", warnIfLegacyAlias), []);
-});
 
 /**
  * @param {Record<string, string>} extraEnv
@@ -47,7 +13,7 @@ test("warnIfLegacyAlias is silent when invoked as repoctx", () => {
  */
 function runPostinstall(extraEnv) {
   // Start from a clean slate for the guard vars so the host CI env can't leak in.
-  const env = { ...process.env, CI: "", REPOCTX_SKIP_POSTINSTALL: "", npm_config_global: "", ...extraEnv };
+  const env = { ...process.env, CI: "", OTITO_SKIP_POSTINSTALL: "", npm_config_global: "", ...extraEnv };
   const result = spawnSync(process.execPath, [postinstall], { env, encoding: "utf8" });
   return { status: result.status, stderr: result.stderr ?? "" };
 }
@@ -69,7 +35,7 @@ test("postinstall is skipped in CI and when opted out", () => {
   assert.equal(inCi.status, 0);
   assert.equal(inCi.stderr.trim(), "");
 
-  const optedOut = runPostinstall({ npm_config_global: "true", REPOCTX_SKIP_POSTINSTALL: "1" });
+  const optedOut = runPostinstall({ npm_config_global: "true", OTITO_SKIP_POSTINSTALL: "1" });
   assert.equal(optedOut.status, 0);
   assert.equal(optedOut.stderr.trim(), "");
 });

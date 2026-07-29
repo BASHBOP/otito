@@ -6,16 +6,16 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { initProject } from "../src/lib/init.js";
 
-test("initProject scaffolds repoctx files without overwriting by default", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-"));
-  const result = initProject(fixture, { toolRepo: "example/repoctx", toolRef: "stable" });
+test("initProject scaffolds otito files without overwriting by default", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-"));
+  const result = initProject(fixture, { toolRepo: "example/otito", toolRef: "stable" });
 
   assert.equal(result.ok, true);
-  assert.deepEqual(result.created.sort(), [".dev-context/README.md", ".githooks/pre-commit", ".github/workflows/repoctx-ci.yml", ".gitignore"].sort());
+  assert.deepEqual(result.created.sort(), [".dev-context/README.md", ".githooks/pre-commit", ".github/workflows/otito-ci.yml", ".gitignore"].sort());
 
-  const generatedWorkflowPath = path.join(fixture, ".github", "workflows", "repoctx-ci.yml");
+  const generatedWorkflowPath = path.join(fixture, ".github", "workflows", "otito-ci.yml");
   const workflow = fs.readFileSync(generatedWorkflowPath, "utf8");
-  assert.match(workflow, /repository: example\/repoctx/);
+  assert.match(workflow, /repository: example\/otito/);
   assert.match(workflow, /ref: stable/);
   assert.match(workflow, /pull_request:/);
   assert.match(workflow, /push:/);
@@ -23,7 +23,7 @@ test("initProject scaffolds repoctx files without overwriting by default", () =>
   assert.match(workflow, /if: github\.event_name == 'pull_request'/);
   assert.match(workflow, /Checkout pushed commit/);
   assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
-  assert.match(workflow, /Install repoctx dependencies/);
+  assert.match(workflow, /Install otito dependencies/);
   assert.match(workflow, /working-directory: \.dev-context\/tool/);
   assert.match(workflow, /git fetch origin "\+\$\{\{ github\.base_ref \}\}:refs\/remotes\/origin\/\$\{\{ github\.base_ref \}\}"/);
   assert.match(workflow, /Generate commit review context/);
@@ -31,12 +31,12 @@ test("initProject scaffolds repoctx files without overwriting by default", () =>
 
   fs.writeFileSync(generatedWorkflowPath, "custom workflow\n");
   const skipped = initProject(fixture);
-  assert.ok(skipped.skipped.includes(".github/workflows/repoctx-ci.yml"));
+  assert.ok(skipped.skipped.includes(".github/workflows/otito-ci.yml"));
   assert.equal(fs.readFileSync(generatedWorkflowPath, "utf8"), "custom workflow\n");
 });
 
 test("initProject adds .dev-context/ to .gitignore (creating it when absent)", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gitignore-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
   const result = initProject(fixture, { noWorkflow: true });
 
   const gitignorePath = path.join(fixture, ".gitignore");
@@ -47,7 +47,7 @@ test("initProject adds .dev-context/ to .gitignore (creating it when absent)", (
 });
 
 test("initProject appends .dev-context/ to an existing .gitignore without clobbering it", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gitignore-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
   const gitignorePath = path.join(fixture, ".gitignore");
   fs.writeFileSync(gitignorePath, "node_modules\ndist\n");
 
@@ -60,7 +60,7 @@ test("initProject appends .dev-context/ to an existing .gitignore without clobbe
 });
 
 test("initProject is idempotent about .gitignore and respects covering patterns", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gitignore-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
   const gitignorePath = path.join(fixture, ".gitignore");
 
   initProject(fixture, { noWorkflow: true });
@@ -72,7 +72,7 @@ test("initProject is idempotent about .gitignore and respects covering patterns"
   assert.ok(second.skipped.includes(".gitignore"));
 
   // A bare ".dev-context" (no trailing slash) already covers the directory.
-  const covered = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gitignore-"));
+  const covered = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
   fs.writeFileSync(path.join(covered, ".gitignore"), ".dev-context\n");
   const result = initProject(covered, { noWorkflow: true });
   assert.equal(fs.readFileSync(path.join(covered, ".gitignore"), "utf8"), ".dev-context\n");
@@ -80,21 +80,21 @@ test("initProject is idempotent about .gitignore and respects covering patterns"
 });
 
 test("initProject can force overwrite and skip workflow", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-"));
   initProject(fixture);
 
   const forced = initProject(fixture, { force: true });
   assert.ok(forced.updated.includes(".dev-context/README.md"));
-  assert.ok(forced.updated.includes(".github/workflows/repoctx-ci.yml"));
+  assert.ok(forced.updated.includes(".github/workflows/otito-ci.yml"));
 
-  const noWorkflow = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-"));
+  const noWorkflow = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-"));
   const result = initProject(noWorkflow, { noWorkflow: true });
   assert.ok(result.created.includes(".dev-context/README.md"));
-  assert.equal(fs.existsSync(path.join(noWorkflow, ".github", "workflows", "repoctx-ci.yml")), false);
+  assert.equal(fs.existsSync(path.join(noWorkflow, ".github", "workflows", "otito-ci.yml")), false);
 });
 
 test("initProject injects a harness-driven quality job and pre-commit hook from package scripts", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-gates-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gates-"));
   fs.writeFileSync(
     path.join(fixture, "package.json"),
     JSON.stringify({ name: "sample", scripts: { lint: "eslint .", typecheck: "tsc --noEmit", test: "node --test" } }, null, 2),
@@ -108,7 +108,7 @@ test("initProject injects a harness-driven quality job and pre-commit hook from 
   assert.equal(result.precommitStatus, "applied");
   assert.ok(result.created.includes(".githooks/pre-commit"));
 
-  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "repoctx-ci.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
   const qualitySection = workflow.split("  review:")[0];
   assert.match(workflow, /^ {2}quality:$/m);
   assert.match(workflow, /actions\/setup-node@v4/);
@@ -125,7 +125,7 @@ test("initProject injects a harness-driven quality job and pre-commit hook from 
   assert.match(hook, /^#!\/bin\/sh/);
   assert.match(hook, /npm run lint/);
   assert.match(hook, /npm run typecheck/);
-  assert.match(hook, /repoctx gate \. --staged --out \.dev-context\/gate\.md/);
+  assert.match(hook, /otito gate \. --staged --out \.dev-context\/gate\.md/);
   // slow gates (test/build/audit) never run in the pre-commit hook
   assert.doesNotMatch(hook, /npm test/);
   // the hook must be executable
@@ -133,7 +133,7 @@ test("initProject injects a harness-driven quality job and pre-commit hook from 
 });
 
 test("initProject omits gates and pre-commit when disabled", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-nogates-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-nogates-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint ." } }, null, 2));
 
   const result = initProject(fixture, { gates: false, precommit: false });
@@ -144,13 +144,13 @@ test("initProject omits gates and pre-commit when disabled", () => {
   assert.equal(result.precommitStatus, "disabled");
   assert.equal(fs.existsSync(path.join(fixture, ".githooks", "pre-commit")), false);
 
-  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "repoctx-ci.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
   assert.doesNotMatch(workflow, /^ {2}quality:$/m);
   assert.match(workflow, /name: Generate PR review context/);
 });
 
 test("initProject installs the staged safety hook even when no static scripts are detected", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-bare-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-bare-"));
   const result = initProject(fixture);
 
   assert.equal(result.gatesApplied, false);
@@ -158,23 +158,23 @@ test("initProject installs the staged safety hook even when no static scripts ar
   assert.equal(result.precommitApplied, true);
   assert.equal(result.precommitStatus, "applied");
   const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
-  assert.match(hook, /repoctx gate \. --staged --out \.dev-context\/gate\.md/);
+  assert.match(hook, /otito gate \. --staged --out \.dev-context\/gate\.md/);
 });
 
 test("initProject uses npm ci when package-lock.json is present", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-lock-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-lock-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint .", test: "node --test" } }, null, 2));
   fs.writeFileSync(path.join(fixture, "package-lock.json"), JSON.stringify({ name: "sample", lockfileVersion: 3, packages: {} }, null, 2));
 
   initProject(fixture);
 
-  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "repoctx-ci.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
   const qualitySection = workflow.split("  review:")[0];
   assert.match(qualitySection, /install Node dependencies\n {8}run: npm ci/);
 });
 
 test("initProject excludes non-static script names from the pre-commit hook", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-precommit-filter-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-precommit-filter-"));
   fs.writeFileSync(
     path.join(fixture, "package.json"),
     JSON.stringify({ name: "sample", scripts: { lint: "eslint .", prototype: "node prototype.js", test: "node --test" } }, null, 2),
@@ -184,14 +184,14 @@ test("initProject excludes non-static script names from the pre-commit hook", ()
 
   assert.equal(result.precommitApplied, true);
   const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
-  assert.match(hook, /repoctx gate \. --staged --out \.dev-context\/gate\.md/);
+  assert.match(hook, /otito gate \. --staged --out \.dev-context\/gate\.md/);
   assert.match(hook, /npm run lint/);
   assert.doesNotMatch(hook, /prototype/);
   assert.doesNotMatch(hook, /npm test/);
 });
 
 test("initProject sets core.hooksPath only when requested, inside a git repo", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-hooks-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-hooks-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint ." } }, null, 2));
   execFileSync("git", ["init"], { cwd: fixture, stdio: "ignore" });
 
@@ -204,7 +204,7 @@ test("initProject sets core.hooksPath only when requested, inside a git repo", (
 });
 
 test("initProject skips hooks path when no pre-commit hook was scaffolded", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-init-hooks-skip-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-hooks-skip-"));
   execFileSync("git", ["init"], { cwd: fixture, stdio: "ignore" });
 
   const result = initProject(fixture, { hooksPath: true, gates: false, precommit: false });

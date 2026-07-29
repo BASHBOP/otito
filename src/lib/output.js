@@ -18,49 +18,46 @@ export function printJson(value) {
 }
 
 export function printHelp() {
-  printText(`repoctx
+  printText(`otito
 
 Usage:
-  repoctx doctor [--json]
-  repoctx repo <path> [--json]
-  repoctx discover <root...> [--depth n] [--limit n] [--json]
-  repoctx index <repo...> [--discover] [--catalog file] [--json]
-  repoctx catalog [--catalog file] [--json]
-  repoctx search <query> [--catalog file] [--limit n] [--offline] [--json]
-  repoctx context <query> [--path repo] [--limit n] [--out file] [--json]
-  repoctx impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--mermaid] [--no-emoji] [--color|--no-color] [--theme name]
-  repoctx ax <repo> <query> [--top n] [--out file] [--json]
-  repoctx converge <repo> <query> --base <ref> [--staged] [--top n] [--out file] [--json]
-  repoctx pass <repo> [--base ref] [--staged] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
-  repoctx gate <repo> [--base ref] [--staged] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
-  repoctx pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
-  repoctx review <repo> [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--min-convergence n] [--receipt hash|file] [--json] [--mermaid] [--no-emoji]
-  repoctx install|i [--global|--link] [--json]
-  repoctx map <path> [--out file] [--json] [--mermaid]
-  repoctx structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
-  repoctx deps <package> [--query text] [--limit n] [--json]
-  repoctx init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--no-gates] [--no-precommit] [--hooks-path] [--yes] [--json]
-  repoctx matrix [--json]
-  repoctx mcp
-  repoctx pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
-  repoctx report <path> [--out file] [--json] [--mermaid]
-  repoctx workspace <repo...> [--out file] [--json] [--mermaid]
-  repoctx harness <path> [--out file] [--json]
-  repoctx eval <path> [--query text] [--naive-cap n] [--out file] [--json]
-  repoctx data-access <path> [--out file] [--json] [--mermaid]
-  repoctx agent-tools [--json|--markdown]
-  repoctx dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]   # local usage & performance UI (HTML)
-  repoctx telemetry [status|on|off|clear] [--json]                                          # opt-in usage capture (off by default)
-  repoctx config [list]                           # show config with source annotations
-  repoctx config get [key]                        # show one or all resolved values
-  repoctx config set <key> <value> [--local]      # write to user (or local) config
-  repoctx config set color true                   # enable color in user config
-  repoctx config set theme high-contrast          # set theme (default|color|minimal|high-contrast)
-  repoctx config set emoji false                  # disable emoji in user config
-  repoctx config set telemetry true               # opt in to local usage capture for the dashboard
-
-Legacy alias (deprecated, removed in v3.0.0 — use repoctx):
-  dev-context <command>
+  otito doctor [--json]
+  otito repo <path> [--json]
+  otito discover <root...> [--depth n] [--limit n] [--json]
+  otito index <repo...> [--discover] [--catalog file] [--json]
+  otito catalog [--catalog file] [--json]
+  otito search <query> [--catalog file] [--limit n] [--offline] [--json]
+  otito context <query> [--path repo] [--limit n] [--out file] [--json]
+  otito impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--mermaid] [--no-emoji] [--color|--no-color] [--theme name]
+  otito ax <repo> <query> [--top n] [--out file] [--json]
+  otito converge <repo> <query> --base <ref> [--staged] [--top n] [--out file] [--json]
+  otito pass <repo> [--base ref] [--staged] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
+  otito gate <repo> [--base ref] [--staged] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
+  otito pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
+  otito review <repo> [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--min-convergence n] [--receipt hash|file] [--json] [--mermaid] [--no-emoji]
+  otito install|i [--global|--link] [--json]
+  otito map <path> [--out file] [--json] [--mermaid]
+  otito structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
+  otito deps <package> [--query text] [--limit n] [--json]
+  otito init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--no-gates] [--no-precommit] [--hooks-path] [--yes] [--json]
+  otito matrix [--json]
+  otito mcp
+  otito pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
+  otito report <path> [--out file] [--json] [--mermaid]
+  otito workspace <repo...> [--out file] [--json] [--mermaid]
+  otito harness <path> [--out file] [--json]
+  otito eval <path> [--query text] [--naive-cap n] [--out file] [--json]
+  otito data-access <path> [--out file] [--json] [--mermaid]
+  otito agent-tools [--json|--markdown]
+  otito dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]   # local usage & performance UI (HTML)
+  otito telemetry [status|on|off|clear] [--json]                                          # opt-in usage capture (off by default)
+  otito config [list]                           # show config with source annotations
+  otito config get [key]                        # show one or all resolved values
+  otito config set <key> <value> [--local]      # write to user (or local) config
+  otito config set color true                   # enable color in user config
+  otito config set theme high-contrast          # set theme (default|color|minimal|high-contrast)
+  otito config set emoji false                  # disable emoji in user config
+  otito config set telemetry true               # opt in to local usage capture for the dashboard
 
 Examples:
   node src/cli.js doctor

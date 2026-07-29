@@ -6,7 +6,7 @@ import path from "node:path";
 import { defaultCatalogPath, discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "../src/lib/catalog.js";
 
 test("discoverRepositories finds local repository roots", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-discover-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-discover-"));
   const app = path.join(root, "apps", "web");
   fs.mkdirSync(app, { recursive: true });
   fs.writeFileSync(path.join(app, "package.json"), JSON.stringify({ name: "web-app" }));
@@ -20,7 +20,7 @@ test("discoverRepositories finds local repository roots", () => {
 });
 
 test("indexRepositories writes an index and catalog entry", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-index-local-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-index-local-"));
   const catalogPath = path.join(root, "catalog.json");
   fs.mkdirSync(path.join(root, "src", "services"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "local-api" }));
@@ -37,7 +37,7 @@ test("indexRepositories writes an index and catalog entry", () => {
 });
 
 test("searchCatalog searches indexed paths and symbols", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-search-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-search-"));
   const catalogPath = path.join(root, "catalog.json");
   fs.mkdirSync(path.join(root, "src", "services"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "search-api" }));
@@ -53,31 +53,19 @@ test("searchCatalog searches indexed paths and symbols", () => {
   assert.ok(result.matches[0].reasons.includes("symbol"));
 });
 
-test("defaultCatalogPath prefers REPOCTX_CATALOG while keeping legacy fallback", () => {
-  const originalRepoctx = process.env.REPOCTX_CATALOG;
-  const originalLegacy = process.env.DEV_CONTEXT_CATALOG;
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-catalog-env-"));
-  const repoctxCatalog = path.join(root, "repoctx-catalog.json");
-  const legacyCatalog = path.join(root, "legacy-catalog.json");
+test("defaultCatalogPath uses OTITO_CATALOG when set", () => {
+  const original = process.env.OTITO_CATALOG;
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-catalog-env-"));
+  const otitoCatalog = path.join(root, "otito-catalog.json");
 
   try {
-    process.env.REPOCTX_CATALOG = repoctxCatalog;
-    process.env.DEV_CONTEXT_CATALOG = legacyCatalog;
-    assert.equal(defaultCatalogPath(), repoctxCatalog);
-
-    delete process.env.REPOCTX_CATALOG;
-    assert.equal(defaultCatalogPath(), legacyCatalog);
+    process.env.OTITO_CATALOG = otitoCatalog;
+    assert.equal(defaultCatalogPath(), otitoCatalog);
   } finally {
-    if (originalRepoctx === undefined) {
-      delete process.env.REPOCTX_CATALOG;
+    if (original === undefined) {
+      delete process.env.OTITO_CATALOG;
     } else {
-      process.env.REPOCTX_CATALOG = originalRepoctx;
-    }
-
-    if (originalLegacy === undefined) {
-      delete process.env.DEV_CONTEXT_CATALOG;
-    } else {
-      process.env.DEV_CONTEXT_CATALOG = originalLegacy;
+      process.env.OTITO_CATALOG = original;
     }
   }
 });

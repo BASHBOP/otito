@@ -3,8 +3,8 @@
 // turned it on. The whole module is built to be invisible when off and harmless
 // when on:
 //
-//   - off by default; gated by the `telemetry` config key or REPOCTX_TELEMETRY,
-//     and forced off under CI unless REPOCTX_TELEMETRY explicitly opts in.
+//   - off by default; gated by the `telemetry` config key or OTITO_TELEMETRY,
+//     and forced off under CI unless OTITO_TELEMETRY explicitly opts in.
 //   - the gate is resolved ONCE per process and cached, so the hot path never
 //     re-reads config (no per-event loadConfig directory walk).
 //   - appendEvent is best-effort: it swallows every error and NEVER writes to
@@ -27,21 +27,21 @@ const MAX_LOG_BYTES = 5 * 1024 * 1024; // rotate at 5MB to a single .1 generatio
 const MAX_ERROR_LEN = 60;
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-let repoctxVersion = "0.0.0";
+let otitoVersion = "0.0.0";
 try {
-  repoctxVersion = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8")).version ?? "0.0.0";
+  otitoVersion = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8")).version ?? "0.0.0";
 } catch {
   // best-effort; version is cosmetic in the log
 }
 
 /**
- * Resolve the append-only log path. REPOCTX_TELEMETRY_PATH overrides (used by
+ * Resolve the append-only log path. OTITO_TELEMETRY_PATH overrides (used by
  * tests and power users); otherwise it sits beside the catalog under ~/.dev-context.
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {string}
  */
 export function telemetryLogPath(env = process.env) {
-  return path.resolve(env.REPOCTX_TELEMETRY_PATH ?? path.join(os.homedir(), ".dev-context", "usage.jsonl"));
+  return path.resolve(env.OTITO_TELEMETRY_PATH ?? path.join(os.homedir(), ".dev-context", "usage.jsonl"));
 }
 
 /**
@@ -55,7 +55,7 @@ function coerceBool(value) {
 }
 
 /**
- * Resolve whether telemetry is enabled. Precedence: REPOCTX_TELEMETRY env wins;
+ * Resolve whether telemetry is enabled. Precedence: OTITO_TELEMETRY env wins;
  * under CI the default is OFF unless the env explicitly opts in; otherwise the
  * persisted `telemetry` config key. Pure given its inputs.
  * @param {NodeJS.ProcessEnv} env
@@ -63,9 +63,9 @@ function coerceBool(value) {
  * @returns {boolean}
  */
 function resolveEnabled(env, cwd) {
-  const envBool = coerceBool(env.REPOCTX_TELEMETRY);
+  const envBool = coerceBool(env.OTITO_TELEMETRY);
   // CI must never capture from an inherited user config; only an explicit
-  // REPOCTX_TELEMETRY=1 turns it on there.
+  // OTITO_TELEMETRY=1 turns it on there.
   if (env.CI) return envBool === true;
   if (envBool !== undefined) return envBool;
   try {
@@ -161,7 +161,7 @@ export function takePendingSignals() {
 
 /**
  * Append one usage event, best-effort. Short-circuits when telemetry is off.
- * Stamps the envelope (schema version, wall-clock ts, repoctx/node version, and
+ * Stamps the envelope (schema version, wall-clock ts, otito/node version, and
  * a non-reversible repo group key). NEVER throws, NEVER writes stdout.
  * @param {Record<string, any>} event
  * @param {{ env?: NodeJS.ProcessEnv, cwd?: string }} [opts]
@@ -184,7 +184,7 @@ export function appendEvent(event, opts = {}) {
       error: event.error ?? null,
       durationMs: typeof event.durationMs === "number" ? Math.round(event.durationMs) : null,
       repo: repoRoot ? crypto.createHash("sha256").update(String(repoRoot)).digest("hex").slice(0, 12) : null,
-      repoctxVersion,
+      otitoVersion,
       node: process.version,
       signals: event.signals ?? null,
     };
@@ -275,7 +275,7 @@ export function clearTelemetryLog(opts = {}) {
 }
 
 /**
- * Snapshot of the telemetry state for `repoctx telemetry status`.
+ * Snapshot of the telemetry state for `otito telemetry status`.
  * @param {{ env?: NodeJS.ProcessEnv, cwd?: string }} [opts]
  * @returns {{ enabled: boolean, path: string, exists: boolean, sizeBytes: number, events: number }}
  */

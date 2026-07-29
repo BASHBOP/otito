@@ -1,6 +1,6 @@
 # Release Readiness
 
-repoctx follows Semantic Versioning and keeps releases tied to tests, changelog discipline, and maintainer review.
+otito follows Semantic Versioning and keeps releases tied to tests, changelog discipline, and maintainer review.
 
 ---
 
@@ -36,7 +36,7 @@ Maintainers should keep these aligned:
 
 ## PullPass PR Readiness
 
-repoctx runs PullPass on pull requests so merge-readiness evidence is visible before an owner or reviewer merges.
+otito runs PullPass on pull requests so merge-readiness evidence is visible before an owner or reviewer merges.
 
 The workflow installs PullPass `v0.9.0` and runs:
 
@@ -59,14 +59,8 @@ Then require the `PullPass readiness` check alongside CI, docs build, required r
 ## Current Install Path
 
 ```bash
-npm install -g @nugehs/repoctx
-repoctx doctor
-```
-
-The package also exposes a deprecated legacy alias (`dev-context`), scheduled for removal in v3.0.0. It still runs but prints a deprecation warning; prefer `repoctx`:
-
-```bash
-dev-context doctor   # deprecated — use `repoctx doctor`
+npm install -g @bashbop/otito
+otito doctor
 ```
 
 ---
@@ -75,7 +69,7 @@ dev-context doctor   # deprecated — use `repoctx doctor`
 
 ```mermaid
 flowchart TD
-    A[repoctx context] --> B[Implementation]
+    A[otito context] --> B[Implementation]
     B --> C[npm run ci]
     C --> D[PR review]
     D --> E[PullPass gate]

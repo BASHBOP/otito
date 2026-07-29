@@ -59,7 +59,7 @@ for MERGE_SHA in $COMMITS; do
     BASE_SHA="$MERGE_SHA"
   fi
 
-  if [ "${REPOCTX_ATTEST_DRY_RUN:-0}" = "1" ]; then
+  if [ "${OTITO_ATTEST_DRY_RUN:-0}" = "1" ]; then
     echo "$MERGE_SHA"
     continue
   fi
@@ -69,12 +69,12 @@ for MERGE_SHA in $COMMITS; do
     ATTEST_MODE="auto"
   fi
 
-  REPOCTX_ATTEST_MODE="$ATTEST_MODE" \
+  OTITO_ATTEST_MODE="$ATTEST_MODE" \
     GITHUB_SHA="$MERGE_SHA" \
     GITHUB_EVENT_BEFORE="$BASE_SHA" \
     bash scripts/post-merge-attest.sh
 done
 
-if [ "${REPOCTX_ATTEST_DRY_RUN:-0}" != "1" ]; then
+if [ "${OTITO_ATTEST_DRY_RUN:-0}" != "1" ]; then
   node audit-pilot/attest.mjs --verify
 fi

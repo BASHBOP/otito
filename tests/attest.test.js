@@ -81,8 +81,8 @@ test("post-merge attestation records a valid FAIL verdict even when review exits
   fs.chmodSync(fakeGh, 0o755);
 
   git(root, ["init", "-q"]);
-  git(root, ["config", "user.name", "Repoctx Test"]);
-  git(root, ["config", "user.email", "repoctx@example.test"]);
+  git(root, ["config", "user.name", "Òtítọ́ Test"]);
+  git(root, ["config", "user.email", "otito@example.test"]);
   git(root, ["add", "."]);
   git(root, ["commit", "-qm", "base"]);
   const base = git(root, ["rev-parse", "HEAD"]);

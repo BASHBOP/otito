@@ -336,7 +336,7 @@ export const tools = [
 // longer appear in tools/list. Each entry maps an old name to its canonical
 // successor plus a pure arguments translator. Renames forward 1:1; folded tools
 // translate params (e.g. find_backend_route's query → repo_map.route). This
-// guarantee holds until repoctx 3.0; see docs/MIGRATION-2.0.md.
+// guarantee holds until otito 3.0; see docs/MIGRATION-2.0.md.
 /**
  * @typedef {{ tool: string, mapArgs: (args?: ToolArgs) => (ToolArgs | undefined) }} LegacyAlias
  * @type {Record<string, LegacyAlias>}

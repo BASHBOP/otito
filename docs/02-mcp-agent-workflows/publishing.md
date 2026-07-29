@@ -1,7 +1,7 @@
 # 🚀 Publishing an MCP Server to npm + the MCP Registry
 
 This guide walks the full publish path for a stdio MCP server, using
-`@nugehs/repoctx` as the worked example. Follow it once and your server
+`@bashbop/otito` as the worked example. Follow it once and your server
 becomes installable by anyone via `npm install -g`, discoverable by any
 registry-aware MCP host (Claude Desktop, Claude Code, Codex CLI, Cursor,
 Goose), and verifiably owned by you.
@@ -28,17 +28,17 @@ Two options:
 
 | Option | Format | When to use |
 | --- | --- | --- |
-| Bare name | `repoctx` | Only if `npm view <name>` returns 404 |
-| Scoped name | `@yourorg/repoctx` | **Recommended** — free, immediate, brand-consistent with your GitHub org |
+| Bare name | `otito` | Only if `npm view <name>` returns 404 |
+| Scoped name | `@yourorg/otito` | **Recommended** — free, immediate, brand-consistent with your GitHub org |
 
 Check availability before deciding:
 
 ```bash
-npm view repoctx version          # 404 = free; any version number = taken
-npm view @yourorg/repoctx version
+npm view otito version          # 404 = free; any version number = taken
+npm view @yourorg/otito version
 ```
 
-For this guide we use `@nugehs/repoctx`.
+For this guide we use `@bashbop/otito`.
 
 ---
 
@@ -48,11 +48,11 @@ Add or update these fields:
 
 ```json
 {
-  "name": "@nugehs/repoctx",
+  "name": "@bashbop/otito",
   "version": "1.0.0",
-  "mcpName": "io.github.nugehs/repoctx",
+  "mcpName": "io.github.bashbop/otito",
   "bin": {
-    "repoctx": "src/cli.js"
+    "otito": "src/cli.js"
   },
   "files": [
     "src",
@@ -69,11 +69,11 @@ Add or update these fields:
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nugehs/repoctx.git"
+    "url": "https://github.com/BASHBOP/otito.git"
   },
-  "homepage": "https://nugehs.github.io/repoctx/",
+  "homepage": "https://bashbop.github.io/otito/",
   "bugs": {
-    "url": "https://github.com/nugehs/repoctx/issues"
+    "url": "https://github.com/BASHBOP/otito/issues"
   },
   "keywords": ["mcp", "mcp-server", "cli", "developer-tools"]
 }
@@ -136,14 +136,14 @@ If 2FA is on your account, npm prompts for an OTP. After success you'll
 see:
 
 ```
-+ @nugehs/repoctx@1.0.0
++ @bashbop/otito@1.0.0
 ```
 
 Verify immediately:
 
 ```bash
-npm view @nugehs/repoctx version       # → 1.0.0
-npx -y @nugehs/repoctx --help          # downloads fresh, runs the CLI
+npm view @bashbop/otito version       # → 1.0.0
+npx -y @bashbop/otito --help          # downloads fresh, runs the CLI
 ```
 
 !!! warning "npm versions are immutable"
@@ -176,12 +176,12 @@ your repo (next to `package.json`). Minimal valid example:
 ```json
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.nugehs/repoctx",
-  "title": "repoctx",
+  "name": "io.github.bashbop/otito",
+  "title": "otito",
   "description": "Local-first code context, impact analysis, and merge-readiness verdicts for AI agents.",
-  "websiteUrl": "https://nugehs.github.io/repoctx/",
+  "websiteUrl": "https://bashbop.github.io/otito/",
   "repository": {
-    "url": "https://github.com/nugehs/repoctx",
+    "url": "https://github.com/BASHBOP/otito",
     "source": "github",
     "id": "1242199320"
   },
@@ -189,7 +189,7 @@ your repo (next to `package.json`). Minimal valid example:
   "packages": [
     {
       "registryType": "npm",
-      "identifier": "@nugehs/repoctx",
+      "identifier": "@bashbop/otito",
       "version": "1.0.0",
       "transport": {
         "type": "stdio"
@@ -221,7 +221,7 @@ your repo (next to `package.json`). Minimal valid example:
 | `packages[0].packageArguments` | array of arg specs | Required if your server entry point needs subcommand args. Each entry is `{"type":"positional","value":"<arg>"}` or `{"type":"positional","valueHint":"<hint>"}` |
 
 !!! danger "Common error: description too long"
-    First publish attempt for `@nugehs/repoctx` failed with:
+    First publish attempt for `@bashbop/otito` failed with:
     ```
     HTTP 422 Unprocessable Entity
     {"message":"expected length <= 100","location":"body.description"}
@@ -239,7 +239,7 @@ mcp-publisher login github
 
 Device-code OAuth flow opens your browser. The GitHub account you log in
 with **must own** the `<your-username>` namespace in `server.json.name`.
-For `io.github.nugehs/repoctx` the GitHub account must be `nugehs`.
+For `io.github.bashbop/otito` the GitHub account must be `bashbop`.
 
 ---
 
@@ -255,8 +255,8 @@ The CLI reads `server.json` from the current directory and submits it.
     Most common first-publish failure:
     ```
     HTTP 400 Bad Request
-    NPM package '@nugehs/repoctx' is missing required 'mcpName' field.
-    Add this to your package.json: "mcpName": "io.github.nugehs/repoctx"
+    NPM package '@bashbop/otito' is missing required 'mcpName' field.
+    Add this to your package.json: "mcpName": "io.github.bashbop/otito"
     ```
     This is the registry's **ownership-proof** check: it downloads the
     `package.json` from the published npm tarball and looks for
@@ -274,7 +274,7 @@ Success looks like:
 ```
 Publishing to https://registry.modelcontextprotocol.io...
 ✓ Successfully published
-✓ Server io.github.nugehs/repoctx version 1.0.1
+✓ Server io.github.bashbop/otito version 1.0.1
 ```
 
 ---

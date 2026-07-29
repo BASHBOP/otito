@@ -1,7 +1,7 @@
 export const designPrint = [
-  "repoctx",
+  "otito",
   "+------------------------------------------------------+",
-  "| Hello builder, welcome to repoctx                    |",
+  "| Hello builder, welcome to otito                    |",
   "+--------------------------.---------------------------+",
   "                           |",
   "              .------------+------------.",

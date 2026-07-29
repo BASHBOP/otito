@@ -27,7 +27,7 @@ function writeFiles(root, files) {
 }
 
 function makeRepoFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-mcp-disp-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-mcp-disp-"));
   writeFiles(root, {
     "package.json": JSON.stringify({
       name: "fixture-events-api",
@@ -53,7 +53,7 @@ function makeRepoFixture() {
 }
 
 function makeGitRepoFixture(prefix) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), `repoctx-mcp-git-${prefix}-`));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), `otito-mcp-git-${prefix}-`));
   git(root, "init", "-q", "-b", "main");
   git(root, "config", "commit.gpgsign", "false");
   writeFiles(root, {
@@ -210,7 +210,7 @@ test("tools/call validates params, name, arguments, and unknown tools", async ()
 });
 
 test("tools/call returns isError content when the underlying tool throws", async () => {
-  const bogusPath = path.join(os.tmpdir(), "repoctx-mcp-missing-xyz-abc-123");
+  const bogusPath = path.join(os.tmpdir(), "otito-mcp-missing-xyz-abc-123");
   const messages = await runRequests([{ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_inspect", arguments: { path: bogusPath } } }]);
   const response = byId(messages, 1);
   assert.equal(response.result.isError, true);
@@ -271,7 +271,7 @@ test("repo_inspect, repo_map, and repo_harness produce structured results", asyn
 
 test("repo_index dryRun is read-only and does not write the catalog", async () => {
   const fixture = makeRepoFixture();
-  const catalogPath = path.join(os.tmpdir(), `repoctx-mcp-dry-${path.basename(fixture)}.json`);
+  const catalogPath = path.join(os.tmpdir(), `otito-mcp-dry-${path.basename(fixture)}.json`);
   // Run the dryRun request on its own so the assertion sees the state before any
   // non-dryRun index could write the catalog.
   const messages = await runRequests([
@@ -293,7 +293,7 @@ test("repo_index dryRun is read-only and does not write the catalog", async () =
 
 test("repo_index, repo_search query, and no-query repo_search catalog round-trip a fixture", async () => {
   const fixture = makeRepoFixture();
-  const catalogPath = path.join(os.tmpdir(), `repoctx-mcp-cat-${path.basename(fixture)}.json`);
+  const catalogPath = path.join(os.tmpdir(), `otito-mcp-cat-${path.basename(fixture)}.json`);
   const messages = await runRequests([
     { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_index", arguments: { paths: [fixture], catalog: catalogPath } } },
     // repo_search with no query returns the catalog listing (old repo_catalog).
@@ -327,7 +327,7 @@ test("repo_index, repo_search query, and no-query repo_search catalog round-trip
 
 test("repo_search on an empty catalog returns a remediation hint pointing at repo_index", async () => {
   // A non-existent catalog path loads as an empty catalog (no repositories).
-  const emptyCatalog = path.join(os.tmpdir(), `repoctx-mcp-empty-cat-${Date.now()}-${Math.random().toString(16).slice(2)}.json`);
+  const emptyCatalog = path.join(os.tmpdir(), `otito-mcp-empty-cat-${Date.now()}-${Math.random().toString(16).slice(2)}.json`);
   const messages = await runRequests([
     { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_search", arguments: { query: "events", catalog: emptyCatalog } } },
   ]);
@@ -696,7 +696,7 @@ test("repo_map domain/kind/route filters fold in the retired find_* tools", asyn
 test("every legacy tool name still dispatches to a sane result via tools/call", async () => {
   const fixture = makeRepoFixture();
   const gitFixture = makeGitRepoFixture("legacy");
-  const catalogPath = path.join(os.tmpdir(), `repoctx-mcp-legacy-cat-${path.basename(fixture)}.json`);
+  const catalogPath = path.join(os.tmpdir(), `otito-mcp-legacy-cat-${path.basename(fixture)}.json`);
 
   // Seed the catalog so repo_catalog (no-query repo_search) has something to list.
   await runRequests([{ jsonrpc: "2.0", id: 0, method: "tools/call", params: { name: "repo_index", arguments: { paths: [fixture], catalog: catalogPath } } }]);

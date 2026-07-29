@@ -1,18 +1,18 @@
 ---
-name: repoctx-self-improve
+name: otito-self-improve
 description: >-
-  Self-evaluates repoctx context packs against expected files/symbols, records labeled gaps as eval corpus cases, and implements ranking/extractor fixes when retrieval fails. Use when repoctx missed the right file, hotspots were wrong, the user says repoctx was not useful, or asks to self-evaluate / auto-improve repoctx. Default mode is gated: detect → eval case → fix → verify; commit/PR only when the user asks.
+  Self-evaluates otito context packs against expected files/symbols, records labeled gaps as eval corpus cases, and implements ranking/extractor fixes when retrieval fails. Use when otito missed the right file, hotspots were wrong, the user says otito was not useful, or asks to self-evaluate / auto-improve otito. Default mode is gated: detect → eval case → fix → verify; commit/PR only when the user asks.
 ---
 
-# repoctx self-evaluate + auto-improve
+# otito self-evaluate + auto-improve
 
-Close the loop when `context_pack` / `repoctx context` is a weak map: turn the miss into a labeled regression, fix the engine, prove it, then stop for commit approval.
+Close the loop when `context_pack` / `otito context` is a weak map: turn the miss into a labeled regression, fix the engine, prove it, then stop for commit approval.
 
 ## Default autonomy (gated)
 
 1. Detect and score the gap.
 2. Add or update an accuracy eval case (fixture when possible; live-repo note when not).
-3. Implement the smallest ranking/extractor fix in `/Users/segzy/dev/repoctx`.
+3. Implement the smallest ranking/extractor fix in `/Users/segzy/dev/otito`.
 4. Re-run targeted tests + `npm run eval:accuracy` (or the skill script).
 5. Report before/after. **Do not commit or open a PR unless the user asks.**
 
@@ -20,7 +20,7 @@ Do **not** silently lower corpus thresholds to make a bad pack pass.
 
 ## When to run
 
-- User says repoctx missed / was not useful / should self-improve.
+- User says otito missed / was not useful / should self-improve.
 - After a task where the agent needed grep because hotspots/primary files were wrong.
 - After changing `src/lib/context-engine.js`, `src/lib/code-map/ast.js`, or index cache version.
 
@@ -42,10 +42,10 @@ If the user did not label expected files, infer from what the agent actually edi
 
 ### 1) Score the gap
 
-Prefer the helper (from a repoctx checkout):
+Prefer the helper (from a otito checkout):
 
 ```bash
-node /Users/segzy/dev/repoctx/codex/skills/repoctx-self-improve/scripts/score-gap.mjs \
+node /Users/segzy/dev/otito/codex/skills/otito-self-improve/scripts/score-gap.mjs \
   --query "…" \
   --path /path/to/repo \
   --expect-primary "src/email/email.service.ts" \
@@ -53,7 +53,7 @@ node /Users/segzy/dev/repoctx/codex/skills/repoctx-self-improve/scripts/score-ga
   --json
 ```
 
-Or equivalent MCP/`repoctx context … --json` and check:
+Or equivalent MCP/`otito context … --json` and check:
 
 - Is each `expectedPrimary` in `primaryFiles` (top 5 ideal)?
 - Is each `expectedHotspot` in `hotspots`?
@@ -88,11 +88,11 @@ Minimal retrieval case shape:
 
 For Nest method hotspots, extend a small fixture service with named methods rather than depending on live BashBop trees in CI.
 
-If only a live repo can reproduce today: keep a markdown note under `codex/skills/repoctx-self-improve/gaps/` with query + expected paths, and still add the smallest fixture that encodes the same shape.
+If only a live repo can reproduce today: keep a markdown note under `codex/skills/otito-self-improve/gaps/` with query + expected paths, and still add the smallest fixture that encodes the same shape.
 
 ### 4) Implement the fix
 
-Work only in the repoctx checkout (`/Users/segzy/dev/repoctx` unless the user moved it).
+Work only in the otito checkout (`/Users/segzy/dev/otito` unless the user moved it).
 
 - Smallest change that makes the new case pass.
 - Update unit tests next to the change (`tests/context-engine.test.js`, `tests/code-map.test.js`, …).
@@ -102,11 +102,11 @@ Work only in the repoctx checkout (`/Users/segzy/dev/repoctx` unless the user mo
 ### 5) Verify
 
 ```bash
-cd /Users/segzy/dev/repoctx
+cd /Users/segzy/dev/otito
 node --test tests/code-map.test.js tests/context-engine.test.js tests/index-cache.test.js
 npm run eval:accuracy
 # re-score the original gap
-node codex/skills/repoctx-self-improve/scripts/score-gap.mjs --query "…" --path "…" --expect-primary "…" --expect-hotspot "…" --json
+node codex/skills/otito-self-improve/scripts/score-gap.mjs --query "…" --path "…" --expect-primary "…" --expect-hotspot "…" --json
 ```
 
 Pass criteria: gap script `ok: true`, accuracy eval exit 0, targeted unit tests green.
@@ -114,7 +114,7 @@ Pass criteria: gap script `ok: true`, accuracy eval exit 0, targeted unit tests 
 ### 6) Report (always)
 
 ```markdown
-## repoctx gap report
+## otito gap report
 
 - Query: …
 - Before: primary=[…]; hotspots=[…]
@@ -136,10 +136,10 @@ Pass criteria: gap script `ok: true`, accuracy eval exit 0, targeted unit tests 
 
 ## Sync to Cursor
 
-From the repoctx checkout:
+From the otito checkout:
 
 ```bash
-codex/skills/repoctx-self-improve/scripts/sync-installed.sh
+codex/skills/otito-self-improve/scripts/sync-installed.sh
 ```
 
-Installs to `~/.cursor/skills/repoctx-self-improve` (and `~/.codex/skills/repoctx-self-improve` when present).
+Installs to `~/.cursor/skills/otito-self-improve` (and `~/.codex/skills/otito-self-improve` when present).

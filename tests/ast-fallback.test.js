@@ -17,7 +17,7 @@ import { generateCodeMap } from "../src/lib/code-map.js";
 // here. See the agent notes for the recommended follow-up.
 
 test("generateCodeMap parses CommonJS require() and module exports in a .js file", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-ast-cjs-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-ast-cjs-"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "cjs-fixture" }));
   fs.writeFileSync(
     path.join(root, "service.js"),
@@ -46,7 +46,7 @@ test("generateCodeMap parses CommonJS require() and module exports in a .js file
 });
 
 test("generateCodeMap parses ESM import/export in a .mjs file", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-ast-mjs-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-ast-mjs-"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "mjs-fixture" }));
   fs.writeFileSync(
     path.join(root, "util.mjs"),
@@ -72,7 +72,7 @@ test("generateCodeMap parses ESM import/export in a .mjs file", () => {
 });
 
 test("generateCodeMap tolerates syntactically broken JS without throwing", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-ast-broken-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-ast-broken-"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "broken-fixture" }));
   // Deliberately malformed: unbalanced braces and a dangling export.
   fs.writeFileSync(path.join(root, "broken.js"), "export const ok = true;\nfunction half( {\n  return\n");

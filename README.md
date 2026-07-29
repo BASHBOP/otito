@@ -1,12 +1,12 @@
-# repoctx
+# Òtítọ́
 
 **Local-first code context for agents and reviewers — what does this change actually touch?**
 
-[![npm](https://img.shields.io/npm/v/@nugehs/repoctx?style=flat-square)](https://www.npmjs.com/package/@nugehs/repoctx) [![CI](https://img.shields.io/github/actions/workflow/status/nugehs/repoctx/repoctx-ci.yml?style=flat-square&label=CI)](https://github.com/nugehs/repoctx/actions/workflows/repoctx-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/node/v/@nugehs/repoctx?style=flat-square)](https://www.npmjs.com/package/@nugehs/repoctx)
+[![npm](https://img.shields.io/npm/v/@bashbop/otito?style=flat-square)](https://www.npmjs.com/package/@bashbop/otito) [![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/otito/otito-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/otito/actions/workflows/otito-ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/node/v/@bashbop/otito?style=flat-square)](https://www.npmjs.com/package/@bashbop/otito)
 
-![repoctx demo](repoctx-demo.gif)
+![otito demo](otito-demo.gif)
 
-![repoctx](assets/repoctx-design-print.svg)
+![otito](assets/otito-design-print.svg)
 
 ```text
  ____   _____   ____    ___    ____   _____  __  __
@@ -18,9 +18,7 @@
 
 An agent's output is bounded by two things: the **model** and the **harness** around it — the prompts, the context it's given, the codebase it works in, and the gates it must pass before code merges. You don't control the model. You control the harness, and a tighter harness lets a cheaper model do the same work with fewer wasted tokens.
 
-`repoctx` is that harness layer. It is local-first, deterministic, and model-agnostic: it discovers repositories, builds local indexes, generates task-aware context before an agent edits, scores how much a change actually touches, and gates merge readiness — the same way every time, with no server, no account, and no code leaving the machine. Because it depends on software fundamentals rather than any one model, the harness you build today keeps working as models change underneath it.
-
-The legacy `dev-context` command still works but is **deprecated** and will be removed in v3.0.0; use `repoctx`. Invoking `dev-context` prints a deprecation warning to stderr.
+**Òtítọ́** is that harness layer. It is local-first, deterministic, and model-agnostic: it discovers repositories, builds local indexes, generates task-aware context before an agent edits, scores how much a change actually touches, and gates merge readiness — the same way every time, with no server, no account, and no code leaving the machine. Because it depends on software fundamentals rather than any one model, the harness you build today keeps working as models change underneath it.
 
 It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. It gives developers and coding agents a single CLI that can:
 
@@ -49,7 +47,7 @@ Local-first context — feeds the gates:
 
 ## Documentation
 
-repoctx now includes a publishable MkDocs documentation site, shaped as a practical discovery and delivery pack:
+otito now includes a publishable MkDocs documentation site, shaped as a practical discovery and delivery pack:
 
 - [Home](docs/index.md)
 - [Executive Summary](docs/EXECUTIVE-SUMMARY.md)
@@ -68,7 +66,7 @@ repoctx now includes a publishable MkDocs documentation site, shaped as a practi
 When GitHub Pages is enabled for the repository, the published site is configured for:
 
 ```text
-https://nugehs.github.io/repoctx/
+https://bashbop.github.io/otito/
 ```
 
 ## Quick Start
@@ -78,14 +76,14 @@ Code maps use the TypeScript compiler for JS/TS and dedicated language extractor
 Install from npm:
 
 ```bash
-npm install -g @nugehs/repoctx
-repoctx doctor
+npm install -g @bashbop/otito
+otito doctor
 ```
 
 Or run without installing:
 
 ```bash
-npx -y @nugehs/repoctx doctor
+npx -y @bashbop/otito doctor
 ```
 
 From a local checkout:
@@ -93,8 +91,8 @@ From a local checkout:
 ```bash
 npm ci             # install dependencies
 npm run ci         # run the full quality gate
-npm install -g .   # install the repoctx CLI globally
-repoctx doctor     # verify the install
+npm install -g .   # install the otito CLI globally
+otito doctor     # verify the install
 ```
 
 ```bash
@@ -133,25 +131,25 @@ node src/cli.js structure . --out .dev-context/structure.html
 
 | Goal | Command | Output |
 | --- | --- | --- |
-| Inspect one repo | `repoctx repo . --json` | Repo facts, scripts, languages, entrypoints, and git state |
-| Build a code map | `repoctx map . --json` | Source files, domains, imports, exports, symbols, and routes |
-| Prepare task context | `repoctx context "add a new MCP tool" --path .` | Primary files, related files, tests, patterns, and validation commands |
-| Generate an agent harness | `repoctx harness . --out .dev-context/harness.md` | Setup, validation, runtime, and context commands |
-| Review local changes | `repoctx pr . --base origin/main --out .dev-context/pr-review.md` | Changed files, risk prompts, review targets, and test hints |
-| Index local projects | `repoctx index ~/projects --discover` | `.dev-context/index.json` files plus a local catalog |
-| Search indexed repos | `repoctx search "events controller"` | Ranked matches across paths, domains, routes, imports, exports, and symbols |
-| Run the MCP server | `repoctx mcp` | Stdio MCP server exposing repoctx tools |
-| Track usage & performance | `repoctx dashboard` | Self-contained HTML from an opt-in local usage log (off by default) |
+| Inspect one repo | `otito repo . --json` | Repo facts, scripts, languages, entrypoints, and git state |
+| Build a code map | `otito map . --json` | Source files, domains, imports, exports, symbols, and routes |
+| Prepare task context | `otito context "add a new MCP tool" --path .` | Primary files, related files, tests, patterns, and validation commands |
+| Generate an agent harness | `otito harness . --out .dev-context/harness.md` | Setup, validation, runtime, and context commands |
+| Review local changes | `otito pr . --base origin/main --out .dev-context/pr-review.md` | Changed files, risk prompts, review targets, and test hints |
+| Index local projects | `otito index ~/projects --discover` | `.dev-context/index.json` files plus a local catalog |
+| Search indexed repos | `otito search "events controller"` | Ranked matches across paths, domains, routes, imports, exports, and symbols |
+| Run the MCP server | `otito mcp` | Stdio MCP server exposing otito tools |
+| Track usage & performance | `otito dashboard` | Self-contained HTML from an opt-in local usage log (off by default) |
 
 For Claude Desktop, VS Code, Cursor, and generic stdio client snippets, see [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md).
 
-## repoctx vs alternatives
+## otito vs alternatives
 
-| Approach | Strengths | Where repoctx differs |
+| Approach | Strengths | Where otito differs |
 | --- | --- | --- |
-| Sourcegraph / Cody context | Powerful hosted code search and embedding-based context across an org | repoctx is local-first and deterministic: no server, no account, no code leaves the machine, and the same query always yields the same packet |
-| Hand-written `CLAUDE.md` / rules files | Curated, intent-rich guidance | Hand-written context goes stale; repoctx regenerates context from the actual code (symbols, imports, routes, tests) on every run and complements a short `CLAUDE.md` |
-| `grep` / `ripgrep` | Fast, universal text matching | repoctx ranks whole files by task intent across paths, symbols, exports, and tests, then adds patterns and validation commands — a context packet, not a list of matching lines |
+| Sourcegraph / Cody context | Powerful hosted code search and embedding-based context across an org | otito is local-first and deterministic: no server, no account, no code leaves the machine, and the same query always yields the same packet |
+| Hand-written `CLAUDE.md` / rules files | Curated, intent-rich guidance | Hand-written context goes stale; otito regenerates context from the actual code (symbols, imports, routes, tests) on every run and complements a short `CLAUDE.md` |
+| `grep` / `ripgrep` | Fast, universal text matching | otito ranks whole files by task intent across paths, symbols, exports, and tests, then adds patterns and validation commands — a context packet, not a list of matching lines |
 
 ## Quality Gates
 
@@ -174,7 +172,7 @@ The gate runs:
 
 Coverage currently gates source files at 70% lines, 60% branches, and 75% functions. Generated artifacts under `.dev-context/` are ignored by git, linting, and formatting; keep durable reports there instead of committing them.
 
-repoctx follows Semantic Versioning. Pull requests should identify whether they are no-version-impact, patch, minor, or major changes; maintainers apply the final package version during release.
+otito follows Semantic Versioning. Pull requests should identify whether they are no-version-impact, patch, minor, or major changes; maintainers apply the final package version during release.
 
 For longer trust-layer work, use the [Builder-Founder Operating Loop](docs/06-builder-founder-operating-loop/README.md) to keep every session tied to context, focused changes, visible gates, human decisions, and durable evidence.
 
@@ -285,7 +283,7 @@ node src/cli.js install --global
 node src/cli.js install --json
 ```
 
-After installation, use `repoctx` as the primary command. `dev-context` remains as a deprecated alias and will be removed in v3.0.0.
+After installation, use `otito` as the command.
 
 ### `repo <path>`
 
@@ -315,10 +313,10 @@ Generates local `.dev-context/index.json` files and adds repositories to the loc
 ```bash
 node src/cli.js index .
 node src/cli.js index ~/projects --discover
-node src/cli.js index . --catalog /tmp/repoctx-catalog.json --json
+node src/cli.js index . --catalog /tmp/otito-catalog.json --json
 ```
 
-The default catalog path is `~/.dev-context/catalog.json`. Set `REPOCTX_CATALOG`, the legacy `DEV_CONTEXT_CATALOG`, or pass `--catalog` to use a different file.
+The default catalog path is `~/.dev-context/catalog.json`. Set `OTITO_CATALOG` or pass `--catalog` to use a different file.
 
 ### `catalog`
 
@@ -365,19 +363,19 @@ Use this as the first artifact an agent or CI workflow reads before touching cod
 
 ### `init <path>`
 
-Scaffolds repoctx into another repository.
+Scaffolds otito into another repository.
 
 ```bash
 node src/cli.js init /path/to/target-repo
 node src/cli.js init /path/to/target-repo --force
 node src/cli.js init /path/to/target-repo --no-workflow
-node src/cli.js init /path/to/target-repo --tool-repo nugehs/repoctx --tool-ref main
+node src/cli.js init /path/to/target-repo --tool-repo BASHBOP/otito --tool-ref main
 ```
 
 Generated files:
 
 - `.dev-context/README.md`
-- `.github/workflows/repoctx-ci.yml`
+- `.github/workflows/otito-ci.yml`
 
 The generated workflow runs on pull requests and commit pushes. Pull request runs generate the report, upload an artifact, and create or update a sticky PR comment. Push runs generate and upload the report artifact without commenting.
 
@@ -389,7 +387,7 @@ Runs `code-structure` against TypeScript files.
 node src/cli.js structure . --pattern "app/**/*.tsx" --out .dev-context/structure.html
 ```
 
-If `code-structure` is missing, the command returns an install hint instead of failing mysteriously. If it is not installed globally but `npx` is available, repoctx can run it through `npx --yes code-structure`.
+If `code-structure` is missing, the command returns an install hint instead of failing mysteriously. If it is not installed globally but `npx` is available, otito can run it through `npx --yes code-structure`.
 
 ### `deps <package>`
 
@@ -439,11 +437,11 @@ Useful flags:
 
 ### GitHub Actions
 
-This repo includes `.github/workflows/repoctx-ci.yml`. The workflow installs dependencies, runs `npm run ci`, then generates PR or push review context as an uploaded artifact. Use `node src/cli.js init /path/to/target-repo` to scaffold a repoctx review workflow into another repository.
+This repo includes `.github/workflows/otito-ci.yml`. The workflow installs dependencies, runs `npm run ci`, then generates PR or push review context as an uploaded artifact. Use `node src/cli.js init /path/to/target-repo` to scaffold a otito review workflow into another repository.
 
 ### `mcp`
 
-Starts a stdio MCP server exposing repoctx as agent-callable tools. MCP repo-map lookups cache `.dev-context/index.json` with a file fingerprint and automatically refresh when files change.
+Starts a stdio MCP server exposing otito as agent-callable tools. MCP repo-map lookups cache `.dev-context/index.json` with a file fingerprint and automatically refresh when files change.
 
 ```bash
 node src/cli.js mcp
@@ -454,9 +452,9 @@ When wiring it into an MCP host (Claude Desktop, Claude Code, Codex CLI, Cursor,
 ```json
 {
   "mcpServers": {
-    "repoctx": {
+    "otito": {
       "command": "npx",
-      "args": ["-y", "@nugehs/repoctx", "mcp"]
+      "args": ["-y", "@bashbop/otito", "mcp"]
     }
   }
 }
@@ -467,17 +465,17 @@ If you prefer a globally installed binary:
 ```json
 {
   "mcpServers": {
-    "repoctx": {
-      "command": "repoctx",
+    "otito": {
+      "command": "otito",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-Ollama can provide the local model, but it does not call MCP tools by itself. To use repoctx through MCP with a local model, use an MCP-capable agent client that supports Ollama as the model provider and configure the `repoctx` server above.
+Ollama can provide the local model, but it does not call MCP tools by itself. To use otito through MCP with a local model, use an MCP-capable agent client that supports Ollama as the model provider and configure the `otito` server above.
 
-repoctx 2.3 exposes **13** MCP tools (consolidated from 18 in 2.0; `agent_experience` and `convergence_score` added in 2.3). All legacy names still work through `tools/call` until 3.0 — see [Migration to 2.0](docs/MIGRATION-2.0.md).
+Òtítọ́ exposes **13** MCP tools for repository inspection, context, impact, review, and merge evidence.
 
 | Tool                | Purpose                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------ |
@@ -494,8 +492,6 @@ repoctx 2.3 exposes **13** MCP tools (consolidated from 18 in 2.0; `agent_experi
 | `review_verdict`    | Composite verdict: impact + review_context + review_gate                             |
 | `workspace_report`  | Product-level report across multiple repos                                           |
 | `repo_harness`      | Setup, validation, runtime, and context commands for an agent or CI harness          |
-
-The retired `repo_discover`, `repo_catalog`, `find_domain`, `find_file_kind`, `find_backend_route`, `find_frontend_api_client`, `pr_review`, `review_pr`, `merge_readiness`, and `pr_merge_readiness` names remain callable via `tools/call` and forward to the tools above. See [Migration to 2.0](docs/MIGRATION-2.0.md) for the full mapping and param translations. Plan for [Migration to 3.0](docs/MIGRATION-3.0.md) before the alias removal release.
 
 ### `matrix`
 
@@ -515,11 +511,11 @@ This keeps the project useful quickly while leaving room to replace weak adapter
 
 ## Part of the toolchain
 
-**repoctx** is one of four tools that form a deterministic trust layer for AI-assisted development. Each answers a question people keep handing to an LLM — with static analysis instead.
+**otito** is one of four tools that form a deterministic trust layer for AI-assisted development. Each answers a question people keep handing to an LLM — with static analysis instead.
 
-- **repoctx** (this tool) — context: what does this change actually touch?
-- [tieline](https://www.npmjs.com/package/@nugehs/tieline) — contracts: did the front end and back end quietly stop agreeing?
-- [bouncer](https://www.npmjs.com/package/@nugehs/bouncer) — compliance: could you defend this to Ofcom?
-- [aiglare](https://www.npmjs.com/package/@nugehs/aiglare) — governance: where can the model do something you can't undo?
+- **otito** (this tool) — context: what does this change actually touch?
+- [tieline](https://www.npmjs.com/package/@bashbop/tieline) — contracts: did the front end and back end quietly stop agreeing?
+- [bouncer](https://www.npmjs.com/package/@bashbop/bouncer) — compliance: could you defend this to Ofcom?
+- [aiglare](https://www.npmjs.com/package/@bashbop/aiglare) — governance: where can the model do something you can't undo?
 
 More at [segunolumbe.com](https://segunolumbe.com). _static analysis, never the model._

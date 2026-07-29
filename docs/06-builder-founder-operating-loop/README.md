@@ -4,7 +4,7 @@
 
 Prepared by **Oluwasegun Olumbe**.
 
-This page is the operating loop for repoctx, PullPass, and the wider trust-layer work. It is for Codex sessions, maintainers, contributors, and company reviewers who need the same rhythm to survive across branches, pull requests, releases, and pilots.
+This page is the operating loop for otito, PullPass, and the wider trust-layer work. It is for Codex sessions, maintainers, contributors, and company reviewers who need the same rhythm to survive across branches, pull requests, releases, and pilots.
 
 The point is simple:
 
@@ -16,27 +16,27 @@ human decision
 durable evidence
 ```
 
-repoctx gives the context foundation. PullPass gives the merge-safety gate. The maintainer turns both into a practice that can be repeated by one founder today and a company team tomorrow.
+otito gives the context foundation. PullPass gives the merge-safety gate. The maintainer turns both into a practice that can be repeated by one founder today and a company team tomorrow.
 
 ---
 
 ## Tool Boundaries
 
-repoctx is the product surface. It should stay the command and MCP server that users install first when they need repository context, PR review context, workspace reports, and agent-facing evidence.
+otito is the product surface. It should stay the command and MCP server that users install first when they need repository context, PR review context, workspace reports, and agent-facing evidence.
 
 PullPass is the merge-safety gate. It should stay focused on review readiness, governance mode, policy checks, CI state, CODEOWNERS, conversations, and the final human decision before merge.
 
-`repoctx impact` is the canonical change-impact analyzer. Use it when scope is unclear, when import-neighbor evidence matters, or when a diff needs validation against the original change request. The standalone `impact-map` work has been absorbed into repoctx for normal product and agent workflows.
+`otito impact` is the canonical change-impact analyzer. Use it when scope is unclear, when import-neighbor evidence matters, or when a diff needs validation against the original change request. The standalone `impact-map` work has been absorbed into otito for normal product and agent workflows.
 
 The rule is simple:
 
 | Question | Use |
 | --- | --- |
-| What should an agent or reviewer know before changing this repo? | repoctx |
+| What should an agent or reviewer know before changing this repo? | otito |
 | Is this PR ready to merge under the repo's governance rules? | PullPass |
-| What files, import neighbors, tests, or missed diff areas might this change affect? | `repoctx impact` |
+| What files, import neighbors, tests, or missed diff areas might this change affect? | `otito impact` |
 
-This keeps the public story clear: repoctx owns context and impact analysis; PullPass owns the final merge-safety gate.
+This keeps the public story clear: otito owns context and impact analysis; PullPass owns the final merge-safety gate.
 
 ---
 
@@ -47,7 +47,7 @@ Use this loop at the start of every meaningful coding-agent session.
 | Step | Action | Evidence |
 | --- | --- | --- |
 | 1. Orient | Check git state, current branch, open PRs, and latest roadmap item | Clean or explained worktree, known base branch, no hidden conflict |
-| 2. Map | Run repoctx context for the task and `repoctx impact` when scope or risk is unclear | Primary files, related files, tests, risks, and validation commands |
+| 2. Map | Run otito context for the task and `otito impact` when scope or risk is unclear | Primary files, related files, tests, risks, and validation commands |
 | 3. Choose | Pick one deliverable that moves the trust layer forward | A branch, issue, PR, docs page, release task, or proof artifact |
 | 4. Change | Make the smallest complete change that satisfies the deliverable | Focused diff with no unrelated cleanup |
 | 5. Prove | Run the relevant local checks and record any skipped checks | CI command output, docs build, PullPass result, or explicit no-test rationale |
@@ -69,7 +69,7 @@ A trust-layer task is ready to start when these are known:
 - The validation command or reason validation is not applicable.
 - The review path: solo owner decision, maintainer review, team review, company review, or high-risk review.
 
-If these are not known, the first deliverable is context: a repoctx report, `repoctx impact` output, issue note, or pilot preflight record.
+If these are not known, the first deliverable is context: a otito report, `otito impact` output, issue note, or pilot preflight record.
 
 ## Definition Of Done
 
@@ -112,8 +112,8 @@ Risk mode:
 Version impact:
 
 Context:
-- repoctx artifact:
-- repoctx impact artifact:
+- otito artifact:
+- otito impact artifact:
 - related repos:
 
 Change:
@@ -153,7 +153,7 @@ The ledger can live in a PR description, merge note, release note, company pilot
 
 | Track | Question | Artifact |
 | --- | --- | --- |
-| Product | Is repoctx still the context foundation? | README, docs, CLI/MCP behavior, tests |
+| Product | Is otito still the context foundation? | README, docs, CLI/MCP behavior, tests |
 | Gate | Is PullPass still the merge-safety signal? | PullPass workflow, local report, PR check, policy mode |
 | Release | Can another maintainer understand what shipped? | SemVer impact, changelog, tag, GitHub release |
 | Governance | Can a company see who was accountable? | CODEOWNERS, review policy, branch protection, decision record |
@@ -172,7 +172,7 @@ When the plan feels large, choose the next action in this order:
 2. Close an open PR or conflict.
 3. Add missing verification for an already shipped claim.
 4. Tighten the company-facing evidence boundary.
-5. Improve repoctx or PullPass behavior that would make the next pilot easier.
+5. Improve otito or PullPass behavior that would make the next pilot easier.
 6. Update roadmap, proof index, or release notes so the current state is not trapped in memory.
 
 This keeps the builder-founder path practical: build, prove, publish, review, repeat.

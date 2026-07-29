@@ -1,24 +1,24 @@
 ---
-name: repoctx-review
-description: Run repoctx review and gate before merge — composite verdict, PR context, and PASS/WARN/FAIL checks. Invoke before declaring a PR merge-ready.
+name: otito-review
+description: Run otito review and gate before merge — composite verdict, PR context, and PASS/WARN/FAIL checks. Invoke before declaring a PR merge-ready.
 ---
 
-# repoctx review (procedure)
+# otito review (procedure)
 
 Use this **before** merge or when the user asks if a change is safe to land.
 
 ## Local changes
 
 ```bash
-repoctx review . --request "<what changed>" --base origin/main --json
-repoctx gate . --base origin/main
+otito review . --request "<what changed>" --base origin/main --json
+otito gate . --base origin/main
 ```
 
 ## GitHub PR
 
 ```bash
-repoctx review . --pr <number> --json
-repoctx gate --pr <number> --path .
+otito review . --pr <number> --json
+otito gate --pr <number> --path .
 ```
 
 ## Interpretation

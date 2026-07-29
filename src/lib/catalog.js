@@ -96,7 +96,7 @@ const stopWords = new Set([
 ]);
 
 export function defaultCatalogPath() {
-  return path.resolve(process.env.REPOCTX_CATALOG ?? process.env.DEV_CONTEXT_CATALOG ?? path.join(os.homedir(), ".dev-context", "catalog.json"));
+  return path.resolve(process.env.OTITO_CATALOG ?? path.join(os.homedir(), ".dev-context", "catalog.json"));
 }
 
 /**
