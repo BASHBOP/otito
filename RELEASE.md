@@ -6,7 +6,7 @@ otito follows Semantic Versioning.
 - Minor: new commands, new MCP tools, new report fields, or backward-compatible behavior.
 - Major: removed commands, renamed fields, incompatible output changes, or changed runtime requirements.
 
-Preserve this discipline across the stable 2.x line. Reserve the next major version for intentional CLI, MCP, cache, or runtime incompatibilities with an explicit migration guide.
+Preserve this discipline across the stable 1.x line. Reserve the next major version for intentional CLI, MCP, cache, or runtime incompatibilities with an explicit migration guide.
 
 ## Checklist
 
@@ -20,12 +20,12 @@ Preserve this discipline across the stable 2.x line. Reserve the next major vers
 8. Commit the release changes.
 9. Tag the release as `vX.Y.Z` and push the tag.
 10. Confirm npm Trusted Publishing is configured for `BASHBOP/otito` and `.github/workflows/release.yml`. The workflow uses GitHub OIDC (`id-token: write`) for provenance and does not require an `NPM_TOKEN` secret.
-11. Confirm MCP Registry GitHub OIDC access is configured for `io.github.bashbop/otito`.
+11. Confirm MCP Registry GitHub OIDC access is configured for `io.github.BASHBOP/otito`.
 12. Push the tag. The `Release` workflow runs the full quality gate, publishes npm first, then creates the GitHub release and publishes `server.json` to the MCP Registry.
 13. Verify the published binary:
 
 ```bash
-npm install -g @bashbop/otito@2.5.0
+npm install -g @bashbop/otito@1.0.2
 otito doctor
 ```
 

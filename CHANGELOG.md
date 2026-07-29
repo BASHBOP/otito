@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [1.0.2] - 2026-07-29
+
+### Fixed
+
+- **MCP Registry ownership namespace.** The manifest and published package now use the exact GitHub OIDC namespace granted to Bashbop: `io.github.BASHBOP/otito`. This allows the signed release workflow to publish the server to the MCP Registry.
+
 ## [1.0.1] - 2026-07-29
 
 ### Fixed
