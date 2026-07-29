@@ -76,6 +76,9 @@ import { runCommand } from "./tools.js";
  * @property {string} [title]
  * @property {string} [url]
  * @property {string} [baseRefName]
+ * @property {string} [baseRefOid]
+ * @property {string} [headRefOid]
+ * @property {number} [changedFiles]
  * @property {boolean} [isDraft]
  * @property {string} [mergeStateStatus]
  * @property {string} [mergeable]
@@ -85,7 +88,7 @@ import { runCommand } from "./tools.js";
  * @property {any[]} [statusCheckRollup]
  */
 
-const passPrEngineVersion = 1;
+const passPrEngineVersion = 2;
 const PR_BASE_LABEL = "GitHub PR";
 
 /**
@@ -103,20 +106,34 @@ export async function evaluatePR(repoPath, selector, options = {}) {
   pr.statusCheckRollup = enrichStatusCheckAnnotations(root, pr.statusCheckRollup ?? [], runner);
 
   const files = (pr.files ?? []).map((entry) => entry.path).filter((/** @type {string} */ p) => p && p.trim());
+  const subject = pullRequestSubject(pr);
+  const filesComplete = Number.isInteger(pr.changedFiles) && pr.changedFiles === files.length;
+  const subjectError = !subject
+    ? "GitHub did not return valid immutable base and head commit IDs for this pull request."
+    : !filesComplete
+      ? `GitHub reported ${pr.changedFiles ?? "an unknown number of"} changed files but returned ${files.length}; an exact receipt requires the complete file set.`
+      : "";
 
   const checks = [
     prStateCheck(pr),
+    pullRequestSnapshotCheck(subject, filesComplete, subjectError),
     changedFilesCheck(files),
     secretCheck(files),
     riskCheck(files),
-    checkRelease(root, files, { baseContent: prBaseContent(root, pr.baseRefName), governance }),
+    checkRelease(root, files, { baseContent: prBaseContent(root, pr.baseRefOid, pr.baseRefName), governance }),
     reviewDecisionCheck(pr.reviewDecision, governance),
     codeownersCheckPR(root, files, pr.reviews ?? [], runner, governance),
     unresolvedConversationsCheck(root, pr.number, runner),
     branchProtectionCheck(root, pr.baseRefName, runner),
     statusChecksCheck(pr.statusCheckRollup ?? []),
   ];
-  const convergence = convergenceCheck(root, localBaseRef(root, pr.baseRefName), options.request, options.minConvergence, options.receipt);
+  const convergence = convergenceCheck(root, subject?.baseSha ?? localBaseRef(root, pr.baseRefName), options.request, options.minConvergence, options.receipt, {
+    subject,
+    subjectError,
+    diffFiles: files,
+    expectedHead: subject?.headSha,
+    requireClean: true,
+  });
   if (convergence) checks.push(convergence);
   checks.push(policyCheck({ profile, governance, files, checks, remote: true }));
 
@@ -133,6 +150,8 @@ export async function evaluatePR(repoPath, selector, options = {}) {
       title: pr.title,
       url: pr.url,
       baseRefName: pr.baseRefName,
+      baseSha: pr.baseRefOid,
+      headSha: pr.headRefOid,
       isDraft: Boolean(pr.isDraft),
       mergeStateStatus: pr.mergeStateStatus ?? "",
       mergeable: pr.mergeable ?? "",
@@ -145,6 +164,12 @@ export async function evaluatePR(repoPath, selector, options = {}) {
     changedFiles: files,
     checks,
   };
+  if (subject) data.subject = subject;
+  if (convergence?.receipt) {
+    data.convergence = convergence.convergence;
+    data.band = convergence.band;
+    data.receipt = convergence.receipt;
+  }
   data.tokenEstimate = { fullJson: estimateTokens(data) };
   return data;
 }
@@ -172,13 +197,16 @@ function localBaseRef(root, baseRefName) {
 // base isn't fetched locally, in which case release discipline stays strict.
 /**
  * @param {string} root
+ * @param {string | undefined} baseRefOid
  * @param {string | undefined} baseRefName
  * @returns {((file: string) => string | null) | undefined}
  */
-function prBaseContent(root, baseRefName) {
-  if (!baseRefName) return undefined;
+function prBaseContent(root, baseRefOid, baseRefName) {
+  if (!baseRefOid && !baseRefName) return undefined;
+  const fallbackRefs = baseRefName ? [`origin/${baseRefName}`, baseRefName] : [];
   return (/** @type {string} */ file) => {
-    for (const ref of [`origin/${baseRefName}`, baseRefName]) {
+    if (baseRefOid) return gitShowContent(root, baseRefOid, file);
+    for (const ref of fallbackRefs) {
       const content = gitShowContent(root, ref, file);
       if (content != null) return content;
     }
@@ -195,12 +223,62 @@ function prBaseContent(root, baseRefName) {
 function viewPR(root, selector, runner) {
   const args = ["pr", "view"];
   if (selector && String(selector).trim()) args.push(String(selector));
-  args.push("--json", "number,title,url,baseRefName,isDraft,mergeStateStatus,mergeable,reviewDecision,files,reviews,statusCheckRollup");
+  args.push(
+    "--json",
+    "number,title,url,baseRefName,baseRefOid,headRefOid,changedFiles,isDraft,mergeStateStatus,mergeable,reviewDecision,files,reviews,statusCheckRollup",
+  );
   const out = runner.run(root, args);
   try {
     return JSON.parse(out);
   } catch (/** @type {any} */ error) {
     throw new Error(`parse gh pr view response: ${error.message ?? String(error)}`);
+  }
+}
+
+/**
+ * @param {PR} pr
+ * @returns {{ kind: string, repository: string, number: number, baseSha: string, headSha: string } | null}
+ */
+function pullRequestSubject(pr) {
+  const baseSha = String(pr.baseRefOid ?? "").trim();
+  const headSha = String(pr.headRefOid ?? "").trim();
+  if (!isObjectId(baseSha) || !isObjectId(headSha)) return null;
+  const repository = repositoryFromUrl(pr.url);
+  const number = Number(pr.number);
+  if (!repository || !Number.isSafeInteger(number) || number <= 0) return null;
+  return { kind: "github-pr", repository, number, baseSha, headSha };
+}
+
+/**
+ * @param {{ kind: string, repository: string, number: number, baseSha: string, headSha: string } | null} subject
+ * @param {boolean} filesComplete
+ * @param {string} error
+ * @returns {Check}
+ */
+function pullRequestSnapshotCheck(subject, filesComplete, error) {
+  if (!subject || !filesComplete) return { name: "PR snapshot", status: STATUS.warn, summary: error };
+  return {
+    name: "PR snapshot",
+    status: STATUS.pass,
+    summary: "GitHub returned exact base/head commits and the complete changed-file set.",
+    details: [`Base: ${subject.baseSha}`, `Head: ${subject.headSha}`],
+  };
+}
+
+/** @param {string} value @returns {boolean} */
+function isObjectId(value) {
+  return /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/i.test(value);
+}
+
+/** @param {string | undefined} value @returns {string} */
+function repositoryFromUrl(value) {
+  try {
+    const url = new URL(String(value ?? ""));
+    if (url.hostname.toLowerCase() !== "github.com") return "";
+    const parts = url.pathname.split("/").filter(Boolean);
+    return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : "";
+  } catch {
+    return "";
   }
 }
 
@@ -829,7 +907,9 @@ function isNotFound(error) {
  * @typedef {Object} PassPrData
  * @property {Verdict} verdict
  * @property {{ root: string, name: string }} repo
- * @property {{ number?: number, title?: string, url?: string, baseRefName?: string, isDraft: boolean, mergeStateStatus: string, mergeable: string, reviewDecision: string }} pr
+ * @property {{ number?: number, title?: string, url?: string, baseRefName?: string, baseSha?: string, headSha?: string, isDraft: boolean, mergeStateStatus: string, mergeable: string, reviewDecision: string }} pr
+ * @property {{ kind?: string, repository?: string, number?: number, baseSha?: string, headSha?: string }} [subject]
+ * @property {Record<string, any>} [receipt]
  * @property {string} policy
  * @property {string} governance
  * @property {string[]} changedFiles
@@ -854,6 +934,7 @@ export function formatPassPrTerminal(data, rendererFactory) {
     { text: data.pr.url || `${data.repo.root}`, glyph: data.pr.url ? "🔗" : "📂" },
     { text: `base: ${data.pr.baseRefName || "?"} · policy: ${data.policy} · governance: ${data.governance}`, glyph: "⚙️" },
   ];
+  if (data.pr.baseSha && data.pr.headSha) sub.push({ text: `commits: ${data.pr.baseSha.slice(0, 8)}..${data.pr.headSha.slice(0, 8)}`, glyph: "🧾" });
   lines.push(renderer.header({ text: "repoctx pass-pr · GitHub merge readiness", glyph: "📋" }, sub));
   lines.push("");
 
@@ -903,6 +984,8 @@ export function formatPassPrMarkdown(data) {
     `Verdict: **${data.verdict}**`,
     `Repository: \`${data.repo.root}\``,
     `Base: \`${data.pr.baseRefName ?? ""}\``,
+    ...(data.pr.baseSha ? [`Base commit: \`${data.pr.baseSha}\``] : []),
+    ...(data.pr.headSha ? [`Head commit: \`${data.pr.headSha}\``] : []),
     `Policy: \`${data.policy}\``,
     `Governance: \`${data.governance}\``,
     data.pr.url ? `PR: ${data.pr.url}` : "",

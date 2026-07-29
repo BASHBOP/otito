@@ -220,10 +220,13 @@ Merge gate (`gate` is the canonical v2 command; `pass` / `pass-pr` remain as leg
 
 ```bash
 node src/cli.js gate . --base origin/main          # local gate (no GitHub)
-node src/cli.js gate . --staged --base origin/main # exact staged change, suitable for pre-commit hooks
+node src/cli.js gate . --staged --base origin/main # staged-path evidence, suitable for pre-commit hooks
 node src/cli.js gate . --base origin/main --request "update the greeting" --min-convergence 80
+node src/cli.js converge "update the greeting" --path . --base HEAD --staged --json # exact change-subject receipt
 node src/cli.js gate --pr 123 --path .             # GitHub PR gate via gh
 ```
+
+In staged mode, changed-path, risk, secret and convergence evidence use the exact Git index tree. Exact-subject source analysis streams raw Git blobs and fails closed above 5,000 source files or 64 MiB. Release, validation-command and optional analyzer checks still inspect the working tree and are reported outside the convergence receipt.
 
 Multi-repo product context:
 
@@ -485,7 +488,7 @@ repoctx 2.3 exposes **13** MCP tools (consolidated from 18 in 2.0; `agent_experi
 | `context_pack`      | Build a task-aware context packet                                                    |
 | `change_impact`     | Rank files most likely to own a plain-English change request                         |
 | `agent_experience`  | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity   |
-| `convergence_score` | Score intent vs. execution (0–100) with a recomputable receipt                       |
+| `convergence_score` | Score intent vs. execution (0–100) with an exact change-subject receipt              |
 | `review_context`    | Diff/comment review context (no verdict)                                             |
 | `review_gate`       | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`             |
 | `review_verdict`    | Composite verdict: impact + review_context + review_gate                             |

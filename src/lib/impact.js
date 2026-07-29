@@ -11,6 +11,8 @@ import { conceptsFromQuery, classifyPath, CONCEPT_SYNONYMS, RISK_FLAGS, glyphFor
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 import { runCommand } from "./tools.js";
 
+export const DIFF_RENAME_LIMIT = 1000;
+
 /**
  * @typedef {import('./index-cache.js').CodeMapFile} CodeMapFile
  * @typedef {import('./index-cache.js').CodeMapRepo} CodeMapRepo
@@ -22,6 +24,8 @@ import { runCommand } from "./tools.js";
  * @property {number} [top]
  * @property {string} [path]
  * @property {string} [diffBase]
+ * @property {string[]} [diffFiles]
+ * @property {any} [codeMap]
  */
 
 /**
@@ -187,7 +191,7 @@ export function generateImpact(query, options = {}) {
 
   const top = clampInt(options.top, defaultTop, 1, 50);
   const repoPath = options.path ?? ".";
-  const map = getCachedCodeMap(repoPath);
+  const map = options.codeMap ?? getCachedCodeMap(repoPath);
   const weightedQuery = weightedQueryTerms(normalized);
   const concepts = conceptsFromQuery(normalized);
   const wantsTests = queryMentions(weightedQuery, ["test", "tests", "spec", "coverage", "qa"]);
@@ -200,7 +204,11 @@ export function generateImpact(query, options = {}) {
   const testSuggestions = suggestTests(map.files, ranked, map.repo);
   const implementationPlan = buildPlan(normalized, ranked);
   const risks = identifyRisks(normalized, ranked, concepts);
-  const validation = options.diffBase ? validateAgainstDiff(map.repo.root, options.diffBase, ranked, map.files) : null;
+  const validation = Array.isArray(options.diffFiles)
+    ? validateChangedFiles(options.diffBase ?? "", options.diffFiles, ranked, map.files)
+    : options.diffBase
+      ? validateAgainstDiff(map.repo.root, options.diffBase, ranked, map.files)
+      : null;
 
   const data = /** @type {Record<string, any> & { tokenEstimate?: any }} */ ({
     ok: true,
@@ -651,10 +659,35 @@ function riskSentence(flag) {
  * @param {CodeMapFile[]} allFiles
  */
 function validateAgainstDiff(root, base, ranked, allFiles) {
-  // Use the arg-array runCommand helper (no shell, no string interpolation)
-  // like every other git call site in the codebase, so `base` can never be
-  // interpreted by a shell.
-  const result = runCommand("git", ["diff", "--name-only", base], { cwd: root });
+  // Resolve user input before passing it to `git diff`. The resolved value is
+  // a hex object ID, so a ref beginning with `-` cannot be parsed as an option.
+  const resolved = runCommand("git", ["--no-replace-objects", "rev-parse", "--verify", "--end-of-options", `${base}^{commit}`], { cwd: root });
+  if (!resolved.ok || !resolved.stdout.trim()) {
+    const message = (resolved.stderr || resolved.error?.message || "command failed").trim();
+    return {
+      base,
+      ok: false,
+      error: `git diff failed: could not resolve base ref: ${message}`,
+    };
+  }
+  const result = runCommand(
+    "git",
+    [
+      "--no-replace-objects",
+      "diff",
+      "--no-ext-diff",
+      "--no-textconv",
+      "--ignore-submodules=none",
+      "--diff-algorithm=myers",
+      "--find-renames=50%",
+      `-l${DIFF_RENAME_LIMIT}`,
+      "--name-only",
+      "-z",
+      resolved.stdout.trim(),
+      "--",
+    ],
+    { cwd: root },
+  );
   if (!result.ok) {
     const message = (result.stderr || result.error?.message || "command failed").trim();
     return {
@@ -663,10 +696,20 @@ function validateAgainstDiff(root, base, ranked, allFiles) {
       error: `git diff failed: ${message}`,
     };
   }
-  const changedFiles = result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const changedFiles = result.stdout.split("\0").filter(Boolean);
+
+  return validateChangedFiles(base, changedFiles, ranked, allFiles);
+}
+
+/**
+ * Compare an already-captured immutable file set with the predicted owners.
+ * @param {string} base
+ * @param {string[]} files
+ * @param {ScoredEntry[]} ranked
+ * @param {CodeMapFile[]} allFiles
+ */
+function validateChangedFiles(base, files, ranked, allFiles) {
+  const changedFiles = [...new Set(files.map(String).filter(Boolean))].sort();
 
   const predictedDirect = new Set(ranked.map((entry) => entry.file.path));
   const predictedRelated = new Set();
