@@ -31,7 +31,7 @@ codex/skills/otito/scripts/sync-installed.sh
 
 1. Start with the smallest context artifact that answers the task.
 2. Use JSON output when another tool or script will consume it.
-3. Use Markdown artifacts under `.dev-context/` when a human or long-running agent needs a durable report.
+3. Use Markdown artifacts under `.otito/` when a human or long-running agent needs a durable report.
 4. For cross-repo product work, use `workspace` instead of inspecting each repo in isolation.
 5. For PR review, use `pr` with an explicit base when possible.
 6. If `otito` is unavailable as a command, run `node /path/to/otito/src/cli.js ...`.
@@ -52,10 +52,10 @@ node src/cli.js catalog --json
 node src/cli.js search "events controller" --json
 node src/cli.js context "add a new MCP tool" --path /path/to/repo --json
 node src/cli.js map /path/to/repo --json
-node src/cli.js harness /path/to/repo --out /path/to/repo/.dev-context/harness.md
-node src/cli.js workspace /path/to/web /path/to/api --out .dev-context/workspace.md
-node src/cli.js pr /path/to/repo --base origin/main --out /path/to/repo/.dev-context/pr-review.md
-node src/cli.js report /path/to/repo --out /path/to/repo/.dev-context/report.md
+node src/cli.js harness /path/to/repo --out /path/to/repo/.otito/harness.md
+node src/cli.js workspace /path/to/web /path/to/api --out .otito/workspace.md
+node src/cli.js pr /path/to/repo --base origin/main --out /path/to/repo/.otito/pr-review.md
+node src/cli.js report /path/to/repo --out /path/to/repo/.otito/report.md
 node src/cli.js init /path/to/repo
 node src/cli.js mcp
 ```
@@ -72,7 +72,7 @@ Use these only when dependency-source lookup or TypeScript structure HTML is nee
 
 ```bash
 node src/cli.js deps zod --query parse --limit 20
-node src/cli.js structure /path/to/repo --pattern "app/**/*.tsx" --out .dev-context/structure.html
+node src/cli.js structure /path/to/repo --pattern "app/**/*.tsx" --out .otito/structure.html
 ```
 
 ## MCP Server
@@ -87,7 +87,7 @@ MCP tools exposed by the server:
 
 - `repo_inspect`: repository shape, scripts, package managers, entrypoints, git metadata
 - `repo_map`: compact JSON code map with optional `domain`, `kind`, and `route` filters
-- `repo_index`: local `.dev-context/index.json` generation and catalog registration; `dryRun:true` discovers read-only
+- `repo_index`: local `.otito/index.json` generation and catalog registration; `dryRun:true` discovers read-only
 - `repo_search`: local catalog search across paths, domains, routes, imports, exports, and symbols; omit `query` to list the catalog
 - `context_pack`: task-aware local context packet with primary files, related files, tests, patterns, validation commands, and source evidence
 - `change_impact`: rank files most likely to own a plain-English change request
@@ -104,7 +104,7 @@ MCP tools exposed by the server:
 - Treat generated context as a map, not proof. Confirm by reading the files before editing.
 - Do not hardcode route, API-client, schema, or contract paths when `otito` can discover them.
 - For dirty worktrees, report the state before writing generated artifacts.
-- Use `.dev-context/` for generated reports in target repos; avoid mixing generated context into source directories.
+- Use `.otito/` for generated reports in target repos; avoid mixing generated context into source directories.
 - For PR review, lead with bugs, risky behavior changes, missing tests, and unclear contracts.
 
 ## Maintaining otito

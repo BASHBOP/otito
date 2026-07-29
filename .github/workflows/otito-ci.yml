@@ -96,7 +96,7 @@ jobs:
             --base "origin/${{ github.base_ref }}" \
             --head HEAD \
             --number "${{ github.event.pull_request.number }}" \
-            --out .dev-context/pr-review.md \
+            --out .otito/pr-review.md \
             --comment
 
       - name: Generate commit review context
@@ -114,13 +114,13 @@ jobs:
           node src/cli.js pr . \
             --base "$BASE" \
             --head "${{ github.sha }}" \
-            --out .dev-context/pr-review.md
+            --out .otito/pr-review.md
 
       - name: Upload PR review artifact
         uses: actions/upload-artifact@v7
         with:
           name: otito-pr-review
-          path: .dev-context/pr-review.md
+          path: .otito/pr-review.md
 
   pullpass-readiness:
     name: PullPass readiness

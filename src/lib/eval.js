@@ -172,7 +172,7 @@ const IGNORED_DIRS = new Set([
   "build",
   "out",
   ".next",
-  ".dev-context",
+  ".otito",
   "bin",
   "obj",
   "coverage",
@@ -617,7 +617,7 @@ function loadCorpus(corpusPath) {
 
 // Resolve the fixtures named by a retrieval case to absolute directories, copy
 // each into an isolated temp dir (so the committed fixtures are never mutated
-// and the stale `.dev-context/index.json` they ship with — pinned to an old
+// and the stale `.otito/index.json` they ship with — pinned to an old
 // absolute root and an old cache version — is dropped so the map regenerates
 // from the real files), run generateContextPack, then clean the temp dirs up.
 /**
@@ -901,7 +901,7 @@ function resolveFixture(root, fixtureRoots, name) {
 function copyFixtureToTemp(source) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-fix-"));
   for (const ent of readDirEnts(source)) {
-    if (ent.name === ".dev-context") continue;
+    if (ent.name === ".otito") continue;
     fs.cpSync(path.join(source, ent.name), path.join(dir, ent.name), { recursive: true });
   }
   return { dir };

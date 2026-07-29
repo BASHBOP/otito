@@ -11,7 +11,7 @@ const nodeGlobals = {
 
 export default [
   {
-    ignores: [".dev-context/**", "coverage/**", "dist/**", "node_modules/**", "package-lock.json"],
+    ignores: [".otito/**", "coverage/**", "dist/**", "node_modules/**", "package-lock.json"],
   },
   {
     files: ["src/**/*.js", "tests/**/*.js", "codex/skills/**/*.js"],

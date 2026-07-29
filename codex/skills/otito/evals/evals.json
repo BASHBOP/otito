@@ -10,7 +10,7 @@
         "The output identifies evals/files/sample-node-api as the target repo.",
         "The output uses otito harness or the node src/cli.js harness fallback.",
         "The output includes setup, validation, runtime, or context commands from the generated harness.",
-        "The output writes generated artifacts under .dev-context/ or explains why it is reporting inline instead.",
+        "The output writes generated artifacts under .otito/ or explains why it is reporting inline instead.",
         "The output does not edit application source files."
       ]
     },
@@ -95,7 +95,7 @@
         "The output uses otito harness, otito harness, node src/cli.js harness, or package script inspection.",
         "The output includes npm run ci as the full gate for this repo.",
         "The output includes at least one focused fallback such as npm test or npm run smoke.",
-        "The output keeps generated artifacts under .dev-context/ or reports inline.",
+        "The output keeps generated artifacts under .otito/ or reports inline.",
         "The output does not modify source files."
       ]
     }

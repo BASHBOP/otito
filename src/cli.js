@@ -923,7 +923,7 @@ async function handleDashboard(parsed) {
     return;
   }
 
-  const target = parsed.flags.out ?? join(repoPath, ".dev-context", "dashboard.html");
+  const target = parsed.flags.out ?? join(repoPath, ".otito", "dashboard.html");
   const artifact = writeArtifact(target, html);
   printText(`Dashboard written: ${artifact.path}`);
   if (!data.totals.events) {

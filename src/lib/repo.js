@@ -6,7 +6,7 @@ const ignoredDirs = new Set([
   ".git",
   ".husky",
   ".vscode",
-  ".dev-context",
+  ".otito",
   ".augment",
   ".claude",
   ".codex",

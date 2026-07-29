@@ -144,7 +144,7 @@ const warnedPaths = new Set();
  */
 export function getCachedCodeMap(repoPath = ".") {
   const root = path.resolve(repoPath);
-  const cachePath = path.join(root, ".dev-context", "index.json");
+  const cachePath = path.join(root, ".otito", "index.json");
   const fingerprint = repoFingerprint(root);
   const memoKey = `${root}\0${fingerprint}`;
 

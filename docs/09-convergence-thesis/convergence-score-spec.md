@@ -193,8 +193,8 @@ score, a receipt, or both to the local/PR gate:
 
 ```bash
 otito gate . --base origin/main --request "update the greeting" --min-convergence 80
-otito converge . "update the greeting" --base origin/main --staged --json > .dev-context/convergence.json
-otito gate . --base origin/main --staged --request "update the greeting" --receipt .dev-context/convergence.json
+otito converge . "update the greeting" --base origin/main --staged --json > .otito/convergence.json
+otito gate . --base origin/main --staged --request "update the greeting" --receipt .otito/convergence.json
 ```
 
 The gate recomputes the score from the selected diff and fails when the score is
