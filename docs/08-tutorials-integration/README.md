@@ -28,13 +28,12 @@ Add a devcontainer to the tutorials repo so every Codespace has otito ready:
 {
   "name": "tutorials + otito",
   "image": "mcr.microsoft.com/devcontainers/universal:2-linux",
-  "postCreateCommand": "OTITO_SKIP_POSTINSTALL=1 npm install -g @bashbop/otito && otito doctor"
+  "postCreateCommand": "git clone https://github.com/BASHBOP/otito.git \"$HOME/otito\" && cd \"$HOME/otito\" && npm ci && npm link && otito doctor"
 }
 ```
 
-`OTITO_SKIP_POSTINSTALL=1` suppresses otito's own post-install doctor so the check
-prints exactly once, right after install. Without a devcontainer, install on demand with
-`npm install -g @bashbop/otito`.
+The source checkout is used while npm publication is pending. Without a devcontainer, clone
+Òtítọ́, run `npm ci`, then run `npm link` from that checkout.
 
 ## Working a tutorial
 

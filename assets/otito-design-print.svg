@@ -12,27 +12,27 @@
 
   <rect x="1" y="1" width="598" height="418" rx="14" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
 
-  <!-- OTITO wordmark -->
-  <g fill="url(#rainbow)" font-weight="bold">
-    <text x="24" y="46" xml:space="preserve"> ____   _____   ____    ___    ____   _____  __  __</text>
-    <text x="24" y="67" xml:space="preserve">|  _ \ | ____| |  _ \  / _ \  / ___| |_   _| \ \/ /</text>
-    <text x="24" y="88" xml:space="preserve">| |_) ||  _|   | |_) || | | || |       | |    \  /</text>
-    <text x="24" y="109" xml:space="preserve">|  _ &lt; | |___  |  __/ | |_| || |___    | |    /  \</text>
-    <text x="24" y="130" xml:space="preserve">|_| \_\|_____| |_|     \___/  \____|   |_|   /_/\_\</text>
+  <g fill="url(#rainbow)" font-weight="bold" font-size="32">
+    <text x="28" y="54">ÒTÍTỌ́</text>
   </g>
+  <text x="28" y="82" fill="#8b949e" font-size="14">deterministic repository evidence</text>
 
-  <!-- brand design print -->
-  <g>
-    <text x="24" y="168" fill="#6e7681" xml:space="preserve">+------------------------------------------------------+</text>
-    <text x="24" y="189" fill="#c9d1d9" xml:space="preserve">| Hello builder, welcome to otito                    |</text>
-    <text x="24" y="210" fill="#6e7681" xml:space="preserve">+--------------------------.---------------------------+</text>
-    <text x="24" y="231" fill="#58a6ff" xml:space="preserve">                           |</text>
-    <text x="24" y="252" fill="#58a6ff" xml:space="preserve">              .------------+------------.</text>
-    <text x="24" y="273" fill="#d2a8ff" xml:space="preserve">             /  local repo context      \</text>
-    <text x="24" y="294" fill="#6e7681" xml:space="preserve">            /____________________________\</text>
-    <text x="24" y="315" fill="#7ee787" xml:space="preserve">                 o----o----o----o</text>
-    <text x="24" y="336" fill="#ffd866" xml:space="preserve">                repo map  ctx  review</text>
-    <text x="24" y="357" fill="#7ee787" xml:space="preserve">                 |    |    |    |</text>
-    <text x="24" y="378" fill="#ffa657" xml:space="preserve">              files routes tests prompts</text>
+  <g font-size="15">
+    <rect x="28" y="112" width="544" height="52" rx="8" fill="#161b22" stroke="#30363d"/>
+    <text x="46" y="143" fill="#c9d1d9">requested change</text>
+    <text x="406" y="143" fill="#58a6ff">context + impact</text>
+
+    <path d="M300 164v32" stroke="#58a6ff" stroke-width="2"/>
+    <path d="M294 190l6 7 6-7" fill="none" stroke="#58a6ff" stroke-width="2"/>
+
+    <rect x="28" y="210" width="544" height="84" rx="8" fill="#161b22" stroke="#30363d"/>
+    <text x="46" y="240" fill="#d2a8ff">repository evidence</text>
+    <text x="46" y="268" fill="#c9d1d9">files  ·  symbols  ·  tests  ·  owners  ·  staged tree</text>
+
+    <path d="M300 294v32" stroke="#7ee787" stroke-width="2"/>
+    <path d="M294 320l6 7 6-7" fill="none" stroke="#7ee787" stroke-width="2"/>
+
+    <rect x="28" y="340" width="544" height="52" rx="8" fill="#161b22" stroke="#30363d"/>
+    <text x="46" y="372" fill="#7ee787">human review, with durable evidence</text>
   </g>
 </svg>
