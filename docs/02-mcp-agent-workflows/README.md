@@ -6,21 +6,16 @@ otito can run as a stdio MCP server so agent hosts can ask for repository contex
 
 ## Start The Server
 
-Install the CLI first:
+The npm package is not published yet. Start from a local checkout:
 
 ```bash
-npm install -g @bashbop/otito
-otito doctor
-```
-
-Or run via `npx` without installing — recommended for MCP host configs:
-
-```bash
-npx -y @bashbop/otito mcp
+git clone https://github.com/BASHBOP/otito.git
+cd otito && npm ci
+node src/cli.js doctor
 ```
 
 ```bash
-otito mcp
+node src/cli.js mcp
 ```
 
 From a local checkout:
@@ -35,7 +30,7 @@ The MCP server uses stdio. The agent host starts `otito mcp` as a child process 
 
 ## MCP Client Examples
 
-Use the installed binary when possible. If a host cannot find `otito`, replace `"otito"` with the full path from `command -v otito` on macOS/Linux or `where otito` on Windows.
+Use the checkout path until npm publication. After installation, the `otito` binary can replace the `node` command below.
 
 ### Generic stdio client
 
@@ -45,8 +40,8 @@ Many MCP clients use this shape:
 {
   "mcpServers": {
     "otito": {
-      "command": "otito",
-      "args": ["mcp"],
+      "command": "node",
+      "args": ["/absolute/path/to/otito/src/cli.js", "mcp"],
       "env": {}
     }
   }
@@ -201,7 +196,7 @@ sequenceDiagram
     Ask otito for context before planning broad work. Use the output to choose files to read, not as a replacement for source inspection.
 
 !!! warning "Boundary"
-    otito does not approve or merge code. Pair it with tests, code review, branch protection, and PullPass.
+    Òtítọ́ does not approve or merge code. Pair it with tests, code review, branch protection, and a human decision.
 
 !!! warning "MCP safety"
     MCP hosts can start local processes. Only add MCP servers from trusted repositories, review command paths before enabling them, avoid putting secrets directly in config files, and keep local absolute paths out of public docs.

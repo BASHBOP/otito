@@ -4,7 +4,7 @@
 
 Prepared by **Oluwasegun Olumbe**.
 
-This page is the operating loop for otito, PullPass, and the wider trust-layer work. It is for Codex sessions, maintainers, contributors, and company reviewers who need the same rhythm to survive across branches, pull requests, releases, and pilots.
+This page is the operating loop for Òtítọ́ and the wider trust-layer work. It is for Codex sessions, maintainers, contributors, and company reviewers who need the same rhythm to survive across branches, pull requests, releases, and pilots.
 
 The point is simple:
 
@@ -16,15 +16,13 @@ human decision
 durable evidence
 ```
 
-otito gives the context foundation. PullPass gives the merge-safety gate. The maintainer turns both into a practice that can be repeated by one founder today and a company team tomorrow.
+Òtítọ́ provides both the context foundation and merge-safety gate. The maintainer turns that into a practice that can be repeated by one founder today and a company team tomorrow.
 
 ---
 
 ## Tool Boundaries
 
-otito is the product surface. It should stay the command and MCP server that users install first when they need repository context, PR review context, workspace reports, and agent-facing evidence.
-
-PullPass is the merge-safety gate. It should stay focused on review readiness, governance mode, policy checks, CI state, CODEOWNERS, conversations, and the final human decision before merge.
+Òtítọ́ is the product surface. Its context, impact, and gate commands provide repository context, PR review context, workspace reports, agent-facing evidence, and merge readiness.
 
 `otito impact` is the canonical change-impact analyzer. Use it when scope is unclear, when import-neighbor evidence matters, or when a diff needs validation against the original change request. The standalone `impact-map` work has been absorbed into otito for normal product and agent workflows.
 
@@ -32,11 +30,11 @@ The rule is simple:
 
 | Question | Use |
 | --- | --- |
-| What should an agent or reviewer know before changing this repo? | otito |
-| Is this PR ready to merge under the repo's governance rules? | PullPass |
+| What should an agent or reviewer know before changing this repo? | Òtítọ́ context |
+| Is this PR ready to merge under the repo's governance rules? | Òtítọ́ gate |
 | What files, import neighbors, tests, or missed diff areas might this change affect? | `otito impact` |
 
-This keeps the public story clear: otito owns context and impact analysis; PullPass owns the final merge-safety gate.
+This keeps the public story clear: one product, with context and impact analysis before its final merge-safety gate.
 
 ---
 
@@ -50,8 +48,8 @@ Use this loop at the start of every meaningful coding-agent session.
 | 2. Map | Run otito context for the task and `otito impact` when scope or risk is unclear | Primary files, related files, tests, risks, and validation commands |
 | 3. Choose | Pick one deliverable that moves the trust layer forward | A branch, issue, PR, docs page, release task, or proof artifact |
 | 4. Change | Make the smallest complete change that satisfies the deliverable | Focused diff with no unrelated cleanup |
-| 5. Prove | Run the relevant local checks and record any skipped checks | CI command output, docs build, PullPass result, or explicit no-test rationale |
-| 6. Gate | Open or update a PR and let review gates speak before merge | CI, PullPass readiness, review state, CODEOWNERS state, conversations |
+| 5. Prove | Run the relevant local checks and record any skipped checks | CI command output, docs build, Òtítọ́ result, or explicit no-test rationale |
+| 6. Gate | Open or update a PR and let review gates speak before merge | CI, Òtítọ́ readiness, review state, CODEOWNERS state, conversations |
 | 7. Decide | Record the owner or reviewer decision | PR review, merge note, release note, or trust-layer decision record |
 | 8. Handoff | End with current state and next remaining goal | Clean worktree, PR link, check status, and next action |
 
@@ -77,7 +75,7 @@ A trust-layer task is done only when the evidence matches the claim.
 
 - The branch diff is focused and reviewed.
 - Relevant tests, docs builds, audits, or smoke checks pass.
-- PullPass result is captured when a merge decision is involved.
+- Òtítọ́ gate result is captured when a merge decision is involved.
 - Any `WARN` or `FAIL` state is explained before merge.
 - Version impact is marked as none, patch, minor, or major.
 - Public evidence avoids local absolute paths, secrets, customer data, private source, and confidential logs.
@@ -89,7 +87,7 @@ A trust-layer task is done only when the evidence matches the claim.
 
 | Mode | Use when | Merge bar |
 | --- | --- | --- |
-| Solo | One accountable maintainer owns the repo | Admin merge can be valid, but CI, PullPass, and the owner decision must be visible |
+| Solo | One accountable maintainer owns the repo | Admin merge can be valid, but CI, Òtítọ́, and the owner decision must be visible |
 | Small team | A small engineering team shares review | Require one human reviewer, required checks, and CODEOWNERS for sensitive paths |
 | Company | A company evaluates or adopts the workflow | Require CODEOWNERS, status checks, resolved conversations, governance evidence, and release notes |
 | High-risk | Auth, payments, data, deployment, secrets, or incident-prone code changes | Add stricter policy checks, explicit risk review, and stronger release or rollback evidence |
@@ -123,8 +121,8 @@ Change:
 
 Gate:
 - CI:
-- PullPass mode:
-- PullPass verdict:
+- Gate mode:
+- Gate verdict:
 - reviewer or owner:
 - CODEOWNERS:
 - conversations:
@@ -154,7 +152,7 @@ The ledger can live in a PR description, merge note, release note, company pilot
 | Track | Question | Artifact |
 | --- | --- | --- |
 | Product | Is otito still the context foundation? | README, docs, CLI/MCP behavior, tests |
-| Gate | Is PullPass still the merge-safety signal? | PullPass workflow, local report, PR check, policy mode |
+| Gate | Is Òtítọ́ still the merge-safety signal? | Òtítọ́ workflow, local report, PR check, policy mode |
 | Release | Can another maintainer understand what shipped? | SemVer impact, changelog, tag, GitHub release |
 | Governance | Can a company see who was accountable? | CODEOWNERS, review policy, branch protection, decision record |
 | Evidence | Can proof be shared safely? | Proof index, sanitized links, public/private boundary |
@@ -172,7 +170,7 @@ When the plan feels large, choose the next action in this order:
 2. Close an open PR or conflict.
 3. Add missing verification for an already shipped claim.
 4. Tighten the company-facing evidence boundary.
-5. Improve otito or PullPass behavior that would make the next pilot easier.
+5. Improve Òtítọ́ behavior that would make the next pilot easier.
 6. Update roadmap, proof index, or release notes so the current state is not trapped in memory.
 
 This keeps the builder-founder path practical: build, prove, publish, review, repeat.

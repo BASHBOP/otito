@@ -143,7 +143,7 @@ Verify immediately:
 
 ```bash
 npm view @bashbop/otito version       # → 1.0.0
-npx -y @bashbop/otito --help          # downloads fresh, runs the CLI
+npx -y @bashbop/otito --help          # after publication: downloads fresh and runs the CLI
 ```
 
 !!! warning "npm versions are immutable"

@@ -34,14 +34,14 @@ Maintainers should keep these aligned:
 
 ---
 
-## PullPass PR Readiness
+## Òtítọ́ PR Readiness
 
-otito runs PullPass on pull requests so merge-readiness evidence is visible before an owner or reviewer merges.
+Òtítọ́ runs merge-readiness checks on pull requests so evidence is visible before an owner or reviewer merges.
 
-The workflow installs PullPass `v0.9.0` and runs:
+For a solo-maintainer repository, run:
 
 ```bash
-pullpass pr "$PR_NUMBER" --repo . --governance solo
+otito gate --pr "$PR_NUMBER" --path . --governance solo
 ```
 
 Solo governance keeps one-person maintainer work moving while making missing separate review or CODEOWNERS approval explicit `WARN` evidence. The owner/admin decision still has to be recorded before merge.
@@ -49,18 +49,18 @@ Solo governance keeps one-person maintainer work moving while making missing sep
 For a company or shared-team repository, switch the same workflow to:
 
 ```bash
-pullpass pr "$PR_NUMBER" --repo . --governance team --policy company
+otito gate --pr "$PR_NUMBER" --path . --governance team --policy company
 ```
 
-Then require the `PullPass readiness` check alongside CI, docs build, required review, CODEOWNERS approval, and conversation resolution.
+Then require the Òtítọ́ readiness check alongside CI, docs build, required review, CODEOWNERS approval, and conversation resolution.
 
 ---
 
 ## Current Install Path
 
 ```bash
-npm install -g @bashbop/otito
-otito doctor
+git clone https://github.com/BASHBOP/otito.git
+cd otito && npm ci && node src/cli.js doctor
 ```
 
 ---
@@ -72,7 +72,7 @@ flowchart TD
     A[otito context] --> B[Implementation]
     B --> C[npm run ci]
     C --> D[PR review]
-    D --> E[PullPass gate]
+    D --> E[Òtítọ́ gate]
     E --> F[Version and changelog]
     F --> G[Tag and GitHub release]
 ```

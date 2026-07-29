@@ -1,12 +1,12 @@
 # Trust-Layer Demo
 
-## otito + PullPass review rhythm
+## Òtítọ́ review rhythm
 
 This walkthrough shows the operating model behind the tools:
 
 ```text
-otito  -> context before change
-PullPass -> validation before merge
+Òtítọ́ -> context before change
+Òtítọ́ -> validation before merge
 Humans   -> accountability before release
 ```
 
@@ -24,7 +24,7 @@ The goal is not to replace review. The goal is to make review easier to trust.
 | Contributor | Opens a focused PR with tests or a no-test rationale |
 | Agent | Uses otito to understand scope before suggesting changes |
 | Maintainer | Reviews the PR context, risk areas, and test evidence |
-| PullPass | Checks merge readiness, review state, CODEOWNERS, CI, conversations, and branch protection |
+| Òtítọ́ merge gate | Checks merge readiness, review state, CODEOWNERS, CI, conversations, and branch protection |
 
 !!! note "Solo now, company-ready later"
     A solo maintainer can use the same rhythm by recording owner decisions when an admin merge is needed. As the repo is shared with companies, that owner decision becomes a team review path with CODEOWNERS, required approvals, resolved conversations, and release evidence.
@@ -73,8 +73,8 @@ Evidence to expect:
 ### 4. Run the merge-safety gate
 
 ```bash
-pullpass pr
-pullpass pr 123 --json
+otito gate .
+otito gate --pr 123 --path . --json
 ```
 
 Evidence to expect:
@@ -88,7 +88,7 @@ Evidence to expect:
 
 ### 5. Keep the human decision explicit
 
-PullPass can report `PASS`, `WARN`, or `FAIL`, but the maintainer still owns the merge decision.
+The Òtítọ́ merge gate can report `PASS`, `WARN`, or `FAIL`, but the maintainer still owns the merge decision.
 
 | Verdict | Meaning |
 | --- | --- |
@@ -118,7 +118,7 @@ Use this checklist when publishing a demo, release note, or case study.
 - otito context or harness artifact exists
 - PR review context exists
 - CI result is visible
-- PullPass report is attached or summarized
+- Òtítọ́ merge-gate report is attached or summarized
 - Required human review is recorded
 - CODEOWNERS approval is present when required
 - Branch protection is enabled on the base branch
@@ -138,7 +138,7 @@ flowchart LR
     A[Task request] --> B[otito context]
     B --> C[Focused change]
     C --> D[otito PR review context]
-    D --> E[PullPass gate]
+    D --> E[Òtítọ́ gate]
     E --> F{Verdict}
     F -->|PASS| G[Human merge decision]
     F -->|WARN| H[Maintainer inspection]
@@ -157,7 +157,7 @@ Use this short version in a README, video, or issue comment:
 ```bash
 otito context "describe the change" --path . --json
 otito pr . --base origin/main --out .otito/pr-review.md
-pullpass pr 123
+otito gate --pr 123 --path .
 ```
 
 The public story is simple: context first, validation second, human accountability always.
