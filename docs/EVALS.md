@@ -1,16 +1,17 @@
-# otito Accuracy Evals
+# otito Evals
 
-otito ships two evals. They answer different questions and must not be
+otito ships three evals. They answer different questions and must not be
 confused:
 
 | Eval | Entry point | Question it answers |
 |---|---|---|
 | Token-savings | `runEval(repoPath)` | _Is the context pack **smaller** than a naive file dump?_ |
 | Accuracy | `runRetrievalEval()` | _Is the context pack **right** — does it surface the files an agent needs, and does the risk classifier label paths/queries correctly?_ |
+| Harness execution | `runHarnessExecutionEval()` | _Do the encoded setup and validation commands Otito inferred actually run?_ |
 
 The token-savings eval is necessary but not sufficient: a randomly-ranked pack
-saves exactly as many tokens as a perfect one. The accuracy eval closes that
-gap. This document covers the accuracy eval.
+saves exactly as many tokens as a perfect one. The accuracy and harness
+execution evals close distinct gaps in that evidence.
 
 ## What the corpus measures
 
@@ -67,6 +68,32 @@ absent. Encoded regression guards include:
 - `roles.guard.ts` → auth/security, **not** money flow
 - `tests/checkout.spec.ts` → **no** merge-gate flag
 - `config/dev.environments.ts` → **not** a secret (`.env` substring must not match)
+
+### Harness execution cases
+
+The `harnessExecution` corpus encodes a small, reviewed fixture repository and
+the exact commands Otito must infer from it. The current Node fixture proves:
+
+- `npm install`
+- `npm test`
+- `npm run typecheck`
+- `npm run build`
+
+For every expected command, the runner first verifies that it appears in the
+right harness group, then executes it in a temporary copy of the fixture. The
+source fixture is never mutated. It accepts only ordinary `npm`, `pnpm`,
+`yarn`, or `bun` install/test/run forms, has a 60-second timeout per command,
+and disables lifecycle scripts during the install probe. It never executes a
+command inferred from a customer repository.
+
+The current dependency-free Node fixture uses `node --check` behind its
+`typecheck` script. That proves command inference and execution; it does not
+claim TypeScript compiler coverage. Add a dedicated TypeScript fixture when
+testing compiler semantics is the goal.
+
+This is execution evidence for the encoded fixture commands, not a claim that
+every command in every possible harness is safe or runnable. Add another small
+fixture when extending coverage to another ecosystem or command form.
 
 ## How thresholds work
 
@@ -148,18 +175,38 @@ headroom rather than a defect.
    }
    ```
 
+   Harness execution:
+
+   ```json
+   {
+     "name": "node-install-test-typecheck-build",
+     "repoFixture": "harness-node",
+     "commands": [
+       { "kind": "install", "group": "setup", "command": "npm install" },
+       { "kind": "test", "group": "validate", "command": "npm test", "script": "test" }
+     ]
+   }
+   ```
+
 3. **Run it.** `node --test tests/eval.test.js`, or run the runner directly to
    see the scoreboard. If you intentionally changed behavior, re-record the
    baseline above and re-set the thresholds to baseline-minus-slack.
 
 ## Running the eval
 
-`runRetrievalEval()` is exported from `src/lib/eval.js`. The accuracy suite is
-covered by `tests/eval.test.js`:
+`runRetrievalEval()` and `runHarnessExecutionEval()` are exported from
+`src/lib/eval.js`. Both suites are covered by `tests/eval.test.js`:
 
 ```bash
 node --test tests/eval.test.js
 ```
 
-A CLI wiring for an `eval --accuracy` (or `eval:accuracy`) subcommand is left to
-the CLI owner — see the note in the PR description.
+Run the release-gating commands directly with:
+
+```bash
+npm run eval:accuracy
+npm run eval:harness
+```
+
+The CLI equivalents are `otito eval --accuracy` and `otito eval --harness`.
+Both exit non-zero on a failed corpus, and `npm run quality` runs both.

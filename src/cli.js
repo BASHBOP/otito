@@ -54,7 +54,7 @@ import { generatePrReview } from "./lib/pr-review.js";
 import { formatReportMermaid, formatReportTerminal, generateReport } from "./lib/report.js";
 import { formatWorkspaceMermaid, generateWorkspaceReport } from "./lib/workspace.js";
 import { generateHarness } from "./lib/harness.js";
-import { runEval, runRetrievalEval } from "./lib/eval.js";
+import { runEval, runHarnessExecutionEval, runRetrievalEval } from "./lib/eval.js";
 import { formatDataAccessMermaid, generateDataAccessReport } from "./lib/data-access.js";
 import { getAgentTools } from "./lib/agent-tools.js";
 import { formatCodeMapMermaid, formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
@@ -882,6 +882,26 @@ async function handleEval(parsed) {
     return;
   }
 
+  // --harness runs only the committed, fixture-backed command corpus. It
+  // proves that the inferred install/test/typecheck/build commands execute in
+  // an isolated temp copy rather than executing an inspected user repository.
+  if (parsed.flags.harness) {
+    const result = runHarnessExecutionEval({ corpusPath: parsed.flags.corpus });
+    noteResult(result.data);
+    if (parsed.flags.json) {
+      printJson(result.data);
+    } else if (parsed.flags.out) {
+      const artifact = writeArtifact(parsed.flags.out, result.markdown);
+      printText(`Harness execution eval written: ${artifact.path}`);
+    } else {
+      printText(result.markdown);
+    }
+    if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
   const repoPath = parsed.positionals[0] ?? ".";
   /** @type {EvalOptions} */
   const options = {};
@@ -1096,6 +1116,7 @@ function handleHelp(_parsed) {
       "",
       "Accuracy eval (v2):",
       "  otito eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",
+      "  otito eval --harness [--corpus path] [--json] [--out file]    # run inferred install/test/typecheck/build commands in isolated fixtures",
       "",
       "Canonical vs legacy commands:",
       "  gate                 canonical merge gate; `pass` (local) and `pass-pr` (PR) remain as legacy aliases",
