@@ -11,7 +11,7 @@ test("initProject scaffolds otito files without overwriting by default", () => {
   const result = initProject(fixture, { toolRepo: "example/otito", toolRef: "stable" });
 
   assert.equal(result.ok, true);
-  assert.deepEqual(result.created.sort(), [".dev-context/README.md", ".githooks/pre-commit", ".github/workflows/otito-ci.yml", ".gitignore"].sort());
+  assert.deepEqual(result.created.sort(), [".otito/README.md", ".githooks/pre-commit", ".github/workflows/otito-ci.yml", ".gitignore"].sort());
 
   const generatedWorkflowPath = path.join(fixture, ".github", "workflows", "otito-ci.yml");
   const workflow = fs.readFileSync(generatedWorkflowPath, "utf8");
@@ -24,10 +24,11 @@ test("initProject scaffolds otito files without overwriting by default", () => {
   assert.match(workflow, /Checkout pushed commit/);
   assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
   assert.match(workflow, /Install otito dependencies/);
-  assert.match(workflow, /working-directory: \.dev-context\/tool/);
+  assert.match(workflow, /working-directory: \.otito\/tool/);
+  assert.match(workflow, /secrets\.OTITO_REPO_TOKEN/);
   assert.match(workflow, /git fetch origin "\+\$\{\{ github\.base_ref \}\}:refs\/remotes\/origin\/\$\{\{ github\.base_ref \}\}"/);
   assert.match(workflow, /Generate commit review context/);
-  assert.match(workflow, /node \.dev-context\/tool\/src\/cli\.js pr \./);
+  assert.match(workflow, /node \.otito\/tool\/src\/cli\.js pr \./);
 
   fs.writeFileSync(generatedWorkflowPath, "custom workflow\n");
   const skipped = initProject(fixture);
@@ -35,18 +36,18 @@ test("initProject scaffolds otito files without overwriting by default", () => {
   assert.equal(fs.readFileSync(generatedWorkflowPath, "utf8"), "custom workflow\n");
 });
 
-test("initProject adds .dev-context/ to .gitignore (creating it when absent)", () => {
+test("initProject adds .otito/ to .gitignore (creating it when absent)", () => {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
   const result = initProject(fixture, { noWorkflow: true });
 
   const gitignorePath = path.join(fixture, ".gitignore");
   assert.ok(fs.existsSync(gitignorePath), ".gitignore must be created");
   const contents = fs.readFileSync(gitignorePath, "utf8");
-  assert.match(contents, /^\.dev-context\/$/m);
+  assert.match(contents, /^\.otito\/$/m);
   assert.ok(result.created.includes(".gitignore"));
 });
 
-test("initProject appends .dev-context/ to an existing .gitignore without clobbering it", () => {
+test("initProject appends .otito/ to an existing .gitignore without clobbering it", () => {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
   const gitignorePath = path.join(fixture, ".gitignore");
   fs.writeFileSync(gitignorePath, "node_modules\ndist\n");
@@ -55,7 +56,7 @@ test("initProject appends .dev-context/ to an existing .gitignore without clobbe
   const contents = fs.readFileSync(gitignorePath, "utf8");
   assert.match(contents, /node_modules/);
   assert.match(contents, /dist/);
-  assert.match(contents, /^\.dev-context\/$/m);
+  assert.match(contents, /^\.otito\/$/m);
   assert.ok(result.updated.includes(".gitignore"));
 });
 
@@ -71,11 +72,11 @@ test("initProject is idempotent about .gitignore and respects covering patterns"
   assert.equal(afterFirst, afterSecond, "second run must not duplicate the entry");
   assert.ok(second.skipped.includes(".gitignore"));
 
-  // A bare ".dev-context" (no trailing slash) already covers the directory.
+  // A bare ".otito" (no trailing slash) already covers the directory.
   const covered = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
-  fs.writeFileSync(path.join(covered, ".gitignore"), ".dev-context\n");
+  fs.writeFileSync(path.join(covered, ".gitignore"), ".otito\n");
   const result = initProject(covered, { noWorkflow: true });
-  assert.equal(fs.readFileSync(path.join(covered, ".gitignore"), "utf8"), ".dev-context\n");
+  assert.equal(fs.readFileSync(path.join(covered, ".gitignore"), "utf8"), ".otito\n");
   assert.ok(result.skipped.includes(".gitignore"));
 });
 
@@ -84,12 +85,12 @@ test("initProject can force overwrite and skip workflow", () => {
   initProject(fixture);
 
   const forced = initProject(fixture, { force: true });
-  assert.ok(forced.updated.includes(".dev-context/README.md"));
+  assert.ok(forced.updated.includes(".otito/README.md"));
   assert.ok(forced.updated.includes(".github/workflows/otito-ci.yml"));
 
   const noWorkflow = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-"));
   const result = initProject(noWorkflow, { noWorkflow: true });
-  assert.ok(result.created.includes(".dev-context/README.md"));
+  assert.ok(result.created.includes(".otito/README.md"));
   assert.equal(fs.existsSync(path.join(noWorkflow, ".github", "workflows", "otito-ci.yml")), false);
 });
 
@@ -125,7 +126,7 @@ test("initProject injects a harness-driven quality job and pre-commit hook from 
   assert.match(hook, /^#!\/bin\/sh/);
   assert.match(hook, /npm run lint/);
   assert.match(hook, /npm run typecheck/);
-  assert.match(hook, /otito gate \. --staged --out \.dev-context\/gate\.md/);
+  assert.match(hook, /otito gate \. --staged --out \.otito\/gate\.md/);
   // slow gates (test/build/audit) never run in the pre-commit hook
   assert.doesNotMatch(hook, /npm test/);
   // the hook must be executable
@@ -158,7 +159,7 @@ test("initProject installs the staged safety hook even when no static scripts ar
   assert.equal(result.precommitApplied, true);
   assert.equal(result.precommitStatus, "applied");
   const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
-  assert.match(hook, /otito gate \. --staged --out \.dev-context\/gate\.md/);
+  assert.match(hook, /otito gate \. --staged --out \.otito\/gate\.md/);
 });
 
 test("initProject uses npm ci when package-lock.json is present", () => {
@@ -184,7 +185,7 @@ test("initProject excludes non-static script names from the pre-commit hook", ()
 
   assert.equal(result.precommitApplied, true);
   const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
-  assert.match(hook, /otito gate \. --staged --out \.dev-context\/gate\.md/);
+  assert.match(hook, /otito gate \. --staged --out \.otito\/gate\.md/);
   assert.match(hook, /npm run lint/);
   assert.doesNotMatch(hook, /prototype/);
   assert.doesNotMatch(hook, /npm test/);

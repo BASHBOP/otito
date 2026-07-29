@@ -759,7 +759,7 @@ function typeScriptFallback(runner) {
  */
 function contextEvidence(base, request) {
   const quoted = JSON.stringify(request && request.trim() ? request : "review this change");
-  return [`otito impact . ${quoted} --json`, `otito pr . --base ${base} --out .dev-context/pr-review.md`];
+  return [`otito impact . ${quoted} --json`, `otito pr . --base ${base} --out .otito/pr-review.md`];
 }
 
 /** @param {string} filePath */

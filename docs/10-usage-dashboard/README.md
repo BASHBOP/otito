@@ -14,10 +14,10 @@ deterministic discipline applied to otito's own usage.
 otito telemetry on          # opt in (off by default)
 otito context "add a tool" --path .
 otito gate .
-otito dashboard             # writes .dev-context/dashboard.html
+otito dashboard             # writes .otito/dashboard.html
 ```
 
-Open `.dev-context/dashboard.html` in any browser — it works straight off disk
+Open `.otito/dashboard.html` in any browser — it works straight off disk
 (`file://`), offline.
 
 ## What it shows
@@ -28,7 +28,7 @@ Open `.dev-context/dashboard.html` in any browser — it works straight off disk
 | Token savings vs naive | the latest `otito eval` byte-ratio delta against a whole-file baseline |
 | Gate pass rate / verdict mix | `PASS` / `WARN` / `FAIL` outcomes from `gate`, `pass`, and `review` |
 | Convergence over time | `otito converge` scores (intent vs diff) as a trend |
-| Recent artifacts / commits | existing `.dev-context/*.json` reports and recent git history |
+| Recent artifacts / commits | existing `.otito/*.json` reports and recent git history |
 
 Every tile and chart carries an interpretation tooltip, and a **"what this can't
 show"** panel keeps the coverage gaps explicit (latency only for runs after
@@ -40,8 +40,8 @@ naive-savings number is a relative cross-build delta, not an absolute guarantee)
 - **Off by default.** Capture is gated by the `telemetry` config key or the
   `OTITO_TELEMETRY` env var, and is forced off under CI unless explicitly
   opted in. There is no `init`-time nudge — you turn it on manually.
-- **Local only.** Events append to `~/.dev-context/usage.jsonl`. Nothing is sent
-  anywhere. The derived HTML lives under the repo's gitignored `.dev-context/`.
+- **Local only.** Events append to `~/.otito/usage.jsonl`. Nothing is sent
+  anywhere. The derived HTML lives under the repo's gitignored `.otito/`.
 - **Shape, not content.** Each event records the command name, the *shape* of its
   arguments (key names only — never flag values, paths, or queries), latency,
   outcome, and the value signals the command already produced. Error text is

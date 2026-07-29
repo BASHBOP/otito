@@ -71,9 +71,9 @@ test("renderDashboardHtml escapes embedded strings", () => {
   assert.match(html, /&lt;script&gt;/);
 });
 
-test("scanArtifacts classifies .dev-context JSON by its discriminating keys", () => {
+test("scanArtifacts classifies .otito JSON by its discriminating keys", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-dash-art-"));
-  const dir = path.join(root, ".dev-context");
+  const dir = path.join(root, ".otito");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "converge.json"), JSON.stringify({ convergence: 80, band: "aligned" }));
   fs.writeFileSync(path.join(dir, "gate.json"), JSON.stringify({ verdict: "WARN", checks: [] }));

@@ -376,7 +376,7 @@
           <text x="550" y="73"  class="label">MCP</text>
           <text x="550" y="89"  class="sub">otito mcp</text>
         </g>
-        <g class="node" data-id="ci" data-group="entry" data-title="CI scaffold" data-desc="otito init writes .github/workflows/otito-ci.yml, optional harness-driven quality job, pre-commit hook, and .dev-context/ assets.">
+        <g class="node" data-id="ci" data-group="entry" data-title="CI scaffold" data-desc="otito init writes .github/workflows/otito-ci.yml, optional harness-driven quality job, pre-commit hook, and .otito/ assets.">
           <rect x="815" y="49" width="130" height="52" rx="10" fill="#161b22" stroke="#58a6ff" color="#58a6ff" />
           <text x="880" y="73"  class="label">CI</text>
           <text x="880" y="89"  class="sub">init scaffold</text>
@@ -388,7 +388,7 @@
           <text x="220" y="187" class="label">inspect</text>
           <text x="220" y="201" class="sub">repo facts</text>
         </g>
-        <g class="node" data-id="index" data-group="discover" data-title="repo_index" data-desc="Discover and index local repos into a catalog with symbols and paths. Persists .dev-context/index.json cache.">
+        <g class="node" data-id="index" data-group="discover" data-title="repo_index" data-desc="Discover and index local repos into a catalog with symbols and paths. Persists .otito/index.json cache.">
           <circle cx="550" cy="191" r="34" fill="#161b22" stroke="#79c0ff" color="#79c0ff" />
           <text x="550" y="187" class="label">index</text>
           <text x="550" y="201" class="sub">catalog</text>
@@ -446,9 +446,9 @@
         </g>
 
         <!-- OUTPUT -->
-        <g class="node" data-id="artifacts" data-group="output" data-title=".dev-context/" data-desc="Durable Markdown/JSON artifacts: pr-review.md, harness.md, workspace.md, index cache. Gitignored by init.">
+        <g class="node" data-id="artifacts" data-group="output" data-title=".otito/" data-desc="Durable Markdown/JSON artifacts: pr-review.md, harness.md, workspace.md, index cache. Gitignored by init.">
           <rect x="155" y="647" width="130" height="52" rx="10" fill="#161b22" stroke="#ffa657" color="#ffa657" />
-          <text x="220" y="671" class="label">.dev-context</text>
+          <text x="220" y="671" class="label">.otito</text>
           <text x="220" y="687" class="sub">artifacts</text>
         </g>
         <g class="node" data-id="prcomment" data-group="output" data-title="PR comment" data-desc="CI review job posts structured context to the PR and uploads otito-pr-review artifact.">
@@ -490,7 +490,7 @@
           </div>
           <div class="step" data-step="5" data-node="artifacts" data-group="output">
             <div class="step-num" style="background: var(--orange)">6</div>
-            <div><strong>Evidence</strong><span>Artifacts in .dev-context/, PR comments, CI verdict for merge</span></div>
+            <div><strong>Evidence</strong><span>Artifacts in .otito/, PR comments, CI verdict for merge</span></div>
           </div>
         </div>
       </section>
@@ -538,7 +538,7 @@
         reviewctx: ["review_context", "otito pr"],
         verdict: ["review_verdict", "otito review"],
         gate: ["review_gate", "otito gate"],
-        artifacts: [".dev-context/pr-review.md", ".dev-context/harness.md"],
+        artifacts: [".otito/pr-review.md", ".otito/harness.md"],
         prcomment: ["GitHub Actions", "PR comment artifact"],
         verdictout: ["PASS", "WARN", "FAIL"],
       };

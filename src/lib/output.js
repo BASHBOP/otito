@@ -72,13 +72,13 @@ Examples:
   node src/cli.js init ../my-repo
   node src/cli.js init ../my-repo --hooks-path --yes
   node src/cli.js mcp
-  node src/cli.js pr . --base origin/main --out .dev-context/pr-review.md
-  node src/cli.js harness . --out .dev-context/harness.md
+  node src/cli.js pr . --base origin/main --out .otito/pr-review.md
+  node src/cli.js harness . --out .otito/harness.md
   node src/cli.js deps zod --query parse
-  node src/cli.js report . --out .dev-context/report.md
-  node src/cli.js workspace ../web ../api --out .dev-context/workspace.md
-  node src/cli.js structure ../web --pattern 'app/**/*.tsx' --out .dev-context/app.html
-  node src/cli.js eval . --out .dev-context/eval.md
+  node src/cli.js report . --out .otito/report.md
+  node src/cli.js workspace ../web ../api --out .otito/workspace.md
+  node src/cli.js structure ../web --pattern 'app/**/*.tsx' --out .otito/app.html
+  node src/cli.js eval . --out .otito/eval.md
 `);
 }
 

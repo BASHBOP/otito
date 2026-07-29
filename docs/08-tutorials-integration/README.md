@@ -47,7 +47,7 @@ be scoped to a single chapter folder:
 | Map a chapter | `otito map ./03-async --json` |
 | Context before a change | `otito context "add a test to the retry example" --path ./03-async` |
 | Blast radius of a change | `otito impact "change the retry backoff" --path ./03-async` |
-| Agent harness for the repo | `otito harness . --out .dev-context/harness.md` |
+| Agent harness for the repo | `otito harness . --out .otito/harness.md` |
 | Index for cross-tutorial search | `otito index . --discover` |
 | Merge gate before committing | `otito gate . --base origin/main` |
 | Agent-experience score | `otito ax "add a test to the retry example" --path ./03-async` |
