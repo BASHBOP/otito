@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { generateContextPack } from "../src/lib/context-engine.js";
+import { formatContextPackTerminal, generateContextPack } from "../src/lib/context-engine.js";
+import { createRenderer } from "../src/lib/render/fancy.js";
 
 test("generateContextPack returns task-aware files, tests, patterns, and commands", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-"));
@@ -182,4 +183,56 @@ test("generateContextPack ranks email service methods as hotspots over booking c
   assert.ok(result.data.hotspots.some((item) => item.symbol === "sendRsvpConfirmationEmail"));
   assert.ok(result.data.agentPrompt.includes("Start at these hotspots"));
   assert.match(result.markdown, /## Hotspots/);
+});
+
+test("generateContextPack prioritizes the signup verification auth flow over generic email services", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-auth-flow-"));
+  fs.mkdirSync(path.join(root, "src", "authentication"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src", "email"), { recursive: true });
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "auth-flow-fixture", scripts: { test: "node --test" } }));
+  fs.writeFileSync(
+    path.join(root, "src", "authentication", "auth.controller.ts"),
+    [
+      "@Controller('auth')",
+      "export class AuthController {",
+      "  @Post('register')",
+      "  async register() { return this.sendRegistrationOtp(); }",
+      "  @Post('validate-otp')",
+      "  async validateOtp() { return true; }",
+      "  private async sendRegistrationOtp() { return true; }",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "authentication", "auth.service.ts"),
+    [
+      "export class AuthService {",
+      "  async registerUser() { return true; }",
+      "  validateOTP() { return true; }",
+      "  login() { return 'Please verify your email before logging in'; }",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  fs.writeFileSync(
+    path.join(root, "src", "email", "email.service.ts"),
+    ["export class EmailService {", "  async sendEmail() { return true; }", "  async emailStatus() { return true; }", "}", ""].join("\n"),
+  );
+
+  const result = generateContextPack("where is email verification implemented during signup?", { path: root });
+  const primaryPaths = result.data.primaryFiles.map((file) => file.path);
+
+  assert.equal(result.data.intent.hints.includes("auth-flow"), true);
+  assert.equal(primaryPaths[0], "src/authentication/auth.controller.ts");
+  assert.equal(primaryPaths[1], "src/authentication/auth.service.ts");
+  assert.ok(result.data.hotspots.some((hotspot) => hotspot.path === "src/authentication/auth.controller.ts" && hotspot.symbol === "sendRegistrationOtp"));
+
+  const terminal = formatContextPackTerminal(result.data, (options) => createRenderer({ ...options, emoji: true, color: true, width: 78 }));
+  assert.match(terminal, /otito context · repository guide/);
+  assert.match(terminal, /🔥 Start here/);
+  assert.match(terminal, /🥇 Primary files/);
+  assert.match(terminal, /POST register/);
+  assert.ok(terminal.includes("\x1b[36m") || terminal.includes("\x1b[1m"));
+  assert.doesNotMatch(terminal, /# Context Pack:/);
 });

@@ -233,6 +233,162 @@ export function formatContextPackMarkdown(data) {
 }
 
 /**
+ * Render the full context pack for an interactive terminal. Markdown remains
+ * the durable artifact format; this presentation uses the shared renderer so
+ * a long report stays easy to scan in a real terminal.
+ *
+ * @param {Record<string, any>} data
+ * @param {(options: Record<string, unknown>) => ReturnType<typeof import("./render/fancy.js").createRenderer>} rendererFactory
+ * @returns {string}
+ */
+export function formatContextPackTerminal(data, rendererFactory) {
+  const renderer = rendererFactory({});
+  /** @type {string[]} */
+  const lines = [];
+  const repoCount = data.repos.length;
+  const sourceCount = data.repos.reduce((/** @type {number} */ sum, /** @type {{ sourceFileCount?: number }} */ repo) => sum + (repo.sourceFileCount ?? 0), 0);
+
+  lines.push(
+    renderer.header({ text: "otito context · repository guide", glyph: "🧭" }, [
+      { text: `"${data.query}"`, glyph: "💬" },
+      { text: `${repoCount} repo${repoCount === 1 ? "" : "s"} · ${sourceCount} source file(s)`, glyph: "📂" },
+      { text: `${data.primaryFiles.length} primary · ${data.hotspots.length} hotspots · ${data.tests.length} tests`, glyph: "🎯" },
+    ]),
+  );
+  lines.push("");
+
+  if (data.hotspots.length) {
+    lines.push(
+      renderer.section(
+        `${renderer.emoji ? "🔥" : ">"} Start here`,
+        data.hotspots.slice(0, 8).map((/** @type {any} */ hotspot, /** @type {number} */ index) => {
+          const location = `${hotspot.path}${hotspot.line ? `:${hotspot.line}` : ""}`;
+          return `${rankLabel(index, renderer.emoji)} ${location}  ${hotspot.type} ${hotspot.symbol}  ${formatMatch(hotspot.matchedTokens)}`;
+        }),
+      ),
+    );
+  } else {
+    lines.push(renderer.tip("No precise symbol hotspots yet. Start with the primary files, then refine the query with a route or method name."));
+  }
+
+  appendFileSection(
+    lines,
+    renderer,
+    `${renderer.emoji ? "🥇" : ">"} Primary files`,
+    data.primaryFiles,
+    "No primary files matched the query.",
+    true,
+    data.intent,
+  );
+  appendFileSection(lines, renderer, `${renderer.emoji ? "🔗" : ">"} Related files`, data.relatedFiles, "No related files selected.", false, data.intent);
+  appendFileSection(lines, renderer, `${renderer.emoji ? "🧪" : ">"} Tests`, data.tests, "No matching tests found.", false, data.intent);
+
+  lines.push("");
+  lines.push(
+    renderer.section(
+      `${renderer.emoji ? "🧩" : ">"} Patterns`,
+      data.patterns.length ? data.patterns.map((/** @type {string} */ pattern) => renderer.bullet(pattern)) : [renderer.bullet("none inferred")],
+    ),
+  );
+  lines.push("");
+  lines.push(
+    renderer.section(
+      `${renderer.emoji ? "▶️" : ">"} Commands`,
+      data.commands.length
+        ? data.commands.map((/** @type {EngineCommand} */ command) => `${renderer.emoji ? "•" : "-"} ${command.command}\n    ${command.reason}`)
+        : [renderer.bullet("none inferred")],
+    ),
+  );
+
+  if (data.conflicts.length) {
+    lines.push("");
+    lines.push(renderer.statusLine("warn", "Working tree", data.conflicts[0], data.conflicts.slice(1)));
+  }
+  if (data.openQuestions.length) {
+    lines.push("");
+    lines.push(
+      renderer.section(
+        `${renderer.emoji ? "❓" : ">"} Check before changing`,
+        data.openQuestions.map((/** @type {string} */ question) => renderer.bullet(question)),
+      ),
+    );
+  }
+
+  lines.push("");
+  lines.push(renderer.section(`${renderer.emoji ? "🤖" : ">"} Agent handoff`, data.agentPrompt.split("\n")));
+  lines.push("");
+  lines.push(
+    renderer.tip(`Context engine v${data.contextEngineVersion} · ${data.tokenEstimate.fullJson} JSON tokens · ${data.tokenEstimate.markdown} markdown tokens`),
+  );
+  return lines.join("\n");
+}
+
+/**
+ * @param {string[]} lines
+ * @param {ReturnType<import("./render/fancy.js").createRenderer>} renderer
+ * @param {string} title
+ * @param {ScoredFile[]} files
+ * @param {string} fallback
+ * @param {boolean} [ranked]
+ * @param {Intent} [intent]
+ */
+function appendFileSection(lines, renderer, title, files, fallback, ranked = false, intent) {
+  lines.push("");
+  lines.push(
+    renderer.section(
+      title,
+      files.length
+        ? files.map((file, index) => {
+            const rank = ranked ? `${rankLabel(index, renderer.emoji)} ` : "";
+            const method = selectDisplayHttpMethod(file.httpMethods, intent);
+            const route = method ? ` · ${method.method} ${method.path}` : "";
+            const reasons = file.reasons.length ? `\n    ${renderer.emoji ? "└─" : "|-"} ${file.reasons.join(" · ")}` : "";
+            return `${rank}${file.path}  ${file.kind}/${file.domain} · score ${file.score}${route}${reasons}`;
+          })
+        : [renderer.bullet(fallback)],
+    ),
+  );
+}
+
+/**
+ * Show a route that supports the question where one exists. Controllers often
+ * expose several endpoints, and their source-order first route can be wholly
+ * unrelated to the selected context.
+ *
+ * @param {CodeMapHttpMethod[]|undefined} methods
+ * @param {Intent|undefined} intent
+ * @returns {CodeMapHttpMethod|undefined}
+ */
+function selectDisplayHttpMethod(methods, intent) {
+  if (!methods?.length) return undefined;
+  if (intent?.hints.includes("auth-flow")) {
+    return (
+      methods.find((method) => /register|signup/i.test(method.path)) ??
+      methods.find((method) => /validate.*otp|otp/i.test(method.path)) ??
+      methods.find((method) => /verify/i.test(method.path)) ??
+      methods[0]
+    );
+  }
+  return methods[0];
+}
+
+/**
+ * @param {number} index
+ * @param {boolean} emoji
+ */
+function rankLabel(index, emoji) {
+  if (!emoji) return `${index + 1}.`;
+  return ["🥇", "🥈", "🥉"][index] ?? "🏅";
+}
+
+/**
+ * @param {string[]|undefined} tokens
+ */
+function formatMatch(tokens) {
+  return tokens?.length ? `matches ${tokens.join(", ")}` : "matched symbol";
+}
+
+/**
  * @param {CodeMap[]} maps
  * @param {string[]} tokens
  * @param {Intent} intent
@@ -342,6 +498,9 @@ function scoreIntentHints(file, intent, reasons) {
       score += 10;
       reasons.push("test surface");
     }
+    if (hint === "auth-flow") {
+      score += scoreAuthSignupVerificationFlow(file, reasons);
+    }
   }
 
   const domain = normalizeText(file.domain || "");
@@ -355,6 +514,38 @@ function scoreIntentHints(file, intent, reasons) {
   }
 
   return score;
+}
+
+/**
+ * A query such as "where is email verification implemented during signup?"
+ * is asking for an account lifecycle, not a generic email operation. Prefer
+ * the auth boundary only when the same file carries both registration and OTP
+ * or verification evidence, keeping ordinary email searches unchanged.
+ *
+ * @param {CodeMapFile} file
+ * @param {string[]} reasons
+ * @returns {number}
+ */
+function scoreAuthSignupVerificationFlow(file, reasons) {
+  const boundaryTokens = new Set(tokenize(`${file.path} ${file.kind} ${file.domain}`));
+  const isAuthBoundary = [...boundaryTokens].some((token) => token === "auth" || token.startsWith("authent"));
+  if (!isAuthBoundary) {
+    return 0;
+  }
+
+  const text = normalizeText(`${file.path} ${file.kind} ${file.domain} ${file.exports?.join(" ")} ${file.symbols?.map((symbol) => symbol.name).join(" ")}`);
+  const tokens = new Set(tokenize(text));
+  const hasRegistration = ["signup", "register", "registration"].some((term) => tokens.has(term));
+  const hasVerification = ["verification", "verify", "verified", "validate", "otp"].some((term) => tokens.has(term));
+  if (hasRegistration && hasVerification) {
+    reasons.push("signup verification flow");
+    return 220;
+  }
+  if (file.kind === "test") {
+    reasons.push("auth flow test");
+    return 80;
+  }
+  return 0;
 }
 
 /**
@@ -855,6 +1046,9 @@ function inferIntent(query, tokens) {
   if (normalized.includes("tool") || normalized.includes("agent")) hints.push("tool");
   if (normalized.includes("api") || normalized.includes("route") || normalized.includes("integration") || normalized.includes("client")) hints.push("api");
   if (normalized.includes("test") || normalized.includes("verify")) hints.push("test");
+  const hasSignup = tokens.some((token) => ["signup", "register", "registration"].includes(token));
+  const hasVerification = tokens.some((token) => ["verification", "verify", "verified", "validate", "otp"].includes(token));
+  if (hasSignup && hasVerification) hints.push("auth-flow");
 
   return {
     action,
@@ -1188,6 +1382,16 @@ function tokenVariants(token) {
   }
   if (token === "branding") {
     variants.add("brand");
+  }
+  if (token === "signup") {
+    variants.add("register");
+    variants.add("registration");
+  }
+  if (token === "verification") {
+    variants.add("verify");
+    variants.add("verified");
+    variants.add("validate");
+    variants.add("otp");
   }
   return [...variants];
 }

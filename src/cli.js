@@ -42,7 +42,7 @@ import { formatInitSummary, initProject } from "./lib/init.js";
 import { formatInstallSummary, installOtito } from "./lib/install.js";
 import { getToolMatrix } from "./lib/matrix.js";
 import { startMcpServer } from "./lib/mcp.js";
-import { generateContextPack } from "./lib/context-engine.js";
+import { formatContextPackTerminal, generateContextPack } from "./lib/context-engine.js";
 import { formatImpactMermaid, formatImpactTerminal, generateImpact } from "./lib/impact.js";
 import { formatAxMarkdown, generateAxScore } from "./lib/ax.js";
 import { formatConvergenceMarkdown, generateConvergence } from "./lib/converge.js";
@@ -314,7 +314,11 @@ async function handleContext(parsed) {
     return;
   }
 
-  printText(result.markdown);
+  printText(
+    formatContextPackTerminal(result.data, (/** @type {object} */ opts) =>
+      createRenderer({ ...opts, emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }),
+    ),
+  );
 }
 
 /** @param {CliArgs} parsed */
