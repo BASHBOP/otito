@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "repoctx": {
+    "otito": {
       "command": "npm",
       "args": ["run", "mcp", "--silent"],
       "env": {}

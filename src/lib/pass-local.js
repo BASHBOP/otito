@@ -265,7 +265,7 @@ function exactCheckoutFailure(root, expectedHead, requireClean) {
 
 /**
  * Accept a receipt id/hash directly, a JSON receipt object, or a path to a JSON
- * artifact produced from `repoctx converge --json`.
+ * artifact produced from `otito converge --json`.
  * @param {string} root
  * @param {string} value
  * @returns {string | null}
@@ -453,7 +453,7 @@ function localReviewCheck(options) {
 }
 
 // Optional FE↔BE contract-drift gate, powered by tieline
-// (https://github.com/nugehs/tieline). Runs only when a tieline config is
+// (https://github.com/BASHBOP/tieline). Runs only when a tieline config is
 // discoverable AND the binary resolves; otherwise it skips silently so the gate
 // never hard-depends on tieline being installed.
 /**
@@ -469,7 +469,7 @@ function contractDriftCheck(root) {
     return {
       name: "Contract drift",
       status: STATUS.warn,
-      summary: "tieline config found but the tieline binary could not be resolved — install @nugehs/tieline to enable this gate.",
+      summary: "tieline config found but the tieline binary could not be resolved — install @bashbop/tieline to enable this gate.",
       details: [cfg],
     };
   }
@@ -505,7 +505,7 @@ function contractDriftCheck(root) {
  * @returns {Check | null}
  */
 function complianceControlsCheck(root) {
-  const cfg = findToolConfig(root, "bouncer.config.json", "REPOCTX_BOUNCER_CONFIG");
+  const cfg = findToolConfig(root, "bouncer.config.json", "OTITO_BOUNCER_CONFIG");
   if (!cfg) return null;
   const cwd = path.dirname(cfg);
   const bin = resolveToolBin("bouncer", cwd, root);
@@ -563,7 +563,7 @@ function complianceControlsCheck(root) {
  * @returns {Check | null}
  */
 function aiGovernanceCheck(root) {
-  if (process.env.REPOCTX_AIGLARE !== "1") return null;
+  if (process.env.OTITO_AIGLARE !== "1") return null;
   const bin = resolveToolBin("aiglare", root, root);
   if (!bin) return null;
   const result = runCommand(bin, [root, "--json", "--ci"], { cwd: root, timeout: 60000 });
@@ -602,7 +602,7 @@ function aiGovernanceCheck(root) {
  * @returns {string | null}
  */
 function findTielineConfig(root) {
-  return findToolConfig(root, "tieline.config.json", "REPOCTX_TIELINE_CONFIG");
+  return findToolConfig(root, "tieline.config.json", "OTITO_TIELINE_CONFIG");
 }
 
 /**
@@ -626,7 +626,7 @@ function findToolConfig(root, fileName, environmentVariable) {
 }
 
 /**
- * Resolve a configured, workspace-local, repoctx-local, IDE-bundled, or PATH
+ * Resolve a configured, workspace-local, otito-local, IDE-bundled, or PATH
  * tool binary without invoking a shell.
  * @param {string} name
  * @param {string} cwd
@@ -634,7 +634,7 @@ function findToolConfig(root, fileName, environmentVariable) {
  * @returns {string | null}
  */
 function resolveToolBin(name, cwd, root) {
-  const environmentVariable = `REPOCTX_${name.toUpperCase()}_BIN`;
+  const environmentVariable = `OTITO_${name.toUpperCase()}_BIN`;
   const configured = process.env[environmentVariable];
   if (configured && exists(configured)) return path.resolve(configured);
   const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -759,7 +759,7 @@ function typeScriptFallback(runner) {
  */
 function contextEvidence(base, request) {
   const quoted = JSON.stringify(request && request.trim() ? request : "review this change");
-  return [`repoctx impact . ${quoted} --json`, `repoctx pr . --base ${base} --out .dev-context/pr-review.md`];
+  return [`otito impact . ${quoted} --json`, `otito pr . --base ${base} --out .dev-context/pr-review.md`];
 }
 
 /** @param {string} filePath */
@@ -821,7 +821,7 @@ export function formatPassTerminal(data, rendererFactory) {
     },
   ];
   if (data.subject?.treeSha) sub.push({ text: `staged tree: ${data.subject.treeSha.slice(0, 12)}`, glyph: "🧾" });
-  lines.push(renderer.header({ text: "repoctx pass · merge readiness", glyph: "📋" }, sub));
+  lines.push(renderer.header({ text: "otito pass · merge readiness", glyph: "📋" }, sub));
   lines.push("");
 
   for (const check of data.checks) {
@@ -888,7 +888,7 @@ function nextStepFor(data, blocked, warning) {
  */
 export function formatPassMarkdown(data) {
   const lines = [
-    `# repoctx pass: ${data.repo.name}`,
+    `# otito pass: ${data.repo.name}`,
     "",
     `Verdict: **${data.verdict}**`,
     `Repository: \`${data.repo.root}\``,

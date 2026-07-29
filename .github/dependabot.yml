@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    # TypeScript is a runtime dependency because repoctx uses the compiler API.
+    # TypeScript is a runtime dependency because otito uses the compiler API.
     # Major releases require an explicit compatibility migration and must not
     # be opened or auto-merged as routine dependency maintenance.
     ignore:

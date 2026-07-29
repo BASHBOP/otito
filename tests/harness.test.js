@@ -6,7 +6,7 @@ import path from "node:path";
 import { generateHarness } from "../src/lib/harness.js";
 
 test("generateHarness returns commands, focus areas, and token estimates", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-harness-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-harness-"));
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
   fs.writeFileSync(
     path.join(root, "package.json"),
@@ -41,6 +41,6 @@ test("generateHarness returns commands, focus areas, and token estimates", () =>
   assert.ok(result.data.commands.runtime.some((command) => command.command === "npm run dev"));
   assert.ok(result.data.focusAreas.includes("backend request controllers"));
   assert.ok(result.data.tokenEstimate.fullJson > 0);
-  assert.match(result.markdown, /# repoctx Harness: events-api/);
+  assert.match(result.markdown, /# otito Harness: events-api/);
   assert.match(result.markdown, /## Token Budget/);
 });

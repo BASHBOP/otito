@@ -866,10 +866,10 @@ function checkRunIdFromDetailsUrl(detailsUrl) {
  */
 function contextEvidence(pr, request) {
   const subject = String(request ?? pr.title ?? "review this pull request").trim() || "review this pull request";
-  const evidence = [`repoctx impact . ${JSON.stringify(subject)} --json`];
-  if (pr.number) evidence.push(`repoctx pr . --number ${pr.number} --out .dev-context/pr-review.md`);
-  else if (pr.baseRefName) evidence.push(`repoctx pr . --base ${pr.baseRefName} --out .dev-context/pr-review.md`);
-  else evidence.push("repoctx pr . --out .dev-context/pr-review.md");
+  const evidence = [`otito impact . ${JSON.stringify(subject)} --json`];
+  if (pr.number) evidence.push(`otito pr . --number ${pr.number} --out .dev-context/pr-review.md`);
+  else if (pr.baseRefName) evidence.push(`otito pr . --base ${pr.baseRefName} --out .dev-context/pr-review.md`);
+  else evidence.push("otito pr . --out .dev-context/pr-review.md");
   return evidence;
 }
 
@@ -935,7 +935,7 @@ export function formatPassPrTerminal(data, rendererFactory) {
     { text: `base: ${data.pr.baseRefName || "?"} · policy: ${data.policy} · governance: ${data.governance}`, glyph: "⚙️" },
   ];
   if (data.pr.baseSha && data.pr.headSha) sub.push({ text: `commits: ${data.pr.baseSha.slice(0, 8)}..${data.pr.headSha.slice(0, 8)}`, glyph: "🧾" });
-  lines.push(renderer.header({ text: "repoctx pass-pr · GitHub merge readiness", glyph: "📋" }, sub));
+  lines.push(renderer.header({ text: "otito pass-pr · GitHub merge readiness", glyph: "📋" }, sub));
   lines.push("");
 
   for (const check of data.checks) {
@@ -979,7 +979,7 @@ function nextStep(data, blocked, warning) {
  */
 export function formatPassPrMarkdown(data) {
   const lines = [
-    `# repoctx pass-pr: #${data.pr.number ?? "?"} ${data.pr.title ?? ""}`.trim(),
+    `# otito pass-pr: #${data.pr.number ?? "?"} ${data.pr.title ?? ""}`.trim(),
     "",
     `Verdict: **${data.verdict}**`,
     `Repository: \`${data.repo.root}\``,

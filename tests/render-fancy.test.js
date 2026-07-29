@@ -15,19 +15,19 @@ test("shouldUseEmoji disables when NO_EMOJI=1 or CI=true", () => {
 
 test("header uses Unicode box drawing and includes title text", () => {
   const r = createRenderer({ emoji: true, width: 60 });
-  const out = r.header({ text: "repoctx doctor", glyph: "📋" });
+  const out = r.header({ text: "otito doctor", glyph: "📋" });
   assert.match(out, /^╭/);
   assert.match(out, /╯$/);
-  assert.match(out, /repoctx doctor/);
+  assert.match(out, /otito doctor/);
   assert.match(out, /📋/);
 });
 
 test("header in plain mode strips glyphs and uses ASCII box", () => {
   const r = createRenderer({ emoji: false, width: 60 });
-  const out = r.header({ text: "repoctx doctor", glyph: "📋" });
+  const out = r.header({ text: "otito doctor", glyph: "📋" });
   assert.match(out, /^\+/);
   assert.match(out, /\+$/);
-  assert.match(out, /repoctx doctor/);
+  assert.match(out, /otito doctor/);
   assert.ok(!out.includes("📋"), "plain mode should drop the title glyph");
 });
 

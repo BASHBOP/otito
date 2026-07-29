@@ -1,20 +1,20 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.nugehs/repoctx",
-  "title": "repoctx",
-  "description": "Local-first code context, impact analysis, and merge-readiness verdicts for AI agents.",
-  "websiteUrl": "https://nugehs.github.io/repoctx/",
+  "name": "io.github.bashbop/otito",
+  "title": "Òtítọ́",
+  "description": "Deterministic local repository context, impact analysis, and merge-readiness evidence for AI agents.",
+  "websiteUrl": "https://bashbop.github.io/otito/",
   "repository": {
-    "url": "https://github.com/nugehs/repoctx",
+    "url": "https://github.com/BASHBOP/otito",
     "source": "github",
     "id": "1242199320"
   },
-  "version": "2.6.0",
+  "version": "1.0.0",
   "packages": [
     {
       "registryType": "npm",
-      "identifier": "@nugehs/repoctx",
-      "version": "2.6.0",
+      "identifier": "@bashbop/otito",
+      "version": "1.0.0",
       "transport": {
         "type": "stdio"
       },

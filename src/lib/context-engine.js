@@ -716,7 +716,7 @@ function inferCommands(repoPaths, query) {
     );
     commands.push({
       repo: harness.repo.name,
-      command: `repoctx context ${JSON.stringify(query)} --path ${JSON.stringify(harness.repo.root)} --json`,
+      command: `otito context ${JSON.stringify(query)} --path ${JSON.stringify(harness.repo.root)} --json`,
       reason: "refresh this context packet before planning or review",
     });
   }
@@ -835,7 +835,7 @@ function inferSources(maps, commands) {
     ).map((command) => ({
       type: "harness",
       repo: command.repo,
-      command: "repoctx harness <path> --json",
+      command: "otito harness <path> --json",
     })),
   ];
 }

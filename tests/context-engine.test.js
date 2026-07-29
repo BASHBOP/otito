@@ -6,7 +6,7 @@ import path from "node:path";
 import { generateContextPack } from "../src/lib/context-engine.js";
 
 test("generateContextPack returns task-aware files, tests, patterns, and commands", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-"));
   fs.mkdirSync(path.join(root, "src", "lib"), { recursive: true });
   fs.mkdirSync(path.join(root, "tests"), { recursive: true });
   fs.writeFileSync(
@@ -17,7 +17,7 @@ test("generateContextPack returns task-aware files, tests, patterns, and command
         test: "node --test",
       },
       bin: {
-        repoctx: "./src/cli.js",
+        otito: "./src/cli.js",
       },
     }),
   );
@@ -58,7 +58,7 @@ test("generateContextPack returns task-aware files, tests, patterns, and command
 });
 
 test("generateContextPack gates imports/exports/symbols evidence behind includeEvidence", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-evidence-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-evidence-"));
   fs.mkdirSync(path.join(root, "src", "lib"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "evidence-fixture", scripts: { test: "node --test" } }));
   fs.writeFileSync(
@@ -90,7 +90,7 @@ test("generateContextPack gates imports/exports/symbols evidence behind includeE
 });
 
 test("generateContextPack falls back to entrypoints and configs when no task keywords match", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-fallback-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-fallback-"));
   fs.mkdirSync(path.join(root, "src", "components"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fallback-fixture", scripts: { build: "vite build" } }));
   fs.writeFileSync(path.join(root, "vite.config.ts"), "export default { plugins: [] };\n");
@@ -112,7 +112,7 @@ test("generateContextPack falls back to entrypoints and configs when no task key
 });
 
 test("generateContextPack fallback ranking is deterministic across runs", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-fallback-det-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-fallback-det-"));
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fallback-det-fixture" }));
   fs.writeFileSync(path.join(root, "src", "main.ts"), "export function bootstrap() { return 1; }\n");
@@ -129,7 +129,7 @@ test("generateContextPack fallback ranking is deterministic across runs", () => 
 });
 
 test("generateContextPack falls back to low-scored matches for narrow symbol queries", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-symbol-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-symbol-"));
   fs.mkdirSync(path.join(root, "src", "services"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "symbol-fixture" }));
   fs.writeFileSync(path.join(root, "src", "services", "events-service.ts"), "export function submitRsvp() { return true; }\n");
@@ -141,7 +141,7 @@ test("generateContextPack falls back to low-scored matches for narrow symbol que
 });
 
 test("generateContextPack ranks email service methods as hotspots over booking controllers", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-context-hotspots-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-hotspots-"));
   fs.mkdirSync(path.join(root, "src", "email"), { recursive: true });
   fs.mkdirSync(path.join(root, "src", "booking"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "hotspot-fixture", scripts: { test: "node --test" } }));

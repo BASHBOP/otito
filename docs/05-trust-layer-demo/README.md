@@ -1,11 +1,11 @@
 # Trust-Layer Demo
 
-## repoctx + PullPass review rhythm
+## otito + PullPass review rhythm
 
 This walkthrough shows the operating model behind the tools:
 
 ```text
-repoctx  -> context before change
+otito  -> context before change
 PullPass -> validation before merge
 Humans   -> accountability before release
 ```
@@ -22,7 +22,7 @@ The goal is not to replace review. The goal is to make review easier to trust.
 | Role | Responsibility |
 | --- | --- |
 | Contributor | Opens a focused PR with tests or a no-test rationale |
-| Agent | Uses repoctx to understand scope before suggesting changes |
+| Agent | Uses otito to understand scope before suggesting changes |
 | Maintainer | Reviews the PR context, risk areas, and test evidence |
 | PullPass | Checks merge readiness, review state, CODEOWNERS, CI, conversations, and branch protection |
 
@@ -36,8 +36,8 @@ The goal is not to replace review. The goal is to make review easier to trust.
 ### 1. Build context before touching code
 
 ```bash
-repoctx context "ship the change" --path . --json
-repoctx harness . --out .dev-context/harness.md
+otito context "ship the change" --path . --json
+otito harness . --out .dev-context/harness.md
 ```
 
 Evidence to expect:
@@ -59,7 +59,7 @@ Keep the PR easy to review:
 ### 3. Generate PR review context
 
 ```bash
-repoctx pr . --base origin/main --out .dev-context/pr-review.md
+otito pr . --base origin/main --out .dev-context/pr-review.md
 ```
 
 Evidence to expect:
@@ -101,13 +101,13 @@ PullPass can report `PASS`, `WARN`, or `FAIL`, but the maintainer still owns the
 After merge, bind the review verdict to the merge commit as tamper-evident evidence:
 
 ```bash
-repoctx review . --pr 123 --json > verdict.json
+otito review . --pr 123 --json > verdict.json
 node audit-pilot/attest.mjs --verdict verdict.json --merge <sha> --prev <base> \
      --pr 123 --author "Name" --committed <iso>
 node audit-pilot/attest.mjs --verify
 ```
 
-See [audit-pilot/README.md](https://github.com/nugehs/repoctx/blob/main/audit-pilot/README.md) for the hash-chained ledger pilot and production notes.
+See [audit-pilot/README.md](https://github.com/BASHBOP/otito/blob/main/audit-pilot/README.md) for the hash-chained ledger pilot and production notes.
 
 ---
 
@@ -115,7 +115,7 @@ See [audit-pilot/README.md](https://github.com/nugehs/repoctx/blob/main/audit-pi
 
 Use this checklist when publishing a demo, release note, or case study.
 
-- repoctx context or harness artifact exists
+- otito context or harness artifact exists
 - PR review context exists
 - CI result is visible
 - PullPass report is attached or summarized
@@ -135,9 +135,9 @@ Use this checklist when publishing a demo, release note, or case study.
 
 ```mermaid
 flowchart LR
-    A[Task request] --> B[repoctx context]
+    A[Task request] --> B[otito context]
     B --> C[Focused change]
-    C --> D[repoctx PR review context]
+    C --> D[otito PR review context]
     D --> E[PullPass gate]
     E --> F{Verdict}
     F -->|PASS| G[Human merge decision]
@@ -155,8 +155,8 @@ flowchart LR
 Use this short version in a README, video, or issue comment:
 
 ```bash
-repoctx context "describe the change" --path . --json
-repoctx pr . --base origin/main --out .dev-context/pr-review.md
+otito context "describe the change" --path . --json
+otito pr . --base origin/main --out .dev-context/pr-review.md
 pullpass pr 123
 ```
 

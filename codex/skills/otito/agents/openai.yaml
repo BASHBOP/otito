@@ -1,0 +1,4 @@
+interface:
+  display_name: "Òtítọ́"
+  short_description: "Generate repo maps, harnesses, and PR context"
+  default_prompt: "Use $otito to generate repository context before planning, editing, or reviewing this change."

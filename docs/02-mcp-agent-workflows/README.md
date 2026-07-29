@@ -1,6 +1,6 @@
 # MCP and Agent Workflows
 
-repoctx can run as a stdio MCP server so agent hosts can ask for repository context without scraping terminal output.
+otito can run as a stdio MCP server so agent hosts can ask for repository context without scraping terminal output.
 
 ---
 
@@ -9,18 +9,18 @@ repoctx can run as a stdio MCP server so agent hosts can ask for repository cont
 Install the CLI first:
 
 ```bash
-npm install -g @nugehs/repoctx
-repoctx doctor
+npm install -g @bashbop/otito
+otito doctor
 ```
 
 Or run via `npx` without installing — recommended for MCP host configs:
 
 ```bash
-npx -y @nugehs/repoctx mcp
+npx -y @bashbop/otito mcp
 ```
 
 ```bash
-repoctx mcp
+otito mcp
 ```
 
 From a local checkout:
@@ -29,13 +29,13 @@ From a local checkout:
 node src/cli.js mcp
 ```
 
-The MCP server uses stdio. The agent host starts `repoctx mcp` as a child process and speaks JSON-RPC over standard input and output.
+The MCP server uses stdio. The agent host starts `otito mcp` as a child process and speaks JSON-RPC over standard input and output.
 
 ---
 
 ## MCP Client Examples
 
-Use the installed binary when possible. If a host cannot find `repoctx`, replace `"repoctx"` with the full path from `command -v repoctx` on macOS/Linux or `where repoctx` on Windows.
+Use the installed binary when possible. If a host cannot find `otito`, replace `"otito"` with the full path from `command -v otito` on macOS/Linux or `where otito` on Windows.
 
 ### Generic stdio client
 
@@ -44,8 +44,8 @@ Many MCP clients use this shape:
 ```json
 {
   "mcpServers": {
-    "repoctx": {
-      "command": "repoctx",
+    "otito": {
+      "command": "otito",
       "args": ["mcp"],
       "env": {}
     }
@@ -60,16 +60,16 @@ For a local checkout instead of a global install:
 ```json
 {
   "mcpServers": {
-    "repoctx": {
+    "otito": {
       "command": "node",
-      "args": ["/path/to/repoctx/src/cli.js", "mcp"],
+      "args": ["/path/to/otito/src/cli.js", "mcp"],
       "env": {}
     }
   }
 }
 ```
 
-Keep `/path/to/repoctx` as a private local path. Do not commit machine-specific absolute paths to public documentation or shared repositories.
+Keep `/path/to/otito` as a private local path. Do not commit machine-specific absolute paths to public documentation or shared repositories.
 
 ### Claude Desktop
 
@@ -83,9 +83,9 @@ Claude Desktop uses `claude_desktop_config.json` with a top-level `mcpServers` o
 ```json
 {
   "mcpServers": {
-    "repoctx": {
+    "otito": {
       "type": "stdio",
-      "command": "repoctx",
+      "command": "otito",
       "args": ["mcp"],
       "env": {}
     }
@@ -93,7 +93,7 @@ Claude Desktop uses `claude_desktop_config.json` with a top-level `mcpServers` o
 }
 ```
 
-After editing the config, fully restart Claude Desktop. If the server does not appear, run `repoctx doctor` and `repoctx mcp` manually in a terminal first, then check the MCP logs for the host.
+After editing the config, fully restart Claude Desktop. If the server does not appear, run `otito doctor` and `otito mcp` manually in a terminal first, then check the MCP logs for the host.
 
 Reference: [Model Context Protocol local server guide](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
 
@@ -106,9 +106,9 @@ VS Code uses a top-level `servers` object:
 ```json
 {
   "servers": {
-    "repoctx": {
+    "otito": {
       "type": "stdio",
-      "command": "repoctx",
+      "command": "otito",
       "args": ["mcp"]
     }
   }
@@ -137,8 +137,8 @@ Cursor uses `mcp.json` with a top-level `mcpServers` object.
 ```json
 {
   "mcpServers": {
-    "repoctx": {
-      "command": "repoctx",
+    "otito": {
+      "command": "otito",
       "args": ["mcp"],
       "env": {}
     }
@@ -146,7 +146,7 @@ Cursor uses `mcp.json` with a top-level `mcpServers` object.
 }
 ```
 
-Use a project config when repoctx should only be available for one workspace. Use a global config only when you want the server available across projects.
+Use a project config when otito should only be available for one workspace. Use a global config only when you want the server available across projects.
 
 Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 
@@ -154,7 +154,7 @@ Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 
 ## MCP Tool Surface
 
-repoctx 2.3 exposes **13** canonical MCP tools. Legacy names (`pr_review`, `merge_readiness`, `find_*`, etc.) still work via `tools/call` until v3.0 — see [Migration to 2.0](../MIGRATION-2.0.md).
+Òtítọ́ exposes **13** MCP tools for deterministic repository context and merge evidence.
 
 | Tool               | Purpose                                                                               |
 | ------------------ | ------------------------------------------------------------------------------------- |
@@ -180,16 +180,16 @@ repoctx 2.3 exposes **13** canonical MCP tools. Legacy names (`pr_review`, `merg
 sequenceDiagram
     participant User
     participant Agent
-    participant repoctx
+    participant otito
     participant Repo
 
     User->>Agent: Make a change safely
-    Agent->>repoctx: context_pack(task, repo)
-    repoctx->>Repo: Inspect files and git state
-    repoctx-->>Agent: Primary files, related files, tests, patterns
+    Agent->>otito: context_pack(task, repo)
+    otito->>Repo: Inspect files and git state
+    otito-->>Agent: Primary files, related files, tests, patterns
     Agent->>Repo: Edit scoped files
-    Agent->>repoctx: review_context(base, head)
-    repoctx-->>Agent: Review prompts and risk flags
+    Agent->>otito: review_context(base, head)
+    otito-->>Agent: Review prompts and risk flags
     Agent->>User: Verified change summary
 ```
 
@@ -198,10 +198,10 @@ sequenceDiagram
 ## Host Guidance
 
 !!! success "Recommended agent behavior"
-    Ask repoctx for context before planning broad work. Use the output to choose files to read, not as a replacement for source inspection.
+    Ask otito for context before planning broad work. Use the output to choose files to read, not as a replacement for source inspection.
 
 !!! warning "Boundary"
-    repoctx does not approve or merge code. Pair it with tests, code review, branch protection, and PullPass.
+    otito does not approve or merge code. Pair it with tests, code review, branch protection, and PullPass.
 
 !!! warning "MCP safety"
     MCP hosts can start local processes. Only add MCP servers from trusted repositories, review command paths before enabling them, avoid putting secrets directly in config files, and keep local absolute paths out of public docs.

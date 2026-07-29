@@ -31,8 +31,8 @@ import { classifyPath, conceptsFromQuery, isGateRiskPath, isSecretPath } from ".
  * @property {string} description
  * @property {boolean} ok
  * @property {string} [error]
- * @property {number} repoctxBytes
- * @property {number} repoctxTokens
+ * @property {number} otitoBytes
+ * @property {number} otitoTokens
  * @property {number} naiveBytes
  * @property {number} naiveTokens
  * @property {number} savedTokens
@@ -222,7 +222,7 @@ export function runEval(repoPath, options = {}) {
  * @returns {TaskResult}
  */
 function runRepoOverview(root) {
-  const repoctx = safeRun(() => {
+  const otito = safeRun(() => {
     const result = inspectRepo(root);
     return JSON.stringify(result);
   });
@@ -233,7 +233,7 @@ function runRepoOverview(root) {
     if (isFile(p)) naiveBytes += statSize(p);
   }
 
-  return makeTaskResult("repo_overview", "Identify what this repo is", repoctx, naiveBytes);
+  return makeTaskResult("repo_overview", "Identify what this repo is", otito, naiveBytes);
 }
 
 /**
@@ -244,7 +244,7 @@ function runRepoOverview(root) {
 function runCodeMap(root, opts) {
   /** @type {number|undefined} */
   let mapFileCount;
-  const repoctx = safeRun(() => {
+  const otito = safeRun(() => {
     const map = generateCodeMap(root);
     mapFileCount = (map.files ?? []).length;
     return JSON.stringify(map);
@@ -253,7 +253,7 @@ function runCodeMap(root, opts) {
   const sources = listSourceFiles(root).slice(0, opts.naiveFileCap);
   const naiveBytes = sources.reduce((sum, p) => sum + statSize(p), 0);
 
-  return makeTaskResult("code_map", `Map the source (naive caps at ${opts.naiveFileCap} files)`, repoctx, naiveBytes, {
+  return makeTaskResult("code_map", `Map the source (naive caps at ${opts.naiveFileCap} files)`, otito, naiveBytes, {
     mapFileCount,
     naiveFileCount: sources.length,
   });
@@ -264,7 +264,7 @@ function runCodeMap(root, opts) {
  * @returns {TaskResult}
  */
 function runHarness(root) {
-  const repoctx = safeRun(() => {
+  const otito = safeRun(() => {
     const result = generateHarness(root);
     return result.markdown ?? JSON.stringify(result.data);
   });
@@ -283,7 +283,7 @@ function runHarness(root) {
     }
   }
 
-  return makeTaskResult("harness", "Identify setup/validation/runtime commands", repoctx, naiveBytes);
+  return makeTaskResult("harness", "Identify setup/validation/runtime commands", otito, naiveBytes);
 }
 
 /**
@@ -292,7 +292,7 @@ function runHarness(root) {
  * @returns {TaskResult}
  */
 function runContextPack(root, opts) {
-  const repoctx = safeRun(() => {
+  const otito = safeRun(() => {
     const result = generateContextPack(opts.query, { path: root });
     return result.markdown ?? JSON.stringify(result.data ?? result);
   });
@@ -300,7 +300,7 @@ function runContextPack(root, opts) {
   const sources = listSourceFiles(root).slice(0, opts.naiveFileCap);
   const naiveBytes = sources.reduce((sum, p) => sum + statSize(p), 0);
 
-  return makeTaskResult("context_pack", `Task-aware context for: "${opts.query}"`, repoctx, naiveBytes);
+  return makeTaskResult("context_pack", `Task-aware context for: "${opts.query}"`, otito, naiveBytes);
 }
 
 /**
@@ -319,23 +319,23 @@ function safeRun(fn) {
 /**
  * @param {string} name
  * @param {string} description
- * @param {ProbeResult} repoctx
+ * @param {ProbeResult} otito
  * @param {number} naiveBytes
  * @param {{ mapFileCount?: number, naiveFileCount?: number }} [extra]
  * @returns {TaskResult}
  */
-function makeTaskResult(name, description, repoctx, naiveBytes, extra = {}) {
-  const repoctxTokens = Math.ceil(repoctx.bytes / CHARS_PER_TOKEN);
+function makeTaskResult(name, description, otito, naiveBytes, extra = {}) {
+  const otitoTokens = Math.ceil(otito.bytes / CHARS_PER_TOKEN);
   const naiveTokens = Math.ceil(naiveBytes / CHARS_PER_TOKEN);
-  const savedTokens = naiveTokens - repoctxTokens;
-  const savedPct = naiveBytes > 0 ? Math.round(((naiveBytes - repoctx.bytes) / naiveBytes) * 100) : 0;
+  const savedTokens = naiveTokens - otitoTokens;
+  const savedPct = naiveBytes > 0 ? Math.round(((naiveBytes - otito.bytes) / naiveBytes) * 100) : 0;
   return {
     name,
     description,
-    ok: repoctx.ok,
-    error: repoctx.error,
-    repoctxBytes: repoctx.bytes,
-    repoctxTokens,
+    ok: otito.ok,
+    error: otito.error,
+    otitoBytes: otito.bytes,
+    otitoTokens,
     naiveBytes,
     naiveTokens,
     savedTokens,
@@ -348,17 +348,17 @@ function makeTaskResult(name, description, repoctx, naiveBytes, extra = {}) {
  * @param {TaskResult[]} tasks
  */
 function aggregate(tasks) {
-  const repoctxBytes = tasks.reduce((s, t) => s + t.repoctxBytes, 0);
+  const otitoBytes = tasks.reduce((s, t) => s + t.otitoBytes, 0);
   const naiveBytes = tasks.reduce((s, t) => s + t.naiveBytes, 0);
-  const repoctxTokens = Math.ceil(repoctxBytes / CHARS_PER_TOKEN);
+  const otitoTokens = Math.ceil(otitoBytes / CHARS_PER_TOKEN);
   const naiveTokens = Math.ceil(naiveBytes / CHARS_PER_TOKEN);
   return {
-    repoctxBytes,
+    otitoBytes,
     naiveBytes,
-    repoctxTokens,
+    otitoTokens,
     naiveTokens,
-    savedTokens: naiveTokens - repoctxTokens,
-    savedPct: naiveBytes > 0 ? Math.round(((naiveBytes - repoctxBytes) / naiveBytes) * 100) : 0,
+    savedTokens: naiveTokens - otitoTokens,
+    savedPct: naiveBytes > 0 ? Math.round(((naiveBytes - otitoBytes) / naiveBytes) * 100) : 0,
   };
 }
 
@@ -484,7 +484,7 @@ function statSize(p) {
  */
 export function formatEvalMarkdown(data) {
   const lines = [
-    `# repoctx Eval: ${data.repo.name}`,
+    `# otito Eval: ${data.repo.name}`,
     "",
     `Generated: ${data.generatedAt}`,
     `Eval version: ${data.evalVersion}`,
@@ -494,21 +494,21 @@ export function formatEvalMarkdown(data) {
     "",
     "## Per-task",
     "",
-    "| Task | repoctx tokens | naive tokens | saved | saved% | coverage | ok |",
+    "| Task | otito tokens | naive tokens | saved | saved% | coverage | ok |",
     "|---|---:|---:|---:|---:|:---:|:---:|",
     ...data.tasks.map(
-      (t) => `| ${t.name} | ${t.repoctxTokens} | ${t.naiveTokens} | ${t.savedTokens} | ${t.savedPct}% | ${formatCoverage(t)} | ${t.ok ? "yes" : "no"} |`,
+      (t) => `| ${t.name} | ${t.otitoTokens} | ${t.naiveTokens} | ${t.savedTokens} | ${t.savedPct}% | ${formatCoverage(t)} | ${t.ok ? "yes" : "no"} |`,
     ),
     "",
     "## Totals",
     "",
-    `- repoctx: **${data.totals.repoctxTokens} tokens** (${data.totals.repoctxBytes} bytes)`,
+    `- otito: **${data.totals.otitoTokens} tokens** (${data.totals.otitoBytes} bytes)`,
     `- naive:   **${data.totals.naiveTokens} tokens** (${data.totals.naiveBytes} bytes)`,
     `- saved:   **${data.totals.savedTokens} tokens (${data.totals.savedPct}%)**`,
     "",
     "_Naive is a deterministic JS-side approximation of what a grep+ls+read agent would absorb, not a live subagent transcript. Same approximation runs on every run, so deltas across builds are the trustworthy signal._",
     "",
-    "_Coverage on `code_map` is `files_mapped / files_naive_would_read`. A high savings% with low coverage means repoctx is smaller because it understands less, not because it summarised better — fix the language adapter before celebrating._",
+    "_Coverage on `code_map` is `files_mapped / files_naive_would_read`. A high savings% with low coverage means otito is smaller because it understands less, not because it summarised better — fix the language adapter before celebrating._",
     "",
   ];
   return lines.join("\n");
@@ -544,7 +544,7 @@ const defaultCorpusPath = path.join(repoRoot, "evals", "corpus.json");
  *
  * @param {object} [options]
  * @param {string} [options.corpusPath] absolute path to a corpus.json (defaults to evals/corpus.json)
- * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the repoctx repo root)
+ * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the otito repo root)
  * @returns {{ data: object, markdown: string }}
  */
 export function runRetrievalEval(options = {}) {
@@ -714,7 +714,7 @@ function fixtureForPrimary(file, fixtureNames, paths) {
 
 // precision@k = relevant-in-top-k / returned-in-top-k. The denominator is the
 // number of files the pack actually returned (capped at k), NOT k itself:
-// repoctx packs are intentionally tiny (often 1-3 primary files), so dividing a
+// otito packs are intentionally tiny (often 1-3 primary files), so dividing a
 // single correct hit by a fixed k=5 would score a *perfect* one-file pack at
 // 0.2 and punish precision for being concise. Dividing by what was returned
 // answers the right question — "of the files it surfaced, how many mattered?".
@@ -899,7 +899,7 @@ function resolveFixture(root, fixtureRoots, name) {
  * @returns {{ dir: string }}
  */
 function copyFixtureToTemp(source) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-eval-fix-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-fix-"));
   for (const ent of readDirEnts(source)) {
     if (ent.name === ".dev-context") continue;
     fs.cpSync(path.join(source, ent.name), path.join(dir, ent.name), { recursive: true });
@@ -921,7 +921,7 @@ function round3(value) {
  */
 export function formatRetrievalEvalMarkdown(data) {
   const lines = [
-    "# repoctx Accuracy Eval",
+    "# otito Accuracy Eval",
     "",
     `Generated: ${data.generatedAt}`,
     `Corpus: ${data.corpusPath}`,

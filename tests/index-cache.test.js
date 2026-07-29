@@ -16,7 +16,7 @@ function makeRepo(name) {
 const cachePathFor = (root) => path.join(root, ".dev-context", "index.json");
 
 test("getCachedCodeMap writes and reuses a repo index", () => {
-  const root = makeRepo("dev-context-index-");
+  const root = makeRepo("otito-index-");
 
   const first = getCachedCodeMap(root);
   const second = getCachedCodeMap(root);
@@ -28,7 +28,7 @@ test("getCachedCodeMap writes and reuses a repo index", () => {
 });
 
 test("regenerates when a file changes (fingerprint staleness)", () => {
-  const root = makeRepo("dev-context-index-stale-");
+  const root = makeRepo("otito-index-stale-");
 
   const first = getCachedCodeMap(root);
   assert.equal(first.cache.hit, false);
@@ -48,7 +48,7 @@ test("regenerates when a file changes (fingerprint staleness)", () => {
 });
 
 test("regenerates (without throwing) when the cache file is corrupted JSON", () => {
-  const root = makeRepo("dev-context-index-corrupt-");
+  const root = makeRepo("otito-index-corrupt-");
   const cachePath = cachePathFor(root);
   fs.mkdirSync(path.dirname(cachePath), { recursive: true });
   fs.writeFileSync(cachePath, "{ this is not: valid json ]]]");
@@ -68,7 +68,7 @@ test("regenerates (without throwing) when the cache file is corrupted JSON", () 
 });
 
 test("a stale cacheVersion on disk is ignored on the first read of a repo", () => {
-  const root = makeRepo("dev-context-index-version-fresh-");
+  const root = makeRepo("otito-index-version-fresh-");
   const cachePath = cachePathFor(root);
 
   // Write a structurally valid cache with an old version BEFORE any call for
@@ -86,7 +86,7 @@ test("a stale cacheVersion on disk is ignored on the first read of a repo", () =
 });
 
 test("writes the cache atomically and leaves no temp files behind", () => {
-  const root = makeRepo("dev-context-index-atomic-");
+  const root = makeRepo("otito-index-atomic-");
   const result = getCachedCodeMap(root);
   assert.equal(result.cache.hit, false);
 
@@ -101,7 +101,7 @@ test("writes the cache atomically and leaves no temp files behind", () => {
 });
 
 test("write failures do not throw and the call still returns a map", () => {
-  const root = makeRepo("dev-context-index-writefail-");
+  const root = makeRepo("otito-index-writefail-");
   // Make .dev-context a file so mkdir/write of the index underneath fails.
   fs.writeFileSync(path.join(root, ".dev-context"), "not a directory");
 
@@ -114,7 +114,7 @@ test("write failures do not throw and the call still returns a map", () => {
 });
 
 test("repeated calls are served from the in-process memo without re-reading disk", () => {
-  const root = makeRepo("dev-context-index-memo-");
+  const root = makeRepo("otito-index-memo-");
 
   const first = getCachedCodeMap(root);
   assert.equal(first.cache.hit, false);
@@ -133,7 +133,7 @@ test("repeated calls are served from the in-process memo without re-reading disk
 });
 
 test("memo returns equivalent repo data across calls", () => {
-  const root = makeRepo("dev-context-index-memo-eq-");
+  const root = makeRepo("otito-index-memo-eq-");
   const first = getCachedCodeMap(root);
   const second = getCachedCodeMap(root);
   assert.equal(second.cache.source, "memo");

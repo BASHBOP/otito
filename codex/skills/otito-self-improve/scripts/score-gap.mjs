@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Score a live repoctx context pack against expected primary paths / hotspot symbols.
+ * Score a live otito context pack against expected primary paths / hotspot symbols.
  * Exit 0 when all expectations are met; exit 1 on gap.
  *
  * Usage:

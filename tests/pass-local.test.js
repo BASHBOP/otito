@@ -93,7 +93,7 @@ test("staged convergence receipt is bound to the captured Git index tree", () =>
     {
       "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
       "package-lock.json": JSON.stringify({ name: "fixture", version: "1.0.0", lockfileVersion: 3 }),
-      ".gitattributes": "*.ts filter=repoctx-test\n",
+      ".gitattributes": "*.ts filter=otito-test\n",
       "src/index.ts": "export const greet = () => 'hi';\n",
       "src/later.ts": "export const later = false;\n",
     },
@@ -107,9 +107,9 @@ test("staged convergence receipt is bound to the captured Git index tree", () =>
     `const fs = require("node:fs"); fs.writeFileSync(${JSON.stringify(filterSentinel)}, "ran"); process.stdin.pipe(process.stdout);\n`,
   );
   fs.writeFileSync(cleanFilterScript, "process.stdin.pipe(process.stdout);\n");
-  git(root, "config", "filter.repoctx-test.clean", `${process.execPath} ${cleanFilterScript}`);
-  git(root, "config", "filter.repoctx-test.smudge", `${process.execPath} ${filterScript}`);
-  git(root, "config", "filter.repoctx-test.required", "true");
+  git(root, "config", "filter.otito-test.clean", `${process.execPath} ${cleanFilterScript}`);
+  git(root, "config", "filter.otito-test.smudge", `${process.execPath} ${filterScript}`);
+  git(root, "config", "filter.otito-test.required", "true");
   fs.writeFileSync(path.join(root, "src/index.ts"), "export const greet = () => 'hello';\n");
   git(root, "add", "src/index.ts");
   fs.writeFileSync(path.join(root, "src/later.ts"), "export const later = true;\n");
@@ -285,16 +285,16 @@ test("evaluateLocal includes configured tieline contract evidence", () => {
   const bin = path.join(root, "fake-tieline");
   fs.writeFileSync(bin, `#!/usr/bin/env node\nconsole.log(JSON.stringify({ totals: { drift: 0 }, drift: [] }));\n`);
   fs.chmodSync(bin, 0o755);
-  const previous = process.env.REPOCTX_TIELINE_BIN;
-  process.env.REPOCTX_TIELINE_BIN = bin;
+  const previous = process.env.OTITO_TIELINE_BIN;
+  process.env.OTITO_TIELINE_BIN = bin;
   try {
     const result = evaluateLocal(root, { base: "HEAD" });
     const contracts = result.checks.find((check) => check.name === "Contract drift");
     assert.equal(contracts.status, "PASS");
     assert.match(contracts.summary, /No frontend↔backend contract drift/);
   } finally {
-    if (previous === undefined) delete process.env.REPOCTX_TIELINE_BIN;
-    else process.env.REPOCTX_TIELINE_BIN = previous;
+    if (previous === undefined) delete process.env.OTITO_TIELINE_BIN;
+    else process.env.OTITO_TIELINE_BIN = previous;
   }
 });
 
@@ -316,16 +316,16 @@ test("evaluateLocal includes configured bouncer compliance evidence", () => {
     `#!/usr/bin/env node\nconsole.log(JSON.stringify({ totals: { pass: 2, fail: 1, unknown: 0 }, findings: [{ ruleId: 'osa.report', status: 'fail', fix: 'Add report controls.' }] }));\n`,
   );
   fs.chmodSync(bin, 0o755);
-  const previous = process.env.REPOCTX_BOUNCER_BIN;
-  process.env.REPOCTX_BOUNCER_BIN = bin;
+  const previous = process.env.OTITO_BOUNCER_BIN;
+  process.env.OTITO_BOUNCER_BIN = bin;
   try {
     const result = evaluateLocal(root, { base: "HEAD" });
     const compliance = result.checks.find((check) => check.name === "Compliance controls");
     assert.equal(compliance.status, "FAIL");
     assert.match(compliance.summary, /1 required control is missing/);
   } finally {
-    if (previous === undefined) delete process.env.REPOCTX_BOUNCER_BIN;
-    else process.env.REPOCTX_BOUNCER_BIN = previous;
+    if (previous === undefined) delete process.env.OTITO_BOUNCER_BIN;
+    else process.env.OTITO_BOUNCER_BIN = previous;
   }
 });
 
@@ -346,20 +346,20 @@ test("evaluateLocal includes opted-in aiglare governance evidence", () => {
     `#!/usr/bin/env node\nconsole.log(JSON.stringify({ surfaceCount: 1, surfaces: [{ file: 'src/ai.ts', sink: 'side-effectful', severity: 'red' }], gate: { passed: false, blocking: 1 } }));\n`,
   );
   fs.chmodSync(bin, 0o755);
-  const previousBin = process.env.REPOCTX_AIGLARE_BIN;
-  const previousOptIn = process.env.REPOCTX_AIGLARE;
-  process.env.REPOCTX_AIGLARE_BIN = bin;
-  process.env.REPOCTX_AIGLARE = "1";
+  const previousBin = process.env.OTITO_AIGLARE_BIN;
+  const previousOptIn = process.env.OTITO_AIGLARE;
+  process.env.OTITO_AIGLARE_BIN = bin;
+  process.env.OTITO_AIGLARE = "1";
   try {
     const result = evaluateLocal(root, { base: "HEAD" });
     const governance = result.checks.find((check) => check.name === "AI governance");
     assert.equal(governance.status, "FAIL");
     assert.match(governance.summary, /1 irreversible AI surface lacks/);
   } finally {
-    if (previousBin === undefined) delete process.env.REPOCTX_AIGLARE_BIN;
-    else process.env.REPOCTX_AIGLARE_BIN = previousBin;
-    if (previousOptIn === undefined) delete process.env.REPOCTX_AIGLARE;
-    else process.env.REPOCTX_AIGLARE = previousOptIn;
+    if (previousBin === undefined) delete process.env.OTITO_AIGLARE_BIN;
+    else process.env.OTITO_AIGLARE_BIN = previousBin;
+    if (previousOptIn === undefined) delete process.env.OTITO_AIGLARE;
+    else process.env.OTITO_AIGLARE = previousOptIn;
   }
 });
 
@@ -525,7 +525,7 @@ test("evaluateLocal markdown rendering includes the verdict and check names", ()
   );
   const data = evaluateLocal(root, { base: "HEAD" });
   const markdown = formatPassMarkdown(data);
-  assert.match(markdown, /# repoctx pass/);
+  assert.match(markdown, /# otito pass/);
   assert.match(markdown, /Verdict:/);
   assert.match(markdown, /Secret safety/);
 });

@@ -1,6 +1,6 @@
-site_name: repoctx
-site_url: https://nugehs.github.io/repoctx/
-site_description: Local-first repository context for agents and reviewers.
+site_name: Òtítọ́
+site_url: https://bashbop.github.io/otito/
+site_description: Deterministic local repository context and merge evidence for agents and reviewers.
 site_author: Oluwasegun Olumbe
 use_directory_urls: true
 
@@ -84,12 +84,8 @@ nav:
   - MCP and Agents:
       - Overview: 02-mcp-agent-workflows/README.md
       - Publishing to npm + MCP Registry: 02-mcp-agent-workflows/publishing.md
-  - Contributor Governance:
-      - Overview: 03-contributor-governance/README.md
   - Release Readiness:
       - Overview: 04-release-readiness/README.md
-      - Migration to 2.0: MIGRATION-2.0.md
-      - Migration to 3.0: MIGRATION-3.0.md
   - Trust-Layer Demo:
       - Overview: 05-trust-layer-demo/README.md
   - Builder-Founder Loop:
@@ -104,6 +100,7 @@ nav:
       - Convergence Score Spec: 09-convergence-thesis/convergence-score-spec.md
   - Usage Dashboard:
       - Overview: 10-usage-dashboard/README.md
+  - Evaluation Guide: EVALS.md
   - Glossary: GLOSSARY.md
 
 copyright: "(c) 2026 Oluwasegun Olumbe. MIT licensed."

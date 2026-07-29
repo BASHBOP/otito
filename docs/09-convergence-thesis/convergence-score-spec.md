@@ -1,11 +1,11 @@
 # Spec: Convergence Score
 
-**Status:** Implemented — task mode (`repoctx converge`) + `convergence_score` MCP tool, including exact change-subject receipt v2.
+**Status:** Implemented — task mode (`otito converge`) + `convergence_score` MCP tool, including exact change-subject receipt v2.
 **Depends on:** `src/lib/impact.js` (`generateImpact`, `validateAgainstDiff`),
 `src/lib/risk-paths.js` (`classifyPath`, `isSecretPath`, `RISK_FLAGS`),
 `src/lib/tools.js` (`runCommand`), `node:crypto`.
 **Implementation:** `src/lib/converge.js` (`generateConvergence`, `makeReceipt`),
-CLI `repoctx converge`, MCP `convergence_score`, tests in `tests/converge.test.js`.
+CLI `otito converge`, MCP `convergence_score`, tests in `tests/converge.test.js`.
 
 ## 1. Summary
 
@@ -15,7 +15,7 @@ actual git diff (execution)** — the buildable core of the convergence thesis
 *measurement*, computed out-of-band where the agent cannot fake it.
 
 ```bash
-repoctx converge "add Stripe refunds" --base origin/main
+otito converge "add Stripe refunds" --base origin/main
 ```
 
 ## 2. Why this is low-risk to build
@@ -167,9 +167,9 @@ full 64-character `inputsHash`. The receipt is hashed but not yet cryptographica
 ## 6. Surface
 
 ```bash
-repoctx converge "<task>" --base origin/main           # task mode, cwd
-repoctx converge <repo> "<task>" --base HEAD~1 --json   # explicit repo, machine-readable
-repoctx converge "<task>" --base HEAD --staged --json   # exact Git-index subject
+otito converge "<task>" --base origin/main           # task mode, cwd
+otito converge <repo> "<task>" --base HEAD~1 --json   # explicit repo, machine-readable
+otito converge "<task>" --base HEAD --staged --json   # exact Git-index subject
 ```
 
 MCP: `convergence_score` (requires `query` + `base`, accepts `staged`), mirroring
@@ -192,9 +192,9 @@ Convergence can now be made load-bearing by passing a task plus either a minimum
 score, a receipt, or both to the local/PR gate:
 
 ```bash
-repoctx gate . --base origin/main --request "update the greeting" --min-convergence 80
-repoctx converge . "update the greeting" --base origin/main --staged --json > .dev-context/convergence.json
-repoctx gate . --base origin/main --staged --request "update the greeting" --receipt .dev-context/convergence.json
+otito gate . --base origin/main --request "update the greeting" --min-convergence 80
+otito converge . "update the greeting" --base origin/main --staged --json > .dev-context/convergence.json
+otito gate . --base origin/main --staged --request "update the greeting" --receipt .dev-context/convergence.json
 ```
 
 The gate recomputes the score from the selected diff and fails when the score is

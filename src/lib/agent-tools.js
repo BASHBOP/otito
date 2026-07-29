@@ -5,19 +5,19 @@ import { tools } from "./mcp.js";
 // tools/call form instead of a bare command.
 /** @type {Record<string, string>} */
 const cliCommandByTool = {
-  repo_inspect: "repoctx repo <path> --json",
-  repo_map: "repoctx map <path> --json",
-  repo_index: "repoctx index <repo...> --json",
-  repo_search: "repoctx search <query> --json",
-  context_pack: "repoctx context <query> --path <repo> --json",
-  change_impact: "repoctx impact <query> --path <repo> --json",
-  agent_experience: "repoctx ax <query> --path <repo> --json",
-  convergence_score: "repoctx converge <query> --base <ref> --path <repo> --json",
-  review_gate: "repoctx gate [--pr <selector>] --path <repo> --json",
-  review_verdict: "repoctx review --path <repo> --json",
-  workspace_report: "repoctx workspace <repo...> --json",
-  review_context: "repoctx pr <path> --json",
-  repo_harness: "repoctx harness <path> --json",
+  repo_inspect: "otito repo <path> --json",
+  repo_map: "otito map <path> --json",
+  repo_index: "otito index <repo...> --json",
+  repo_search: "otito search <query> --json",
+  context_pack: "otito context <query> --path <repo> --json",
+  change_impact: "otito impact <query> --path <repo> --json",
+  agent_experience: "otito ax <query> --path <repo> --json",
+  convergence_score: "otito converge <query> --base <ref> --path <repo> --json",
+  review_gate: "otito gate [--pr <selector>] --path <repo> --json",
+  review_verdict: "otito review --path <repo> --json",
+  workspace_report: "otito workspace <repo...> --json",
+  review_context: "otito pr <path> --json",
+  repo_harness: "otito harness <path> --json",
 };
 
 // The MCP tools array in mcp.js is the single source of truth for the tool
@@ -26,7 +26,7 @@ const cliCommandByTool = {
 export function getAgentTools() {
   return {
     ok: true,
-    protocol: "repoctx-agent-tools/v0",
+    protocol: "otito-agent-tools/v1",
     tools: tools.map(deriveAgentTool),
   };
 }
@@ -37,7 +37,7 @@ export function getAgentTools() {
 function deriveAgentTool(tool) {
   return {
     name: tool.name,
-    command: cliCommandByTool[tool.name] ?? `repoctx mcp (tools/call ${tool.name})`,
+    command: cliCommandByTool[tool.name] ?? `otito mcp (tools/call ${tool.name})`,
     mcpOnly: !(tool.name in cliCommandByTool),
     description: tool.description,
     input: deriveInput(tool.inputSchema),

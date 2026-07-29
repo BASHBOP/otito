@@ -191,8 +191,7 @@ const statusNames = {
 };
 
 const preferredScripts = ["lint", "typecheck", "type-check", "check:type", "tsc", "tsc:check", "test", "test:unit", "test:e2e", "build"];
-const prCommentMarker = "<!-- repoctx-pr-review -->";
-const legacyPrCommentMarker = "<!-- dev-context-pr-review -->";
+const prCommentMarker = "<!-- otito-pr-review -->";
 
 /**
  * @param {string} [repoPath]
@@ -414,7 +413,7 @@ export function formatPrReviewMarkdown(data) {
 export function formatPrCommentMarkdown(data) {
   const lines = [
     prCommentMarker,
-    "## repoctx PR Review",
+    "## otito PR Review",
     "",
     `**Risk:** ${data.risk.level} (${data.risk.score})`,
     `**Changed files:** ${data.comparison.changedFileCount}`,
@@ -478,7 +477,7 @@ export function formatPrCommentMarkdown(data) {
     lines.push(`- ${step}`);
   }
 
-  lines.push("", "_Full Markdown report is uploaded as the `repoctx-pr-review` workflow artifact when run in GitHub Actions._", "");
+  lines.push("", "_Full Markdown report is uploaded as the `otito-pr-review` workflow artifact when run in GitHub Actions._", "");
   return lines.join("\n");
 }
 
@@ -647,7 +646,7 @@ function findExistingPrComment(root, nameWithOwner, number) {
   try {
     return JSON.parse(comments.stdout).find((/** @type {any} */ comment) => {
       const body = String(comment.body ?? "");
-      return body.includes(prCommentMarker) || body.includes(legacyPrCommentMarker);
+      return body.includes(prCommentMarker);
     });
   } catch {
     return undefined;
@@ -659,7 +658,7 @@ function findExistingPrComment(root, nameWithOwner, number) {
  * @returns {string}
  */
 function writeCommentPayload(body) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "dev-context-comment-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "otito-comment-"));
   const payloadPath = path.join(directory, "body.json");
   fs.writeFileSync(payloadPath, JSON.stringify({ body }));
   return payloadPath;

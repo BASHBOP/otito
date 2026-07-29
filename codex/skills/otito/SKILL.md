@@ -1,32 +1,30 @@
 ---
-name: dev-context
-description: Use when working with the repoctx repository, CLI, or MCP server; generating repository harnesses, repo maps, workspace reports, PR review context, route/client/domain lookup, token estimates, or installing/restoring repoctx from github.com/nugehs/repoctx.
+name: otito
+description: Use when working with the otito repository, CLI, or MCP server; generating repository harnesses, repo maps, workspace reports, PR review context, route/client/domain lookup, token estimates, or installing/restoring otito from github.com/BASHBOP/otito.
 ---
 
-# repoctx
+# otito
 
-Use `repoctx` to generate concrete repository context for agents and reviewers before editing, reviewing, or planning work. Prefer its structured output over guessing repo scripts, routes, file kinds, or cross-repo contracts.
-
-The legacy `dev-context` command remains available as an alias.
+Use `otito` to generate concrete repository context for agents and reviewers before editing, reviewing, or planning work. Prefer its structured output over guessing repo scripts, routes, file kinds, or cross-repo contracts.
 
 ## Source
 
 The canonical skill source is backed by this repository at:
 
 ```bash
-codex/skills/dev-context
+codex/skills/otito
 ```
 
 If the repo is missing, restore it from:
 
 ```bash
-git clone https://github.com/nugehs/repoctx /path/to/repoctx
+git clone https://github.com/BASHBOP/otito /path/to/otito
 ```
 
-If the installed skill is missing or stale, run this from a `repoctx` checkout:
+If the installed skill is missing or stale, run this from a `otito` checkout:
 
 ```bash
-codex/skills/dev-context/scripts/sync-installed.sh
+codex/skills/otito/scripts/sync-installed.sh
 ```
 
 ## Quick Workflow
@@ -36,7 +34,7 @@ codex/skills/dev-context/scripts/sync-installed.sh
 3. Use Markdown artifacts under `.dev-context/` when a human or long-running agent needs a durable report.
 4. For cross-repo product work, use `workspace` instead of inspecting each repo in isolation.
 5. For PR review, use `pr` with an explicit base when possible.
-6. If `repoctx` is unavailable as a command, run `node /path/to/repoctx/src/cli.js ...`.
+6. If `otito` is unavailable as a command, run `node /path/to/otito/src/cli.js ...`.
 
 ## CLI Commands
 
@@ -62,7 +60,7 @@ node src/cli.js init /path/to/repo
 node src/cli.js mcp
 ```
 
-If installed as a package, the same commands can use `repoctx` instead of `node src/cli.js`.
+If installed as a package, the same commands can use `otito` instead of `node src/cli.js`.
 
 Optional external tools:
 
@@ -82,10 +80,10 @@ node src/cli.js structure /path/to/repo --pattern "app/**/*.tsx" --out .dev-cont
 Run:
 
 ```bash
-node /path/to/repoctx/src/cli.js mcp
+node /path/to/otito/src/cli.js mcp
 ```
 
-MCP tools exposed by the server (13 canonical; legacy names forward until v3.0):
+MCP tools exposed by the server:
 
 - `repo_inspect`: repository shape, scripts, package managers, entrypoints, git metadata
 - `repo_map`: compact JSON code map with optional `domain`, `kind`, and `route` filters
@@ -104,12 +102,12 @@ MCP tools exposed by the server (13 canonical; legacy names forward until v3.0):
 ## Interpretation Rules
 
 - Treat generated context as a map, not proof. Confirm by reading the files before editing.
-- Do not hardcode route, API-client, schema, or contract paths when `repoctx` can discover them.
+- Do not hardcode route, API-client, schema, or contract paths when `otito` can discover them.
 - For dirty worktrees, report the state before writing generated artifacts.
 - Use `.dev-context/` for generated reports in target repos; avoid mixing generated context into source directories.
 - For PR review, lead with bugs, risky behavior changes, missing tests, and unclear contracts.
 
-## Maintaining repoctx
+## Maintaining otito
 
 When editing this repo, run:
 

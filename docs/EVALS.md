@@ -1,6 +1,6 @@
-# repoctx Accuracy Evals
+# otito Accuracy Evals
 
-repoctx ships two evals. They answer different questions and must not be
+otito ships two evals. They answer different questions and must not be
 confused:
 
 | Eval | Entry point | Question it answers |
@@ -24,7 +24,7 @@ scores whether the labeled files land in `primaryFiles`:
 
 - **precision@k** — of the files the pack returned (capped at `k`), how many
   were relevant. The denominator is _what was returned_, not `k`, because
-  repoctx packs are intentionally tiny (often 1–3 files); dividing a single
+  otito packs are intentionally tiny (often 1–3 files); dividing a single
   correct hit by a fixed `k=5` would score a perfect one-file pack at 0.2 and
   punish concision.
 - **recall@k** — of the relevant files, how many appeared in the top `k`.

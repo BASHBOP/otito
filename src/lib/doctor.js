@@ -90,7 +90,7 @@ export function formatDoctorReport(report, options = {}) {
   const renderer = createRenderer(options);
   /** @type {string[]} */
   const lines = [];
-  lines.push(renderer.header({ text: "repoctx doctor", glyph: "📋" }, [{ text: "local runtime + optional tools", glyph: "🩺" }]));
+  lines.push(renderer.header({ text: "otito doctor", glyph: "📋" }, [{ text: "local runtime + optional tools", glyph: "🩺" }]));
   lines.push("");
   for (const tool of report.tools) {
     const status = tool.available ? "pass" : "warn";

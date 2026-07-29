@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest a repoctx improvement.
+description: Suggest a otito improvement.
 title: "feature: "
 labels:
   - enhancement
@@ -15,7 +15,7 @@ body:
     id: proposal
     attributes:
       label: Proposal
-      description: What should repoctx do?
+      description: What should otito do?
     validations:
       required: true
   - type: textarea

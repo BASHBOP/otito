@@ -9,7 +9,7 @@ import { runEval, runRetrievalEval } from "../src/lib/eval.js";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 test("runEval returns per-task and total token estimates for a tiny repo", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-eval-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-"));
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(
     path.join(root, "package.json"),
@@ -34,17 +34,17 @@ test("runEval returns per-task and total token estimates for a tiny repo", () =>
 
   for (const task of data.tasks) {
     assert.equal(task.ok, true, `task ${task.name} should run cleanly: ${task.error}`);
-    assert.ok(task.repoctxBytes >= 0);
+    assert.ok(task.otitoBytes >= 0);
     assert.ok(task.naiveBytes >= 0);
-    assert.ok(task.repoctxTokens >= 0);
+    assert.ok(task.otitoTokens >= 0);
     assert.ok(task.naiveTokens >= 0);
   }
 
-  assert.ok(data.totals.repoctxBytes > 0);
-  assert.equal(data.totals.repoctxTokens + data.totals.savedTokens, data.totals.naiveTokens, "repoctx + saved should equal naive");
+  assert.ok(data.totals.otitoBytes > 0);
+  assert.equal(data.totals.otitoTokens + data.totals.savedTokens, data.totals.naiveTokens, "otito + saved should equal naive");
 
-  assert.match(markdown, /# repoctx Eval:/);
-  assert.match(markdown, /\| Task \| repoctx tokens \|/);
+  assert.match(markdown, /# otito Eval:/);
+  assert.match(markdown, /\| Task \| otito tokens \|/);
   assert.match(markdown, /## Totals/);
 });
 
@@ -76,7 +76,7 @@ test("runRetrievalEval scores the committed corpus and passes its thresholds", (
   assert.equal(data.passed, true, "committed corpus must pass all thresholds");
   assert.equal(data.exitCode, 0);
 
-  assert.match(markdown, /# repoctx Accuracy Eval/);
+  assert.match(markdown, /# otito Accuracy Eval/);
   assert.match(markdown, /## Scoreboard/);
   assert.match(markdown, /Overall: PASS/);
 });
@@ -135,14 +135,14 @@ test("runRetrievalEval fails (exit 1) when a corpus regresses below threshold", 
   // Synthetic corpus: a retrieval case whose expected primary can never be
   // returned, with thresholds the engine cannot meet. Proves the runner is a
   // real gate, not a rubber stamp — a randomly-wrong pack must NOT pass.
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-eval-corpus-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-corpus-"));
   const corpusPath = path.join(dir, "corpus.json");
   fs.writeFileSync(
     corpusPath,
     JSON.stringify({
       k: 5,
       thresholds: { retrieval: { precisionAtK: 0.99, recallAtK: 0.99, mrr: 0.99 }, risk: { accuracy: 0.99 } },
-      fixtureRoots: { "sample-api": "codex/skills/dev-context/evals/files/sample-api" },
+      fixtureRoots: { "sample-api": "codex/skills/otito/evals/files/sample-api" },
       retrieval: [
         {
           name: "impossible",
@@ -174,7 +174,7 @@ test("runRetrievalEval fails (exit 1) when a corpus regresses below threshold", 
 });
 
 test("runRetrievalEval rejects a malformed corpus", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "repoctx-eval-bad-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-bad-"));
   const corpusPath = path.join(dir, "corpus.json");
   fs.writeFileSync(corpusPath, JSON.stringify({ retrieval: "nope" }));
   assert.throws(() => runRetrievalEval({ corpusPath }), /retrieval\[\] and risk\[\]/);

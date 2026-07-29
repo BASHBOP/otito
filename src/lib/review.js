@@ -1,4 +1,4 @@
-// repoctx review = the composite engine that runs Phases 2-4 together:
+// otito review = the composite engine that runs Phases 2-4 together:
 // impact (blast radius) → pr-review (rich diff context) → pass (verdict).
 // Returns one structured report an agent or reviewer can consume in a
 // single call, with a derived confidence score the agent can use to
@@ -144,7 +144,7 @@ export function formatReviewTerminal(data, rendererFactory) {
     { text: `${data.repo.root}`, glyph: "📂" },
     { text: `verdict ${data.verdict} · confidence ${data.confidence}%`, glyph: "🚦" },
   ];
-  lines.push(renderer.header({ text: "repoctx review · composite verdict", glyph: "🔬" }, sub));
+  lines.push(renderer.header({ text: "otito review · composite verdict", glyph: "🔬" }, sub));
   lines.push("");
 
   lines.push(

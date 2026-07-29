@@ -110,7 +110,7 @@ function formatReportMarkdown(data) {
   const present = data.doctor.tools.filter((tool) => tool.available);
 
   return [
-    "# repoctx Report",
+    "# otito Report",
     "",
     `Generated: ${data.generatedAt}`,
     "",
@@ -161,8 +161,8 @@ export function formatReportTerminal(data, options = {}) {
   const missing = data.doctor.tools.filter((tool) => !tool.available);
   const present = data.doctor.tools.filter((tool) => tool.available);
   const lines = [
-    "repoctx Field Report",
-    "=".repeat("repoctx Field Report".length),
+    "otito Field Report",
+    "=".repeat("otito Field Report".length),
     `Generated: ${data.generatedAt}`,
     ...formatLabeledParagraph("Status", formatStatusLine(data), { width }),
   ];

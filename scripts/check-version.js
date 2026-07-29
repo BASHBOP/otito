@@ -37,7 +37,7 @@ if (serverManifest) {
   }
 }
 
-console.log(`ok: repoctx version ${packageJson.version} is SemVer`);
+console.log(`ok: otito version ${packageJson.version} is SemVer`);
 
 function readJson(filePath, { optional = false } = {}) {
   if (optional && !fs.existsSync(filePath)) {

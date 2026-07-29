@@ -8,11 +8,11 @@ sync_to() {
   local target="$1"
   mkdir -p "$target"
   rsync -a --delete "$SKILL_DIR/" "$target/"
-  echo "Synced repoctx-self-improve → $target"
+  echo "Synced otito-self-improve → $target"
 }
 
-sync_to "${HOME}/.cursor/skills/repoctx-self-improve"
+sync_to "${HOME}/.cursor/skills/otito-self-improve"
 
 if [[ -d "${CODEX_HOME:-$HOME/.codex}/skills" ]]; then
-  sync_to "${CODEX_HOME:-$HOME/.codex}/skills/repoctx-self-improve"
+  sync_to "${CODEX_HOME:-$HOME/.codex}/skills/otito-self-improve"
 fi

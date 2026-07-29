@@ -596,14 +596,14 @@ test("formatPassPrTerminal and formatPassPrMarkdown render the verdict and check
   const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
 
   const plain = formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: false, width: 80 }));
-  assert.match(plain, /repoctx pass-pr/);
+  assert.match(plain, /otito pass-pr/);
   assert.match(plain, /Context evidence/);
 
   const fancy = formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: true, width: 80 }));
   assert.match(fancy, /merge readiness/);
 
   const markdown = formatPassPrMarkdown(data);
-  assert.match(markdown, /# repoctx pass-pr/);
+  assert.match(markdown, /# otito pass-pr/);
   assert.match(markdown, /Verdict:/);
   assert.match(markdown, /## Checks/);
   assert.match(markdown, /Branch protection/);
