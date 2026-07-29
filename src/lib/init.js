@@ -229,10 +229,10 @@ function writeScaffoldFile(root, relativePath, contents, { force, operations, mo
   operations.push({ action: exists ? "updated" : "created", path: relativePath });
 }
 
-// The first context_pack / repo_map on an unprepared repo drops a
-// .otito/index.json cache into the tree, dirtying git status. Add the
-// directory to .gitignore so that never happens. Idempotent: skip when the
-// entry (or a covering pattern) is already present, create the file if absent.
+// Init intentionally creates local .otito artifacts (the copied tool, reports,
+// and optional hooks). Keep that directory ignored; map/context caches themselves
+// now live outside the inspected repository. Idempotent: skip when the entry (or
+// a covering pattern) is already present, create the file if absent.
 /**
  * @param {string} root
  * @param {string} entry

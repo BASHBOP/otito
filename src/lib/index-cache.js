@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { generateCodeMap } from "./code-map.js";
 import { listRepoFiles } from "./repo.js";
@@ -118,7 +119,8 @@ import { listRepoFiles } from "./repo.js";
  * @property {CodeMapCacheInfo} [cache]
  */
 
-const cacheVersion = 5;
+const cacheVersion = 6;
+const externalCacheDirectory = "otito-index-cache";
 
 // Bound on the in-process memo. MCP hosts call repo-map tools repeatedly for the
 // same repo; without this we re-read and re-JSON.parse the on-disk index every call.
@@ -139,12 +141,13 @@ const warnedPaths = new Set();
 
 /**
  * Returns the code map for a repository, served from an in-process memo or an
- * on-disk index when the repo fingerprint is unchanged, regenerating otherwise.
+ * external on-disk index when the repo fingerprint is unchanged, regenerating
+ * otherwise. The inspected repository is never modified.
  * @param {string} [repoPath]
  */
 export function getCachedCodeMap(repoPath = ".") {
   const root = path.resolve(repoPath);
-  const cachePath = path.join(root, ".otito", "index.json");
+  const cachePath = getCodeMapCachePath(root);
   const fingerprint = repoFingerprint(root);
   const memoKey = `${root}\0${fingerprint}`;
 
@@ -163,7 +166,7 @@ export function getCachedCodeMap(repoPath = ".") {
   }
 
   const cached = readCache(cachePath);
-  if (cached?.version === cacheVersion && cached.fingerprint === fingerprint && cached.map) {
+  if (cached?.version === cacheVersion && cached.fingerprint === fingerprint && cached.map?.repo?.root === root) {
     writeMemo(memoKey, { map: cached.map, generatedAt: cached.generatedAt });
     return {
       ...cached.map,
@@ -196,6 +199,17 @@ export function getCachedCodeMap(repoPath = ".") {
       fingerprint,
     },
   };
+}
+
+/**
+ * Resolve the per-user cache location for a repository without writing into the
+ * inspected working tree. The root hash keeps unrelated repositories isolated;
+ * the stored map must still name the same root before it is trusted.
+ * @param {string} [repoPath]
+ */
+export function getCodeMapCachePath(repoPath = ".") {
+  const root = path.resolve(repoPath);
+  return path.join(os.tmpdir(), externalCacheDirectory, hash(root), "index.json");
 }
 
 /**

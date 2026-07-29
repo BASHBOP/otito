@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getCachedCodeMap } from "../src/lib/index-cache.js";
+import { getCachedCodeMap, getCodeMapCachePath } from "../src/lib/index-cache.js";
 
 function makeRepo(name) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), name));
@@ -13,9 +13,9 @@ function makeRepo(name) {
   return root;
 }
 
-const cachePathFor = (root) => path.join(root, ".otito", "index.json");
+const cachePathFor = (root) => getCodeMapCachePath(root);
 
-test("getCachedCodeMap writes and reuses a repo index", () => {
+test("getCachedCodeMap writes and reuses an index outside the inspected repository", () => {
   const root = makeRepo("otito-index-");
 
   const first = getCachedCodeMap(root);
@@ -25,6 +25,8 @@ test("getCachedCodeMap writes and reuses a repo index", () => {
   assert.equal(second.cache.hit, true);
   assert.equal(second.repo.name, "cached-repo");
   assert.ok(fs.existsSync(cachePathFor(root)));
+  assert.equal(first.cache.path, cachePathFor(root));
+  assert.ok(!fs.existsSync(path.join(root, ".otito")), "mapping a repository must not create a working-tree artifact");
 });
 
 test("regenerates when a file changes (fingerprint staleness)", () => {
@@ -63,7 +65,7 @@ test("regenerates (without throwing) when the cache file is corrupted JSON", () 
 
   // The corrupted file is replaced with a valid one.
   const onDisk = JSON.parse(fs.readFileSync(cachePath, "utf8"));
-  assert.equal(onDisk.version, 5);
+  assert.equal(onDisk.version, 6);
   assert.ok(onDisk.map);
 });
 
@@ -96,14 +98,15 @@ test("writes the cache atomically and leaves no temp files behind", () => {
 
   // The single file present is complete, valid JSON (never a half-written index).
   const parsed = JSON.parse(fs.readFileSync(cachePathFor(root), "utf8"));
-  assert.equal(parsed.version, 5);
+  assert.equal(parsed.version, 6);
   assert.ok(parsed.map.ok);
 });
 
 test("write failures do not throw and the call still returns a map", () => {
   const root = makeRepo("otito-index-writefail-");
-  // Make .otito a file so mkdir/write of the index underneath fails.
-  fs.writeFileSync(path.join(root, ".otito"), "not a directory");
+  // Make the external cache directory a file so mkdir/write underneath fails.
+  fs.mkdirSync(path.dirname(path.dirname(cachePathFor(root))), { recursive: true });
+  fs.writeFileSync(path.dirname(cachePathFor(root)), "not a directory");
 
   let result;
   assert.doesNotThrow(() => {
@@ -111,6 +114,7 @@ test("write failures do not throw and the call still returns a map", () => {
   });
   assert.equal(result.cache.hit, false);
   assert.equal(result.repo.name, "cached-repo", "a failed cache write still returns a freshly generated map");
+  assert.ok(!fs.existsSync(path.join(root, ".otito")), "a failed cache write must not fall back to the repository");
 });
 
 test("repeated calls are served from the in-process memo without re-reading disk", () => {
