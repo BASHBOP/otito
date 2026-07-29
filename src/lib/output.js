@@ -27,7 +27,7 @@ Usage:
   otito index <repo...> [--discover] [--catalog file] [--json]
   otito catalog [--catalog file] [--json]
   otito search <query> [--catalog file] [--limit n] [--offline] [--json]
-  otito context <query> [--path repo] [--limit n] [--out file] [--json]
+  otito context <query> [--path repo] [--limit n] [--out file] [--json] [--no-emoji] [--color|--no-color] [--theme name]
   otito impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--mermaid] [--no-emoji] [--color|--no-color] [--theme name]
   otito ax <repo> <query> [--top n] [--out file] [--json]
   otito converge <repo> <query> --base <ref> [--staged] [--top n] [--out file] [--json]
