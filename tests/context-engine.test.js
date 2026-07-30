@@ -236,3 +236,29 @@ test("generateContextPack prioritizes the signup verification auth flow over gen
   assert.ok(terminal.includes("\x1b[36m") || terminal.includes("\x1b[1m"));
   assert.doesNotMatch(terminal, /# Context Pack:/);
 });
+
+test("generateContextPack routes a plain-language QR check-in question to its controller hotspot", () => {
+  const root = path.resolve("evals/fixtures/checkin-api");
+  const result = generateContextPack("where is QR booking check-in handled for event staff?", { path: root });
+
+  assert.equal(result.data.primaryFiles[0].path, "src/booking/ticket.controller.ts");
+  assert.ok(result.data.hotspots.some((hotspot) => hotspot.path === "src/booking/ticket.controller.ts" && hotspot.symbol === "scanTicket"));
+});
+
+test("generateContextPack prioritizes the RSVP privacy configuration control over its public reader", () => {
+  const root = path.resolve("evals/fixtures/rsvp-configuration-web");
+  const result = generateContextPack("where do organisers configure the RSVP page to keep venue details private?", { path: root });
+
+  assert.equal(result.data.primaryFiles[0].path, "components/conversational/questions/RsvpStudioQuestion.tsx");
+  assert.ok(result.data.intent.hints.includes("configuration"));
+  assert.ok(result.data.intent.hints.includes("privacy"));
+});
+
+test("generateContextPack keeps the mobile host screen and RSVP screen ahead of type declarations", () => {
+  const root = path.resolve("evals/fixtures/mobile-host-rsvp");
+  const result = generateContextPack("where does the mobile app show an event host bio and let an attendee RSVP?", { path: root });
+  const primaryPaths = result.data.primaryFiles.slice(0, 2).map((file) => file.path);
+
+  assert.deepEqual(primaryPaths, ["app/(tabs)/explore/[id].tsx", "app/rsvp/[eventId].tsx"]);
+  assert.ok(result.data.hotspots.some((hotspot) => hotspot.path === "app/(tabs)/explore/[id].tsx" && hotspot.symbol === "HostCard"));
+});
