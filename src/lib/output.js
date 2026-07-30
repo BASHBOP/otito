@@ -21,6 +21,7 @@ export function printHelp() {
   printText(`otito
 
 Usage:
+  otito --version | -v
   otito doctor [--json]
   otito repo <path> [--json]
   otito discover <root...> [--depth n] [--limit n] [--json]

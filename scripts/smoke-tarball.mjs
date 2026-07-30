@@ -16,6 +16,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const packageVersion = String(JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8")).version);
 const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-tarball-smoke-"));
 const npmCache = path.join(workDir, "npm-cache");
 
@@ -35,6 +36,11 @@ try {
   run("npm", ["install", "--no-audit", "--no-fund", "--prefer-offline", "--cache", npmCache, tarball], { cwd: projectDir });
 
   const bin = path.join(projectDir, "node_modules", ".bin", "otito");
+  const versionOutput = run(bin, ["--version"], { cwd: projectDir }).trim();
+  if (versionOutput !== packageVersion) {
+    throw new Error(`installed bin reported version ${JSON.stringify(versionOutput)} instead of ${packageVersion}`);
+  }
+
   const helpOutput = run(bin, ["help"], { cwd: projectDir });
   if (!helpOutput.includes("otito")) {
     throw new Error(`installed bin produced unexpected help output: ${JSON.stringify(helpOutput.slice(0, 200))}`);
@@ -52,7 +58,9 @@ try {
     throw new Error(`installed bin eval --accuracy failed: passed=${evalParsed?.passed} exitCode=${evalParsed?.exitCode}`);
   }
 
-  console.log(`tarball smoke OK: installed bin produced ${helpOutput.length} bytes of help, valid repo JSON, and eval --accuracy passed`);
+  console.log(
+    `tarball smoke OK: installed bin reported v${packageVersion}, produced ${helpOutput.length} bytes of help, valid repo JSON, and eval --accuracy passed`,
+  );
 } finally {
   fs.rmSync(workDir, { recursive: true, force: true });
 }
