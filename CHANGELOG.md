@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 
 This project follows SemVer.
 
+## [Unreleased]
+
+## [1.2.0] - 2026-07-30
+
+### Added
+
+- **Explicit anonymous usage sharing.** Developers can opt in with `otito telemetry share on` and opt out again with `otito telemetry share off`. Otito sends a fixed nine-field command outcome event through the first-party Bashbop relay.
+
+### Privacy
+
+- **Off by default and shape only.** Usage sharing remains disabled until the developer opts in, and disabling local telemetry also disables sharing. Events exclude prompts, arguments, paths, repository names, source code, errors, receipts, user identities, and email addresses.
+
 ## [1.1.1] - 2026-07-29
 
 ### Fixed
@@ -54,8 +66,6 @@ This project follows SemVer.
 - **Clean product cutover to Òtítọ́.** The package is now `@bashbop/otito`, the CLI is `otito`, and the MCP server identity is `io.github.bashbop/otito`.
 - **Fresh configuration and artifact namespaces.** Configuration uses `.otitorc.json`, `~/.config/otito/config.json`, and `OTITO_*` environment variables. Local evidence artifacts, indexes, catalog, and telemetry now live under `.otito/`.
 - **Bashbop stewardship.** Repository, documentation, release, and MCP metadata now point to Bashbop Ltd. The public contributor programme material has been removed while the protected-review rule remains owned by the Bashbop team.
-
-## [Unreleased]
 
 ## [1.1.2] - 2026-07-30
 
