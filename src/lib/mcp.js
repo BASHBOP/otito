@@ -8,7 +8,7 @@ import { generateContextPack } from "./context-engine.js";
 import { generateImpact } from "./impact.js";
 import { generateAxScore, formatAxMarkdown } from "./ax.js";
 import { generateConvergence, formatConvergenceMarkdown } from "./converge.js";
-import { appendEvent, extractSignals, redactError } from "./telemetry.js";
+import { appendEvent, extractSignals, redactError, shareEvent } from "./telemetry.js";
 import { evaluateLocal } from "./pass-local.js";
 import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
@@ -533,7 +533,7 @@ function recordToolEvent(name, args, startedAt, outcome, payload) {
     if (hasResult) {
       signals = { ...(signals ?? {}), resultBytes: toolResultText(payload.result).length };
     }
-    appendEvent({
+    const record = appendEvent({
       surface: "mcp",
       cmd: canonical,
       requested: canonical !== name ? name : null,
@@ -544,6 +544,7 @@ function recordToolEvent(name, args, startedAt, outcome, payload) {
       signals,
       repoRoot: typeof args?.path === "string" ? args.path : process.cwd(),
     });
+    void shareEvent(record);
   } catch {
     // Telemetry must never affect the JSON-RPC channel.
   }

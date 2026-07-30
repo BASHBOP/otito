@@ -1,10 +1,12 @@
-// Opt-in, local-only usage telemetry. One JSONL line is appended per CLI run and
-// per MCP tool call to ~/.otito/usage.jsonl, but ONLY when the user has
-// turned it on. The whole module is built to be invisible when off and harmless
-// when on:
+// Opt-in usage telemetry. Local capture and anonymous remote sharing are two
+// separate permissions. Local capture appends one JSONL line per CLI run and
+// MCP call to ~/.otito/usage.jsonl. Remote sharing sends only a much smaller,
+// explicitly allowlisted shape through Otito's public relay:
 //
 //   - off by default; gated by the `telemetry` config key or OTITO_TELEMETRY,
 //     and forced off under CI unless OTITO_TELEMETRY explicitly opts in.
+//   - remote sharing is independently off by default; existing local telemetry
+//     consent is never widened into network transmission.
 //   - the gate is resolved ONCE per process and cached, so the hot path never
 //     re-reads config (no per-event loadConfig directory walk).
 //   - appendEvent is best-effort: it swallows every error and NEVER writes to
@@ -23,8 +25,11 @@ import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.js";
 
 export const TELEMETRY_SCHEMA_VERSION = 1;
+export const TELEMETRY_SHARE_SCHEMA_VERSION = 1;
+export const DEFAULT_TELEMETRY_SHARE_ENDPOINT = "https://api.bashbop.com/api/v1/analytics/otito";
 const MAX_LOG_BYTES = 5 * 1024 * 1024; // rotate at 5MB to a single .1 generation
 const MAX_ERROR_LEN = 60;
+const DEFAULT_SHARE_TIMEOUT_MS = 750;
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 let otitoVersion = "0.0.0";
@@ -42,6 +47,11 @@ try {
  */
 export function telemetryLogPath(env = process.env) {
   return path.resolve(env.OTITO_TELEMETRY_PATH ?? path.join(os.homedir(), ".otito", "usage.jsonl"));
+}
+
+/** @param {NodeJS.ProcessEnv} [env] */
+export function telemetryAnonymousIdPath(env = process.env) {
+  return path.resolve(env.OTITO_TELEMETRY_ID_PATH ?? path.join(os.homedir(), ".otito", "anonymous-id"));
 }
 
 /**
@@ -75,8 +85,25 @@ function resolveEnabled(env, cwd) {
   }
 }
 
+/**
+ * @param {NodeJS.ProcessEnv} env
+ * @param {string} cwd
+ */
+function resolveSharingEnabled(env, cwd) {
+  const envBool = coerceBool(env.OTITO_TELEMETRY_SHARE);
+  if (env.CI) return envBool === true;
+  if (envBool !== undefined) return envBool;
+  try {
+    return loadConfig({ cwd, env }).telemetryShare === true;
+  } catch {
+    return false;
+  }
+}
+
 /** @type {{ enabled: boolean } | null} */
 let _gate = null;
+/** @type {{ enabled: boolean } | null} */
+let _shareGate = null;
 
 /**
  * Cached per-process gate. The first call resolves config; later calls are free.
@@ -90,9 +117,22 @@ export function isTelemetryEnabled(opts = {}) {
   return enabled;
 }
 
+/**
+ * Remote sharing uses its own explicit permission and cache. Local capture
+ * being on is not consent to send anything over the network.
+ * @param {{ env?: NodeJS.ProcessEnv, cwd?: string, fresh?: boolean }} [opts]
+ */
+export function isTelemetrySharingEnabled(opts = {}) {
+  if (_shareGate && !opts.fresh) return _shareGate.enabled;
+  const enabled = resolveSharingEnabled(opts.env ?? process.env, opts.cwd ?? process.cwd());
+  _shareGate = { enabled };
+  return enabled;
+}
+
 /** Test seam: drop the cached gate (and any pending signals). */
 export function resetTelemetryCache() {
   _gate = null;
+  _shareGate = null;
   _pendingSignals = null;
 }
 
@@ -165,12 +205,12 @@ export function takePendingSignals() {
  * a non-reversible repo group key). NEVER throws, NEVER writes stdout.
  * @param {Record<string, any>} event
  * @param {{ env?: NodeJS.ProcessEnv, cwd?: string }} [opts]
- * @returns {void}
+ * @returns {Record<string, any> | null}
  */
 export function appendEvent(event, opts = {}) {
   try {
     const env = opts.env ?? process.env;
-    if (!isTelemetryEnabled({ env, cwd: opts.cwd })) return;
+    if (!isTelemetryEnabled({ env, cwd: opts.cwd })) return null;
 
     const repoRoot = event.repoRoot;
     const record = {
@@ -207,8 +247,126 @@ export function appendEvent(event, opts = {}) {
     } finally {
       fs.closeSync(fd);
     }
+    return record;
   } catch {
     // Telemetry must never break a command or pollute output.
+    return null;
+  }
+}
+
+/** @param {unknown} value */
+function durationBucket(value) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return "unknown";
+  if (value < 100) return "under_100ms";
+  if (value < 1_000) return "100ms_to_1s";
+  if (value < 5_000) return "1s_to_5s";
+  if (value < 30_000) return "5s_to_30s";
+  return "over_30s";
+}
+
+/** @param {string} value */
+function normalizedPlatform(value) {
+  return ["darwin", "linux", "win32"].includes(value) ? value : "other";
+}
+
+/** @param {unknown} value */
+function normalizedCommand(value) {
+  const command = typeof value === "string" ? value.toLowerCase() : "";
+  return /^[a-z][a-z0-9_-]{0,63}$/.test(command) ? command : "other";
+}
+
+/** @param {unknown} value */
+function normalizedVersion(value) {
+  const version = typeof value === "string" ? value : "";
+  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) ? version.slice(0, 32) : "0.0.0";
+}
+
+/** @param {NodeJS.ProcessEnv} env */
+function getOrCreateAnonymousId(env) {
+  const idPath = telemetryAnonymousIdPath(env);
+  try {
+    const existing = fs.readFileSync(idPath, "utf8").trim();
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(existing)) return existing;
+  } catch {
+    // Create it below, only after the user explicitly opted into sharing.
+  }
+
+  const id = crypto.randomUUID();
+  fs.mkdirSync(path.dirname(idPath), { recursive: true });
+  try {
+    fs.writeFileSync(idPath, `${id}\n`, { encoding: "utf8", flag: "wx", mode: 0o600 });
+    return id;
+  } catch {
+    try {
+      const raced = fs.readFileSync(idPath, "utf8").trim();
+      if (/^[0-9a-f-]{36}$/i.test(raced)) return raced;
+    } catch {
+      // best-effort only
+    }
+    return id;
+  }
+}
+
+/**
+ * Produce the only payload allowed to cross the network boundary. Notice what
+ * is intentionally absent: repository/path hashes, prompts, argument shapes,
+ * errors, result signals, receipt IDs, source content, and timestamps.
+ * @param {Record<string, any>} record
+ * @param {{ env?: NodeJS.ProcessEnv, platform?: string }} [opts]
+ */
+export function buildSharedTelemetryPayload(record, opts = {}) {
+  const env = opts.env ?? process.env;
+  const nodeMajor = Number.parseInt(
+    String(record.node ?? process.version)
+      .replace(/^v/, "")
+      .split(".")[0],
+    10,
+  );
+  return {
+    schema_version: TELEMETRY_SHARE_SCHEMA_VERSION,
+    installation_id: getOrCreateAnonymousId(env),
+    surface: record.surface === "mcp" ? "mcp" : "cli",
+    command: normalizedCommand(record.cmd),
+    outcome: ["error", "fail", "ok"].includes(record.outcome) ? record.outcome : "error",
+    duration_bucket: durationBucket(record.durationMs),
+    otito_version: normalizedVersion(record.otitoVersion),
+    node_major: Number.isInteger(nodeMajor) && nodeMajor >= 18 && nodeMajor <= 100 ? nodeMajor : 18,
+    platform: normalizedPlatform(opts.platform ?? process.platform),
+  };
+}
+
+/**
+ * Best-effort anonymous delivery through the public relay. Never throws and
+ * never writes to stdout/stderr, so deterministic CLI/MCP channels stay clean.
+ * @param {Record<string, any> | null} record
+ * @param {{ env?: NodeJS.ProcessEnv, cwd?: string, fetchImpl?: typeof fetch, timeoutMs?: number }} [opts]
+ * @returns {Promise<boolean>}
+ */
+export async function shareEvent(record, opts = {}) {
+  if (!record) return false;
+  const env = opts.env ?? process.env;
+  if (!isTelemetrySharingEnabled({ env, cwd: opts.cwd })) return false;
+
+  const endpoint = env.OTITO_TELEMETRY_ENDPOINT ?? DEFAULT_TELEMETRY_SHARE_ENDPOINT;
+  try {
+    const url = new URL(endpoint);
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) return false;
+
+    const controller = new globalThis.AbortController();
+    const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_SHARE_TIMEOUT_MS);
+    try {
+      const response = await (opts.fetchImpl ?? globalThis.fetch)(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildSharedTelemetryPayload(record, { env })),
+        signal: controller.signal,
+      });
+      return response.ok;
+    } finally {
+      clearTimeout(timeout);
+    }
+  } catch {
+    return false;
   }
 }
 
@@ -277,7 +435,7 @@ export function clearTelemetryLog(opts = {}) {
 /**
  * Snapshot of the telemetry state for `otito telemetry status`.
  * @param {{ env?: NodeJS.ProcessEnv, cwd?: string }} [opts]
- * @returns {{ enabled: boolean, path: string, exists: boolean, sizeBytes: number, events: number }}
+ * @returns {{ enabled: boolean, sharing: boolean, shareEndpoint: string, path: string, exists: boolean, sizeBytes: number, events: number }}
  */
 export function telemetryStatus(opts = {}) {
   const env = opts.env ?? process.env;
@@ -293,6 +451,8 @@ export function telemetryStatus(opts = {}) {
   const { events } = readTelemetryLog({ env });
   return {
     enabled: isTelemetryEnabled({ env, cwd: opts.cwd, fresh: true }),
+    sharing: isTelemetrySharingEnabled({ env, cwd: opts.cwd, fresh: true }),
+    shareEndpoint: env.OTITO_TELEMETRY_ENDPOINT ?? DEFAULT_TELEMETRY_SHARE_ENDPOINT,
     path: logPath,
     exists,
     sizeBytes,

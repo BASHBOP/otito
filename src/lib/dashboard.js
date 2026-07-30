@@ -468,7 +468,7 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;}
   <ul>${blindSpots}</ul>
 </div>
 
-<div class="foot">Opt-in, local-only telemetry · ${esc(d.logPath ?? "")} · nothing leaves this machine · clear with <code>otito telemetry clear</code></div>
+<div class="foot">Opt-in local telemetry · ${esc(d.logPath ?? "")} · anonymous sharing is a separate opt-in · clear with <code>otito telemetry clear</code></div>
 </div>
 <script type="application/json" id="otito-dashboard-data">${embedded}</script>
 </body>
