@@ -60,7 +60,7 @@ import { getAgentTools } from "./lib/agent-tools.js";
 import { formatCodeMapMermaid, formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
 import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
-import { appendEvent, clearTelemetryLog, noteResult, redactError, takePendingSignals, telemetryStatus } from "./lib/telemetry.js";
+import { appendEvent, clearTelemetryLog, noteResult, redactError, shareEvent, takePendingSignals, telemetryStatus } from "./lib/telemetry.js";
 import { generateDashboard } from "./lib/dashboard.js";
 
 /** @type {Record<string, ((parsed: CliArgs) => void | Promise<void>) | undefined>} */
@@ -138,7 +138,8 @@ async function main(argv = process.argv.slice(2)) {
   // never flag values — so no paths or queries reach the log.
   const argsShape = { positionals: parsed.positionals.length, flags: Object.keys(parsed.flags).sort() };
   if (command === "mcp") {
-    appendEvent({ surface: "cli", cmd: "mcp", argsShape, outcome: "ok", durationMs: null, repoRoot: process.cwd() });
+    const record = appendEvent({ surface: "cli", cmd: "mcp", argsShape, outcome: "ok", durationMs: null, repoRoot: process.cwd() });
+    void shareEvent(record);
   }
 
   const startedAt = performance.now();
@@ -158,7 +159,7 @@ async function main(argv = process.argv.slice(2)) {
   } finally {
     if (command !== "mcp") {
       const outcome = caughtError ? "error" : process.exitCode ? "fail" : "ok";
-      appendEvent({
+      const record = appendEvent({
         surface: "cli",
         cmd: command,
         argsShape,
@@ -168,6 +169,7 @@ async function main(argv = process.argv.slice(2)) {
         signals: takePendingSignals(),
         repoRoot: process.cwd(),
       });
+      await shareEvent(record);
     }
   }
 }
@@ -959,10 +961,29 @@ async function handleDashboard(parsed) {
 async function handleTelemetry(parsed) {
   const sub = parsed.positionals[0] ?? "status";
 
+  if (sub === "share") {
+    const action = parsed.positionals[1] ?? "status";
+    if (action === "on" || action === "off") {
+      const scope = parsed.flags.local ? "local" : "user";
+      writeConfig(action === "on" ? { telemetry: true, telemetryShare: true } : { telemetryShare: false }, scope);
+      printText(
+        action === "on"
+          ? `Anonymous usage sharing on (${getConfigPath(scope)}). Local capture is also on.`
+          : `Anonymous usage sharing off (${getConfigPath(scope)}). Local capture is unchanged.`,
+      );
+      return;
+    }
+    if (action !== "status") throw new Error("Usage: otito telemetry share [status|on|off]");
+  }
+
   if (sub === "on" || sub === "off") {
     const scope = parsed.flags.local ? "local" : "user";
-    writeConfig({ telemetry: sub === "on" }, scope);
-    printText(`Telemetry ${sub} (${getConfigPath(scope)}).`);
+    writeConfig(sub === "on" ? { telemetry: true } : { telemetry: false, telemetryShare: false }, scope);
+    printText(
+      sub === "on"
+        ? `Local telemetry on (${getConfigPath(scope)}). Nothing is shared unless you run \`otito telemetry share on\`.`
+        : `Telemetry off (${getConfigPath(scope)}). Local capture and anonymous sharing are both disabled.`,
+    );
     return;
   }
 
@@ -981,12 +1002,14 @@ async function handleTelemetry(parsed) {
   printText(
     [
       `Telemetry:   ${status.enabled ? "on" : "off"}`,
+      `Sharing:     ${status.sharing ? "on (anonymous, opt-in)" : "off"}`,
       `Log:         ${status.path}`,
       `Exists:      ${status.exists ? "yes" : "no"}`,
       `Size:        ${status.sizeBytes} bytes`,
       `Events:      ${status.events}`,
       "",
-      status.enabled ? "Disable with `otito telemetry off`." : "Enable with `otito telemetry on` (or `otito config set telemetry true`).",
+      status.enabled ? "Disable all telemetry with `otito telemetry off`." : "Enable local capture with `otito telemetry on`.",
+      status.sharing ? "Disable sharing with `otito telemetry share off`." : "Share anonymous usage with `otito telemetry share on`.",
       "Clear the log with `otito telemetry clear`.",
     ].join("\n"),
   );

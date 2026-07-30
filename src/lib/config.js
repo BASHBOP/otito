@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 
 /** Keys accepted in a config file or via env. */
-const VALID_KEYS = new Set(["emoji", "color", "theme", "width", "policy", "governance", "telemetry"]);
+const VALID_KEYS = new Set(["emoji", "color", "theme", "width", "policy", "governance", "telemetry", "telemetryShare"]);
 
 /**
  * Built-in defaults. Only keys with stable defaults are listed; undefined keys
@@ -15,6 +15,9 @@ const DEFAULTS = {
   governance: "team",
   // Usage telemetry is strictly opt-in: off until the user turns it on.
   telemetry: false,
+  // Anonymous remote sharing is a separate opt-in. Existing local telemetry
+  // consent must never be silently widened into network transmission.
+  telemetryShare: false,
 };
 
 /**
@@ -26,6 +29,7 @@ const DEFAULTS = {
  * @property {string | undefined} policy
  * @property {string | undefined} governance
  * @property {boolean | undefined} telemetry
+ * @property {boolean | undefined} telemetryShare
  */
 
 /**
@@ -105,6 +109,10 @@ function applyEnv(cfg, env) {
   if (env.OTITO_TELEMETRY !== undefined) {
     const v = coerceBool(env.OTITO_TELEMETRY);
     if (v !== undefined) cfg.telemetry = v;
+  }
+  if (env.OTITO_TELEMETRY_SHARE !== undefined) {
+    const v = coerceBool(env.OTITO_TELEMETRY_SHARE);
+    if (v !== undefined) cfg.telemetryShare = v;
   }
   if (env.OTITO_WIDTH !== undefined) {
     const n = Number(env.OTITO_WIDTH);
