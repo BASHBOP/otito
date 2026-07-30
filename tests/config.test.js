@@ -17,6 +17,17 @@ test("CONFIG_KEYS lists all expected keys", () => {
   assert.ok(CONFIG_KEYS.includes("policy"));
   assert.ok(CONFIG_KEYS.includes("governance"));
   assert.ok(CONFIG_KEYS.includes("telemetry"));
+  assert.ok(CONFIG_KEYS.includes("telemetryShare"));
+});
+
+test("anonymous telemetry sharing is a separate opt-in", () => {
+  const tmp = makeTmpDir();
+  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetryShare, false);
+  fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ telemetry: true, telemetryShare: false }));
+  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetry, true);
+  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetryShare, false, "local consent does not imply sharing");
+  assert.equal(loadConfig({ cwd: tmp, env: { OTITO_TELEMETRY_SHARE: "1" } }).telemetryShare, true);
+  fs.rmSync(tmp, { recursive: true });
 });
 
 test("telemetry defaults to off and OTITO_TELEMETRY overrides it", () => {

@@ -145,6 +145,7 @@ otito structure . --out .otito/structure.html
 | Search indexed repos | `otito search "events controller"` | Ranked matches across paths, domains, routes, imports, exports, and symbols |
 | Run the MCP server | `otito mcp` | Stdio MCP server exposing otito tools |
 | Track usage & performance | `otito dashboard` | Self-contained HTML from an opt-in local usage log (off by default) |
+| Help improve Otito | `otito telemetry share on` | Separately opt into a minimal anonymous usage event; no prompts, paths, repo data, or source content |
 
 For Claude Desktop, VS Code, Cursor, and generic stdio client snippets, see [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md).
 
