@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-30T08:29:39.544Z",
+  "generatedAt": "2026-07-30T10:19:57.301Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 65,
+  "confidence": 70,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -13,28 +13,28 @@
     "concepts": [],
     "topFiles": [
       {
+        "path": "scripts/smoke-tarball.mjs",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
+        "path": "src/cli.js",
+        "score": 15,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/output.js",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
+        "path": "tests/cli.test.js",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
         "path": "src/lib/review.js",
         "score": 41,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/pr-review.js",
-        "score": 36,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/agent-tools.js",
-        "score": 22,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/args.js",
-        "score": 22,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/ax.js",
-        "score": 22,
         "riskFlags": []
       }
     ],
@@ -43,13 +43,12 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 4,
-    "additions": 17,
+    "changedFiles": 8,
+    "additions": 42,
     "deletions": 7,
-    "riskLevel": "medium",
+    "riskLevel": "low",
     "riskFlags": [
-      "configuration",
-      "no test files changed"
+      "configuration"
     ],
     "reviewTargetsCount": 0
   },
@@ -61,7 +60,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "5 changed files found."
+        "summary": "9 changed files found."
       },
       {
         "name": "Secret safety",
@@ -101,6 +100,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 426
+    "fullJson": 419
   }
 }
