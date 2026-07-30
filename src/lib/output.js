@@ -50,7 +50,8 @@ Usage:
   otito data-access <path> [--out file] [--json] [--mermaid]
   otito agent-tools [--json|--markdown]
   otito dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]   # local usage & performance UI (HTML)
-  otito telemetry [status|on|off|clear] [--json]                                          # opt-in usage capture (off by default)
+  otito telemetry [status|on|off|clear] [--json]                                          # opt-in local usage capture
+  otito telemetry share [status|on|off]                                                    # separate anonymous sharing opt-in
   otito config [list]                           # show config with source annotations
   otito config get [key]                        # show one or all resolved values
   otito config set <key> <value> [--local]      # write to user (or local) config
@@ -58,6 +59,7 @@ Usage:
   otito config set theme high-contrast          # set theme (default|color|minimal|high-contrast)
   otito config set emoji false                  # disable emoji in user config
   otito config set telemetry true               # opt in to local usage capture for the dashboard
+  otito telemetry share on                      # optionally share a minimal anonymous usage shape
 
 Examples:
   node src/cli.js doctor

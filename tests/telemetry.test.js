@@ -8,12 +8,15 @@ import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 import {
   appendEvent,
+  buildSharedTelemetryPayload,
   clearTelemetryLog,
   extractSignals,
   isTelemetryEnabled,
+  isTelemetrySharingEnabled,
   readTelemetryLog,
   redactError,
   resetTelemetryCache,
+  shareEvent,
   TELEMETRY_SCHEMA_VERSION,
 } from "../src/lib/telemetry.js";
 import { startMcpServer } from "../src/lib/mcp.js";
@@ -72,6 +75,88 @@ test("CI forces telemetry off unless OTITO_TELEMETRY explicitly opts in", () => 
   assert.equal(isTelemetryEnabled({ env: { CI: "true", OTITO_TELEMETRY: "1" }, fresh: true }), true, "explicit opt-in wins in CI");
   assert.equal(isTelemetryEnabled({ env: { OTITO_TELEMETRY: "1" }, fresh: true }), true, "env opt-in outside CI");
   assert.equal(isTelemetryEnabled({ env: { OTITO_TELEMETRY: "0" }, fresh: true }), false, "env opt-out");
+});
+
+test("anonymous sharing stays off when only local telemetry is enabled", () => {
+  resetTelemetryCache();
+  assert.equal(isTelemetrySharingEnabled({ env: { OTITO_TELEMETRY: "1" }, fresh: true }), false);
+  assert.equal(isTelemetrySharingEnabled({ env: { OTITO_TELEMETRY_SHARE: "1" }, fresh: true }), true);
+  assert.equal(isTelemetrySharingEnabled({ env: { CI: "true", OTITO_TELEMETRY_SHARE: "1" }, fresh: true }), true);
+  assert.equal(isTelemetrySharingEnabled({ env: { CI: "true" }, fresh: true }), false);
+});
+
+test("shared payload contains only the documented anonymous allowlist", () => {
+  const idPath = tmpLog();
+  const payload = buildSharedTelemetryPayload(
+    {
+      surface: "cli",
+      cmd: "context",
+      outcome: "ok",
+      durationMs: 1_250,
+      otitoVersion: "1.2.0",
+      node: "v22.17.0",
+      repo: "private-repo-hash",
+      argsShape: { flags: ["path"], positionals: 1 },
+      error: "private error",
+      signals: { receiptId: "private-receipt" },
+    },
+    { env: { OTITO_TELEMETRY_ID_PATH: idPath }, platform: "darwin" },
+  );
+
+  assert.deepEqual(Object.keys(payload).sort(), [
+    "command",
+    "duration_bucket",
+    "installation_id",
+    "node_major",
+    "otito_version",
+    "outcome",
+    "platform",
+    "schema_version",
+    "surface",
+  ]);
+  assert.equal(payload.duration_bucket, "1s_to_5s");
+  assert.match(payload.installation_id, /^[0-9a-f-]{36}$/i);
+  const encoded = JSON.stringify(payload);
+  assert.equal(encoded.includes("private"), false);
+  assert.equal(encoded.includes("path"), false);
+});
+
+test("shareEvent posts only after explicit sharing opt-in", async () => {
+  resetTelemetryCache();
+  const requests = [];
+  const fetchImpl = async (url, init) => {
+    requests.push({ url: String(url), body: JSON.parse(String(init.body)) });
+    return { ok: true };
+  };
+  const record = {
+    surface: "mcp",
+    cmd: "context_pack",
+    outcome: "ok",
+    durationMs: 88,
+    otitoVersion: "1.2.0",
+    node: "v22.17.0",
+    repo: "must-not-leave",
+  };
+  const idPath = tmpLog();
+  const baseEnv = {
+    OTITO_TELEMETRY_ENDPOINT: "https://telemetry.example.test/otito",
+    OTITO_TELEMETRY_ID_PATH: idPath,
+  };
+
+  assert.equal(await shareEvent(record, { env: baseEnv, fetchImpl }), false);
+  assert.equal(requests.length, 0);
+
+  resetTelemetryCache();
+  assert.equal(
+    await shareEvent(record, {
+      env: { ...baseEnv, OTITO_TELEMETRY_SHARE: "1" },
+      fetchImpl,
+    }),
+    true,
+  );
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].body.command, "context_pack");
+  assert.equal(JSON.stringify(requests[0].body).includes("must-not-leave"), false);
 });
 
 test("redactError keeps a code/class, never the message", () => {
