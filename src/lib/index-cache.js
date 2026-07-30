@@ -11,6 +11,7 @@ import { listRepoFiles } from "./repo.js";
  * @property {string} type - Declaration kind ("class", "function", "method", "const", "interface", "type", "enum", "let", "var").
  * @property {string} name
  * @property {number} line - 1-based line number of the declaration.
+ * @property {string[]} [terms] - Bounded semantic identifiers within the declaration.
  */
 
 /**
@@ -41,6 +42,9 @@ import { listRepoFiles } from "./repo.js";
  * @property {string[]} imports - Imported module specifiers.
  * @property {string[]} exports - Exported symbol names.
  * @property {CodeMapSymbol[]} symbols
+ * @property {string[]} [formFields] - Form control identifiers used by the file.
+ * @property {string[]} [navigationTargets] - Static navigation route targets used by the file.
+ * @property {string[]} [localIdentifiers] - Local semantic identifier names used by the file.
  * @property {boolean} [isVendor]
  * @property {CodeMapDataAccess[]} [dataAccess]
  */
@@ -119,7 +123,7 @@ import { listRepoFiles } from "./repo.js";
  * @property {CodeMapCacheInfo} [cache]
  */
 
-const cacheVersion = 6;
+const cacheVersion = 10;
 const externalCacheDirectory = "otito-index-cache";
 
 // Bound on the in-process memo. MCP hosts call repo-map tools repeatedly for the
