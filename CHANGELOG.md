@@ -6,6 +6,12 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-07-30
+
+### Fixed
+
+- **Standard CLI version flags.** `otito --version` and `otito -v` now print the exact installed package version and exit successfully. The packed-tarball smoke test protects the npm binary path against regressions.
+
 ## [1.2.0] - 2026-07-30
 
 ### Added
