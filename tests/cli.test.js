@@ -6,6 +6,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { main } from "../src/cli.js";
 
+const expectedCliVersion = String(JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
+
 async function runCli(argv) {
   const stdoutChunks = [];
   const stderrChunks = [];
@@ -124,6 +126,15 @@ test("explicit help command exits 0", async () => {
   const result = await runCli(["help"]);
   assert.equal(result.exitCode, 0);
   assert.match(result.stdout, /Usage:/);
+});
+
+test("--version and -v print the exact package version", async () => {
+  for (const flag of ["--version", "-v"]) {
+    const result = await runCli([flag]);
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.stderr, "");
+    assert.equal(result.stdout, `${expectedCliVersion}\n`);
+  }
 });
 
 test("error path prints JSON when --json flag is set", async () => {

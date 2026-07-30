@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
@@ -63,6 +63,9 @@ import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig 
 import { appendEvent, clearTelemetryLog, noteResult, redactError, shareEvent, takePendingSignals, telemetryStatus } from "./lib/telemetry.js";
 import { generateDashboard } from "./lib/dashboard.js";
 
+const packageVersion = String(JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
+const versionFlags = new Set(["--version", "-v"]);
+
 /** @type {Record<string, ((parsed: CliArgs) => void | Promise<void>) | undefined>} */
 const commandHandlers = {
   doctor: handleDoctor,
@@ -101,6 +104,12 @@ const commandHandlers = {
 };
 
 async function main(argv = process.argv.slice(2)) {
+  if (argv.length === 1 && versionFlags.has(argv[0])) {
+    printText(packageVersion);
+    process.exitCode = 0;
+    return;
+  }
+
   const parsed = parseArgv(argv);
   const command = parsed.command ?? "help";
   const handler = commandHandlers[command];
