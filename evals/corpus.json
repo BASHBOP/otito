@@ -22,7 +22,10 @@
     "polyglot-svc": "evals/fixtures/polyglot-svc",
     "web-client": "evals/fixtures/web-client",
     "harness-node": "evals/fixtures/harness-node",
-    "auth-signup-api": "evals/fixtures/auth-signup-api"
+    "auth-signup-api": "evals/fixtures/auth-signup-api",
+    "checkin-api": "evals/fixtures/checkin-api",
+    "rsvp-configuration-web": "evals/fixtures/rsvp-configuration-web",
+    "mobile-host-rsvp": "evals/fixtures/mobile-host-rsvp"
   },
   "retrieval": [
     {
@@ -135,6 +138,27 @@
       "query": "where is email verification implemented during signup?",
       "repoFixture": "auth-signup-api",
       "expectedPrimary": ["src/authentication/auth.controller.ts", "src/authentication/auth.service.ts"]
+    },
+    {
+      "name": "api-qr-checkin",
+      "comment": "Plain-language QR check-in should find the ticket controller rather than generic booking helpers.",
+      "query": "where is QR booking check-in handled for event staff?",
+      "repoFixture": "checkin-api",
+      "expectedPrimary": ["src/booking/ticket.controller.ts"]
+    },
+    {
+      "name": "web-rsvp-privacy-configuration",
+      "comment": "An organiser configuration question should prefer the form control, not the public RSVP reader.",
+      "query": "where do organisers configure the RSVP page to keep venue details private?",
+      "repoFixture": "rsvp-configuration-web",
+      "expectedPrimary": ["components/conversational/questions/RsvpStudioQuestion.tsx"]
+    },
+    {
+      "name": "mobile-host-bio-rsvp",
+      "comment": "A mobile attendee question must bring the event screen and RSVP screen ahead of a dense type barrel.",
+      "query": "where does the mobile app show an event host bio and let an attendee RSVP?",
+      "repoFixture": "mobile-host-rsvp",
+      "expectedPrimary": ["app/(tabs)/explore/[id].tsx", "app/rsvp/[eventId].tsx"]
     }
   ],
   "risk": [

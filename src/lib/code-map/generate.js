@@ -32,6 +32,9 @@ export function isSourceFilePath(file) {
  * @property {string[]} imports
  * @property {string[]} exports
  * @property {CodeSymbol[]} symbols
+ * @property {string[]} formFields
+ * @property {string[]} navigationTargets
+ * @property {string[]} localIdentifiers
  * @property {boolean} isVendor
  * @property {DataAccessHit[]} [dataAccess]
  */
@@ -251,6 +254,9 @@ function analyzeSource(relativePath, text, maxSymbols) {
     imports: ast.imports,
     exports: ast.exports,
     symbols: ast.symbols.slice(0, maxSymbols),
+    formFields: ast.formFields ?? [],
+    navigationTargets: ast.navigationTargets ?? [],
+    localIdentifiers: ast.localIdentifiers ?? [],
     isVendor: vendor,
   };
   if (dataAccess.length > 0) {

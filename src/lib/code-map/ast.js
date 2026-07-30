@@ -9,6 +9,7 @@ import { extractCsharpFacts, extractGoFacts, extractJavaFacts, extractPythonFact
  * @property {string} type
  * @property {string} name
  * @property {number} line
+ * @property {string[]} [terms] - Bounded semantic identifiers within the declaration.
  */
 
 /**
@@ -17,6 +18,9 @@ import { extractCsharpFacts, extractGoFacts, extractJavaFacts, extractPythonFact
  * @property {string[]} imports
  * @property {string[]} exports
  * @property {CodeSymbol[]} symbols
+ * @property {string[]} [formFields]
+ * @property {string[]} [navigationTargets]
+ * @property {string[]} [localIdentifiers]
  */
 
 const declarationPatterns = [
@@ -66,6 +70,12 @@ export function extractAstFacts(relativePath, text) {
       exports: new Set(),
       /** @type {CodeSymbol[]} */
       symbols: [],
+      /** @type {Set<string>} */
+      formFields: new Set(),
+      /** @type {Set<string>} */
+      navigationTargets: new Set(),
+      /** @type {Set<string>} */
+      localIdentifiers: new Set(),
     };
     /** @type {Set<string>} */
     const seenSymbols = new Set();
@@ -75,6 +85,9 @@ export function extractAstFacts(relativePath, text) {
       imports: [...facts.imports].slice(0, 100),
       exports: [...facts.exports].slice(0, 100),
       symbols: facts.symbols,
+      formFields: [...facts.formFields].slice(0, 100),
+      navigationTargets: [...facts.navigationTargets].slice(0, 100),
+      localIdentifiers: [...facts.localIdentifiers].slice(0, 200),
     };
 
     /** @param {ts.Node} node */
@@ -82,6 +95,9 @@ export function extractAstFacts(relativePath, text) {
       collectImport(node, facts.imports);
       collectExport(node, facts.exports);
       collectSymbol(sourceFile, node, facts.symbols, seenSymbols);
+      collectFormField(node, facts.formFields);
+      collectNavigationTarget(node, facts.navigationTargets);
+      collectLocalIdentifier(node, facts.localIdentifiers);
       ts.forEachChild(node, visit);
     }
   } catch {
@@ -90,8 +106,74 @@ export function extractAstFacts(relativePath, text) {
       imports: extractImports(text),
       exports: extractExports(codeText),
       symbols: extractSymbols(codeText),
+      formFields: [],
+      navigationTargets: [],
+      localIdentifiers: [],
     };
   }
+}
+
+/**
+ * @param {ts.Node} node
+ * @param {Set<string>} identifiers
+ */
+function collectLocalIdentifier(node, identifiers) {
+  if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+    identifiers.add(node.name.text);
+  }
+}
+
+const formFieldCallees = new Set(["watch", "register", "setValue", "setValues", "setFieldValue", "setFieldsValue", "update"]);
+const navigationCallees = new Set(["push", "replace", "navigate"]);
+
+/**
+ * Keep the names of controls passed to common form APIs. These are semantic
+ * identifiers rather than source content: they let context queries distinguish
+ * a settings surface from a page that merely reads the same value.
+ *
+ * @param {ts.Node} node
+ * @param {Set<string>} fields
+ */
+function collectFormField(node, fields) {
+  if (!ts.isCallExpression(node)) {
+    return;
+  }
+
+  const callee = ts.isIdentifier(node.expression) ? node.expression.text : ts.isPropertyAccessExpression(node.expression) ? node.expression.name.text : "";
+  if (!formFieldCallees.has(callee)) {
+    return;
+  }
+
+  for (const argument of node.arguments) {
+    if (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument)) {
+      fields.add(argument.text);
+    }
+  }
+}
+
+/**
+ * Extract static route targets from common navigation calls. This records only
+ * the route identifier, not source content, so a screen that sends a user to
+ * an RSVP or checkout flow remains discoverable from a natural-language task.
+ *
+ * @param {ts.Node} node
+ * @param {Set<string>} targets
+ */
+function collectNavigationTarget(node, targets) {
+  if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression) || !navigationCallees.has(node.expression.name.text)) {
+    return;
+  }
+  for (const argument of node.arguments) {
+    collectStringLiterals(argument, targets);
+  }
+}
+
+/** @param {ts.Node} node @param {Set<string>} values */
+function collectStringLiterals(node, values) {
+  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
+    values.add(node.text);
+  }
+  ts.forEachChild(node, (child) => collectStringLiterals(child, values));
 }
 
 /**
@@ -234,11 +316,38 @@ function symbolForNode(sourceFile, node) {
  * @returns {CodeSymbol}
  */
 function symbol(sourceFile, node, type, name) {
-  return {
+  /** @type {CodeSymbol} */
+  const result = {
     type,
     name,
     line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
   };
+  if (ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node) || ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
+    const terms = collectDeclarationTerms(node);
+    if (terms.length) {
+      result.terms = terms;
+    }
+  }
+  return result;
+}
+
+/**
+ * @param {ts.FunctionLikeDeclaration} node
+ * @returns {string[]}
+ */
+function collectDeclarationTerms(node) {
+  /** @type {Set<string>} */
+  const terms = new Set();
+  const visit = (/** @type {ts.Node} */ child) => {
+    if (ts.isVariableDeclaration(child) && ts.isIdentifier(child.name)) {
+      terms.add(child.name.text);
+    }
+    ts.forEachChild(child, visit);
+  };
+  if (node.body) {
+    ts.forEachChild(node.body, visit);
+  }
+  return [...terms].slice(0, 30);
 }
 
 /**
