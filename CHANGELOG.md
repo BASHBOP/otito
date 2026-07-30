@@ -57,6 +57,12 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-07-30
+
+### Fixed
+
+- **Plain-language developer routing.** Context now caps dense type/export evidence, recognises QR check-in vocabulary, and retains form-control identifiers for privacy and configuration questions. This keeps behaviour-owning screens, controllers, and hotspots ahead of support-only declarations.
+
 ### Added
 
 - **Exact change-subject convergence receipts.** Receipt v2 binds staged convergence to the resolved base, parent commit, and immutable Git index tree; GitHub PR convergence binds to the target repository, PR number, and exact base/head OIDs. Legacy subject-less receipt IDs remain unchanged.

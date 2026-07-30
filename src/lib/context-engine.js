@@ -75,6 +75,7 @@ const stopWords = new Set([
   "be",
   "by",
   "do",
+  "does",
   "for",
   "from",
   "how",
@@ -82,6 +83,7 @@ const stopWords = new Set([
   "in",
   "is",
   "it",
+  "let",
   "me",
   "new",
   "of",
@@ -95,6 +97,9 @@ const stopWords = new Set([
   "which",
   "who",
   "with",
+  "app",
+  "mobile",
+  "show",
 ]);
 
 const actionWords = new Set(["add", "build", "change", "create", "debug", "fix", "implement", "refactor", "review", "test", "update"]);
@@ -438,12 +443,11 @@ function scoreFile(map, file, tokens, intent) {
     httpScore += scoreField(`${method.method} ${method.path}`, tokens, 7, "http", reasons);
   }
   score += Math.min(httpScore, 56);
-  for (const value of file.imports ?? []) {
-    score += scoreField(value, tokens, 3, "import", reasons);
-  }
-  for (const value of file.exports ?? []) {
-    score += scoreField(value, tokens, 8, "export", reasons);
-  }
+  score += scoreCollection(file.imports ?? [], tokens, 3, "import", reasons, 18);
+  score += scoreCollection(file.exports ?? [], tokens, 8, "export", reasons, 32);
+  score += scoreField((file.formFields ?? []).join(" "), tokens, 5, "form field", reasons);
+  score += scoreField((file.navigationTargets ?? []).join(" "), tokens, 7, "navigation", reasons);
+  score += scoreField((file.localIdentifiers ?? []).join(" "), tokens, 4, "local identifier", reasons);
 
   const symbolMatch = scoreSymbols(file.symbols ?? [], tokens);
   score += symbolMatch.score;
@@ -455,6 +459,12 @@ function scoreFile(map, file, tokens, intent) {
   }
 
   score += scoreIntentHints(file, intent, reasons);
+  score += scoreConceptCoverage(file, tokens, reasons);
+
+  if (isTypeOnlyFile(file)) {
+    score = Math.floor(score * 0.4);
+    reasons.push("type reference");
+  }
 
   if (file.kind === "test" && score > 0) {
     score = Math.max(1, Math.floor(score * 0.7));
@@ -473,7 +483,9 @@ function scoreFile(map, file, tokens, intent) {
  * @returns {number}
  */
 function scoreIntentHints(file, intent, reasons) {
-  const ownText = normalizeText(`${file.path} ${file.kind} ${file.domain} ${file.exports?.join(" ")} ${file.symbols?.map((symbol) => symbol.name).join(" ")}`);
+  const ownText = normalizeText(
+    `${file.path} ${file.kind} ${file.domain} ${file.exports?.join(" ")} ${symbolTerms(file.symbols)} ${file.formFields?.join(" ")} ${file.navigationTargets?.join(" ")} ${file.localIdentifiers?.join(" ")}`,
+  );
   const importText = normalizeText(file.imports?.join(" ") ?? "");
   let score = 0;
 
@@ -503,6 +515,20 @@ function scoreIntentHints(file, intent, reasons) {
     }
   }
 
+  if (intent.hints.includes("configuration") && intent.hints.includes("privacy")) {
+    const fields = new Set(tokenize((file.formFields ?? []).join(" ")));
+    const controlsPrivacy = ["address", "location", "venue", "hide", "hidden", "visibility", "private"].some((term) => fields.has(term));
+    const controlsRsvp = ["rsvp", "invite", "invitation", "guest"].some((term) => fields.has(term));
+    if (controlsPrivacy && controlsRsvp) {
+      score += 120;
+      reasons.push("privacy configuration control");
+      if (file.kind === "component" || file.kind === "route") {
+        score += 36;
+        reasons.push("configuration surface");
+      }
+    }
+  }
+
   const domain = normalizeText(file.domain || "");
   if (domain && intent.topics.includes(domain)) {
     score += 18;
@@ -514,6 +540,44 @@ function scoreIntentHints(file, intent, reasons) {
   }
 
   return score;
+}
+
+/**
+ * Reward files that connect several distinct concepts from a plain-language
+ * question, rather than only repeating a broad noun such as `event`.
+ *
+ * @param {CodeMapFile} file
+ * @param {string[]} tokens
+ * @param {string[]} reasons
+ */
+function scoreConceptCoverage(file, tokens, reasons) {
+  const text = normalizeText(
+    `${file.path} ${file.kind} ${file.domain} ${file.route ?? ""} ${file.controllerBasePath ?? ""} ${file.exports?.join(" ")} ${symbolTerms(file.symbols)} ${file.formFields?.join(" ")} ${file.navigationTargets?.join(" ")} ${file.localIdentifiers?.join(" ")}`,
+  );
+  const textTokens = new Set(tokenize(text));
+  const matched = tokens.filter((token) => tokenVariants(token).some((variant) => textTokens.has(variant)));
+  if (matched.length < 3) {
+    return 0;
+  }
+  reasons.push("multi-concept match");
+  return Math.min(36, (matched.length - 2) * 12);
+}
+
+/**
+ * Declaration-only files are valuable supporting context, but dense barrels of
+ * interfaces should not outrank the screen, controller, or service that owns
+ * the behaviour requested in plain language.
+ *
+ * @param {CodeMapFile} file
+ */
+function isTypeOnlyFile(file) {
+  const symbols = file.symbols ?? [];
+  return symbols.length > 0 && symbols.every((symbol) => ["interface", "type", "enum"].includes(symbol.type));
+}
+
+/** @param {CodeMapFile["symbols"]|undefined} symbols */
+function symbolTerms(symbols) {
+  return (symbols ?? []).map((symbol) => `${symbol.name} ${symbol.terms?.join(" ") ?? ""}`).join(" ");
 }
 
 /**
@@ -533,7 +597,7 @@ function scoreAuthSignupVerificationFlow(file, reasons) {
     return 0;
   }
 
-  const text = normalizeText(`${file.path} ${file.kind} ${file.domain} ${file.exports?.join(" ")} ${file.symbols?.map((symbol) => symbol.name).join(" ")}`);
+  const text = normalizeText(`${file.path} ${file.kind} ${file.domain} ${file.exports?.join(" ")} ${symbolTerms(file.symbols)}`);
   const tokens = new Set(tokenize(text));
   const hasRegistration = ["signup", "register", "registration"].some((term) => tokens.has(term));
   const hasVerification = ["verification", "verify", "verified", "validate", "otp"].some((term) => tokens.has(term));
@@ -562,16 +626,19 @@ function scoreSymbols(symbols, tokens) {
 
   /** @type {Array<{ type: string, name: string, line?: number, matchedTokens: string[], score: number }>} */
   const matches = [];
-  let score = 0;
+  let strongScore = 0;
+  /** @type {Map<string, number>} */
+  const weakByToken = new Map();
 
   for (const symbol of symbols) {
-    const nameTokens = new Set(tokenize(symbol.name));
+    const nameTokens = new Set(tokenize(`${symbol.name} ${symbol.terms?.join(" ") ?? ""}`));
     const matchedTokens = tokens.filter((token) => tokenVariants(token).some((variant) => nameTokens.has(variant)));
     if (!matchedTokens.length) {
       continue;
     }
 
-    let hitScore = matchedTokens.length * 9;
+    const variantHits = tokens.flatMap((token) => tokenVariants(token).filter((variant) => nameTokens.has(variant)));
+    let hitScore = matchedTokens.length * 9 + Math.max(0, variantHits.length - matchedTokens.length) * 9;
     if (symbol.type === "method" && matchedTokens.length >= 2) {
       hitScore += matchedTokens.length * 12;
     }
@@ -579,7 +646,13 @@ function scoreSymbols(symbols, tokens) {
       hitScore += 24;
     }
 
-    score += hitScore;
+    if (matchedTokens.length >= 2 || variantHits.length >= 2) {
+      strongScore += hitScore;
+    } else {
+      for (const token of matchedTokens) {
+        weakByToken.set(token, Math.max(weakByToken.get(token) ?? 0, hitScore));
+      }
+    }
     matches.push({
       type: symbol.type,
       name: symbol.name,
@@ -591,7 +664,14 @@ function scoreSymbols(symbols, tokens) {
 
   matches.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
   return {
-    score: Math.min(score, 180),
+    score: Math.min(
+      strongScore +
+        Math.min(
+          [...weakByToken.values()].reduce((sum, value) => sum + value, 0),
+          36,
+        ),
+      180,
+    ),
     matches: matches.slice(0, 8),
     reasons: matches.length ? ["symbol"] : [],
   };
@@ -649,7 +729,7 @@ function diversifyByDomain(files, limit, maxPerDomain = 3) {
  */
 function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens) {
   const focusKeys = new Set([...primaryFiles, ...relatedFiles].map(fileKey));
-  /** @type {Array<{ repo: string, path: string, kind: string, domain: string, symbol: string, type: string, line?: number, matchedTokens: string[], score: number }>} */
+  /** @type {Array<{ repo: string, path: string, kind: string, domain: string, symbol: string, type: string, line?: number, matchedTokens: string[], score: number, rank: number }>} */
   const hotspots = [];
 
   for (const file of scoredFiles) {
@@ -657,7 +737,8 @@ function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens) {
       continue;
     }
     for (const match of file.matchedSymbols) {
-      if (match.matchedTokens.length < 2 && !tokens.some((token) => token === normalizeText(file.domain))) {
+      const topPrimary = primaryFiles.slice(0, 2).some((primary) => fileKey(primary) === fileKey(file));
+      if (match.matchedTokens.length < 2 && !tokens.some((token) => token === normalizeText(file.domain)) && !topPrimary) {
         continue;
       }
       hotspots.push({
@@ -670,11 +751,15 @@ function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens) {
         line: match.line,
         matchedTokens: match.matchedTokens,
         score: match.score,
+        rank: match.score + (topPrimary ? 12 : 0),
       });
     }
   }
 
-  return hotspots.sort((a, b) => b.score - a.score || a.path.localeCompare(b.path) || a.symbol.localeCompare(b.symbol)).slice(0, 10);
+  return hotspots
+    .sort((a, b) => b.rank - a.rank || a.path.localeCompare(b.path) || a.symbol.localeCompare(b.symbol))
+    .slice(0, 10)
+    .map(({ rank: _rank, ...hotspot }) => hotspot);
 }
 
 /**
@@ -1046,6 +1131,8 @@ function inferIntent(query, tokens) {
   if (normalized.includes("tool") || normalized.includes("agent")) hints.push("tool");
   if (normalized.includes("api") || normalized.includes("route") || normalized.includes("integration") || normalized.includes("client")) hints.push("api");
   if (normalized.includes("test") || normalized.includes("verify")) hints.push("test");
+  if (/\b(configure|configuration|setting|settings|organiser|organizer)\b/.test(normalized)) hints.push("configuration");
+  if (/\b(private|privacy|hide|hidden|visibility|confidential)\b/.test(normalized)) hints.push("privacy");
   const hasSignup = tokens.some((token) => ["signup", "register", "registration"].includes(token));
   const hasVerification = tokens.some((token) => ["verification", "verify", "verified", "validate", "otp"].includes(token));
   if (hasSignup && hasVerification) hints.push("auth-flow");
@@ -1248,6 +1335,46 @@ function scoreField(value, tokens, weight, reason, reasons) {
 }
 
 /**
+ * Score a set of imports or exports once per query concept rather than once
+ * per matching declaration. This stops a broad barrel such as `types/index`
+ * from winning solely because it repeats a word like `event` many times.
+ *
+ * @param {string[]} values
+ * @param {string[]} tokens
+ * @param {number} weight
+ * @param {string} reason
+ * @param {string[]} reasons
+ * @param {number} cap
+ */
+function scoreCollection(values, tokens, weight, reason, reasons, cap) {
+  /** @type {Map<string, number>} */
+  const scoreByToken = new Map();
+  for (const value of values) {
+    const normalized = normalizeText(value);
+    const normalizedTokens = new Set(tokenize(value));
+    for (const token of tokens) {
+      const variants = tokenVariants(token);
+      const hit = variants.some((variant) => normalized === variant)
+        ? weight * 2
+        : variants.some((variant) => normalizedTokens.has(variant) || normalized.includes(variant))
+          ? weight
+          : 0;
+      if (hit > 0) {
+        scoreByToken.set(token, Math.max(scoreByToken.get(token) ?? 0, hit));
+      }
+    }
+  }
+  const score = Math.min(
+    [...scoreByToken.values()].reduce((sum, value) => sum + value, 0),
+    cap,
+  );
+  if (score > 0) {
+    reasons.push(reason);
+  }
+  return score;
+}
+
+/**
  * @param {ScoredFile[]} files
  * @param {string} fallback
  * @returns {string[]}
@@ -1392,6 +1519,22 @@ function tokenVariants(token) {
     variants.add("verified");
     variants.add("validate");
     variants.add("otp");
+  }
+  if (token === "qr") {
+    variants.add("scan");
+    variants.add("ticket");
+  }
+  if (token === "check" || token === "checkin") {
+    variants.add("scan");
+  }
+  if (token === "venue") {
+    variants.add("address");
+    variants.add("location");
+  }
+  if (token === "private" || token === "privacy") {
+    variants.add("hide");
+    variants.add("hidden");
+    variants.add("visibility");
   }
   return [...variants];
 }
