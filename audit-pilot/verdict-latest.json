@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-30T06:17:58.092Z",
+  "generatedAt": "2026-07-30T07:13:03.362Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -13,47 +13,46 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "evals/fixtures/checkin-api/src/booking/ticket.controller.ts",
+        "path": "src/cli.js",
+        "score": 15,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/config.js",
         "score": 0,
         "riskFlags": [
-          "request surface"
+          "configuration"
         ]
       },
       {
-        "path": "evals/fixtures/checkin-api/src/booking/ticket.service.ts",
+        "path": "src/lib/dashboard.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "evals/fixtures/mobile-host-rsvp/app/(tabs)/explore/[id].tsx",
-        "score": 0,
+        "path": "src/lib/mcp.js",
+        "score": 5,
         "riskFlags": []
       },
       {
-        "path": "evals/fixtures/mobile-host-rsvp/app/rsvp/[eventId].tsx",
-        "score": 0,
-        "riskFlags": []
-      },
-      {
-        "path": "evals/fixtures/mobile-host-rsvp/types/index.ts",
+        "path": "src/lib/output.js",
         "score": 0,
         "riskFlags": []
       }
     ],
     "risks": [
-      "Request-surface change: verify request/response shape, validation, client consumers, and backward compatibility."
+      "Configuration change: verify environment variables, secrets, build output, and production defaults."
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 21,
-    "additions": 397,
-    "deletions": 26,
+    "changedFiles": 10,
+    "additions": 339,
+    "deletions": 22,
     "riskLevel": "low",
     "riskFlags": [
-      "configuration",
-      "request surface"
+      "configuration"
     ],
-    "reviewTargetsCount": 1
+    "reviewTargetsCount": 0
   },
   "pass": {
     "verdict": "WARN",
@@ -63,7 +62,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "22 changed files found."
+        "summary": "11 changed files found."
       },
       {
         "name": "Secret safety",
@@ -78,7 +77,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
@@ -103,6 +102,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 477
+    "fullJson": 416
   }
 }
