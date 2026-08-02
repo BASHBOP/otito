@@ -123,7 +123,10 @@ import { listRepoFiles } from "./repo.js";
  * @property {CodeMapCacheInfo} [cache]
  */
 
-const cacheVersion = 10;
+// Bump whenever code-map extraction or file eligibility changes. Otherwise an
+// existing on-disk map can silently omit newly-supported artifacts such as
+// templates and configuration snapshots.
+const cacheVersion = 11;
 const externalCacheDirectory = "otito-index-cache";
 
 // Bound on the in-process memo. MCP hosts call repo-map tools repeatedly for the

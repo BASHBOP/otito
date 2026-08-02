@@ -81,36 +81,65 @@ test("generateImpact flags risk hotspots from concept + classifyPath", () => {
   assert.ok(result.data.risks.some((r) => r.toLowerCase().includes("money") || r.toLowerCase().includes("refund")));
 });
 
-test("generateImpact separates email-template owners from predictable translation, flag, and preview-test fan-out", () => {
+test("generateImpact recognises plural template requests and predictable locale, flag-snapshot, and focused-test fan-out", () => {
   const root = gitFixture("audience-preview", {
     "src/audience/AudienceEmailPreview.tsx": "export function AudienceEmailPreview() { return null; }\n",
+    "src/audience/audience.controller.ts": "export class AudienceController { createCampaign() {} }\n",
+    "src/audience/create-campaign.dto.ts": "export class CreateCampaignDto {}\n",
     "src/email/templates/responsive-base.hbs": "{{organisationAudiencePreview}}\n",
-    "src/i18n/en.json": JSON.stringify({ "audience.preview.title": "Preview" }),
+    "messages/en-GB.json": JSON.stringify({ "audience.preview.title": "Preview" }),
     "src/feature-flags/config/environments/production.json": JSON.stringify({ audienceStudio: false }),
-    "tests/email-preview.template.test.ts": "import test from 'node:test'; test('preview', () => {});\n",
+    "src/feature-flags/config/.snapshot": "organisationAudienceStudio=false\n",
+    "src/audience/audience-email-preview.test.ts": "import test from 'node:test'; test('preview', () => {});\n",
   });
   fs.writeFileSync(path.join(root, "src/audience/AudienceEmailPreview.tsx"), "export function AudienceEmailPreview() { return 'preview'; }\n");
   fs.writeFileSync(path.join(root, "src/email/templates/responsive-base.hbs"), "{{organisationAudiencePreview}}\n{{previewTitle}}\n");
-  fs.writeFileSync(path.join(root, "src/i18n/en.json"), JSON.stringify({ "audience.preview.title": "Preview email" }));
+  fs.writeFileSync(path.join(root, "messages/en-GB.json"), JSON.stringify({ "audience.preview.title": "Preview email" }));
   fs.writeFileSync(path.join(root, "src/feature-flags/config/environments/production.json"), JSON.stringify({ audienceStudio: true }));
-  fs.writeFileSync(path.join(root, "tests/email-preview.template.test.ts"), "import test from 'node:test'; test('preview email', () => {});\n");
+  fs.writeFileSync(path.join(root, "src/feature-flags/config/.snapshot"), "organisationAudienceStudio=true\n");
+  fs.writeFileSync(path.join(root, "src/audience/audience-email-preview.test.ts"), "import test from 'node:test'; test('preview email', () => {});\n");
 
-  const result = generateImpact("add organisation audience email preview template", { path: root, diffBase: "HEAD", top: 10 });
+  const result = generateImpact("add organisation audience email preview templates with feature flags", { path: root, diffBase: "HEAD", top: 10 });
 
   assert.ok(result.data.classifications.requiredOwners.includes("src/audience/AudienceEmailPreview.tsx"));
-  assert.ok(result.data.classifications.requiredOwners.includes("src/email/templates/responsive-base.hbs"));
-  assert.ok(result.data.classifications.supportingFiles.includes("src/i18n/en.json"));
+  assert.ok(result.data.classifications.supportingFiles.includes("src/email/templates/responsive-base.hbs"));
+  assert.ok(result.data.classifications.advisoryFiles.includes("src/audience/audience.controller.ts"));
+  assert.ok(result.data.classifications.advisoryFiles.includes("src/audience/create-campaign.dto.ts"));
+  assert.ok(result.data.classifications.supportingFiles.includes("messages/en-GB.json"));
   assert.ok(result.data.classifications.supportingFiles.includes("src/feature-flags/config/environments/production.json"));
-  assert.ok(result.data.classifications.supportingFiles.includes("tests/email-preview.template.test.ts"));
-  assert.equal(result.data.topFiles.find((file) => file.path === "src/email/templates/responsive-base.hbs")?.role, "required");
+  assert.ok(result.data.classifications.supportingFiles.includes("src/feature-flags/config/.snapshot"));
+  assert.ok(result.data.classifications.supportingFiles.includes("src/audience/audience-email-preview.test.ts"));
+  assert.equal(result.data.topFiles.find((file) => file.path === "src/email/templates/responsive-base.hbs")?.role, "supporting");
   assert.deepEqual(result.data.validation.missedChangedFiles, []);
-  assert.ok(result.data.validation.confirmedRelated.includes("src/i18n/en.json"));
+  assert.ok(result.data.validation.confirmedRelated.includes("messages/en-GB.json"));
   assert.ok(result.data.validation.confirmedRelated.includes("src/feature-flags/config/environments/production.json"));
+  assert.ok(result.data.validation.confirmedRelated.includes("src/feature-flags/config/.snapshot"));
 
   spawnSync("git", ["add", "."], { cwd: root });
-  const convergence = generateConvergence("add organisation audience email preview template", { path: root, base: "HEAD", staged: true });
+  const convergence = generateConvergence("add organisation audience email preview templates with feature flags", { path: root, base: "HEAD", staged: true });
   assert.ok(convergence.convergence >= 80, `expected supporting fan-out not to depress convergence, got ${convergence.convergence}`);
   assert.deepEqual(convergence.drivers.missedChangedFiles, []);
+});
+
+test("generateImpact keeps unrelated drift visible beside expected template fan-out", () => {
+  const root = gitFixture("audience-preview-drift", {
+    "src/audience/AudienceEmailPreview.tsx": "export function AudienceEmailPreview() { return null; }\n",
+    "src/email/templates/campaign-message.hbs": "{{campaignMessage}}\n",
+    "messages/en-GB.json": JSON.stringify({ "audience.preview.title": "Preview" }),
+    "src/feature-flags/config/environments/production.json": JSON.stringify({ audienceStudio: false }),
+    "src/payment/refund.service.ts": "export function refund() { return false; }\n",
+  });
+  fs.writeFileSync(path.join(root, "src/audience/AudienceEmailPreview.tsx"), "export function AudienceEmailPreview() { return 'preview'; }\n");
+  fs.writeFileSync(path.join(root, "src/email/templates/campaign-message.hbs"), "{{campaignMessage}}\n{{previewTitle}}\n");
+  fs.writeFileSync(path.join(root, "messages/en-GB.json"), JSON.stringify({ "audience.preview.title": "Preview email" }));
+  fs.writeFileSync(path.join(root, "src/feature-flags/config/environments/production.json"), JSON.stringify({ audienceStudio: true }));
+  fs.writeFileSync(path.join(root, "src/payment/refund.service.ts"), "export function refund() { return true; }\n");
+
+  const result = generateImpact("update audience email preview templates with feature flags", { path: root, diffBase: "HEAD", top: 10 });
+  assert.ok(result.data.validation.confirmedRelated.includes("src/email/templates/campaign-message.hbs"));
+  assert.ok(result.data.validation.confirmedRelated.includes("messages/en-GB.json"));
+  assert.ok(result.data.validation.confirmedRelated.includes("src/feature-flags/config/environments/production.json"));
+  assert.deepEqual(result.data.validation.missedChangedFiles, ["src/payment/refund.service.ts"]);
 });
 
 test("generateImpact suggests related tests by overlapping path tokens", () => {

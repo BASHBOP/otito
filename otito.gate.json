@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "validation": {
+    "commands": [
+      {
+        "id": "quality",
+        "command": "npm run ci",
+        "timeoutSeconds": 600
+      }
+    ]
+  }
+}

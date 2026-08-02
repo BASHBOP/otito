@@ -36,7 +36,11 @@ export function isSourceFilePath(file) {
   // Manifest and compiler metadata are ubiquitous but are not useful change
   // owners. Keep application JSON (translations and flag config) indexable.
   if (["package.json", "package-lock.json", "tsconfig.json"].includes(basename)) return false;
-  return sourceExtensions.has(path.posix.extname(file)) || /^changelog(?:\.[a-z0-9_-]+)?\.md$/i.test(basename);
+  return (
+    sourceExtensions.has(path.posix.extname(file)) ||
+    (basename === ".snapshot" && /(^|\/)(feature[-_]?flags?|flags?|config)(\/|$)/i.test(file)) ||
+    /^changelog(?:\.[a-z0-9_-]+)?\.md$/i.test(basename)
+  );
 }
 
 /**
