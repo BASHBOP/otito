@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>otito — How It Works</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --stroke: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --blue: #58a6ff;
+        --green: #7ee787;
+        --purple: #d2a8ff;
+        --orange: #ffa657;
+        --yellow: #ffd866;
+        --red: #ff7b72;
+        --cyan: #79c0ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      header {
+        padding: 1.25rem 1.5rem 0.5rem;
+        border-bottom: 1px solid var(--stroke);
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      header p {
+        margin: 0.35rem 0 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+        max-width: 52rem;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1.25rem;
+        padding: 0.85rem 1.5rem 1rem;
+        border-bottom: 1px solid var(--stroke);
+        font-size: 0.8rem;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .stage {
+        position: relative;
+        width: min(1200px, 100%);
+        margin: 0 auto;
+        padding: 1rem;
+      }
+
+      svg.mindmap {
+        display: block;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+
+      .link {
+        fill: none;
+        stroke: var(--stroke);
+        stroke-width: 1.5;
+        stroke-dasharray: 6 5;
+        opacity: 0.55;
+        transition: stroke 0.35s ease, opacity 0.35s ease, stroke-width 0.35s ease;
+      }
+
+      .link.active {
+        stroke-width: 2.5;
+        opacity: 1;
+        animation: flow 1.2s linear infinite;
+      }
+
+      .link.entry.active {
+        stroke: var(--blue);
+      }
+      .link.discover.active {
+        stroke: var(--cyan);
+      }
+      .link.map.active {
+        stroke: var(--purple);
+      }
+      .link.change.active {
+        stroke: var(--yellow);
+      }
+      .link.review.active {
+        stroke: var(--green);
+      }
+      .link.output.active {
+        stroke: var(--orange);
+      }
+
+      @keyframes flow {
+        to {
+          stroke-dashoffset: -22;
+        }
+      }
+
+      .node {
+        cursor: default;
+      }
+
+      .node circle,
+      .node rect {
+        transition: transform 0.35s ease, filter 0.35s ease;
+        transform-origin: center;
+        transform-box: fill-box;
+      }
+
+      .node.active circle,
+      .node.active rect {
+        filter: drop-shadow(0 0 10px currentColor);
+        transform: scale(1.06);
+      }
+
+      .node text {
+        font-size: 11px;
+        fill: var(--text);
+        text-anchor: middle;
+        pointer-events: none;
+      }
+
+      .node .label {
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      .node .sub {
+        fill: var(--muted);
+        font-size: 9.5px;
+      }
+
+      .center-ring {
+        animation: pulse 2.8s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.35;
+          r: 58;
+        }
+        50% {
+          opacity: 0.75;
+          r: 66;
+        }
+      }
+
+      .flow-dot {
+        fill: var(--green);
+        opacity: 0;
+      }
+
+      .flow-dot.on {
+        opacity: 1;
+        animation: travel 2.4s ease-in-out infinite;
+      }
+
+      @keyframes travel {
+        0% {
+          opacity: 0;
+        }
+        10% {
+          opacity: 1;
+        }
+        90% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      .panel {
+        margin: 0 auto 1.5rem;
+        width: min(1200px, calc(100% - 2rem));
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 1rem;
+      }
+
+      @media (max-width: 900px) {
+        .panel {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--stroke);
+        border-radius: 10px;
+        padding: 1rem 1.1rem;
+      }
+
+      .card h2 {
+        margin: 0 0 0.65rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+
+      .steps {
+        display: grid;
+        gap: 0.45rem;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 1.4rem 1fr;
+        gap: 0.55rem;
+        align-items: start;
+        padding: 0.45rem 0.5rem;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        transition: border-color 0.3s ease, background 0.3s ease;
+      }
+
+      .step.active {
+        border-color: var(--stroke);
+        background: #0d1117;
+      }
+
+      .step-num {
+        width: 1.4rem;
+        height: 1.4rem;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--bg);
+      }
+
+      .step strong {
+        display: block;
+        font-size: 0.86rem;
+        margin-bottom: 0.15rem;
+      }
+
+      .step span {
+        color: var(--muted);
+        font-size: 0.8rem;
+        line-height: 1.35;
+      }
+
+      .detail {
+        min-height: 7.5rem;
+      }
+
+      .detail h3 {
+        margin: 0 0 0.4rem;
+        font-size: 1rem;
+      }
+
+      .detail p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1.5;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.75rem;
+      }
+
+      .chip {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.72rem;
+        padding: 0.2rem 0.45rem;
+        border-radius: 999px;
+        border: 1px solid var(--stroke);
+        color: var(--text);
+      }
+
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.78rem;
+        padding: 0 1rem 1.5rem;
+      }
+
+      footer a {
+        color: var(--blue);
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>otito — layered diagram</h1>
+      <p>
+        Local-first repository intelligence: discover code, build context for agents, predict impact, and gate merges — via CLI,
+        MCP, or CI.
+      </p>
+    </header>
+
+    <div class="legend" aria-hidden="true">
+      <span><i class="dot" style="background: var(--blue)"></i> Entry surfaces</span>
+      <span><i class="dot" style="background: var(--cyan)"></i> Discover &amp; index</span>
+      <span><i class="dot" style="background: var(--purple)"></i> Context &amp; maps</span>
+      <span><i class="dot" style="background: var(--yellow)"></i> Change impact</span>
+      <span><i class="dot" style="background: var(--green)"></i> Review &amp; gates</span>
+      <span><i class="dot" style="background: var(--orange)"></i> Outputs</span>
+    </div>
+
+    <div class="stage">
+      <svg class="mindmap" viewBox="0 0 1100 730" role="img" aria-label="otito layered diagram">
+
+        <!-- layer background bands -->
+        <rect x="90" y="38"  width="1005" height="74" rx="8" fill="#58a6ff" opacity="0.04" />
+        <rect x="90" y="154" width="1005" height="74" rx="8" fill="#79c0ff" opacity="0.04" />
+        <rect x="90" y="275" width="1005" height="74" rx="8" fill="#d2a8ff" opacity="0.04" />
+        <rect x="90" y="390" width="1005" height="88" rx="8" fill="#ffd866" opacity="0.04" />
+        <rect x="90" y="515" width="1005" height="82" rx="8" fill="#7ee787" opacity="0.04" />
+        <rect x="90" y="645" width="1005" height="72" rx="8" fill="#ffa657" opacity="0.04" />
+
+        <!-- layer labels -->
+        <text x="45" y="80"  text-anchor="middle" fill="#58a6ff" font-size="9" font-weight="700">ENTRY</text>
+        <text x="45" y="196" text-anchor="middle" fill="#79c0ff" font-size="9" font-weight="700">DISCOVER</text>
+        <text x="45" y="316" text-anchor="middle" fill="#d2a8ff" font-size="9" font-weight="700">CONTEXT</text>
+        <text x="45" y="438" text-anchor="middle" fill="#ffd866" font-size="9" font-weight="700">IMPACT</text>
+        <text x="45" y="560" text-anchor="middle" fill="#7ee787" font-size="9" font-weight="700">REVIEW</text>
+        <text x="45" y="684" text-anchor="middle" fill="#ffa657" font-size="9" font-weight="700">OUTPUT</text>
+
+        <!-- flow connectors (animated dashes show downward direction) -->
+        <g id="links">
+          <line class="link discover" data-group="discover" x1="550" y1="101" x2="550" y2="154" />
+          <line class="link map"      data-group="map"      x1="550" y1="225" x2="550" y2="275" />
+          <line class="link change"   data-group="change"   x1="550" y1="346" x2="550" y2="390" />
+          <line class="link review"   data-group="review"   x1="550" y1="478" x2="550" y2="515" />
+          <line class="link output"   data-group="output"   x1="550" y1="594" x2="550" y2="645" />
+        </g>
+
+        <!-- ENTRY -->
+        <g class="node" data-id="cli" data-group="entry" data-title="CLI" data-desc="Human and script entrypoint. Commands include context, impact, review, gate, init, harness, and pr.">
+          <rect x="155" y="49" width="130" height="52" rx="10" fill="#161b22" stroke="#58a6ff" color="#58a6ff" />
+          <text x="220" y="73"  class="label">CLI</text>
+          <text x="220" y="89"  class="sub">otito …</text>
+        </g>
+        <g class="node" data-id="mcp" data-group="entry" data-title="MCP server" data-desc="stdio MCP host for Cursor, VS Code, Claude Desktop. Exposes repo_inspect, context_pack, change_impact, review_gate, review_verdict, and 6 more v2 tools.">
+          <rect x="485" y="49" width="130" height="52" rx="10" fill="#161b22" stroke="#58a6ff" color="#58a6ff" />
+          <text x="550" y="73"  class="label">MCP</text>
+          <text x="550" y="89"  class="sub">otito mcp</text>
+        </g>
+        <g class="node" data-id="ci" data-group="entry" data-title="CI scaffold" data-desc="otito init writes .github/workflows/otito-ci.yml, optional harness-driven quality job, pre-commit hook, and .otito/ assets.">
+          <rect x="815" y="49" width="130" height="52" rx="10" fill="#161b22" stroke="#58a6ff" color="#58a6ff" />
+          <text x="880" y="73"  class="label">CI</text>
+          <text x="880" y="89"  class="sub">init scaffold</text>
+        </g>
+
+        <!-- DISCOVER -->
+        <g class="node" data-id="inspect" data-group="discover" data-title="repo_inspect" data-desc="Repository facts: languages, scripts, package managers, entrypoints, git state. CLI: otito repo.">
+          <circle cx="220" cy="191" r="34" fill="#161b22" stroke="#79c0ff" color="#79c0ff" />
+          <text x="220" y="187" class="label">inspect</text>
+          <text x="220" y="201" class="sub">repo facts</text>
+        </g>
+        <g class="node" data-id="index" data-group="discover" data-title="repo_index" data-desc="Discover and index local repos into a catalog with symbols and paths. Persists .otito/index.json cache.">
+          <circle cx="550" cy="191" r="34" fill="#161b22" stroke="#79c0ff" color="#79c0ff" />
+          <text x="550" y="187" class="label">index</text>
+          <text x="550" y="201" class="sub">catalog</text>
+        </g>
+        <g class="node" data-id="search" data-group="discover" data-title="repo_search" data-desc="Search indexed paths and symbols offline or online. Replaces legacy repo_catalog discovery flows.">
+          <circle cx="880" cy="191" r="34" fill="#161b22" stroke="#79c0ff" color="#79c0ff" />
+          <text x="880" y="187" class="label">search</text>
+          <text x="880" y="201" class="sub">symbols</text>
+        </g>
+
+        <!-- CONTEXT -->
+        <g class="node" data-id="map" data-group="map" data-title="repo_map" data-desc="AST-backed JSON code map: imports, exports, routes, domains across TS/JS/Go/C#/Python/Java/Ruby/Rust.">
+          <circle cx="165" cy="312" r="34" fill="#161b22" stroke="#d2a8ff" color="#d2a8ff" />
+          <text x="165" y="308" class="label">map</text>
+          <text x="165" y="322" class="sub">AST graph</text>
+        </g>
+        <g class="node" data-id="context" data-group="map" data-title="context_pack" data-desc="Task-aware context packet: primary files, tests, patterns, commands, token estimates. Run before planning or editing.">
+          <circle cx="415" cy="312" r="34" fill="#161b22" stroke="#d2a8ff" color="#d2a8ff" />
+          <text x="415" y="308" class="label">context</text>
+          <text x="415" y="322" class="sub">task pack</text>
+        </g>
+        <g class="node" data-id="harness" data-group="map" data-title="repo_harness" data-desc="Infers setup, validate, and runtime commands from package scripts. Drives init CI gates and documents how to run the repo.">
+          <circle cx="685" cy="312" r="34" fill="#161b22" stroke="#d2a8ff" color="#d2a8ff" />
+          <text x="685" y="308" class="label">harness</text>
+          <text x="685" y="322" class="sub">scripts</text>
+        </g>
+        <g class="node" data-id="workspace" data-group="map" data-title="workspace_report" data-desc="Multi-repo workspace aggregation for cross-service product work.">
+          <circle cx="935" cy="312" r="34" fill="#161b22" stroke="#d2a8ff" color="#d2a8ff" />
+          <text x="935" y="308" class="label">workspace</text>
+          <text x="935" y="322" class="sub">multi-repo</text>
+        </g>
+
+        <!-- IMPACT -->
+        <g class="node" data-id="impact" data-group="change" data-title="change_impact" data-desc="Predicts likely impacted files, tests, and risks from a natural-language change request or git diff. CLI: otito impact.">
+          <circle cx="550" cy="434" r="44" fill="#161b22" stroke="#ffd866" color="#ffd866" />
+          <text x="550" y="430" class="label">impact</text>
+          <text x="550" y="446" class="sub">blast radius</text>
+        </g>
+
+        <!-- REVIEW -->
+        <g class="node" data-id="reviewctx" data-group="review" data-title="review_context" data-desc="PR/commit review context from git diff plus optional GitHub metadata. CLI: otito pr.">
+          <circle cx="220" cy="556" r="38" fill="#161b22" stroke="#7ee787" color="#7ee787" />
+          <text x="220" y="552" class="label">review ctx</text>
+          <text x="220" y="568" class="sub">diff pack</text>
+        </g>
+        <g class="node" data-id="verdict" data-group="review" data-title="review_verdict" data-desc="Composite verdict: impact + review context + local/PR gate. PASS / WARN / FAIL with confidence. CLI: otito review.">
+          <circle cx="550" cy="556" r="38" fill="#161b22" stroke="#7ee787" color="#7ee787" />
+          <text x="550" y="552" class="label">verdict</text>
+          <text x="550" y="568" class="sub">composite</text>
+        </g>
+        <g class="node" data-id="gate" data-group="review" data-title="review_gate" data-desc="Merge gate: secrets, risk paths, release discipline, validation commands, CODEOWNERS, checks. CLI: otito gate.">
+          <circle cx="880" cy="556" r="38" fill="#161b22" stroke="#7ee787" color="#7ee787" />
+          <text x="880" y="552" class="label">gate</text>
+          <text x="880" y="568" class="sub">merge ready</text>
+        </g>
+
+        <!-- OUTPUT -->
+        <g class="node" data-id="artifacts" data-group="output" data-title=".otito/" data-desc="Durable Markdown/JSON artifacts: pr-review.md, harness.md, workspace.md, index cache. Gitignored by init.">
+          <rect x="155" y="647" width="130" height="52" rx="10" fill="#161b22" stroke="#ffa657" color="#ffa657" />
+          <text x="220" y="671" class="label">.otito</text>
+          <text x="220" y="687" class="sub">artifacts</text>
+        </g>
+        <g class="node" data-id="prcomment" data-group="output" data-title="PR comment" data-desc="CI review job posts structured context to the PR and uploads otito-pr-review artifact.">
+          <rect x="485" y="647" width="130" height="52" rx="10" fill="#161b22" stroke="#ffa657" color="#ffa657" />
+          <text x="550" y="671" class="label">PR comment</text>
+          <text x="550" y="687" class="sub">GitHub Actions</text>
+        </g>
+        <g class="node" data-id="verdictout" data-group="output" data-title="PASS / WARN / FAIL" data-desc="Actionable merge-readiness signal for humans and agents. WARN surfaces risk; FAIL blocks merge in strict CI.">
+          <rect x="815" y="647" width="130" height="52" rx="10" fill="#161b22" stroke="#ffa657" color="#ffa657" />
+          <text x="880" y="671" class="label">verdict</text>
+          <text x="880" y="687" class="sub">PASS · WARN · FAIL</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="panel">
+      <section class="card">
+        <h2>Animated workflow</h2>
+        <div class="steps" id="steps">
+          <div class="step active" data-step="0" data-node="mcp" data-group="entry">
+            <div class="step-num" style="background: var(--blue)">1</div>
+            <div><strong>Connect</strong><span>Install CLI or wire MCP host · optional init scaffold for CI + hooks</span></div>
+          </div>
+          <div class="step" data-step="1" data-node="inspect" data-group="discover">
+            <div class="step-num" style="background: var(--cyan)">2</div>
+            <div><strong>Discover</strong><span>Inspect repo shape · index catalog · search symbols</span></div>
+          </div>
+          <div class="step" data-step="2" data-node="context" data-group="map">
+            <div class="step-num" style="background: var(--purple)">3</div>
+            <div><strong>Context</strong><span>Generate maps, task packs, harness commands before the agent edits</span></div>
+          </div>
+          <div class="step" data-step="3" data-node="impact" data-group="change">
+            <div class="step-num" style="background: var(--yellow)">4</div>
+            <div><strong>Impact</strong><span>Predict touched files, tests, and risk-sensitive paths</span></div>
+          </div>
+          <div class="step" data-step="4" data-node="verdict" data-group="review">
+            <div class="step-num" style="background: var(--green)">5</div>
+            <div><strong>Review &amp; gate</strong><span>Build PR context · run merge gate · emit composite verdict</span></div>
+          </div>
+          <div class="step" data-step="5" data-node="artifacts" data-group="output">
+            <div class="step-num" style="background: var(--orange)">6</div>
+            <div><strong>Evidence</strong><span>Artifacts in .otito/, PR comments, CI verdict for merge</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card detail" id="detail">
+        <h3 id="detail-title">MCP server</h3>
+        <p id="detail-body">
+          stdio MCP host for Cursor, VS Code, Claude Desktop. Exposes repo_inspect, context_pack, change_impact,
+          review_gate, review_verdict, and 6 more v2 tools.
+        </p>
+        <div class="chips" id="detail-chips">
+          <span class="chip">otito mcp</span>
+          <span class="chip">context_pack</span>
+          <span class="chip">review_gate</span>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      Open this file in any browser ·
+      <a href="https://bashbop.github.io/otito/">bashbop.github.io/otito</a>
+    </footer>
+
+    <script>
+      const nodes = [...document.querySelectorAll(".node[data-id]")];
+      const links = [...document.querySelectorAll(".link")];
+      const steps = [...document.querySelectorAll(".step")];
+      const detailTitle = document.getElementById("detail-title");
+      const detailBody = document.getElementById("detail-body");
+      const detailChips = document.getElementById("detail-chips");
+
+      const chipMap = {
+        center: ["otito doctor", "otito context", "otito review"],
+        cli: ["otito repo .", "otito init .", "otito harness ."],
+        mcp: ["otito mcp", "context_pack", "review_gate"],
+        ci: ["otito init --hooks-path", "otito-ci.yml"],
+        inspect: ["repo_inspect", "otito repo"],
+        index: ["repo_index", "otito index"],
+        search: ["repo_search", "otito search"],
+        map: ["repo_map", "otito map"],
+        context: ["context_pack", "otito context"],
+        harness: ["repo_harness", "otito harness"],
+        workspace: ["workspace_report", "otito workspace"],
+        impact: ["change_impact", "otito impact"],
+        reviewctx: ["review_context", "otito pr"],
+        verdict: ["review_verdict", "otito review"],
+        gate: ["review_gate", "otito gate"],
+        artifacts: [".otito/pr-review.md", ".otito/harness.md"],
+        prcomment: ["GitHub Actions", "PR comment artifact"],
+        verdictout: ["PASS", "WARN", "FAIL"],
+      };
+
+      let stepIndex = 0;
+      let timer;
+
+      function setActive(step) {
+        const group = step.dataset.group;
+        const nodeId = step.dataset.node;
+
+        steps.forEach((el) => el.classList.toggle("active", el === step));
+        links.forEach((link) => link.classList.toggle("active", link.dataset.group === group));
+        nodes.forEach((node) => node.classList.toggle("active", node.dataset.id === nodeId));
+
+        const node = document.querySelector(`.node[data-id="${nodeId}"]`);
+        if (node) {
+          detailTitle.textContent = node.dataset.title;
+          detailBody.textContent = node.dataset.desc;
+          detailChips.innerHTML = (chipMap[nodeId] || [])
+            .map((chip) => `<span class="chip">${chip}</span>`)
+            .join("");
+        }
+      }
+
+      function cycle() {
+        setActive(steps[stepIndex]);
+        stepIndex = (stepIndex + 1) % steps.length;
+      }
+
+      steps.forEach((step, index) => {
+        step.addEventListener("click", () => {
+          stepIndex = index;
+          cycle();
+          clearInterval(timer);
+          timer = setInterval(cycle, 3200);
+        });
+      });
+
+      nodes.forEach((node) => {
+        node.addEventListener("mouseenter", () => {
+          clearInterval(timer);
+          links.forEach((link) => link.classList.toggle("active", link.dataset.group === node.dataset.group));
+          nodes.forEach((n) => n.classList.toggle("active", n === node));
+          detailTitle.textContent = node.dataset.title;
+          detailBody.textContent = node.dataset.desc;
+          detailChips.innerHTML = (chipMap[node.dataset.id] || [])
+            .map((chip) => `<span class="chip">${chip}</span>`)
+            .join("");
+        });
+        node.addEventListener("mouseleave", () => {
+          timer = setInterval(cycle, 3200);
+        });
+      });
+
+      nodes.forEach((node, i) => {
+        node.style.opacity = "0";
+        node.style.transform = "scale(0.92)";
+        node.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+        setTimeout(() => {
+          node.style.opacity = "1";
+          node.style.transform = "scale(1)";
+        }, 80 + i * 45);
+      });
+
+      cycle();
+      timer = setInterval(cycle, 3200);
+    </script>
+  </body>
+</html>
