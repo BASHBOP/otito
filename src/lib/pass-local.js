@@ -527,8 +527,8 @@ function complianceControlsCheck(root) {
     return {
       name: "Compliance controls",
       status: STATUS.warn,
-      summary: "bouncer config found but the bouncer binary could not be resolved.",
-      details: [cfg],
+      summary: "bouncer config found but the bouncer binary could not be resolved — install @bashbop/bouncer to enable this gate.",
+      details: [cfg, "Repair command: npm install --save-dev @bashbop/bouncer"],
     };
   }
   const result = runCommand(bin, ["check", "--json", "--no-fail", "--config", cfg], { cwd, timeout: 60000 });
@@ -538,7 +538,7 @@ function complianceControlsCheck(root) {
       name: "Compliance controls",
       status: STATUS.warn,
       summary: "bouncer did not return readable evidence.",
-      details: [result.stderr.trim()].filter(Boolean),
+      details: [result.stderr.trim(), `Recheck command: ${shellQuote(bin)} check --json --no-fail --config ${shellQuote(cfg)}`].filter(Boolean),
     };
   }
   const failed = Number(parsed?.totals?.fail ?? 0);

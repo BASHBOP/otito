@@ -25,7 +25,8 @@
     "auth-signup-api": "evals/fixtures/auth-signup-api",
     "checkin-api": "evals/fixtures/checkin-api",
     "rsvp-configuration-web": "evals/fixtures/rsvp-configuration-web",
-    "mobile-host-rsvp": "evals/fixtures/mobile-host-rsvp"
+    "mobile-host-rsvp": "evals/fixtures/mobile-host-rsvp",
+    "campaign-email": "evals/fixtures/campaign-email"
   },
   "retrieval": [
     {
@@ -159,6 +160,17 @@
       "query": "where does the mobile app show an event host bio and let an attendee RSVP?",
       "repoFixture": "mobile-host-rsvp",
       "expectedPrimary": ["app/(tabs)/explore/[id].tsx", "app/rsvp/[eventId].tsx"]
+    },
+    {
+      "name": "campaign-email-handlebars-template",
+      "comment": "A campaign-email request must surface the Handlebars message template rather than only generic email services.",
+      "query": "where is the branded campaign email Handlebars template rendered?",
+      "repoFixture": "campaign-email",
+      "expectedPrimary": [
+        "src/email/template/campaign-message-responsive.hbs",
+        "src/audience/campaign.service.ts",
+        "src/email/template/layouts/responsive-base.hbs"
+      ]
     }
   ],
   "risk": [

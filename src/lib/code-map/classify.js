@@ -9,8 +9,8 @@ export function classifyFile(file) {
   const base = path.basename(file);
   if (isTestFilePath(file)) return "test";
   if (/\.(hbs|handlebars)$/i.test(base)) return "template";
-  if (/(^|\/)(i18n|locale|locales|translations)(\/|$)/i.test(file) && /\.(json|ya?ml)$/i.test(base)) return "translation";
-  if (/\.(json|ya?ml)$/i.test(base) && /(feature[-_]?flag|flags|config|environment|settings)/i.test(file)) return "config";
+  if (/(^|\/)(i18n|locale|locales|translations|messages|languages)(\/|$)/i.test(file) && /\.(json|ya?ml)$/i.test(base)) return "translation";
+  if ((/\.(json|ya?ml)$/i.test(base) || base === ".snapshot") && /(feature[-_]?flag|flags|config|environment|settings)/i.test(file)) return "config";
   if (/^changelog(?:\.[a-z0-9_-]+)?\.md$/i.test(base)) return "changelog";
   if (/(^|\/)app\/api\/.*\/route\.[cm]?[jt]s$/.test(file)) return "apiRoute";
   if (base === "page.tsx" || base === "page.ts" || base === "layout.tsx" || base === "layout.ts") return "route";

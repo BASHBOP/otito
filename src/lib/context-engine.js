@@ -63,7 +63,7 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @property {string} [path]
  */
 
-const contextEngineVersion = 2;
+const contextEngineVersion = 3;
 const defaultLimit = 8;
 const stopWords = new Set([
   "a",
@@ -459,6 +459,7 @@ function scoreFile(map, file, tokens, intent) {
   }
 
   score += scoreIntentHints(file, intent, reasons);
+  score += scoreTemplateIntent(file, tokens, reasons);
   score += scoreConceptCoverage(file, tokens, reasons);
 
   if (isTypeOnlyFile(file)) {
@@ -474,6 +475,23 @@ function scoreFile(map, file, tokens, intent) {
   const summarized = summarizeFile(map, file, score, reasons);
   summarized.matchedSymbols = symbolMatch.matches;
   return summarized;
+}
+
+/**
+ * A request that explicitly names Handlebars, a template, a layout, or a
+ * partial is asking to inspect the rendered artifact itself. Give that
+ * artifact a bounded preference over a generic service that happens to share
+ * broad words such as "email" or "campaign"; the service remains in the pack
+ * as execution context rather than displacing the template.
+ * @param {CodeMapFile} file
+ * @param {string[]} tokens
+ * @param {string[]} reasons
+ */
+function scoreTemplateIntent(file, tokens, reasons) {
+  if (file.kind !== "template") return 0;
+  if (!tokens.some((token) => ["template", "templates", "handlebars", "layout", "partial"].includes(token))) return 0;
+  reasons.push("explicit template intent");
+  return 36;
 }
 
 /**

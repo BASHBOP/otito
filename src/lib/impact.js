@@ -169,6 +169,8 @@ const CONFIG_HINTS = {
 // Kinds that are real implementation owners. The presence of one of these in
 // the top-5 is what we are optimizing for — these get the concept boost.
 const OWNER_KINDS = new Set(["controller", "service", "route", "apiRoute", "apiClient", "schema", "dto", "module", "component", "template"]);
+const REQUEST_BOUNDARY_KINDS = new Set(["controller", "route", "apiRoute", "apiClient", "dto"]);
+const REQUIRED_OWNER_SCORE_RATIO = 0.8;
 
 // Paths that are usually not the owner of a behavior change. Demoted but not
 // dropped — sometimes the right answer IS a script.
@@ -804,20 +806,48 @@ function mergeDiffEvidence(evidence, heuristic) {
 function classifyImpactRoles(heuristicRanked, allFiles, query) {
   /** @type {Map<string, "required" | "supporting" | "advisory">} */
   const byPath = new Map();
-  const directOwners = heuristicRanked
+  const terms = new Set([...tokenize(query), ...weightedQueryTerms(query).keys()]);
+  const requestBoundaryChange = ["api", "endpoint", "form", "payload", "request", "route", "submit"].some((term) => terms.has(term));
+  const directCandidates = heuristicRanked
     .filter((entry) => OWNER_KINDS.has(entry.file.kind) && hasDirectIntentMatch(entry))
-    .slice(0, 4)
+    .filter((entry) => requestBoundaryChange || !REQUEST_BOUNDARY_KINDS.has(entry.file.kind));
+  // A rendered template is a real part of the behavior, but when a specific
+  // implementation owner is already known it is supporting evidence rather
+  // than an additional required owner. This avoids making every similarly
+  // named layout a coverage obligation.
+  const nonTemplateCandidates = directCandidates.filter((entry) => entry.file.kind !== "template");
+  const ownerPool = nonTemplateCandidates.length ? nonTemplateCandidates : directCandidates;
+  const strongestScore = ownerPool[0]?.score ?? 0;
+  const directOwners = ownerPool
+    .filter((entry) => entry.score >= strongestScore * REQUIRED_OWNER_SCORE_RATIO)
+    .slice(0, 3)
     .map((entry) => entry.file.path);
   for (const file of directOwners) byPath.set(file, "required");
 
-  const terms = new Set(tokenize(query));
-  const templateFlow = ["email", "template", "preview", "branding", "campaign", "audience", "newsletter"].some((term) => terms.has(term));
+  // `weightedQueryTerms` carries singular forms, so a request for
+  // "templates" receives the same artifact handling as "template".
+  const templateFlow = ["email", "template", "handlebars", "layout", "partial", "preview", "branding", "campaign", "audience", "newsletter"].some((term) =>
+    terms.has(term),
+  );
+  const featureFlagFlow = terms.has("feature") && (terms.has("flag") || terms.has("flags"));
   const releaseFlow = ["release", "changelog", "version"].some((term) => terms.has(term));
   for (const file of allFiles) {
-    const role = predictableRole(file, { templateFlow, releaseFlow });
+    const role = predictableRole(file, { templateFlow, featureFlagFlow, releaseFlow, terms });
     if (!role || byPath.has(file.path)) continue;
-    byPath.set(file.path, role === "template" ? "required" : "supporting");
+    byPath.set(file.path, "supporting");
   }
+
+  // An import-neighbour of a required owner is expected fan-out, but it still
+  // remains visible in the ranked output. This is deliberately narrower than
+  // treating every file in a domain as supporting.
+  const byRankedPath = new Map(heuristicRanked.map((entry) => [entry.file.path, entry]));
+  const knownPaths = new Set(allFiles.map((file) => file.path));
+  for (const owner of directOwners) {
+    for (const related of byRankedPath.get(owner)?.relatedFiles ?? []) {
+      if (knownPaths.has(related) && !byPath.has(related)) byPath.set(related, "supporting");
+    }
+  }
+  if (releaseFlow) byPath.set("package.json", "supporting");
 
   for (const entry of heuristicRanked) {
     if (!byPath.has(entry.file.path)) byPath.set(entry.file.path, "advisory");
@@ -842,13 +872,30 @@ function hasDirectIntentMatch(entry) {
   return entry.reasons.some((reason) => /^(path|symbol|export|route) matches:/.test(reason));
 }
 
-/** @param {CodeMapFile} file @param {{ templateFlow: boolean, releaseFlow: boolean }} options */
+/** @param {CodeMapFile} file @param {{ templateFlow: boolean, featureFlagFlow: boolean, releaseFlow: boolean, terms: Set<string> }} options */
 function predictableRole(file, options) {
-  if (options.templateFlow && file.kind === "template") return "template";
-  if (options.templateFlow && ["translation", "config"].includes(file.kind)) return "support";
-  if (options.templateFlow && file.kind === "test" && /(preview|template|email|i18n|locale|snapshot)/i.test(file.path)) return "support";
+  // A template with an exact lexical match is already a required owner above.
+  // Other templates (layouts, partials) are predictable supporting fan-out:
+  // they matter to scope, but an untouched adjacent template must not reduce
+  // coverage.
+  if (options.templateFlow && file.kind === "template") return "support";
+  if (options.templateFlow && file.kind === "translation") return "support";
+  if (options.featureFlagFlow && (file.kind === "config" || /feature[-_]?flags?/i.test(file.path))) return "support";
+  if (options.templateFlow && file.kind === "test" && matchesIntentTerms(file.path, options.terms)) return "support";
   if (options.releaseFlow && file.kind === "changelog") return "support";
   return null;
+}
+
+/**
+ * Supporting tests must share a meaningful task term. A generic snapshot or
+ * preview test in a neighbouring domain is still worth inspecting, but it is
+ * not evidence that this change's fan-out was anticipated.
+ * @param {string} filePath
+ * @param {Set<string>} terms
+ */
+function matchesIntentTerms(filePath, terms) {
+  const ignored = new Set(["add", "change", "email", "test", "tests", "template", "templates", "preview", "focused", "update"]);
+  return tokenize(filePath).some((term) => term.length > 2 && !ignored.has(term) && terms.has(term));
 }
 
 /**
