@@ -86,6 +86,237 @@ test("evaluateLocal evaluates only the Git index when staged mode is enabled", (
   assert.match(result.checks.find((check) => check.name === "Staged snapshot").details.join(" "), /not bound by this convergence receipt/);
 });
 
+test("run-validation executes the base-committed policy against the exact staged tree", () => {
+  const root = initRepo("validation-snapshot");
+  writeAndCommit(
+    root,
+    {
+      "otito.gate.json": JSON.stringify({
+        version: 1,
+        validation: {
+          commands: [
+            {
+              id: "staged-source",
+              command: `${process.execPath} -e "const fs=require('node:fs'); process.exit(fs.readFileSync('src/value.js','utf8').includes('staged') ? 0 : 1)"`,
+              timeoutSeconds: 10,
+            },
+          ],
+        },
+      }),
+      "src/value.js": "module.exports = 'base';\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "src/value.js"), "module.exports = 'staged';\n");
+  git(root, "add", "src/value.js");
+  fs.writeFileSync(path.join(root, "src/value.js"), "module.exports = 'unstaged';\n");
+
+  const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
+  const execution = result.checks.find((check) => check.name === "Validation execution");
+
+  assert.equal(execution.status, "PASS");
+  assert.match(execution.summary, /exact staged tree/);
+  assert.equal(result.validationEvidence.policy.version, 1);
+  assert.equal(result.validationEvidence.policy.path, "otito.gate.json");
+  assert.equal(result.validationEvidence.environment.dependencyStateAttested, false);
+  assert.equal(result.validationEvidence.commands[0].status, "PASS");
+  assert.equal(result.validationEvidence.receipt.receiptVersion, 1);
+  assert.deepEqual(result.validationEvidence.receipt.subject, result.subject);
+});
+
+test("run-validation reads its policy from the base commit rather than the staged change", () => {
+  const root = initRepo("validation-policy");
+  writeAndCommit(
+    root,
+    {
+      "otito.gate.json": JSON.stringify({
+        version: 1,
+        validation: { commands: [{ id: "base-policy", command: `${process.execPath} -e "process.exit(0)"` }] },
+      }),
+      "src/value.js": "module.exports = 'base';\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(
+    path.join(root, "otito.gate.json"),
+    JSON.stringify({ version: 1, validation: { commands: [{ id: "staged-policy", command: `${process.execPath} -e "process.exit(1)"` }] } }),
+  );
+  fs.writeFileSync(path.join(root, "src/value.js"), "module.exports = 'staged';\n");
+  git(root, "add", "otito.gate.json", "src/value.js");
+
+  const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
+
+  assert.equal(result.checks.find((check) => check.name === "Validation execution").status, "PASS");
+  assert.equal(result.validationEvidence.commands[0].id, "base-policy");
+});
+
+test("run-validation rejects a staged replacement of a base-pinned npm script", () => {
+  const root = initRepo("validation-script-tamper");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ scripts: { test: `${process.execPath} -e "process.exit(0)"` } }),
+      "otito.gate.json": JSON.stringify({ version: 1, validation: { commands: [{ id: "unit", command: "npm test" }] } }),
+      "src/value.js": "module.exports = 'base';\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ scripts: { test: `${process.execPath} -e "process.exit(0)"` } }));
+  fs.writeFileSync(path.join(root, "src/value.js"), "module.exports = 'staged';\n");
+  // A no-op replacement may look successful to npm, but it is not the script
+  // approved by the base-committed validation policy.
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ scripts: { test: "true" } }));
+  git(root, "add", "package.json", "src/value.js");
+
+  const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
+  const command = result.validationEvidence.commands[0];
+
+  assert.equal(result.checks.find((check) => check.name === "Validation execution").status, "FAIL");
+  assert.equal(command.status, "FAIL");
+  assert.equal(command.packageScript.scriptName, "test");
+  assert.equal(command.exitCode, null);
+});
+
+for (const [label, policyCommand, expectedManager] of [
+  ["Yarn", "yarn test", "yarn"],
+  ["pnpm", "pnpm test", "pnpm"],
+  ["Bun", "bun run test", "bun"],
+  ["Corepack Yarn", "corepack yarn run test", "yarn"],
+]) {
+  test(`run-validation rejects a staged replacement of a base-pinned ${label} script`, () => {
+    const root = initRepo(`validation-${expectedManager}-script-tamper`);
+    writeAndCommit(
+      root,
+      {
+        "package.json": JSON.stringify({ scripts: { test: `${process.execPath} -e "process.exit(0)"` } }),
+        "otito.gate.json": JSON.stringify({ version: 1, validation: { commands: [{ id: "unit", command: policyCommand }] } }),
+        "src/value.js": "module.exports = 'base';\n",
+      },
+      "init",
+    );
+    fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ scripts: { test: "true" } }));
+    git(root, "add", "package.json");
+
+    const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
+    const command = result.validationEvidence.commands[0];
+
+    assert.equal(result.checks.find((check) => check.name === "Validation execution").status, "FAIL");
+    assert.equal(command.status, "FAIL");
+    assert.equal(command.packageScript.packageManager, expectedManager);
+    assert.equal(command.packageScript.scriptName, "test");
+  });
+}
+
+test("run-validation excludes host secrets unless the base policy explicitly allows them", () => {
+  const root = initRepo("validation-environment");
+  const previous = process.env.OTITO_TEST_HOST_SECRET;
+  process.env.OTITO_TEST_HOST_SECRET = "not-for-staged-code";
+  writeAndCommit(
+    root,
+    {
+      "otito.gate.json": JSON.stringify({
+        version: 1,
+        validation: {
+          commands: [{ id: "secret-boundary", command: `${process.execPath} -e "process.exit(process.env.OTITO_TEST_HOST_SECRET ? 1 : 0)"` }],
+        },
+      }),
+      "src/value.js": "module.exports = 'base';\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "src/value.js"), "module.exports = 'staged';\n");
+  git(root, "add", "src/value.js");
+
+  try {
+    const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
+    assert.equal(result.checks.find((check) => check.name === "Validation execution").status, "PASS");
+    assert.deepEqual(result.validationEvidence.environment.inheritedVariables, []);
+    assert.equal(result.validationEvidence.environment.isolatedHome, true);
+  } finally {
+    if (previous === undefined) delete process.env.OTITO_TEST_HOST_SECRET;
+    else process.env.OTITO_TEST_HOST_SECRET = previous;
+  }
+});
+
+test("run-validation supports a base-policy allowlist for required environment variables", () => {
+  const root = initRepo("validation-environment-allow");
+  const previous = process.env.OTITO_TEST_REQUIRED_VALUE;
+  process.env.OTITO_TEST_REQUIRED_VALUE = "available";
+  writeAndCommit(
+    root,
+    {
+      "otito.gate.json": JSON.stringify({
+        version: 1,
+        validation: {
+          environment: { allow: ["OTITO_TEST_REQUIRED_VALUE"] },
+          commands: [
+            { id: "explicit-secret", command: `${process.execPath} -e "process.exit(process.env.OTITO_TEST_REQUIRED_VALUE === 'available' ? 0 : 1)"` },
+          ],
+        },
+      }),
+      "src/value.js": "module.exports = 'base';\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "src/value.js"), "module.exports = 'staged';\n");
+  git(root, "add", "src/value.js");
+
+  try {
+    const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
+    assert.equal(result.checks.find((check) => check.name === "Validation execution").status, "PASS");
+    assert.deepEqual(result.validationEvidence.environment.inheritedVariables, ["OTITO_TEST_REQUIRED_VALUE"]);
+  } finally {
+    if (previous === undefined) delete process.env.OTITO_TEST_REQUIRED_VALUE;
+    else process.env.OTITO_TEST_REQUIRED_VALUE = previous;
+  }
+});
+
+test("run-validation records failed command evidence without retaining raw output", () => {
+  const root = initRepo("validation-failure");
+  const previous = process.env.OTITO_TEST_SECRET_OUTPUT;
+  process.env.OTITO_TEST_SECRET_OUTPUT = "private failure";
+  writeAndCommit(
+    root,
+    {
+      "otito.gate.json": JSON.stringify({
+        version: 1,
+        validation: { commands: [{ id: "fails", command: `${process.execPath} -e "console.error(process.env.OTITO_TEST_SECRET_OUTPUT); process.exit(2)"` }] },
+      }),
+      "src/value.js": "module.exports = 'base';\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "src/value.js"), "module.exports = 'staged';\n");
+  git(root, "add", "src/value.js");
+
+  try {
+    const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
+    const execution = result.checks.find((check) => check.name === "Validation execution");
+
+    assert.equal(execution.status, "FAIL");
+    assert.equal(result.verdict, "FAIL");
+    assert.equal(result.validationEvidence.commands[0].exitCode, 2);
+    assert.match(result.validationEvidence.commands[0].stderrSha256, /^[0-9a-f]{64}$/);
+    assert.ok(!JSON.stringify(result.validationEvidence).includes("private failure"));
+  } finally {
+    if (previous === undefined) delete process.env.OTITO_TEST_SECRET_OUTPUT;
+    else process.env.OTITO_TEST_SECRET_OUTPUT = previous;
+  }
+});
+
+test("run-validation fails closed when the selected base has no versioned validation policy", () => {
+  const root = initRepo("validation-policy-missing");
+  writeAndCommit(root, { "src/value.js": "module.exports = 'base';\n" }, "init");
+  fs.writeFileSync(path.join(root, "src/value.js"), "module.exports = 'staged';\n");
+  git(root, "add", "src/value.js");
+
+  const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
+  const execution = result.checks.find((check) => check.name === "Validation execution");
+
+  assert.equal(execution.status, "FAIL");
+  assert.match(execution.summary, /versioned validation policy/);
+});
+
 test("staged convergence receipt is bound to the captured Git index tree", () => {
   const root = initRepo("staged-receipt");
   writeAndCommit(
@@ -298,6 +529,17 @@ test("evaluateLocal includes configured tieline contract evidence", () => {
   }
 });
 
+test("evaluateLocal gives the tieline installation command when its configured binary is missing", () => {
+  const root = initRepo("tieline-missing");
+  writeAndCommit(root, { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }), "src/index.ts": "export const hi = 1;\n" }, "init");
+  fs.writeFileSync(path.join(root, "tieline.config.json"), JSON.stringify({ frontend: ".", backend: "." }));
+
+  const result = evaluateLocal(root, { base: "HEAD" });
+  const contracts = result.checks.find((check) => check.name === "Contract drift");
+  assert.equal(contracts.status, "WARN");
+  assert.ok(contracts.details.includes("Repair command: npm install --save-dev @bashbop/tieline"));
+});
+
 test("evaluateLocal includes configured bouncer compliance evidence", () => {
   const root = initRepo("bouncer");
   writeAndCommit(
@@ -323,6 +565,8 @@ test("evaluateLocal includes configured bouncer compliance evidence", () => {
     const compliance = result.checks.find((check) => check.name === "Compliance controls");
     assert.equal(compliance.status, "FAIL");
     assert.match(compliance.summary, /1 required control is missing/);
+    assert.ok(compliance.details.some((detail) => detail.includes("Repair action: Add report controls.")));
+    assert.ok(compliance.details.some((detail) => detail.includes("Recheck command:")));
   } finally {
     if (previous === undefined) delete process.env.OTITO_BOUNCER_BIN;
     else process.env.OTITO_BOUNCER_BIN = previous;
@@ -442,6 +686,26 @@ test("evaluateLocal WARNs when risk-sensitive paths change (prisma schema)", () 
   const risk = result.checks.find((c) => c.name === "Risk review");
   assert.equal(risk.status, "WARN");
   assert.ok(risk.details.some((file) => file.includes("schema.prisma")));
+});
+
+test("evaluateLocal makes staged production configuration warnings actionable", () => {
+  const root = initRepo("production-config");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "src/feature-flags/config/environments/production.json": JSON.stringify({ audienceStudio: false }),
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "src/feature-flags/config/environments/production.json"), JSON.stringify({ audienceStudio: true }));
+  git(root, "add", "src/feature-flags/config/environments/production.json");
+
+  const result = evaluateLocal(root, { base: "HEAD", staged: true });
+  const risk = result.checks.find((check) => check.name === "Risk review");
+  assert.equal(risk.status, "WARN");
+  assert.ok(risk.details.some((detail) => detail.includes("explicitly approve the production configuration scope")));
+  assert.ok(risk.details.some((detail) => detail.includes("git restore --staged -- 'src/feature-flags/config/environments/production.json'")));
 });
 
 test("evaluateLocal escalates to FAIL under high-risk policy when prisma changes locally", () => {

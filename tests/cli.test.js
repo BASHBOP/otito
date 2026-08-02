@@ -267,6 +267,29 @@ test("converge --staged emits an exact Git-index subject", async () => {
   assert.deepEqual(payload.receipt.subject, payload.subject);
 });
 
+test("gate --run-validation records an exact staged validation receipt", async () => {
+  const fixture = makeGitFixture("gate-validation");
+  fs.writeFileSync(
+    path.join(fixture, "otito.gate.json"),
+    JSON.stringify({
+      version: 1,
+      validation: { commands: [{ id: "unit", command: `${process.execPath} -e "process.exit(0)"` }] },
+    }),
+  );
+  git(fixture, "add", "otito.gate.json");
+  git(fixture, "commit", "-q", "-m", "add validation policy");
+  fs.writeFileSync(path.join(fixture, "src", "index.ts"), "export const greet = () => 'staged validation';\n");
+  git(fixture, "add", "src/index.ts");
+
+  const result = await runCli(["gate", fixture, "--base", "HEAD", "--staged", "--run-validation", "--json"]);
+  const payload = parseJsonOutput(result.stdout);
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(payload.validationEvidence.commands[0].status, "PASS");
+  assert.equal(payload.validationEvidence.receipt.receiptVersion, 1);
+  assert.equal(payload.validationEvidence.receipt.subject.treeSha, git(fixture, "write-tree").trim());
+});
+
 test("pass evaluates merge readiness on a git fixture", async () => {
   const fixture = makeGitFixture("pass");
   const json = await runCli(["pass", fixture, "--base", "HEAD~1", "--json"]);

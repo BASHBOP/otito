@@ -17,6 +17,29 @@ test("generateCodeMap classifies Next routes and symbols", () => {
   assert.ok(result.files[0].symbols.some((symbol) => symbol.name === "count"));
 });
 
+test("generateCodeMap indexes Handlebars templates and predictable email supporting artifacts", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-email-artifacts-"));
+  fs.mkdirSync(path.join(root, "src", "email", "templates"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src", "i18n"), { recursive: true });
+  fs.mkdirSync(path.join(root, "src", "feature-flags", "config"), { recursive: true });
+  fs.writeFileSync(path.join(root, "src", "email", "templates", "responsive-base.hbs"), "{{> shared-header}}\n{{organisationAudiencePreview}}\n");
+  fs.writeFileSync(path.join(root, "src", "i18n", "en.json"), JSON.stringify({ "audience.preview.title": "Preview" }));
+  fs.writeFileSync(path.join(root, "src", "feature-flags", "config", "production.json"), JSON.stringify({ audienceStudio: true }));
+
+  const result = generateCodeMap(root);
+  const template = result.files.find((file) => file.path === "src/email/templates/responsive-base.hbs");
+  const translation = result.files.find((file) => file.path === "src/i18n/en.json");
+  const config = result.files.find((file) => file.path === "src/feature-flags/config/production.json");
+
+  assert.equal(template?.kind, "template");
+  assert.ok(template?.imports.includes("shared-header"));
+  assert.ok(template?.symbols.some((symbol) => symbol.name === "organisationAudiencePreview"));
+  assert.equal(translation?.kind, "translation");
+  assert.ok(translation?.symbols.some((symbol) => symbol.name === "audience.preview.title"));
+  assert.equal(config?.kind, "config");
+  assert.ok(config?.symbols.some((symbol) => symbol.name === "audienceStudio"));
+});
+
 test("generateCodeMap classifies Nest controllers and methods", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-api-"));
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });

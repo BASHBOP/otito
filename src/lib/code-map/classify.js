@@ -8,6 +8,10 @@ import { readDecoratorCalls } from "./text.js";
 export function classifyFile(file) {
   const base = path.basename(file);
   if (isTestFilePath(file)) return "test";
+  if (/\.(hbs|handlebars)$/i.test(base)) return "template";
+  if (/(^|\/)(i18n|locale|locales|translations)(\/|$)/i.test(file) && /\.(json|ya?ml)$/i.test(base)) return "translation";
+  if (/\.(json|ya?ml)$/i.test(base) && /(feature[-_]?flag|flags|config|environment|settings)/i.test(file)) return "config";
+  if (/^changelog(?:\.[a-z0-9_-]+)?\.md$/i.test(base)) return "changelog";
   if (/(^|\/)app\/api\/.*\/route\.[cm]?[jt]s$/.test(file)) return "apiRoute";
   if (base === "page.tsx" || base === "page.ts" || base === "layout.tsx" || base === "layout.ts") return "route";
   if (base.endsWith(".controller.ts")) return "controller";
@@ -37,7 +41,12 @@ export function classifyFile(file) {
  */
 export function isTestFilePath(file) {
   const normalized = file.replaceAll("\\", "/");
-  return /(^|\/)(__tests__|test|tests)(\/|$)/.test(normalized) || /\.(spec|test)\.[jt]sx?$/.test(normalized) || /(^|\/)[^/]+_test\.go$/.test(normalized);
+  return (
+    /(^|\/)(__tests__|test|tests|__snapshots__|snapshots)(\/|$)/.test(normalized) ||
+    /\.(spec|test)\.[jt]sx?$/.test(normalized) ||
+    /\.snap$/.test(normalized) ||
+    /(^|\/)[^/]+_test\.go$/.test(normalized)
+  );
 }
 
 /**
