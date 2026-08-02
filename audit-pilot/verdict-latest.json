@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-07-30T10:19:57.301Z",
+  "generatedAt": "2026-08-02T07:03:21.188Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -13,7 +13,12 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "scripts/smoke-tarball.mjs",
+        "path": "CHANGELOG.md",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
+        "path": "codex/skills/otito/evals/evals.json",
         "score": 0,
         "riskFlags": []
       },
@@ -23,18 +28,13 @@
         "riskFlags": []
       },
       {
-        "path": "src/lib/output.js",
+        "path": "src/lib/code-map/classify.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "tests/cli.test.js",
+        "path": "src/lib/code-map/generate.js",
         "score": 0,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/review.js",
-        "score": 41,
         "riskFlags": []
       }
     ],
@@ -43,12 +43,13 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 8,
-    "additions": 42,
-    "deletions": 7,
+    "changedFiles": 19,
+    "additions": 1436,
+    "deletions": 58,
     "riskLevel": "low",
     "riskFlags": [
-      "configuration"
+      "large PR",
+      "large file diff"
     ],
     "reviewTargetsCount": 0
   },
@@ -60,7 +61,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "9 changed files found."
+        "summary": "20 changed files found."
       },
       {
         "name": "Secret safety",
@@ -69,13 +70,13 @@
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
