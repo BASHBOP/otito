@@ -44,7 +44,7 @@ export const DIFF_RENAME_LIMIT = 1000;
  * @property {string[]} reasons
  */
 
-const impactEngineVersion = 2;
+const impactEngineVersion = 3;
 const defaultTop = 10;
 
 const STOP_WORDS = new Set([
@@ -168,7 +168,7 @@ const CONFIG_HINTS = {
 
 // Kinds that are real implementation owners. The presence of one of these in
 // the top-5 is what we are optimizing for — these get the concept boost.
-const OWNER_KINDS = new Set(["controller", "service", "route", "apiRoute", "apiClient", "schema", "dto", "module"]);
+const OWNER_KINDS = new Set(["controller", "service", "route", "apiRoute", "apiClient", "schema", "dto", "module", "component", "template"]);
 
 // Paths that are usually not the owner of a behavior change. Demoted but not
 // dropped — sometimes the right answer IS a script.
@@ -200,22 +200,19 @@ export function generateImpact(query, options = {}) {
   const scored = scoreFiles(map.files, weightedQuery, concepts, { wantsTests, wantsDocs });
   const withBoosts = applyDependencyBoosts(map.files, scored);
   const heuristicRanked = [...withBoosts.values()].sort((a, b) => b.score - a.score).slice(0, top);
+  const roles = classifyImpactRoles(heuristicRanked, map.files, normalized);
   const diffSnapshot = captureDiffSnapshot(map.repo.root, options.diffBase, options.diffFiles);
   const exactDiffFiles = diffSnapshot?.ok ? (diffSnapshot.files ?? []) : [];
   const diffEvidence = diffSnapshot?.ok ? buildDiffEvidence(exactDiffFiles, map.files, withBoosts, diffSnapshot.base) : null;
   // A requested Git diff is evidence, not another fuzzy ranking signal. Put every
   // mapped changed file ahead of heuristic candidates and label it as such, so an
   // agent cannot silently overlook the source files that actually changed.
-  const ranked = diffEvidence ? mergeDiffEvidence(diffEvidence.entries, heuristicRanked) : heuristicRanked;
+  const ranked = addPredictableSupportFiles(diffEvidence ? mergeDiffEvidence(diffEvidence.entries, heuristicRanked) : heuristicRanked, map.files, roles);
 
   const testSuggestions = suggestTests(map.files, ranked, map.repo);
   const implementationPlan = buildPlan(normalized, ranked);
   const risks = identifyRisks(normalized, ranked, concepts);
-  const validation = diffSnapshot
-    ? diffSnapshot.ok
-      ? validateChangedFiles(diffSnapshot.base, exactDiffFiles, ranked, map.files, heuristicRanked)
-      : diffSnapshot
-    : null;
+  const validation = diffSnapshot ? (diffSnapshot.ok ? validateChangedFiles(diffSnapshot.base, exactDiffFiles, roles) : diffSnapshot) : null;
 
   const data = /** @type {Record<string, any> & { tokenEstimate?: any }} */ ({
     ok: true,
@@ -243,11 +240,17 @@ export function generateImpact(query, options = {}) {
       score: round(entry.score),
       reasons: entry.reasons,
       relatedFiles: entry.relatedFiles.slice(0, 8),
+      role: roles.byPath.get(entry.file.path) ?? "advisory",
       riskFlags: classifyPath(entry.file.path, { kind: entry.file.kind }),
     })),
     testSuggestions,
     implementationPlan,
     risks,
+    classifications: {
+      requiredOwners: roles.requiredOwners,
+      supportingFiles: roles.supportingFiles,
+      advisoryFiles: roles.advisoryFiles,
+    },
     validation,
   });
 
@@ -790,35 +793,106 @@ function mergeDiffEvidence(evidence, heuristic) {
 }
 
 /**
- * Compare the surfaced result with the exact changed-file subject. Preserve the
- * heuristic-only scorecard too, so evidence inclusion never masquerades as a
+ * Separate the small set of files predicted to own the implementation from
+ * expected fan-out and broader inspection leads. Only required owners lower
+ * convergence coverage when they are untouched; support files are accepted
+ * when changed, while advisory files are deliberately non-load-bearing.
+ * @param {ScoredEntry[]} heuristicRanked
+ * @param {CodeMapFile[]} allFiles
+ * @param {string} query
+ */
+function classifyImpactRoles(heuristicRanked, allFiles, query) {
+  /** @type {Map<string, "required" | "supporting" | "advisory">} */
+  const byPath = new Map();
+  const directOwners = heuristicRanked
+    .filter((entry) => OWNER_KINDS.has(entry.file.kind) && hasDirectIntentMatch(entry))
+    .slice(0, 4)
+    .map((entry) => entry.file.path);
+  for (const file of directOwners) byPath.set(file, "required");
+
+  const terms = new Set(tokenize(query));
+  const templateFlow = ["email", "template", "preview", "branding", "campaign", "audience", "newsletter"].some((term) => terms.has(term));
+  const releaseFlow = ["release", "changelog", "version"].some((term) => terms.has(term));
+  for (const file of allFiles) {
+    const role = predictableRole(file, { templateFlow, releaseFlow });
+    if (!role || byPath.has(file.path)) continue;
+    byPath.set(file.path, role === "template" ? "required" : "supporting");
+  }
+
+  for (const entry of heuristicRanked) {
+    if (!byPath.has(entry.file.path)) byPath.set(entry.file.path, "advisory");
+  }
+  const requiredOwners = [...byPath.entries()]
+    .filter(([, role]) => role === "required")
+    .map(([file]) => file)
+    .sort();
+  const supportingFiles = [...byPath.entries()]
+    .filter(([, role]) => role === "supporting")
+    .map(([file]) => file)
+    .sort();
+  const advisoryFiles = [...byPath.entries()]
+    .filter(([, role]) => role === "advisory")
+    .map(([file]) => file)
+    .sort();
+  return { byPath, requiredOwners, supportingFiles, advisoryFiles };
+}
+
+/** @param {ScoredEntry} entry */
+function hasDirectIntentMatch(entry) {
+  return entry.reasons.some((reason) => /^(path|symbol|export|route) matches:/.test(reason));
+}
+
+/** @param {CodeMapFile} file @param {{ templateFlow: boolean, releaseFlow: boolean }} options */
+function predictableRole(file, options) {
+  if (options.templateFlow && file.kind === "template") return "template";
+  if (options.templateFlow && ["translation", "config"].includes(file.kind)) return "support";
+  if (options.templateFlow && file.kind === "test" && /(preview|template|email|i18n|locale|snapshot)/i.test(file.path)) return "support";
+  if (options.releaseFlow && file.kind === "changelog") return "support";
+  return null;
+}
+
+/**
+ * Keep expected fan-out visible even when it lacks lexical overlap with the
+ * request (for example `locales/en.json` beside an email template). These
+ * entries are labelled supporting and never become convergence owners.
+ * @param {ScoredEntry[]} ranked
+ * @param {CodeMapFile[]} allFiles
+ * @param {{ byPath: Map<string, string> }} roles
+ */
+function addPredictableSupportFiles(ranked, allFiles, roles) {
+  const existing = new Set(ranked.map((entry) => entry.file.path));
+  const baseline = ranked[0]?.score ?? 1;
+  const additions = allFiles
+    .filter((file) => !existing.has(file.path) && roles.byPath.get(file.path) && roles.byPath.get(file.path) !== "advisory")
+    .slice(0, 12)
+    .map((file) => ({
+      file,
+      score: Math.max(1, baseline * 0.2),
+      reasons: [`predictable ${roles.byPath.get(file.path)} fan-out`],
+      relatedFiles: [],
+    }));
+  return [...ranked, ...additions];
+}
+
+/**
+ * Compare role-labelled candidates with the exact changed-file subject. Exact
+ * diff evidence remains visible, but cannot turn an unexplained change into a
  * successful prediction.
  * @param {string} base
  * @param {string[]} files
- * @param {ScoredEntry[]} ranked
- * @param {CodeMapFile[]} allFiles
- * @param {ScoredEntry[]} heuristicRanked
+ * @param {{ requiredOwners: string[], supportingFiles: string[], advisoryFiles: string[] }} roles
  */
-function validateChangedFiles(base, files, ranked, allFiles, heuristicRanked) {
+function validateChangedFiles(base, files, roles) {
   const changedFiles = normalizeChangedFiles(files);
 
-  const predictedDirect = new Set(ranked.map((entry) => entry.file.path));
-  const predictedRelated = new Set();
-  for (const entry of ranked) for (const related of entry.relatedFiles) predictedRelated.add(related);
+  const predictedDirect = new Set(roles.requiredOwners);
+  const predictedRelated = new Set(roles.supportingFiles);
 
   const confirmedDirect = changedFiles.filter((file) => predictedDirect.has(file));
   const confirmedRelated = changedFiles.filter((file) => !predictedDirect.has(file) && predictedRelated.has(file));
   const unconfirmedCandidates = [...predictedDirect].filter((file) => !changedFiles.includes(file));
-  const missedChangedFiles = changedFiles.filter((file) => !predictedDirect.has(file) && !predictedRelated.has(file) && allFiles.some((f) => f.path === file));
-
-  const heuristicDirect = new Set(heuristicRanked.map((entry) => entry.file.path));
-  const heuristicRelated = new Set();
-  for (const entry of heuristicRanked) for (const related of entry.relatedFiles) heuristicRelated.add(related);
-  const heuristicConfirmedDirect = changedFiles.filter((file) => heuristicDirect.has(file));
-  const heuristicConfirmedRelated = changedFiles.filter((file) => !heuristicDirect.has(file) && heuristicRelated.has(file));
-  const heuristicMissedChangedFiles = changedFiles.filter(
-    (file) => !heuristicDirect.has(file) && !heuristicRelated.has(file) && allFiles.some((candidate) => candidate.path === file),
-  );
+  const advisory = new Set(roles.advisoryFiles);
+  const missedChangedFiles = changedFiles.filter((file) => !predictedDirect.has(file) && !predictedRelated.has(file) && !advisory.has(file));
 
   let verdict = "partial";
   if (confirmedDirect.length && missedChangedFiles.length === 0) verdict = "confirmed";
@@ -834,9 +908,9 @@ function validateChangedFiles(base, files, ranked, allFiles, heuristicRanked) {
     missedChangedFiles,
     verdict,
     heuristic: {
-      confirmedDirect: heuristicConfirmedDirect,
-      confirmedRelated: heuristicConfirmedRelated,
-      missedChangedFiles: heuristicMissedChangedFiles,
+      confirmedDirect: confirmedDirect,
+      confirmedRelated: confirmedRelated,
+      missedChangedFiles,
     },
   };
 }
@@ -871,12 +945,17 @@ export function formatImpactMarkdown(data) {
     lines.push(`### ${rank}. \`${file.path}\``);
     lines.push("");
     lines.push(`- Kind: ${file.kind} · domain: ${file.domain}`);
+    lines.push(`- Role: ${file.role}`);
     lines.push(`- Score: ${file.score}`);
     if (file.riskFlags.length) lines.push(`- Risk flags: ${file.riskFlags.join(", ")}`);
     for (const reason of file.reasons) lines.push(`- ${reason}`);
     if (file.relatedFiles.length) lines.push(`- Related: ${file.relatedFiles.map((/** @type {string} */ r) => `\`${r}\``).join(", ")}`);
     lines.push("");
   }
+  lines.push("## Impact Roles", "");
+  lines.push(`- Required owners: ${formatList(data.classifications.requiredOwners)}`);
+  lines.push(`- Predictable supporting files: ${formatList(data.classifications.supportingFiles)}`);
+  lines.push(`- Worth inspecting: ${formatList(data.classifications.advisoryFiles)}`);
   lines.push("## Tests To Run Or Add", "");
   for (const suggestion of data.testSuggestions) lines.push(`- ${suggestion}`);
   lines.push("", "## Implementation Plan", "");
@@ -893,8 +972,7 @@ export function formatImpactMarkdown(data) {
       lines.push(`- Confirmed direct: ${formatList(data.validation.confirmedDirect)}`);
       lines.push(`- Confirmed related: ${formatList(data.validation.confirmedRelated)}`);
       lines.push(`- Unconfirmed candidates: ${formatList(data.validation.unconfirmedCandidates)}`);
-      lines.push(`- Missed changed files: ${formatList(data.validation.missedChangedFiles)}`);
-      lines.push(`- Heuristic-only missed files: ${formatList(data.validation.heuristic.missedChangedFiles)}`);
+      lines.push(`- Unexplained changed files: ${formatList(data.validation.missedChangedFiles)}`);
     }
   }
   return lines.join("\n");
@@ -1085,6 +1163,7 @@ export function formatImpactTerminal(data, rendererFactory) {
   for (const [index, file] of data.topFiles.entries()) {
     const rank = renderer.emoji ? (RANK_GLYPHS[index] ?? "  ") : `${(index + 1).toString().padStart(2, " ")}.`;
     lines.push(`  ${rank}  ${file.path}    score ${file.score}`);
+    lines.push(`       ${renderer.emoji ? "└─" : "|-"} role: ${file.role}`);
     for (const reason of file.reasons.slice(0, 4)) {
       lines.push(`       ${renderer.emoji ? "└─" : "|-"} ${reason}`);
     }
@@ -1127,7 +1206,7 @@ export function formatImpactTerminal(data, rendererFactory) {
               `confirmed direct: ${formatList(v.confirmedDirect)}`,
               `confirmed related: ${formatList(v.confirmedRelated)}`,
               `unconfirmed candidates: ${formatList(v.unconfirmedCandidates)}`,
-              `missed changed files: ${formatList(v.missedChangedFiles)}`,
+              `unexplained changed files: ${formatList(v.missedChangedFiles)}`,
             ]
           : [`error: ${v.error}`],
       ),

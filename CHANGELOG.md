@@ -6,6 +6,17 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **Workspace staged Gate.** `otito workspace-gate` binds two or more repositories' exact staged Git trees, local-gate checks, and validation receipts into one deterministic parent receipt for a product change.
+- **Executed validation receipts.** `otito gate --staged --run-validation` runs a versioned base-committed validation plan against an isolated materialisation of the staged tree, pins package-manager script identity to the selected base (including npm, pnpm, Yarn, Bun, and Corepack forms), uses a scrubbed opt-in environment, and records bounded command outcomes and hashes without retaining raw output.
+- **Trusted-agent workflow guidance.** The same local-first workflow is documented for Codex, Claude, Cursor, Gemini, Kimi, and structured handoffs; GitHub review, hosted CI, and mergeability remain separate authorities.
+
+### Changed
+
+- **More accurate change impact.** Handlebars templates, translations, feature-flag configuration, snapshots, and changelogs are indexed. Impact now distinguishes required owners from predictable supporting fan-out and advisory inspection leads.
+- **Actionable risk and compliance warnings.** Production configuration warnings state the maintainer approval or safe unstage action; bouncer evidence includes its repair action and a reproducible recheck command.
+
 ## [1.2.1] - 2026-07-30
 
 ### Fixed

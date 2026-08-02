@@ -1,6 +1,6 @@
 ---
 name: otito
-description: Use when working with the otito repository, CLI, or MCP server; generating repository harnesses, repo maps, workspace reports, PR review context, route/client/domain lookup, token estimates, or installing/restoring otito from github.com/BASHBOP/otito.
+description: Use when working with the otito repository, CLI, or MCP server; generating repository harnesses, repo maps, workspace reports, PR review context, route/client/domain lookup, token estimates, or installing/restoring otito from github.com/BASHBOP/otito. Works with any agent host that can use MCP, a terminal, or a structured handoff.
 ---
 
 # otito
@@ -35,6 +35,31 @@ codex/skills/otito/scripts/sync-installed.sh
 4. For cross-repo product work, use `workspace` instead of inspecting each repo in isolation.
 5. For PR review, use `pr` with an explicit base when possible.
 6. If `otito` is unavailable as a command, run `node /path/to/otito/src/cli.js ...`.
+
+## Trusted Agent Workflow
+
+Use this sequence for coding work. It is deliberately independent of the model or host: Otito supplies the deterministic evidence; the human retains the merge decision.
+
+1. **Understand.** Run `otito context "<task>" --path . --json` before planning or editing. Read the matched source and tests; a context pack is a map, not proof.
+2. **Bound the work.** For unclear, broad, or risk-sensitive work, run `otito impact . "<task>" --json`. For a product change spanning repositories, start with `otito workspace <repo...> --out .otito/workspace.md`.
+3. **Change narrowly.** Keep one purpose, inspect the diff, and add targeted validation or an explicit no-test rationale.
+4. **Prepare review.** Run `otito pr . --base origin/main --out .otito/pr-review.md` and `otito gate . --staged --base origin/main` before handing work to a maintainer. When using `workspace-gate` for a multi-repository change, describe it only as local staged evidence; GitHub review state, hosted CI, and mergeability remain separate authorities.
+5. **Hand off evidence.** State the intended change, changed scope, validation results, gate verdict, remaining risks, and the human decision required.
+
+Use the lightest useful path for a trivial, low-risk documentation correction. Do not skip context, impact, or review merely because an agent authored the change.
+
+## Host Compatibility
+
+The workflow supports three connection modes. Do not claim that a host has direct MCP support until its current vendor documentation confirms it.
+
+| Host | Recommended Otito connection | Notes |
+| --- | --- | --- |
+| Codex, Claude Desktop, VS Code, Cursor | Local stdio MCP | Configure `otito mcp`, then use the agent workflow above. |
+| Gemini CLI | Local stdio MCP | Add `otito` to `mcpServers` in `~/.gemini/settings.json` or `.gemini/settings.json`; verify with `gemini mcp list`. |
+| Kimi Code CLI | Local stdio MCP | Add `otito` to `~/.kimi-code/mcp.json` or `.kimi-code/mcp.json`; verify with `kimi mcp list`. |
+| Grok | Structured handoff today | Grok custom connectors require a publicly reachable remote MCP endpoint. Do not tunnel or expose a local Otito server without an approved remote deployment and security review. Generate a local `.otito/` artifact and share only a sanitised summary when direct MCP is unavailable. |
+
+For every host, keep machine-specific paths, credentials, raw logs, and source content out of shared configuration and public evidence.
 
 ## CLI Commands
 

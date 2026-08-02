@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { generateImpact, tokenize, weightedQueryTerms } from "../src/lib/impact.js";
+import { generateConvergence } from "../src/lib/converge.js";
 
 test("tokenize splits camelCase and kebab-case identifiers, drops stop-words", () => {
   const tokens = tokenize("addStripeRefunds to bookings");
@@ -78,6 +79,38 @@ test("generateImpact flags risk hotspots from concept + classifyPath", () => {
   });
   const result = generateImpact("issue Stripe refunds", { path: root });
   assert.ok(result.data.risks.some((r) => r.toLowerCase().includes("money") || r.toLowerCase().includes("refund")));
+});
+
+test("generateImpact separates email-template owners from predictable translation, flag, and preview-test fan-out", () => {
+  const root = gitFixture("audience-preview", {
+    "src/audience/AudienceEmailPreview.tsx": "export function AudienceEmailPreview() { return null; }\n",
+    "src/email/templates/responsive-base.hbs": "{{organisationAudiencePreview}}\n",
+    "src/i18n/en.json": JSON.stringify({ "audience.preview.title": "Preview" }),
+    "src/feature-flags/config/environments/production.json": JSON.stringify({ audienceStudio: false }),
+    "tests/email-preview.template.test.ts": "import test from 'node:test'; test('preview', () => {});\n",
+  });
+  fs.writeFileSync(path.join(root, "src/audience/AudienceEmailPreview.tsx"), "export function AudienceEmailPreview() { return 'preview'; }\n");
+  fs.writeFileSync(path.join(root, "src/email/templates/responsive-base.hbs"), "{{organisationAudiencePreview}}\n{{previewTitle}}\n");
+  fs.writeFileSync(path.join(root, "src/i18n/en.json"), JSON.stringify({ "audience.preview.title": "Preview email" }));
+  fs.writeFileSync(path.join(root, "src/feature-flags/config/environments/production.json"), JSON.stringify({ audienceStudio: true }));
+  fs.writeFileSync(path.join(root, "tests/email-preview.template.test.ts"), "import test from 'node:test'; test('preview email', () => {});\n");
+
+  const result = generateImpact("add organisation audience email preview template", { path: root, diffBase: "HEAD", top: 10 });
+
+  assert.ok(result.data.classifications.requiredOwners.includes("src/audience/AudienceEmailPreview.tsx"));
+  assert.ok(result.data.classifications.requiredOwners.includes("src/email/templates/responsive-base.hbs"));
+  assert.ok(result.data.classifications.supportingFiles.includes("src/i18n/en.json"));
+  assert.ok(result.data.classifications.supportingFiles.includes("src/feature-flags/config/environments/production.json"));
+  assert.ok(result.data.classifications.supportingFiles.includes("tests/email-preview.template.test.ts"));
+  assert.equal(result.data.topFiles.find((file) => file.path === "src/email/templates/responsive-base.hbs")?.role, "required");
+  assert.deepEqual(result.data.validation.missedChangedFiles, []);
+  assert.ok(result.data.validation.confirmedRelated.includes("src/i18n/en.json"));
+  assert.ok(result.data.validation.confirmedRelated.includes("src/feature-flags/config/environments/production.json"));
+
+  spawnSync("git", ["add", "."], { cwd: root });
+  const convergence = generateConvergence("add organisation audience email preview template", { path: root, base: "HEAD", staged: true });
+  assert.ok(convergence.convergence >= 80, `expected supporting fan-out not to depress convergence, got ${convergence.convergence}`);
+  assert.deepEqual(convergence.drivers.missedChangedFiles, []);
 });
 
 test("generateImpact suggests related tests by overlapping path tokens", () => {
@@ -229,7 +262,7 @@ test("generateImpact includes untracked files in diff validation before staging"
   assert.ok(result.data.validation.changedFiles.includes("src/payment/refunds/refund-policy.ts"));
 });
 
-test("generateImpact surfaces every mapped changed file as exact diff evidence", () => {
+test("generateImpact surfaces exact diff evidence without concealing unexplained changes", () => {
   const root = gitFixture("diff-evidence", {
     "package.json": JSON.stringify({ name: "diff-evidence-fixture" }),
     "src/access/permission.service.ts": "export const canAccess = () => false;\n",
@@ -251,8 +284,8 @@ test("generateImpact surfaces every mapped changed file as exact diff evidence",
       `missing evidence label for ${file}`,
     );
   }
-  assert.deepEqual(result.data.validation.missedChangedFiles, []);
-  assert.deepEqual(result.data.validation.heuristic.missedChangedFiles, exactFiles, "heuristic misses remain visible instead of being concealed");
+  assert.deepEqual(result.data.validation.missedChangedFiles, exactFiles);
+  assert.deepEqual(result.data.validation.heuristic.missedChangedFiles, exactFiles);
 });
 
 test("generateImpact reports a clean validation error for a bad diff base instead of throwing", () => {
