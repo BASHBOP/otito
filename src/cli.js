@@ -53,6 +53,7 @@ import { createRenderer } from "./lib/render/fancy.js";
 import { generatePrReview } from "./lib/pr-review.js";
 import { formatReportMermaid, formatReportTerminal, generateReport } from "./lib/report.js";
 import { formatWorkspaceMermaid, generateWorkspaceReport } from "./lib/workspace.js";
+import { evaluateWorkspaceGate, formatWorkspaceGateMarkdown } from "./lib/workspace-gate.js";
 import { generateHarness } from "./lib/harness.js";
 import { runEval, runHarnessExecutionEval, runRetrievalEval } from "./lib/eval.js";
 import { formatDataAccessMermaid, generateDataAccessReport } from "./lib/data-access.js";
@@ -95,6 +96,7 @@ const commandHandlers = {
   pr: handlePr,
   report: handleReport,
   workspace: handleWorkspace,
+  "workspace-gate": handleWorkspaceGate,
   harness: handleHarness,
   eval: handleEval,
   "data-access": handleDataAccess,
@@ -463,6 +465,7 @@ async function handlePass(parsed) {
       minConvergence: parsed.flags.min_convergence,
       receipt: parsed.flags.receipt,
       staged: parsed.flags.staged,
+      runValidation: parsed.flags.run_validation,
     })
   );
   noteResult(data);
@@ -855,6 +858,31 @@ async function handleWorkspace(parsed) {
 }
 
 /** @param {CliArgs} parsed */
+async function handleWorkspaceGate(parsed) {
+  if (parsed.positionals.length < 2) {
+    throw new Error("workspace-gate requires at least two repo paths, for example: otito workspace-gate ../web ../api --staged");
+  }
+  const data = evaluateWorkspaceGate(parsed.positionals, {
+    base: parsed.flags.base,
+    policy: parsed.flags.policy,
+    governance: parsed.flags.governance,
+    request: parsed.flags.request,
+    minConvergence: parsed.flags.min_convergence,
+    runValidation: parsed.flags.run_validation,
+  });
+  noteResult(data);
+  if (parsed.flags.json) {
+    printJson(data);
+  } else if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, formatWorkspaceGateMarkdown(data));
+    printText(`Workspace gate report written: ${artifact.path}`);
+  } else {
+    printText(formatWorkspaceGateMarkdown(data));
+  }
+  if (data.verdict === "FAIL") process.exitCode = 1;
+}
+
+/** @param {CliArgs} parsed */
 async function handleHarness(parsed) {
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateHarness(repoPath, {
@@ -1147,8 +1175,9 @@ function handleHelp(_parsed) {
   printText(
     [
       "Merge gate (v2):",
-      "  otito gate <repo> [--base ref] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
+      "  otito gate <repo> [--base ref] [--staged] [--run-validation] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
       "  otito gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
+      "  otito workspace-gate <repo...> [--base ref] [--run-validation] [--policy x] [--governance x] [--request text] [--json]                           # one staged receipt across repositories",
       "",
       "Accuracy eval (v2):",
       "  otito eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",

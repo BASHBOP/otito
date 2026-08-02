@@ -15,6 +15,7 @@ import { checkRelease } from "./release-check.js";
 import { aggregateVerdict, normalizeGovernance, normalizeProfile, policyCheck, STATUS } from "./policy.js";
 import { estimateTokens } from "./tokens.js";
 import { captureStagedSubject, generateConvergence } from "./converge.js";
+import { executeValidationPlan } from "./validation-attestation.js";
 
 /**
  * A single check produced by the local/PR merge-readiness gates.
@@ -38,7 +39,7 @@ const passEngineVersion = 2;
 
 /**
  * @param {string} repoPath
- * @param {{ policy?: unknown, governance?: unknown, base?: string, request?: string, minConvergence?: number | string, receipt?: string, staged?: boolean }} [options]
+ * @param {{ policy?: unknown, governance?: unknown, base?: string, request?: string, minConvergence?: number | string, receipt?: string, staged?: boolean, runValidation?: boolean }} [options]
  */
 export function evaluateLocal(repoPath, options = {}) {
   const profile = normalizeProfile(options.policy);
@@ -65,6 +66,7 @@ export function evaluateLocal(repoPath, options = {}) {
 
   /** @param {string} file */
   const baseContent = (file) => gitShowContent(root, subject?.baseSha ?? base, file);
+  const validationExecution = options.runValidation ? executeValidationPlan({ root, subject }) : null;
   const checks = [
     changedFilesCheck(files),
     ...(staged ? [changeSubjectCheck(subject, subjectError)] : []),
@@ -72,6 +74,7 @@ export function evaluateLocal(repoPath, options = {}) {
     riskCheck(files),
     checkRelease(root, files, { baseContent, governance }),
     validationCommandsCheck(root),
+    ...(validationExecution ? [{ name: "Validation execution", ...validationExecution }] : []),
   ];
   const audit = dependencyAuditCheck(root);
   if (audit) checks.push(audit);
@@ -115,6 +118,7 @@ export function evaluateLocal(repoPath, options = {}) {
     data.band = convergence.band;
     data.receipt = convergence.receipt;
   }
+  if (validationExecution?.evidence) data.validationEvidence = validationExecution.evidence;
   data.tokenEstimate = { fullJson: estimateTokens(data) };
   return data;
 }
@@ -396,11 +400,21 @@ function riskCheck(files) {
   // must not, on its own, force an explicit-review warning at merge time.
   const matches = matchRiskPaths(files, { gate: true });
   if (matches.length > 0) {
+    const productionConfig = matches.filter(isProductionConfigurationPath);
+    const actions = productionConfig.map(
+      (file) =>
+        `Maintainer action: explicitly approve the production configuration scope for ${file}, or remove it from this staged change: git restore --staged -- ${shellQuote(file)}`,
+    );
+    if (actions.length === 0) {
+      actions.push(
+        `Maintainer action: record explicit review of this risk-sensitive scope, or remove unintended staged files: ${matches.map((file) => `git restore --staged -- ${shellQuote(file)}`).join(" ; ")}`,
+      );
+    }
     return {
       name: "Risk review",
       status: STATUS.warn,
       summary: "Risk-sensitive files changed; maintainer review should be explicit.",
-      details: matches.slice(0, 20),
+      details: [...matches.slice(0, 20), ...actions],
     };
   }
   return { name: "Risk review", status: STATUS.pass, summary: "No obvious risk-sensitive file paths changed." };
@@ -470,7 +484,7 @@ function contractDriftCheck(root) {
       name: "Contract drift",
       status: STATUS.warn,
       summary: "tieline config found but the tieline binary could not be resolved — install @bashbop/tieline to enable this gate.",
-      details: [cfg],
+      details: [cfg, "Repair command: npm install --save-dev @bashbop/tieline"],
     };
   }
   const res = runCommand(bin, ["check", "--json", "--no-fail", "--config", cfg], { cwd, timeout: 60000 });
@@ -533,10 +547,15 @@ function complianceControlsCheck(root) {
   const details = (parsed?.findings ?? [])
     .filter((/** @type {{ status?: string }} */ finding) => finding.status !== "pass")
     .slice(0, 10)
-    .map(
-      (/** @type {{ ruleId?: string, status?: string, fix?: string }} */ finding) =>
-        `${finding.ruleId ?? "control"}: ${finding.status ?? "unknown"}${finding.fix ? ` · ${finding.fix}` : ""}`,
-    );
+    .map((/** @type {{ ruleId?: string, status?: string, fix?: string, repairCommand?: string, fixCommand?: string }} */ finding) => {
+      const ruleId = finding.ruleId ?? "control";
+      const declaredRepair = String(finding.repairCommand ?? finding.fixCommand ?? "").trim();
+      const action = finding.fix ? ` · Repair action: ${finding.fix}` : "";
+      const command = declaredRepair
+        ? ` · Repair command: ${declaredRepair}`
+        : ` · Recheck command: ${shellQuote(bin)} check --json --no-fail --config ${shellQuote(cfg)}`;
+      return `${ruleId}: ${finding.status ?? "unknown"}${action}${command}`;
+    });
   if (failed > 0) {
     return {
       name: "Compliance controls",
@@ -679,6 +698,17 @@ function dependencyAuditCommands(root) {
 /** @param {string} root */
 function hasPackageLockfile(root) {
   return ["package-lock.json", "npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock"].some((name) => exists(path.join(root, name)));
+}
+
+/** @param {string} file */
+function isProductionConfigurationPath(file) {
+  const normalized = String(file).toLowerCase();
+  return /(^|\/)(production|prod)(?:\.[^/]+)?\.(json|ya?ml)$/.test(normalized) && /(?:config|flag|env)/.test(normalized);
+}
+
+/** Shell-safe display only; the gate never executes this generated command. @param {string} value */
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", `'"'"'`)}'`;
 }
 
 /**
