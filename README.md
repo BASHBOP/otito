@@ -229,18 +229,36 @@ Merge gate (`gate` is the canonical v2 command; `pass` / `pass-pr` remain as leg
 ```bash
 otito gate . --base origin/main          # local gate (no GitHub)
 otito gate . --staged --base origin/main # staged-path evidence, suitable for pre-commit hooks
+otito gate . --staged --run-validation   # run the base-committed validation plan against the exact staged tree
 otito gate . --base origin/main --request "update the greeting" --min-convergence 80
 otito converge "update the greeting" --path . --base HEAD --staged --json # exact change-subject receipt
 otito gate --pr 123 --path .             # GitHub PR gate via gh
 ```
 
-In staged mode, changed-path, risk, secret and convergence evidence use the exact Git index tree. Exact-subject source analysis streams raw Git blobs and fails closed above 5,000 source files or 64 MiB. Release, validation-command and optional analyzer checks still inspect the working tree and are reported outside the convergence receipt.
+In staged mode, changed-path, risk, secret and convergence evidence use the exact Git index tree. Exact-subject source analysis streams raw Git blobs and fails closed above 5,000 source files or 64 MiB. `--run-validation` additionally executes only a versioned plan from `otito.gate.json` in the selected base commit against an isolated copy of that staged tree. It records commands, exit outcomes and output hashes in a separate validation receipt; it never records raw output. Supported package-manager script forms include direct and `run` invocations for npm, pnpm, Yarn, Bun, and Corepack-wrapped commands. Their selected-base script identity is pinned, so a staged manifest cannot replace them with a no-op. Other base-committed commands remain valid policy commands; adding a new package-manager script form requires the same pinning semantics and regression coverage. Validation starts with a scrubbed environment and isolated home; only explicitly allowlisted variables pass through. The source snapshot is exact, while a linked local `node_modules` directory is explicitly reported as **not attested** in this first increment. Release and optional analyzer checks still inspect the working tree and remain outside that receipt.
+
+Create the policy in the protected base branch before asking the gate to execute it:
+
+```json
+{
+  "version": 1,
+  "validation": {
+    "environment": { "allow": ["TEST_DATABASE_URL"] },
+    "commands": [{ "id": "unit", "command": "npm test", "timeoutSeconds": 300 }]
+  }
+}
+```
+
+`environment.allow` is optional. Use it only for the specific variables a protected validation plan requires; values are never recorded in the receipt.
 
 Multi-repo product context:
 
 ```bash
 otito workspace ../web ../api --out .otito/workspace.md
+otito workspace-gate ../web ../api --base origin/main --request "ship Audience Studio preview" --out .otito/workspace-gate.md
 ```
+
+`workspace-gate` creates one parent receipt across two or more staged repositories. It binds each repository's exact base, parent and staged-tree identity, changed-file scope, local-gate checks, and any validation receipt. All repositories must have a staged subject before the parent receipt is issued.
 
 GitHub Actions bootstrap:
 

@@ -204,9 +204,13 @@ JSON receipt files are accepted and supply that hash automatically. Receipt enfo
 opt-in so existing gate verdicts remain backward-compatible.
 
 This is an exact **convergence receipt**, not yet a complete Gate attestation. Release checks,
-optional local analyzers, base-branch CODEOWNERS, GitHub review state, policy version,
-executed validation, and signer identity are not all bound into this envelope yet. In staged
-mode the Gate reports that working-tree boundary explicitly.
+optional local analyzers, base-branch CODEOWNERS, GitHub review state, and signer identity are
+not all bound into this envelope yet. In staged mode, `otito gate --run-validation` can produce
+a separate validation receipt: a versioned `otito.gate.json` plan is read from the selected base
+commit, run against an isolated materialisation of the exact staged tree, and binds command
+outcomes plus output hashes without retaining raw output. A linked local `node_modules` directory,
+when present, is reported as not attested. The Gate still reports every remaining working-tree
+boundary explicitly.
 
 ## 9. Open questions
 

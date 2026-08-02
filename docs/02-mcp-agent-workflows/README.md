@@ -6,7 +6,14 @@ otito can run as a stdio MCP server so agent hosts can ask for repository contex
 
 ## Start The Server
 
-The npm package is not published yet. Start from a local checkout:
+Install the published package when you want Otito available as a local command:
+
+```bash
+npm install -g @bashbop/otito
+otito doctor
+```
+
+Or start from a local checkout:
 
 ```bash
 git clone https://github.com/BASHBOP/otito.git
@@ -30,7 +37,8 @@ The MCP server uses stdio. The agent host starts `otito mcp` as a child process 
 
 ## MCP Client Examples
 
-Use the checkout path until npm publication. After installation, the `otito` binary can replace the `node` command below.
+Use the installed `otito` binary where available. A local checkout is equally
+valid when you are developing Otito itself.
 
 ### Generic stdio client
 
@@ -145,6 +153,67 @@ Use a project config when otito should only be available for one workspace. Use 
 
 Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 
+### Gemini CLI
+
+Gemini CLI supports stdio MCP servers. Add Otito to user-level
+`~/.gemini/settings.json` or project-level `.gemini/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "otito": {
+      "command": "otito",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Restart Gemini CLI and run `gemini mcp list` (or `/mcp list`) to confirm the
+server is connected. Gemini CLI also supports Skills, so use the Otito trusted
+agent workflow before asking it to edit code.
+
+Reference: [Gemini CLI MCP servers](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md).
+
+### Kimi Code CLI
+
+Kimi Code CLI supports stdio MCP servers. Add Otito to the user-level
+`~/.kimi-code/mcp.json` or project-level `.kimi-code/mcp.json` file:
+
+```json
+{
+  "mcpServers": {
+    "otito": {
+      "command": "otito",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Verify the server with `kimi mcp list`. Kimi Code also recognises local skills;
+keep the agent workflow in the repository so it remains portable across tools.
+
+Reference: [Kimi Code CLI MCP support](https://www.kimi.com/code/docs/en/kimi-code-cli/configuration/data-locations.html).
+
+### Grok
+
+Grok custom MCP connectors use a publicly reachable MCP endpoint. Otito's
+local `otito mcp` command is stdio-only, so it must **not** be exposed through
+a local tunnel by default. Until Otito offers a reviewed remote MCP deployment,
+use the structured-handoff path instead:
+
+```bash
+otito context "<task>" --path . --out .otito/context-pack.md
+otito pr . --base origin/main --out .otito/pr-review.md
+```
+
+Share only a sanitised summary or approved artifact with Grok. A future remote
+connector must receive a separate security, access-control, and data-boundary
+review before it can be presented as direct support.
+
+Reference: [Grok custom MCP connectors](https://docs.x.ai/grok/connectors).
+
 ---
 
 ## MCP Tool Surface
@@ -187,6 +256,21 @@ sequenceDiagram
     otito-->>Agent: Review prompts and risk flags
     Agent->>User: Verified change summary
 ```
+
+## Trusted Agent Workflow
+
+This workflow works across Codex, Claude, Cursor, Gemini, Kimi, and any agent
+that can use local MCP or a structured handoff:
+
+```text
+Request -> context -> scoped change -> validation -> review context -> gate -> human decision
+```
+
+The host does not determine whether a change is trustworthy. Otito provides
+local, deterministic evidence; tests, protected branches, and a human reviewer
+provide accountability. Do not represent a passing gate as an automatic merge
+approval. A workspace-level gate binds local staged evidence across repositories;
+it does not establish hosted CI state, GitHub approval, or mergeability.
 
 ---
 

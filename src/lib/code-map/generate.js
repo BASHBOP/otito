@@ -7,11 +7,36 @@ import { classifyFile, extractHttpMethods, inferControllerBasePath, inferDomainI
 import { extractDataAccess } from "./data-access.js";
 import { isVendorFile } from "./vendor.js";
 
-const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".go", ".cs", ".py", ".java", ".rb", ".rs"]);
+const sourceExtensions = new Set([
+  ".ts",
+  ".tsx",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".mts",
+  ".cts",
+  ".go",
+  ".cs",
+  ".py",
+  ".java",
+  ".rb",
+  ".rs",
+  ".hbs",
+  ".handlebars",
+  ".json",
+  ".yaml",
+  ".yml",
+  ".snap",
+]);
 
 /** @param {string} file @returns {boolean} */
 export function isSourceFilePath(file) {
-  return sourceExtensions.has(path.posix.extname(file));
+  const basename = path.posix.basename(file);
+  // Manifest and compiler metadata are ubiquitous but are not useful change
+  // owners. Keep application JSON (translations and flag config) indexable.
+  if (["package.json", "package-lock.json", "tsconfig.json"].includes(basename)) return false;
+  return sourceExtensions.has(path.posix.extname(file)) || /^changelog(?:\.[a-z0-9_-]+)?\.md$/i.test(basename);
 }
 
 /**
@@ -239,6 +264,7 @@ function analyzeSource(relativePath, text, maxSymbols) {
   }
 
   const ast = extractAstFacts(relativePath, text);
+  const artifactFacts = extractArtifactFacts(relativePath, text);
   const vendor = isVendorFile(relativePath, text);
   const dataAccess = vendor ? [] : extractDataAccess(text);
   const domainInfo = inferDomainInfo(relativePath);
@@ -251,9 +277,9 @@ function analyzeSource(relativePath, text, maxSymbols) {
     route: inferNextRoute(relativePath),
     controllerBasePath: inferControllerBasePath(text),
     httpMethods: extractHttpMethods(text),
-    imports: ast.imports,
+    imports: [...new Set([...ast.imports, ...artifactFacts.imports])],
     exports: ast.exports,
-    symbols: ast.symbols.slice(0, maxSymbols),
+    symbols: [...ast.symbols, ...artifactFacts.symbols].slice(0, maxSymbols),
     formFields: ast.formFields ?? [],
     navigationTargets: ast.navigationTargets ?? [],
     localIdentifiers: ast.localIdentifiers ?? [],
@@ -263,6 +289,41 @@ function analyzeSource(relativePath, text, maxSymbols) {
     record.dataAccess = dataAccess.slice(0, 50);
   }
   return record;
+}
+
+/**
+ * Extract only stable identifiers from templates and configuration. This makes
+ * Handlebars partials, translation keys and feature-flag names searchable
+ * without indexing template bodies, customer copy or configuration values.
+ * @param {string} relativePath
+ * @param {string} text
+ */
+function extractArtifactFacts(relativePath, text) {
+  const extension = path.extname(relativePath).toLowerCase();
+  /** @type {string[]} */
+  const imports = [];
+  /** @type {CodeSymbol[]} */
+  const symbols = [];
+  const seen = new Set();
+  /** @param {string} type @param {string} name @param {number} offset */
+  const add = (type, name, offset) => {
+    if (!name || seen.has(name)) return;
+    seen.add(name);
+    symbols.push({ type, name, line: text.slice(0, offset).split("\n").length });
+  };
+
+  if (extension === ".hbs" || extension === ".handlebars") {
+    for (const match of text.matchAll(/{{\s*[#/>]?\s*([A-Za-z_$][\w$.-]*)/g)) {
+      const name = match[1];
+      add("template", name, match.index ?? 0);
+      if (text.slice(match.index ?? 0, (match.index ?? 0) + 5).includes(">")) imports.push(name);
+    }
+  } else if (extension === ".json") {
+    for (const match of text.matchAll(/"([^"\\]{2,120})"\s*:/g)) add("config", match[1], match.index ?? 0);
+  } else if (extension === ".yaml" || extension === ".yml") {
+    for (const match of text.matchAll(/^\s*([A-Za-z_$][\w$.-]{1,120})\s*:/gm)) add("config", match[1], match.index ?? 0);
+  }
+  return { imports: [...new Set(imports)], symbols };
 }
 
 /**
