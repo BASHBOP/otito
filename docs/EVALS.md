@@ -116,18 +116,18 @@ floor — so the gate catches it.)
 
 ## Current baseline
 
-Recorded **2026-06-10** by running `runRetrievalEval()` against the committed
-corpus (16 retrieval + 16 risk cases):
+Recorded **2026-08-02** by running `runRetrievalEval()` against the committed
+corpus (21 retrieval + 16 risk cases):
 
 ```
 | Group     | Metric       | Value | Threshold | Pass |
 |-----------|--------------|------:|----------:|:----:|
-| retrieval | precisionAtK | 0.933 |      0.85 | yes  |
+| retrieval | precisionAtK | 0.867 |      0.85 | yes  |
 | retrieval | recallAtK    | 1.0   |      0.9  | yes  |
 | retrieval | mrr          | 1.0   |      0.9  | yes  |
 | risk      | accuracy     | 1.0   |      0.95 | yes  |
 
-Retrieval: p@5=0.933, r@5=1.0, mrr=1.0 (16/16 cases pass)
+Retrieval: p@5=0.867, r@5=1.0, mrr=1.0 (21/21 cases pass)
 Risk:      accuracy=1.0 (16/16 cases pass)
 Overall:   PASS (exit 0)
 ```

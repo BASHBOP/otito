@@ -573,6 +573,17 @@ test("evaluateLocal includes configured bouncer compliance evidence", () => {
   }
 });
 
+test("evaluateLocal gives the bouncer installation command when its configured binary is missing", () => {
+  const root = initRepo("bouncer-missing");
+  writeAndCommit(root, { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }), "src/index.ts": "export const hi = 1;\n" }, "init");
+  fs.writeFileSync(path.join(root, "bouncer.config.json"), JSON.stringify({ target: { adapter: "next", repo: "." }, packs: ["uk-osa"] }));
+
+  const result = evaluateLocal(root, { base: "HEAD" });
+  const compliance = result.checks.find((check) => check.name === "Compliance controls");
+  assert.equal(compliance.status, "WARN");
+  assert.ok(compliance.details.includes("Repair command: npm install --save-dev @bashbop/bouncer"));
+});
+
 test("evaluateLocal includes opted-in aiglare governance evidence", () => {
   const root = initRepo("aiglare");
   writeAndCommit(
