@@ -6,6 +6,8 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-02
+
 ### Added
 
 - **Workspace staged Gate.** `otito workspace-gate` binds two or more repositories' exact staged Git trees, local-gate checks, and validation receipts into one deterministic parent receipt for a product change.
