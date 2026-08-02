@@ -6,6 +6,18 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-08-02
+
+### Added
+
+- **Template-aware convergence.** Handlebars templates, translations, feature-flag configuration, snapshots, and changelogs now participate in code maps and expected supporting-change fan-out.
+- **Campaign email retrieval evaluation.** A generic, cross-repository fixture protects template and owner ranking learned from real Audience Studio work.
+- **Versioned validation policy.** Otito can execute an approved base-committed validation plan against the exact staged tree and retain a bounded, privacy-preserving receipt.
+
+### Changed
+
+- **Actionable gate evidence.** Impact distinguishes required owners from supporting artifacts and advisory inspection leads; bouncer and production-configuration warnings state their exact repair or maintainer action.
+
 ## [1.3.0] - 2026-08-02
 
 ### Added

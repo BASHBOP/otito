@@ -1,6 +1,6 @@
 # Òtítọ́
 
-**Local-first code context for agents and reviewers: what does this change actually touch?**
+**Local-first context and merge evidence for coding agents: turn AI-generated changes into trusted commits.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/otito/otito-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/otito/actions/workflows/otito-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/otito?style=flat-square)](https://www.npmjs.com/package/@bashbop/otito) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/)
 
@@ -20,11 +20,23 @@ An agent's output is bounded by two things: the **model** and the **harness** ar
 
 **Òtítọ́** is that harness layer. It is local-first, deterministic, and model-agnostic: it discovers repositories, builds local indexes, generates task-aware context before an agent edits, scores how much a change actually touches, and gates merge readiness. It works the same way every time, with no server, no account, and no code leaving the machine. Because it depends on software fundamentals rather than any one model, the harness you build today keeps working as models change underneath it.
 
+## Trusted agent workflow
+
+> **New in v1.6.0:** staged validation receipts, cross-repository workspace receipts, role-aware impact, and host guidance for Gemini and Kimi.
+
+```text
+Request -> context -> scoped change -> exact validation -> review evidence -> human decision
+```
+
+Otito helps the agent understand and bound a task before editing, then gives the maintainer evidence to decide whether to trust the result. A passing local gate is never an automatic merge approval: hosted CI, GitHub review, CODEOWNERS, and the human release decision remain separate authorities.
+
 It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. It gives developers and coding agents a single CLI that can:
 
 Deterministic merge gates are the differentiated core. This is the human-in-the-loop checkpoint that a model cannot grade for itself:
 
 - score merge readiness for local changes and pull requests with one `review_gate` tool (`gate` on the CLI)
+- execute a protected validation plan against the exact staged tree and retain a bounded receipt of its outcomes
+- bind staged web, API, and shared-contract changes into one workspace receipt
 - resolve CODEOWNERS to required reviewers and surface owner-decision warnings
 - check branch-protection expectations and required checks before merge
 - generate actionable PR review context from git diffs and optional GitHub comments
@@ -114,9 +126,11 @@ otito harness . --out .otito/harness.md
 otito pr . --base origin/main --out .otito/pr-review.md
 otito review . --request "add a new MCP tool" --base origin/main
 otito gate . --staged --base origin/main
+otito gate . --staged --run-validation
 otito mcp
 otito report . --out .otito/report.md
 otito workspace /path/to/web /path/to/api --out .otito/workspace.md
+otito workspace-gate /path/to/web /path/to/api --request "ship the product change" --out .otito/workspace-gate.md
 ```
 
 Optional external tools:
@@ -140,6 +154,8 @@ otito structure . --out .otito/structure.html
 | Build a code map | `otito map . --json` | Source files, domains, imports, exports, symbols, and routes |
 | Prepare task context | `otito context "add a new MCP tool" --path .` | Primary files, related files, tests, patterns, and validation commands |
 | Generate an agent harness | `otito harness . --out .otito/harness.md` | Setup, validation, runtime, and context commands |
+| Gate an exact staged change | `otito gate . --staged --run-validation` | Versioned validation outcomes bound to the staged Git tree |
+| Gate a product change | `otito workspace-gate ../web ../api --request "ship change"` | One receipt across staged repositories |
 | Review local changes | `otito pr . --base origin/main --out .otito/pr-review.md` | Changed files, risk prompts, review targets, and test hints |
 | Index local projects | `otito index ~/projects --discover` | External per-user indexes plus a local catalog |
 | Search indexed repos | `otito search "events controller"` | Ranked matches across paths, domains, routes, imports, exports, and symbols |
@@ -147,7 +163,7 @@ otito structure . --out .otito/structure.html
 | Track usage & performance | `otito dashboard` | Self-contained HTML from an opt-in local usage log (off by default) |
 | Help improve Otito | `otito telemetry share on` | Separately opt into a minimal anonymous usage event; no prompts, paths, repo data, or source content |
 
-For Claude Desktop, VS Code, Cursor, and generic stdio client snippets, see [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md).
+For Codex, Claude Desktop, VS Code, Cursor, Gemini CLI, Kimi Code, Grok handoff guidance, and generic stdio client snippets, see [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md).
 
 ## otito vs alternatives
 
