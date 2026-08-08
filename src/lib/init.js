@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { formatTerminalSummary } from "./output.js";
 import { execFileSync } from "node:child_process";
 import { generateHarness } from "./harness.js";
 
@@ -133,24 +134,27 @@ export function initProject(targetPath = ".", options = {}) {
 
 /**
  * @param {InitResult} result
+ * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
  * @returns {string}
  */
-export function formatInitSummary(result) {
-  const lines = [`otito initialized: ${result.root}`, ""];
-  lines.push(formatList("Created", result.created));
-  lines.push(formatList("Updated", result.updated));
-  lines.push(formatList("Skipped", result.skipped));
-  lines.push("");
-  lines.push(`Gates: ${formatGatesSummary(result)}`);
-  lines.push(`Pre-commit: ${formatPrecommitSummary(result)}`);
-  if (result.hooksPathRequested && !result.precommitApplied) {
-    lines.push("Hooks path: skipped (no pre-commit hook was scaffolded)");
-  }
-  lines.push("", "Next steps:");
-  for (const step of result.nextSteps) {
-    lines.push(`- ${step}`);
-  }
-  return lines.join("\n");
+export function formatInitSummary(result, options = {}) {
+  return formatTerminalSummary({
+    title: "otito init · trust harness setup",
+    glyph: "🛠️",
+    subtitle: result.root,
+    facts: /** @type {[string, string | number][]} */ ([
+      ["Gates", formatGatesSummary(result)],
+      ["Pre-commit", formatPrecommitSummary(result)],
+      ...(result.hooksPathRequested && !result.precommitApplied ? [["Hooks path", "skipped (no pre-commit hook was scaffolded)"]] : []),
+    ]),
+    sections: [
+      { title: "Created", glyph: "✅", items: result.created },
+      { title: "Updated", glyph: "🔄", items: result.updated },
+      { title: "Skipped", glyph: "⏭️", items: result.skipped },
+      { title: "Next steps", glyph: "📝", items: result.nextSteps },
+    ],
+    options,
+  });
 }
 
 /**
@@ -272,18 +276,6 @@ function gitignoreCovers(contents, entry) {
       const normalized = line.replace(/^\/+/, "").replace(/\/+$/, "");
       return normalized === bare;
     });
-}
-
-/**
- * @param {string} title
- * @param {string[]} values
- * @returns {string}
- */
-function formatList(title, values) {
-  if (!values.length) {
-    return `${title}: none`;
-  }
-  return [title, ...values.map((value) => `- ${value}`)].join("\n");
 }
 
 /** @typedef {import('./harness.js').HarnessCommand} HarnessCommand */
