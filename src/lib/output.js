@@ -1,5 +1,46 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createRenderer } from "./render/fancy.js";
+
+/**
+ * @typedef {{ emoji?: boolean, color?: boolean, theme?: string }} TerminalOptions
+ */
+
+/**
+ * Render a compact, human-first terminal summary. JSON and Markdown callers
+ * should continue using their dedicated serializers instead of this helper.
+ *
+ * @param {{ title: string, glyph?: string, subtitle?: string, facts?: [string, string | number][], sections?: { title: string, items: string[], glyph?: string }[], options?: TerminalOptions }} input
+ * @returns {string}
+ */
+export function formatTerminalSummary(input) {
+  const renderer = createRenderer(input.options);
+  const lines = [];
+  const headlines = input.subtitle ? [{ text: input.subtitle, glyph: "💬" }] : [];
+  lines.push(renderer.header({ text: input.title, glyph: input.glyph }, headlines));
+
+  if (input.facts?.length) {
+    lines.push("");
+    lines.push(
+      renderer.section(
+        renderer.emoji ? "📌 At a glance" : "At a glance",
+        input.facts.map(([label, value]) => `${label}: ${value}`),
+      ),
+    );
+  }
+
+  for (const section of input.sections ?? []) {
+    lines.push("");
+    lines.push(
+      renderer.section(
+        `${section.glyph && renderer.emoji ? `${section.glyph} ` : ""}${section.title}`,
+        section.items.length ? section.items.map((item) => `${renderer.emoji ? "•" : "-"} ${item}`) : [renderer.emoji ? "• none" : "- none"],
+      ),
+    );
+  }
+
+  return lines.join("\n");
+}
 
 /**
  * @param {string} text

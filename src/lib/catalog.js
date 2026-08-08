@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { getCachedCodeMap } from "./index-cache.js";
 import { estimateTokens } from "./tokens.js";
+import { formatTerminalSummary } from "./output.js";
 
 /**
  * @typedef {import('./index-cache.js').CodeMap} CodeMap
@@ -270,95 +271,99 @@ export function searchCatalog(query, options = {}) {
 
 /**
  * @param {ReturnType<typeof discoverRepositories>} result
+ * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
  */
-export function formatDiscoverSummary(result) {
-  const lines = [`Repositories discovered: ${result.repositoryCount}`, ""];
-
-  for (const repository of result.repositories) {
-    lines.push(`- ${repository.root} (${repository.marker})`);
-  }
-
-  if (!result.repositories.length) {
-    lines.push("No repositories found.");
-  }
-
-  return lines.join("\n").trimEnd();
+export function formatDiscoverSummary(result, options = {}) {
+  return formatTerminalSummary({
+    title: "otito discover · repository finder",
+    glyph: "🔎",
+    subtitle: `${result.roots.join(", ")} · depth ${result.maxDepth}`,
+    facts: [["Repositories discovered", result.repositoryCount]],
+    sections: [
+      {
+        title: "Repositories",
+        glyph: "📂",
+        items: result.repositories.map((repository) => `${repository.root} (${repository.marker})`),
+      },
+    ],
+    options,
+  });
 }
 
 /**
  * @param {ReturnType<typeof indexRepositories>} result
+ * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
  */
-export function formatIndexSummary(result) {
-  const lines = [
-    `Catalog indexed: ${result.catalogPath}`,
-    `Indexed repositories: ${result.indexedCount}`,
-    `Catalog repositories: ${result.repositoryCount}`,
-    "",
-  ];
-
-  for (const repo of result.repositories) {
-    lines.push(`- ${repo.name}: ${repo.root}`);
-  }
-
-  if (result.errors.length) {
-    lines.push("", "Errors:");
-    for (const error of result.errors) {
-      lines.push(`- ${error.path}: ${error.error}`);
-    }
-  }
-
-  return lines.join("\n").trimEnd();
+export function formatIndexSummary(result, options = {}) {
+  return formatTerminalSummary({
+    title: "otito index · repository catalog",
+    glyph: "🗂️",
+    subtitle: result.catalogPath,
+    facts: [
+      ["Indexed repositories", result.indexedCount],
+      ["Catalog repositories", result.repositoryCount],
+    ],
+    sections: [
+      { title: "Indexed", glyph: "✅", items: result.repositories.map((repo) => `${repo.name}: ${repo.root}`) },
+      { title: "Errors", glyph: "⚠️", items: result.errors.map((error) => `${error.path}: ${error.error}`) },
+    ],
+    options,
+  });
 }
 
 /**
  * @param {ReturnType<typeof listCatalog>} result
+ * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
  */
-export function formatCatalogSummary(result) {
-  const lines = [
-    `Catalog: ${result.catalogPath}`,
-    `Repositories: ${result.repositoryCount}`,
-    result.updatedAt ? `Updated: ${result.updatedAt}` : "Updated: never",
-    "",
-  ];
-
-  for (const repo of result.repositories) {
-    const domains = repo.domains
-      ?.slice(0, 5)
-      .map((domain) => domain.name)
-      .join(", ");
-    lines.push(`- ${repo.name}: ${repo.root}${domains ? ` (${domains})` : ""}`);
-  }
-
-  if (!result.repositories.length) {
-    lines.push("No repositories indexed.");
-  }
-
-  return lines.join("\n").trimEnd();
+export function formatCatalogSummary(result, options = {}) {
+  return formatTerminalSummary({
+    title: "otito catalog · indexed repositories",
+    glyph: "📚",
+    subtitle: result.updatedAt ? `updated ${result.updatedAt}` : "not updated yet",
+    facts: [["Repositories", result.repositoryCount]],
+    sections: [
+      {
+        title: "Repositories",
+        glyph: "📂",
+        items: result.repositories.map((repo) => {
+          const domains = repo.domains
+            ?.slice(0, 5)
+            .map((domain) => domain.name)
+            .join(", ");
+          return `${repo.name}: ${repo.root}${domains ? ` (${domains})` : ""}`;
+        }),
+      },
+    ],
+    options,
+  });
 }
 
 /**
  * @param {ReturnType<typeof searchCatalog>} result
+ * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
  */
-export function formatSearchResults(result) {
-  const lines = [`Search: ${result.query}`, `Matches: ${result.matchCount}`, ""];
-
-  for (const match of result.matches) {
-    const reasons = match.reasons.length ? ` - ${match.reasons.join(", ")}` : "";
-    lines.push(`- ${match.repository.name}: ${match.file.path} [${match.file.kind}/${match.file.domain}]${reasons}`);
-  }
-
-  if (!result.matches.length) {
-    lines.push("No matches found.");
-  }
-
-  if (result.errors.length) {
-    lines.push("", "Errors:");
-    for (const error of result.errors) {
-      lines.push(`- ${error.root}: ${error.error}`);
-    }
-  }
-
-  return lines.join("\n").trimEnd();
+export function formatSearchResults(result, options = {}) {
+  return formatTerminalSummary({
+    title: "otito search · catalog matches",
+    glyph: "🧭",
+    subtitle: `query: ${result.query}`,
+    facts: [
+      ["Matches", result.matchCount],
+      ["Repositories searched", result.repositoryCount],
+    ],
+    sections: [
+      {
+        title: "Matches",
+        glyph: "🎯",
+        items: result.matches.map((match) => {
+          const reasons = match.reasons.length ? ` · ${match.reasons.join(", ")}` : "";
+          return `${match.repository.name}: ${match.file.path} [${match.file.kind}/${match.file.domain}]${reasons}`;
+        }),
+      },
+      { title: "Errors", glyph: "⚠️", items: result.errors.map((error) => `${error.root}: ${error.error}`) },
+    ],
+    options,
+  });
 }
 
 /**

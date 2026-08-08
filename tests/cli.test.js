@@ -173,7 +173,8 @@ test("repo command renders json and text summary", async () => {
   assert.equal(payload.root, fixture);
 
   const textResult = await runCli(["repo", fixture]);
-  assert.match(textResult.stdout, /# Repo:/);
+  assert.match(textResult.stdout, /otito repo · repository overview/);
+  assert.match(textResult.stdout, /At a glance/);
   assert.match(textResult.stdout, /Files scanned:/);
 });
 
