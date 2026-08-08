@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { designPrint } from "./brand.js";
+import { formatTerminalSummary } from "./output.js";
 import { commandExists, runCommand } from "./tools.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -74,38 +74,40 @@ export function getInstallPlan() {
 
 /**
  * @param {ReturnType<typeof installOtito>} result
+ * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
  * @returns {string}
  */
-export function formatInstallSummary(result) {
-  const lines = [
-    designPrint,
-    "",
-    `${result.productName} installer`,
-    "",
-    `Binary: ${result.binaryName}`,
-    `Repository: ${result.repository}`,
-    `Current checkout: ${result.packageRoot}`,
-    `Installed: ${result.installed ? `yes (${result.binaryPath})` : "no"}`,
-    "",
-    "Install commands:",
-    `- From npm: ${result.commands.fromNpm}`,
-    `- From this checkout: ${result.commands.fromCheckout}`,
-    `- Development link: ${result.commands.developmentLink}`,
-    "",
-    `Verify: ${result.commands.verify}`,
-  ];
-
-  if (result.mode && result.mode !== "plan") {
-    lines.push("", `Applied: ${result.applied ? "yes" : "no"}`, `Command: ${result.command}`);
-    if (result.stderr) {
-      lines.push(`stderr: ${result.stderr}`);
-    }
-  }
-
-  lines.push("", "Next steps:");
-  for (const step of result.nextSteps) {
-    lines.push(`- ${step}`);
-  }
-
-  return lines.join("\n");
+export function formatInstallSummary(result, options = {}) {
+  const applied = result.mode && result.mode !== "plan";
+  return formatTerminalSummary({
+    title: `${result.productName} · installer`,
+    glyph: "🚀",
+    subtitle: result.installed ? `installed at ${result.binaryPath}` : "not installed yet",
+    facts: /** @type {[string, string | number][]} */ ([
+      ["Binary", result.binaryName],
+      ["Repository", result.repository],
+      ["Current checkout", result.packageRoot],
+      ...(applied
+        ? [
+            ["Applied", result.applied ? "yes" : "no"],
+            ["Command", result.command ?? "unknown"],
+          ]
+        : []),
+    ]),
+    sections: [
+      {
+        title: "Install commands",
+        glyph: "📦",
+        items: [
+          `From npm: ${result.commands.fromNpm}`,
+          `From this checkout: ${result.commands.fromCheckout}`,
+          `Development link: ${result.commands.developmentLink}`,
+          `Verify: ${result.commands.verify}`,
+        ],
+      },
+      ...(result.stderr ? [{ title: "stderr", glyph: "⚠️", items: [result.stderr] }] : []),
+      { title: "Next steps", glyph: "📝", items: result.nextSteps },
+    ],
+    options,
+  });
 }
