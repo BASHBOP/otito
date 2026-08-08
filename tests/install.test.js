@@ -23,7 +23,8 @@ test("installOtito defaults to a non-mutating plan", () => {
 test("formatInstallSummary includes the Òtítọ́ identity print", () => {
   const summary = formatInstallSummary(getInstallPlan());
 
-  assert.match(summary, /^otito\n\+[-]+\+\n\| Hello builder, welcome to otito/);
-  assert.match(summary, /files routes tests prompts/);
-  assert.match(summary, /Òtítọ́ installer/);
+  assert.match(summary, /Òtítọ́ · installer/);
+  assert.match(summary, /At a glance/);
+  assert.match(summary, /Install commands/);
+  assert.match(summary, /Next steps/);
 });

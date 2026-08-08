@@ -59,7 +59,7 @@ import { runEval, runHarnessExecutionEval, runRetrievalEval } from "./lib/eval.j
 import { formatDataAccessMermaid, generateDataAccessReport } from "./lib/data-access.js";
 import { getAgentTools } from "./lib/agent-tools.js";
 import { formatCodeMapMermaid, formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
-import { printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
+import { formatTerminalSummary, printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
 import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
 import { appendEvent, clearTelemetryLog, noteResult, redactError, shareEvent, takePendingSignals, telemetryStatus } from "./lib/telemetry.js";
 import { generateDashboard } from "./lib/dashboard.js";
@@ -234,7 +234,7 @@ async function handleRepo(parsed) {
     return;
   }
 
-  printText(formatRepoSummary(result));
+  printText(formatRepoSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
 }
 
 /** @param {CliArgs} parsed */
@@ -250,7 +250,7 @@ async function handleDiscover(parsed) {
     return;
   }
 
-  printText(formatDiscoverSummary(result));
+  printText(formatDiscoverSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
 }
 
 /** @param {CliArgs} parsed */
@@ -271,7 +271,7 @@ async function handleIndex(parsed) {
     return;
   }
 
-  printText(formatIndexSummary(result));
+  printText(formatIndexSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
   if (!result.ok) {
     process.exitCode = 1;
   }
@@ -288,7 +288,7 @@ async function handleCatalog(parsed) {
     return;
   }
 
-  printText(formatCatalogSummary(result));
+  printText(formatCatalogSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
 }
 
 /** @param {CliArgs} parsed */
@@ -305,7 +305,7 @@ async function handleSearch(parsed) {
     return;
   }
 
-  printText(formatSearchResults(result));
+  printText(formatSearchResults(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
 }
 
 /** @param {CliArgs} parsed */
@@ -596,7 +596,7 @@ async function handleInstall(parsed) {
     return;
   }
 
-  printText(formatInstallSummary(result));
+  printText(formatInstallSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
   if (result.applied === false) {
     process.exitCode = 1;
   }
@@ -755,7 +755,7 @@ async function handleInit(parsed) {
     return;
   }
 
-  printText(formatInitSummary(result));
+  printText(formatInitSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
 }
 
 /**
@@ -1213,21 +1213,23 @@ function formatCommentResult(comment) {
  * @param {ReturnType<typeof inspectRepo>} result
  * @returns {string}
  */
-function formatRepoSummary(result) {
-  return [
-    `# Repo: ${result.root}`,
-    "",
-    `Files scanned: ${result.fileCount}`,
-    `Primary languages: ${result.languages.map((item) => `${item.language} (${item.count})`).join(", ") || "unknown"}`,
-    `Package managers: ${result.packageManagers.join(", ") || "none detected"}`,
-    `Entrypoints: ${result.entrypoints.join(", ") || "none detected"}`,
-    "",
-    "Scripts:",
-    ...Object.entries(result.scripts).map(([name, value]) => `- ${name}: ${value}`),
-    "",
-    "Important directories:",
-    ...result.importantDirectories.map((dir) => `- ${dir}`),
-  ].join("\n");
+function formatRepoSummary(result, options = {}) {
+  return formatTerminalSummary({
+    title: "otito repo · repository overview",
+    glyph: "📦",
+    subtitle: result.root,
+    facts: [
+      ["Files scanned", result.fileCount],
+      ["Primary languages", result.languages.map((item) => `${item.language} (${item.count})`).join(", ") || "unknown"],
+      ["Package managers", result.packageManagers.join(", ") || "none detected"],
+      ["Entrypoints", result.entrypoints.join(", ") || "none detected"],
+    ],
+    sections: [
+      { title: "Scripts", items: Object.entries(result.scripts).map(([name, value]) => `${name}: ${value}`), glyph: "⚙️" },
+      { title: "Important directories", items: result.importantDirectories, glyph: "📁" },
+    ],
+    options,
+  });
 }
 
 export { main };
