@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-08-08T22:05:07.818Z",
+  "generatedAt": "2026-08-10T12:51:45.224Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -13,28 +13,28 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "src/cli.js",
-        "score": 15,
+        "path": "mkdocs.yml",
+        "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/catalog.js",
+        "path": "src/lib/review.js",
+        "score": 41,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/pr-review.js",
+        "score": 36,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/agent-tools.js",
         "score": 22,
         "riskFlags": []
       },
       {
-        "path": "src/lib/init.js",
-        "score": 0,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/install.js",
-        "score": 0,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/output.js",
-        "score": 0,
+        "path": "src/lib/args.js",
+        "score": 22,
         "riskFlags": []
       }
     ],
@@ -43,11 +43,13 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 7,
-    "additions": 205,
-    "deletions": 161,
+    "changedFiles": 11,
+    "additions": 534,
+    "deletions": 92,
     "riskLevel": "low",
-    "riskFlags": [],
+    "riskFlags": [
+      "no test files changed"
+    ],
     "reviewTargetsCount": 0
   },
   "pass": {
@@ -58,7 +60,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "8 changed files found."
+        "summary": "12 changed files found."
       },
       {
         "name": "Secret safety",
@@ -98,6 +100,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 403
+    "fullJson": 411
   }
 }
