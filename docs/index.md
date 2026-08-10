@@ -40,23 +40,13 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 | 04 | [:material-tag-check: Release Readiness](./04-release-readiness/README.md) | SemVer, changelog discipline, CI, and release gates | :material-check-circle: Active |
 | 05 | [:material-play-circle: Trust-Layer Demo](./05-trust-layer-demo/README.md) | Òtítọ́ as a repeatable review workflow | :material-check-circle: Active |
 | 06 | [:material-repeat: Builder-Founder Loop](./06-builder-founder-operating-loop/README.md) | Session rhythm, evidence ledger, governance ladder, and next-action rule | :material-check-circle: Active |
-
----
-
-## :material-check-decagram: What otito Provides
-
-!!! success "Current Capabilities"
-    - Repository inspection with languages, scripts, entrypoints, and git state
-    - AST-backed JSON-first code maps for TypeScript, JavaScript, Go, C#, Python, Java, Ruby, and Rust
-    - Multi-domain file tagging so feature subdirs surface under both root and feature names
-    - Local discovery, indexing, catalog search, and workspace reports
-    - Task-aware context packs before agents plan or edit, with vendor-bundle filtering
-    - Data-access surface reports (inline SQL and Prisma) with per-file boosts in context-pack scoring
-    - Local-vs-naïve eval suite for measuring otito's token savings
-    - PR review context from git diffs and optional GitHub comments
-    - Go test-file detection for review-ready repositories
-    - MCP tools for repository context, search, maps, and review workflows
-    - Contributor-ready governance: CI, CODEOWNERS, templates, security, and release guidance
+| 07 | [Harness Thesis & AX](./07-harness-thesis/README.md) | Why the harness matters more than the model, plus AX scoring | :material-check-circle: Active |
+| 08 | [Tutorials Integration](./08-tutorials-integration/README.md) | Codespaces setup and MCP onboarding for tutorials | :material-check-circle: Active |
+| 09 | [Convergence Thesis](./09-convergence-thesis/README.md) | Intent-vs-diff convergence scoring and receipts | :material-check-circle: Active |
+| 10 | [Usage Dashboard](./10-usage-dashboard/README.md) | Local usage logging and performance trends | :material-check-circle: Active |
+| 11 | [Determinism Thesis](./11-determinism-thesis/README.md) | Why model variance is structural and the harness is separate | :material-check-circle: Active |
+| 12 | [Dual-Mode Thesis](./12-dual-mode-thesis/README.md) | Probabilistic generation beside deterministic verification | :material-check-circle: Active |
+| 13 | [Prompt Determinism Thesis](./13-prompt-determinism-thesis/README.md) | Why prompt settings do not turn a model into a gate | :material-check-circle: Active |
 
 ---
 
@@ -72,8 +62,6 @@ flowchart LR
     F --> G[PR review context]
     G --> H[Otito gate]
 ```
-
----
 
 ## Quick Start
 
@@ -99,49 +87,3 @@ flowchart LR
     ```
 
 ---
-
-<div class="grid cards" markdown>
-
--   :material-map:{ .lg .middle } **Context Before Change**
-
-    ---
-
-    Generate the map an agent or reviewer needs before touching the code.
-
--   :material-magnify-scan:{ .lg .middle } **Search Across Local Repos**
-
-    ---
-
-    Discover, index, catalog, and search local repositories without sending code to a hosted model.
-
--   :material-source-pull:{ .lg .middle } **PR Review Harness**
-
-    ---
-
-    Turn diffs into review prompts, risk flags, changed domains, and test hints.
-
--   :material-shield-check:{ .lg .middle } **Governance Ready**
-
-    ---
-
-    Use Òtítọ́ as a repeatable trust layer: context before change, validation before merge.
-
--   :material-play-circle:{ .lg .middle } **Public Demo Path**
-
-    ---
-
-    Show the workflow end to end: context pack, focused change, Òtítọ́ gate, human merge.
-
--   :material-briefcase-check:{ .lg .middle } **Company Adoption Case Study**
-
-    ---
-
-    Package the trust layer for engineering leaders, platform teams, and AI governance reviewers.
-
--   :material-repeat:{ .lg .middle } **Builder-Founder Operating Loop**
-
-    ---
-
-    Keep every coding-agent session tied to context, focused change, visible gates, human decisions, and durable evidence.
-
-</div>

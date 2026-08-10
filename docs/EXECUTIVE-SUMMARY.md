@@ -33,6 +33,7 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Governance            | CI gates, Òtítọ́ readiness, CODEOWNERS, SemVer guidance, security reporting, templates, and review policy      |
 | Demo packet           | Company-facing packet that links the executive summary, case study, proof run, launch note, and pilot checklist |
 | Pilot runbook         | Step-by-step first repository and pull request pilot with roles, evidence, stop conditions, and triage          |
+| Thesis pack           | Public explainer pages for harness, tutorials, convergence, usage, determinism, dual-mode, and prompt determinism |
 | Proof index           | Sanitized public evidence map plus private/internal evidence boundaries for company reviewers                  |
 | Review policy         | Branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision snapshot           |
 | Feedback loop         | Structured company pilot intake that turns reviewer concerns into docs, gates, proof, or roadmap work          |

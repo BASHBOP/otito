@@ -112,3 +112,7 @@ model cannot do for itself**, framed as the durable half of the stack.
 
 - Matt Pocock & David Ondrej, _Agentic Engineering Workflow_ — <https://www.youtube.com/watch?v=nQwJVHCtDDY>
 - otito source referenced above: `src/lib/tokens.js`, `src/lib/impact.js`, `src/lib/review.js`, `src/lib/risk-paths.js`, `src/lib/harness.js`
+- Companion: [Determinism Thesis](../11-determinism-thesis/README.md) (why the harness must be non-model),
+  [Dual-Mode Thesis](../12-dual-mode-thesis/README.md) (probabilistic generation + deterministic verification),
+  [Prompt Determinism Thesis](../13-prompt-determinism-thesis/README.md) (prompt settings are not a gate),
+  [Convergence Thesis](../09-convergence-thesis/README.md)

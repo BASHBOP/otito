@@ -100,6 +100,12 @@ nav:
       - Convergence Score Spec: 09-convergence-thesis/convergence-score-spec.md
   - Usage Dashboard:
       - Overview: 10-usage-dashboard/README.md
+  - Determinism Thesis:
+      - Overview: 11-determinism-thesis/README.md
+  - Dual-Mode Thesis:
+      - Overview: 12-dual-mode-thesis/README.md
+  - Prompt Determinism Thesis:
+      - Overview: 13-prompt-determinism-thesis/README.md
   - Evaluation Guide: EVALS.md
   - Glossary: GLOSSARY.md
 
