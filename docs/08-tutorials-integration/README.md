@@ -77,3 +77,9 @@ merge-ready — the same trust-layer discipline otito uses on itself.
   Desktop, Cursor, VS Code, and other MCP hosts.
 - [Harness Thesis & Agent Experience](../07-harness-thesis/README.md) — why the harness
   (the Codespace + otito setup) matters more than the model.
+- [Determinism Thesis & Harness Boundary](../11-determinism-thesis/README.md) — why LLM
+  output varies and what otito verifies instead.
+- [Dual-Mode Thesis & Complementary Stack](../12-dual-mode-thesis/README.md) — probabilistic
+  agents plus deterministic merge evidence.
+- [Prompt Determinism Thesis & Settings Trap](../13-prompt-determinism-thesis/README.md) — why
+  "tell it not to randomize" is not a merge gate.

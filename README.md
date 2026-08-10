@@ -73,6 +73,9 @@ The published MkDocs site is a practical discovery and delivery guide:
 - [Tutorials Integration (Codespaces)](docs/08-tutorials-integration/README.md)
 - [Convergence Thesis & Score](docs/09-convergence-thesis/README.md)
 - [Usage & Performance Dashboard](docs/10-usage-dashboard/README.md)
+- [Determinism Thesis & Harness Boundary](docs/11-determinism-thesis/README.md)
+- [Dual-Mode Thesis & Complementary Stack](docs/12-dual-mode-thesis/README.md)
+- [Prompt Determinism Thesis & Settings Trap](docs/13-prompt-determinism-thesis/README.md)
 - [Glossary](docs/GLOSSARY.md)
 
 Read it at:
