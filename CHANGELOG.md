@@ -6,6 +6,20 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-08-12
+
+### Changed
+
+- **Shared terminal summaries.** Catalog, init, install, and related CLI surfaces now use a compact human-first terminal summary helper. JSON and Markdown outputs stay on their dedicated serializers.
+
+### Docs
+
+- Expanded harness, dual-mode, and prompt-determinism thesis pages, plus executive-summary and site index updates.
+
+### Maintenance
+
+- Dev dependency minor and patch bumps.
+
 ## [1.6.0] - 2026-08-02
 
 ### Added

@@ -22,7 +22,7 @@ An agent's output is bounded by two things: the **model** and the **harness** ar
 
 ## Trusted agent workflow
 
-> **New in v1.6.0:** staged validation receipts, cross-repository workspace receipts, role-aware impact, and host guidance for Gemini and Kimi.
+> **New in v1.6.1:** compact human-first terminal summaries across catalog, init, and install, with JSON and Markdown outputs unchanged.
 
 ```text
 Request -> context -> scoped change -> exact validation -> review evidence -> human decision
