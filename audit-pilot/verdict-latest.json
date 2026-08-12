@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-08-10T12:51:45.224Z",
+  "generatedAt": "2026-08-12T20:35:34.229Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 70,
+  "confidence": 65,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -13,7 +13,12 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "mkdocs.yml",
+        "path": "CHANGELOG.md",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
+        "path": "server.json",
         "score": 0,
         "riskFlags": []
       },
@@ -31,11 +36,6 @@
         "path": "src/lib/agent-tools.js",
         "score": 22,
         "riskFlags": []
-      },
-      {
-        "path": "src/lib/args.js",
-        "score": 22,
-        "riskFlags": []
       }
     ],
     "risks": [
@@ -43,11 +43,12 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 11,
-    "additions": 534,
-    "deletions": 92,
-    "riskLevel": "low",
+    "changedFiles": 5,
+    "additions": 20,
+    "deletions": 6,
+    "riskLevel": "medium",
     "riskFlags": [
+      "configuration",
       "no test files changed"
     ],
     "reviewTargetsCount": 0
@@ -60,7 +61,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "12 changed files found."
+        "summary": "6 changed files found."
       },
       {
         "name": "Secret safety",
@@ -69,13 +70,13 @@
       },
       {
         "name": "Risk review",
-        "status": "PASS",
-        "summary": "No obvious risk-sensitive file paths changed."
+        "status": "WARN",
+        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "No version metadata changes found."
+        "summary": "Version metadata is SemVer and changelog was updated."
       },
       {
         "name": "Validation commands",
@@ -100,6 +101,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 411
+    "fullJson": 425
   }
 }
