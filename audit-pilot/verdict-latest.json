@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-08-12T20:35:34.229Z",
+  "generatedAt": "2026-08-15T18:43:05.612Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 65,
+  "confidence": 70,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -18,23 +18,23 @@
         "riskFlags": []
       },
       {
+        "path": "scripts/benchmark-cli.mjs",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
         "path": "server.json",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/review.js",
-        "score": 41,
+        "path": "src/cli.js",
+        "score": 15,
         "riskFlags": []
       },
       {
-        "path": "src/lib/pr-review.js",
-        "score": 36,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/agent-tools.js",
-        "score": 22,
+        "path": "tests/cli.test.js",
+        "score": 0,
         "riskFlags": []
       }
     ],
@@ -43,13 +43,12 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 5,
-    "additions": 20,
-    "deletions": 6,
-    "riskLevel": "medium",
+    "changedFiles": 9,
+    "additions": 208,
+    "deletions": 46,
+    "riskLevel": "low",
     "riskFlags": [
-      "configuration",
-      "no test files changed"
+      "configuration"
     ],
     "reviewTargetsCount": 0
   },
@@ -61,7 +60,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "6 changed files found."
+        "summary": "10 changed files found."
       },
       {
         "name": "Secret safety",
@@ -101,6 +100,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 425
+    "fullJson": 416
   }
 }
