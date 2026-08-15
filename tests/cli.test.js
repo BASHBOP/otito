@@ -4,21 +4,37 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { main } from "../src/cli.js";
 
 const expectedCliVersion = String(JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
+let cliRunQueue = Promise.resolve();
 
-async function runCli(argv) {
+function runCli(argv) {
+  const run = cliRunQueue.then(
+    () => captureCli(argv),
+    () => captureCli(argv),
+  );
+  cliRunQueue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+async function captureCli(argv) {
   const stdoutChunks = [];
   const stderrChunks = [];
   const originalStdoutWrite = process.stdout.write.bind(process.stdout);
   const originalStderrWrite = process.stderr.write.bind(process.stderr);
   process.stdout.write = (chunk) => {
-    stdoutChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
+    if (typeof chunk !== "string") return originalStdoutWrite(chunk);
+    stdoutChunks.push(chunk);
     return true;
   };
   process.stderr.write = (chunk) => {
-    stderrChunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
+    if (typeof chunk !== "string") return originalStderrWrite(chunk);
+    stderrChunks.push(chunk);
     return true;
   };
   const previousExitCode = process.exitCode;
@@ -134,6 +150,21 @@ test("--version and -v print the exact package version", async () => {
     assert.equal(result.exitCode, 0);
     assert.equal(result.stderr, "");
     assert.equal(result.stdout, `${expectedCliVersion}\n`);
+  }
+});
+
+test("lightweight commands do not load the TypeScript analysis engine", () => {
+  const cli = fileURLToPath(new URL("../src/cli.js", import.meta.url));
+  const loader = fileURLToPath(new URL("fixtures/reject-typescript-loader.mjs", import.meta.url));
+
+  for (const args of [["--version"], ["help"]]) {
+    const result = spawnSync(process.execPath, ["--no-warnings", "--experimental-loader", loader, cli, ...args], {
+      cwd: path.dirname(cli),
+      encoding: "utf8",
+      env: { ...process.env, OTITO_TELEMETRY: "0" },
+    });
+    assert.equal(result.status, 0, `${args.join(" ")} failed: ${result.stderr}`);
+    assert.doesNotMatch(result.stderr, /typescript analysis engine/i);
   }
 });
 
