@@ -3,7 +3,6 @@ import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
-import readline from "node:readline/promises";
 import { parseArgv } from "./lib/args.js";
 
 /** @typedef {import('./lib/args.js').ParsedArgs} ParsedArgs */
@@ -24,45 +23,10 @@ import { parseArgv } from "./lib/args.js";
 /** @typedef {import('./lib/pass-pr.js').PassPrData} PassPrData */
 /** @typedef {import('./lib/review.js').ReviewData} ReviewData */
 /** @typedef {import('./lib/eval.js').EvalOptions} EvalOptions */
-import { formatDoctorReport, getDoctorReport } from "./lib/doctor.js";
-import { inspectRepo } from "./lib/repo.js";
-import { generateStructure } from "./lib/structure.js";
-import { inspectDependency } from "./lib/deps.js";
-import {
-  discoverRepositories,
-  formatCatalogSummary,
-  formatDiscoverSummary,
-  formatIndexSummary,
-  formatSearchResults,
-  indexRepositories,
-  listCatalog,
-  searchCatalog,
-} from "./lib/catalog.js";
-import { formatInitSummary, initProject } from "./lib/init.js";
-import { formatInstallSummary, installOtito } from "./lib/install.js";
-import { getToolMatrix } from "./lib/matrix.js";
-import { startMcpServer } from "./lib/mcp.js";
-import { formatContextPackTerminal, generateContextPack } from "./lib/context-engine.js";
-import { formatImpactMermaid, formatImpactTerminal, generateImpact } from "./lib/impact.js";
-import { formatAxMarkdown, generateAxScore } from "./lib/ax.js";
-import { formatConvergenceMarkdown, generateConvergence } from "./lib/converge.js";
-import { evaluateLocal, formatPassMarkdown, formatPassTerminal } from "./lib/pass-local.js";
-import { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } from "./lib/pass-pr.js";
-import { formatReviewMermaid, formatReviewTerminal, generateReview } from "./lib/review.js";
 import { createRenderer } from "./lib/render/fancy.js";
-import { generatePrReview } from "./lib/pr-review.js";
-import { formatReportMermaid, formatReportTerminal, generateReport } from "./lib/report.js";
-import { formatWorkspaceMermaid, generateWorkspaceReport } from "./lib/workspace.js";
-import { evaluateWorkspaceGate, formatWorkspaceGateMarkdown } from "./lib/workspace-gate.js";
-import { generateHarness } from "./lib/harness.js";
-import { runEval, runHarnessExecutionEval, runRetrievalEval } from "./lib/eval.js";
-import { formatDataAccessMermaid, generateDataAccessReport } from "./lib/data-access.js";
-import { getAgentTools } from "./lib/agent-tools.js";
-import { formatCodeMapMermaid, formatCodeMapMarkdown, generateCodeMap } from "./lib/code-map.js";
 import { formatTerminalSummary, printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
 import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
 import { appendEvent, clearTelemetryLog, noteResult, redactError, shareEvent, takePendingSignals, telemetryStatus } from "./lib/telemetry.js";
-import { generateDashboard } from "./lib/dashboard.js";
 
 const packageVersion = String(JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
 const versionFlags = new Set(["--version", "-v"]);
@@ -187,6 +151,7 @@ async function main(argv = process.argv.slice(2)) {
 
 /** @param {CliArgs} parsed */
 async function handleDoctor(parsed) {
+  const { formatDoctorReport, getDoctorReport } = await import("./lib/doctor.js");
   const report = getDoctorReport();
   if (parsed.flags.json) {
     printJson(report);
@@ -227,6 +192,7 @@ function themePreference(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleRepo(parsed) {
+  const { inspectRepo } = await import("./lib/repo.js");
   const repoPath = parsed.positionals[0] ?? ".";
   const result = inspectRepo(repoPath);
   if (parsed.flags.json) {
@@ -239,6 +205,7 @@ async function handleRepo(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleDiscover(parsed) {
+  const { discoverRepositories, formatDiscoverSummary } = await import("./lib/catalog.js");
   const roots = parsed.positionals.length ? parsed.positionals : ["."];
   const result = discoverRepositories(roots, {
     depth: parsed.flags.depth,
@@ -255,6 +222,7 @@ async function handleDiscover(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleIndex(parsed) {
+  const { formatIndexSummary, indexRepositories } = await import("./lib/catalog.js");
   const repoPaths = parsed.positionals.length ? parsed.positionals : ["."];
   const result = indexRepositories(repoPaths, {
     catalog: parsed.flags.catalog,
@@ -279,6 +247,7 @@ async function handleIndex(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleCatalog(parsed) {
+  const { formatCatalogSummary, listCatalog } = await import("./lib/catalog.js");
   const result = listCatalog({
     catalog: parsed.flags.catalog,
   });
@@ -293,6 +262,7 @@ async function handleCatalog(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleSearch(parsed) {
+  const { formatSearchResults, searchCatalog } = await import("./lib/catalog.js");
   const query = parsed.positionals.join(" ").trim();
   const result = searchCatalog(query, {
     catalog: parsed.flags.catalog,
@@ -310,6 +280,7 @@ async function handleSearch(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleContext(parsed) {
+  const { formatContextPackTerminal, generateContextPack } = await import("./lib/context-engine.js");
   const query = parsed.positionals.join(" ").trim();
   const result = generateContextPack(query, {
     path: parsed.flags.path,
@@ -336,6 +307,7 @@ async function handleContext(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleImpact(parsed) {
+  const { formatImpactMermaid, formatImpactTerminal, generateImpact } = await import("./lib/impact.js");
   let repoPath;
   let query;
   if (parsed.flags.path) {
@@ -379,6 +351,7 @@ async function handleImpact(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleAx(parsed) {
+  const { formatAxMarkdown, generateAxScore } = await import("./lib/ax.js");
   // Mirror `impact` arg parsing: `ax "<task>" --path .` or `ax <repo> "<task>"`.
   let repoPath;
   let query;
@@ -411,6 +384,7 @@ async function handleAx(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleConverge(parsed) {
+  const { formatConvergenceMarkdown, generateConvergence } = await import("./lib/converge.js");
   // Mirror `impact` arg parsing: `converge "<task>" --path . --base <ref>` or
   // `converge <repo> "<task>" --base <ref>`.
   let repoPath;
@@ -454,6 +428,7 @@ async function handleConverge(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handlePass(parsed) {
+  const { evaluateLocal, formatPassMarkdown, formatPassTerminal } = await import("./lib/pass-local.js");
   const repoPath = parsed.positionals[0] ?? ".";
   // evaluateLocal returns a loosely-typed record; it is a PassData at runtime.
   const data = /** @type {PassData} */ (
@@ -493,6 +468,7 @@ async function handlePass(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handlePassPr(parsed) {
+  const { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } = await import("./lib/pass-pr.js");
   const selector = parsed.positionals[0] ?? "";
   // evaluatePR returns a loosely-typed record; it is a PassPrData at runtime.
   const data = /** @type {PassPrData} */ (
@@ -546,6 +522,7 @@ async function handleGate(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleReview(parsed) {
+  const { formatReviewMermaid, formatReviewTerminal, generateReview } = await import("./lib/review.js");
   const repoPath = parsed.positionals[0] ?? ".";
   const trailingRequest = parsed.positionals.slice(1).join(" ").trim();
   const { data } = await generateReview(repoPath, {
@@ -583,6 +560,7 @@ async function handleReview(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleInstall(parsed) {
+  const { formatInstallSummary, installOtito } = await import("./lib/install.js");
   const result = installOtito({
     global: parsed.flags.global,
     link: parsed.flags.link,
@@ -604,6 +582,7 @@ async function handleInstall(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleMap(parsed) {
+  const { formatCodeMapMermaid, formatCodeMapMarkdown, generateCodeMap } = await import("./lib/code-map.js");
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateCodeMap(repoPath, {
     maxSymbols: parsed.flags.max_symbols,
@@ -629,6 +608,7 @@ async function handleMap(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleStructure(parsed) {
+  const { generateStructure } = await import("./lib/structure.js");
   const repoPath = parsed.positionals[0] ?? ".";
   // generateStructure returns an opaque `object`; describe the fields used here.
   const result = /** @type {{ ok: boolean, error?: string, command?: string, installHint?: string, outputPath?: string }} */ (
@@ -661,6 +641,7 @@ async function handleStructure(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleDeps(parsed) {
+  const { inspectDependency } = await import("./lib/deps.js");
   const packageName = parsed.positionals[0];
   if (!packageName) {
     throw new Error("deps requires a package name, for example: otito deps zod --query parse");
@@ -704,6 +685,7 @@ async function handleDeps(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleMatrix(parsed) {
+  const { getToolMatrix } = await import("./lib/matrix.js");
   const matrix = getToolMatrix();
   if (parsed.flags.json) {
     printJson(matrix);
@@ -720,6 +702,7 @@ async function handleMatrix(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleInit(parsed) {
+  const { formatInitSummary, initProject } = await import("./lib/init.js");
   const targetPath = parsed.positionals[0] ?? ".";
 
   // Resolve scaffold options from flags first. --no-gates / --no-precommit turn
@@ -766,6 +749,7 @@ async function handleInit(parsed) {
  * @returns {Promise<boolean>}
  */
 async function promptYesNo(question, defaultValue) {
+  const readline = await import("node:readline/promises");
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   try {
     const hint = defaultValue ? "Y/n" : "y/N";
@@ -780,11 +764,13 @@ async function promptYesNo(question, defaultValue) {
 }
 
 async function handleMcp() {
+  const { startMcpServer } = await import("./lib/mcp.js");
   await startMcpServer();
 }
 
 /** @param {CliArgs} parsed */
 async function handlePr(parsed) {
+  const { generatePrReview } = await import("./lib/pr-review.js");
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generatePrReview(repoPath, {
     number: parsed.flags.number ?? parsed.flags.pr,
@@ -810,6 +796,7 @@ async function handlePr(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleReport(parsed) {
+  const { formatReportMermaid, formatReportTerminal, generateReport } = await import("./lib/report.js");
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateReport(repoPath);
 
@@ -833,6 +820,7 @@ async function handleReport(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleWorkspace(parsed) {
+  const { formatWorkspaceMermaid, generateWorkspaceReport } = await import("./lib/workspace.js");
   if (parsed.positionals.length < 2) {
     throw new Error("workspace requires at least two repo paths, for example: otito workspace ../web ../api");
   }
@@ -859,6 +847,7 @@ async function handleWorkspace(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleWorkspaceGate(parsed) {
+  const { evaluateWorkspaceGate, formatWorkspaceGateMarkdown } = await import("./lib/workspace-gate.js");
   if (parsed.positionals.length < 2) {
     throw new Error("workspace-gate requires at least two repo paths, for example: otito workspace-gate ../web ../api --staged");
   }
@@ -884,6 +873,7 @@ async function handleWorkspaceGate(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleHarness(parsed) {
+  const { generateHarness } = await import("./lib/harness.js");
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateHarness(repoPath, {
     maxSymbols: parsed.flags.max_symbols,
@@ -905,6 +895,7 @@ async function handleHarness(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleEval(parsed) {
+  const { runEval, runHarnessExecutionEval, runRetrievalEval } = await import("./lib/eval.js");
   // --accuracy runs the labeled corpus (retrieval precision + risk
   // classification) instead of the token-savings eval, and exits non-zero
   // when the scoreboard falls below the corpus thresholds so CI can gate on it.
@@ -967,6 +958,7 @@ async function handleEval(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleDashboard(parsed) {
+  const { generateDashboard } = await import("./lib/dashboard.js");
   // `--clear` purges the local usage log (the "delete your own data" path) and
   // does nothing else.
   if (parsed.flags.clear) {
@@ -1054,6 +1046,7 @@ async function handleTelemetry(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleDataAccess(parsed) {
+  const { formatDataAccessMermaid, generateDataAccessReport } = await import("./lib/data-access.js");
   const repoPath = parsed.positionals[0] ?? ".";
   const result = generateDataAccessReport(repoPath);
   if (parsed.flags.json) {
@@ -1073,6 +1066,7 @@ async function handleDataAccess(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleAgentTools(parsed) {
+  const { getAgentTools } = await import("./lib/agent-tools.js");
   const tools = getAgentTools();
   if (parsed.flags.json || !parsed.flags.markdown) {
     printJson(tools);
@@ -1210,7 +1204,7 @@ function formatCommentResult(comment) {
 }
 
 /**
- * @param {ReturnType<typeof inspectRepo>} result
+ * @param {ReturnType<typeof import("./lib/repo.js").inspectRepo>} result
  * @returns {string}
  */
 function formatRepoSummary(result, options = {}) {
