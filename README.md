@@ -22,7 +22,7 @@ An agent's output is bounded by two things: the **model** and the **harness** ar
 
 ## Trusted agent workflow
 
-> **New in v1.6.1:** compact human-first terminal summaries across catalog, init, and install, with JSON and Markdown outputs unchanged.
+> **New in v1.6.2:** faster CLI startup through command-specific module loading, plus repeatable version, help, and context benchmarks.
 
 ```text
 Request -> context -> scoped change -> exact validation -> review evidence -> human decision
@@ -200,6 +200,17 @@ The gate runs:
 Coverage currently gates source files at 70% lines, 60% branches, and 75% functions. Generated artifacts under `.otito/` are ignored by git, linting, and formatting; keep durable reports there instead of committing them.
 
 The v1.1.0 harness execution evaluation runs only vetted install, test, typecheck, and build commands against committed fixtures. It disables install lifecycle scripts, applies timeouts, and never executes inferred commands from a customer repository.
+
+### Performance checks
+
+Run the CLI benchmark when changing startup, repository scanning, or code-map behavior:
+
+```bash
+npm run benchmark:cli -- --iterations 5
+npm run benchmark:cli -- --iterations 5 --json
+```
+
+It measures the lightweight `version` and `help` paths plus a full `context` run. Timings include Node startup and command execution. Compare results on the same machine and checkout; the benchmark reports measurements but does not enforce machine-dependent thresholds in CI.
 
 otito follows Semantic Versioning. Pull requests should identify whether they are no-version-impact, patch, minor, or major changes; maintainers apply the final package version during release.
 

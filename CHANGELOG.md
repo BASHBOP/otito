@@ -6,6 +6,17 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-08-15
+
+### Changed
+
+- **Faster CLI startup.** Commands now load their implementation modules only when invoked, so lightweight paths such as `otito --version` and `otito help` avoid loading the TypeScript analysis engine.
+
+### Added
+
+- **Repeatable CLI benchmarks.** `npm run benchmark:cli` measures version, help, and full context execution with human-readable or JSON output for same-machine comparisons.
+- **Lazy-loading regression coverage.** Subprocess tests fail if lightweight commands begin importing the TypeScript analysis engine again.
+
 ## [1.6.1] - 2026-08-12
 
 ### Changed
