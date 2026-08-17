@@ -1,6 +1,6 @@
 site_name: Òtítọ́
 site_url: https://bashbop.github.io/otito/
-site_description: Deterministic local repository context and merge evidence for agents and reviewers.
+site_description: Independent, deterministic repository context and merge evidence for coding agents and human reviewers.
 site_author: Oluwasegun Olumbe
 use_directory_urls: true
 

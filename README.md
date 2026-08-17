@@ -24,7 +24,7 @@ What remains strategically important is the **trust harness**: accurate reposito
 
 ## Trusted agent workflow
 
-> **New in v1.6.2:** faster CLI startup through command-specific module loading, plus repeatable version, help, and context benchmarks.
+> **New in v1.7.0:** `otito eval --gate-effectiveness` proves the real staged gate against one valid control and six adversarial changes, each with an expected deterministic reason.
 
 ```text
 Request -> context -> scoped change -> exact validation -> review evidence -> human decision

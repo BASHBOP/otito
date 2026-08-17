@@ -3,7 +3,7 @@
 ## Independent trust infrastructure for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.6.2 in this repository; verify npm, GitHub Release, and MCP Registry publication separately<br>
+**Status:** v1.7.0 published to npm, GitHub Releases, and the official MCP Registry<br>
 **Category:** Practical AI governance for developers
 
 > A Bashbop Ltd product for teams that want any coding agent to produce evidence a human can trust before merge.
@@ -19,12 +19,14 @@
 
 ---
 
-## :material-sparkles: What's New
+## What's New
 
-!!! tip "v1.6.2 in this repository (2026-08-15)"
-    - Lightweight CLI commands use command-specific module loading.
-    - Repeatable benchmarks cover version, help, and full context execution.
-    - Publication remains a separate proof chain across npm, GitHub Release, and MCP Registry.
+!!! tip "v1.7.0 published (2026-08-17)"
+    - `otito eval --gate-effectiveness` runs the real staged gate against one valid control and six adversarial changes.
+    - Every adversarial case must fail for its named deterministic reason, so gate behaviour is continuously proved rather than assumed.
+    - The trust-harness positioning is explicit: models generate changes; independent evidence supports the human merge decision.
+
+    [npm v1.7.0](https://www.npmjs.com/package/@bashbop/otito/v/1.7.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.7.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for the full history.
 
@@ -69,13 +71,22 @@ flowchart LR
 === "Install"
 
     ```bash
-    git clone https://github.com/BASHBOP/otito.git
-    cd otito && npm ci && node src/cli.js doctor
+    npm install -g @bashbop/otito@1.7.0
+    otito doctor
+    otito context "review this change" --path .
     ```
 
-=== "Local Checkout"
+=== "No Global Install"
 
     ```bash
+    npx -y @bashbop/otito@1.7.0 doctor
+    ```
+
+=== "Source Checkout"
+
+    ```bash
+    git clone https://github.com/BASHBOP/otito.git
+    cd otito
     npm ci
     npm run ci
     node src/cli.js doctor
@@ -86,5 +97,11 @@ flowchart LR
     ```bash
     otito mcp
     ```
+
+Prove the deterministic merge gate against the committed valid and adversarial corpus:
+
+```bash
+otito eval --gate-effectiveness
+```
 
 ---
