@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Docs
+
+- **Trust harness positioning.** Lead with independent merge evidence rather than a cheaper or smarter model loop. New thesis page: [docs/14-trust-harness-thesis/README.md](docs/14-trust-harness-thesis/README.md).
+
 ## [1.6.2] - 2026-08-15
 
 ### Changed

@@ -1,6 +1,6 @@
 # Òtítọ́
 
-**Local-first context and merge evidence for coding agents: turn AI-generated changes into trusted commits.**
+**Models generate the change. Otito proves whether it is safe to merge.**
 
 [![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/otito/otito-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/otito/actions/workflows/otito-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/otito?style=flat-square)](https://www.npmjs.com/package/@bashbop/otito) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/)
 
@@ -16,9 +16,11 @@
  \___/ |_| |___| |_| \___/
 ```
 
-An agent's output is bounded by two things: the **model** and the **harness** around it. The harness includes the prompts, the context it's given, the codebase it works in, and the gates it must pass before code merges. You don't control the model. You control the harness, and a tighter harness lets a cheaper model do the same work with fewer wasted tokens.
+The generic agent loop (prompting, retries, tool routing, file editing) is becoming infrastructure. Frontier models already plan, search repositories, use tools, and recover from mistakes. Model vendors are packaging native harnesses with file tools and sandbox execution. Competing there is a losing bet.
 
-**Òtítọ́** is that harness layer. It is local-first, deterministic, and model-agnostic: it discovers repositories, builds local indexes, generates task-aware context before an agent edits, scores how much a change actually touches, and gates merge readiness. It works the same way every time, with no server, no account, and no code leaving the machine. Because it depends on software fundamentals rather than any one model, the harness you build today keeps working as models change underneath it.
+What remains strategically important is the **trust harness**: accurate repository context, permission and sandbox boundaries, exact validation against the changed code, risk-sensitive policies, CODEOWNERS and human approval, reproducible receipts, and independent evidence the model cannot award itself. Stronger models increase that need, because teams will let them change more code with less supervision.
+
+**Òtítọ́** is that independent trust layer. It is local-first, deterministic, and model-agnostic: it discovers repositories, builds local indexes, generates task-aware context before an agent edits, scores how much a change actually touches, and gates merge readiness. It works the same way every time, with no server, no account, and no code leaving the machine. It does not compete with Codex, Claude Code, Gemini, Cursor, or future native harnesses. It integrates with them, and keeps working as models change underneath it.
 
 ## Trusted agent workflow
 
@@ -30,7 +32,7 @@ Request -> context -> scoped change -> exact validation -> review evidence -> hu
 
 Otito helps the agent understand and bound a task before editing, then gives the maintainer evidence to decide whether to trust the result. A passing local gate is never an automatic merge approval: hosted CI, GitHub review, CODEOWNERS, and the human release decision remain separate authorities.
 
-It does not try to replace `opensrc`, `code-structure`, Daytona, or Harnss. It gives developers and coding agents a single CLI that can:
+It does not try to replace native agent harnesses, `opensrc`, `code-structure`, Daytona, or Harnss. It gives developers and coding agents a single CLI that can:
 
 Deterministic merge gates are the differentiated core. This is the human-in-the-loop checkpoint that a model cannot grade for itself:
 
@@ -76,6 +78,7 @@ The published MkDocs site is a practical discovery and delivery guide:
 - [Determinism Thesis & Harness Boundary](docs/11-determinism-thesis/README.md)
 - [Dual-Mode Thesis & Complementary Stack](docs/12-dual-mode-thesis/README.md)
 - [Prompt Determinism Thesis & Settings Trap](docs/13-prompt-determinism-thesis/README.md)
+- [Trust Harness Thesis & Commodity Loop](docs/14-trust-harness-thesis/README.md)
 - [Glossary](docs/GLOSSARY.md)
 
 Read it at:

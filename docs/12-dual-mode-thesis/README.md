@@ -22,13 +22,15 @@ the onboarding explainer for why otito sits beside an LLM instead of replacing o
 
 ## The thesis in one line
 
-> Coding agents are **probabilistic** — they interpret, generate, and adapt. Merge
-> readiness is **deterministic** — same repo state, same rules, same verdict. A
+> Coding agents are **probabilistic**: they interpret, generate, and adapt. Merge
+> readiness is **deterministic**: same repo state, same rules, same verdict. A
 > trustworthy agent stack uses **both modes on purpose**, with a bright line between
-> generation and verification.
+> generation and verification. Native model harnesses own generation. Otito owns
+> verification.
 
 otito **is** the deterministic mode for repository work: rules, gates, receipts, and
-git facts — not token sampling.
+git facts, not token sampling. It integrates with Codex, Claude Code, Gemini, and
+Cursor rather than competing with their agent loops.
 
 ## What lines up — otito is already the deterministic mode
 
@@ -53,10 +55,14 @@ LLM outputs vary at scale. This doc explains *what to do about it architecturall
 
 The determinism doc owns "models vary; harnesses don't." This doc owns the **split
 itself**: *probabilistic generation, deterministic verification.*
+[The trust harness thesis](../14-trust-harness-thesis/README.md) then names **which
+harness** sits on the deterministic side: independent merge evidence, not the generic
+agent loop.
 
 That reframes otito from "anti-AI" to "complementary." Teams already accept that
 chatbots are probabilistic. otito makes the same acceptance explicit for coding agents:
-let the model judge and draft; let the harness rule and measure.
+let the model judge and draft; let the harness rule and measure. Native hosts generate.
+Otito attests.
 
 ### 2. Place deterministic work at guarantees
 
@@ -129,14 +135,17 @@ agents** — the if-this-then-that layer for repository trust.
 ## How the thesis docs fit together
 
 ```text
-Dual-mode (this doc)            →  two modes, complementary roles
-Prompt determinism (docs/13)    →  you cannot collapse modes via prompting
-Determinism (docs/11)           →  why the probabilistic mode cannot self-verify
-Harness (docs/07)               →  what you control instead of the model
-Convergence (docs/09)           →  how you measure intent vs. execution deterministically
+Trust harness (docs/14)         ->  which harness is durable; integrate with native loops
+Dual-mode (this doc)            ->  two modes, complementary roles
+Prompt determinism (docs/13)    ->  you cannot collapse modes via prompting
+Determinism (docs/11)           ->  why the probabilistic mode cannot self-verify
+Harness (docs/07)               ->  what you still control; AX as a cost property
+Convergence (docs/09)           ->  how you measure intent vs. execution deterministically
 ```
 
 Read this doc first for onboarding. Read
+[the trust harness thesis](../14-trust-harness-thesis/README.md) when the question is
+whether generic agent loops still matter. Read
 [the prompt determinism thesis](../13-prompt-determinism-thesis/README.md) when someone
 proposes "just tell it not to randomize." Read determinism next for the engineering depth on
 LLM variance. Read harness and convergence when designing workflows and gates.
@@ -165,7 +174,8 @@ in a stack that still needs probabilistic generation.
 - otito source referenced above: `src/lib/pass-local.js`, `src/lib/risk-paths.js`,
   `src/lib/converge.js`, `src/lib/review.js`, `src/lib/context-engine.js`,
   `codex/skills/otito-context/`, `codex/skills/otito-review/`
-- Companions: [Determinism Thesis](../11-determinism-thesis/README.md),
+- Companions: [Trust Harness Thesis](../14-trust-harness-thesis/README.md),
+  [Determinism Thesis](../11-determinism-thesis/README.md),
   [Harness Thesis](../07-harness-thesis/README.md),
   [Convergence Thesis](../09-convergence-thesis/README.md),
   [Prompt Determinism Thesis](../13-prompt-determinism-thesis/README.md)
