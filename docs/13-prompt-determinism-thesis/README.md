@@ -123,11 +123,12 @@ merge evidence** — because the chat is not the artifact that ships.
 ## How the thesis docs fit together
 
 ```text
-Dual-mode (docs/12)           →  two modes, complementary roles
-Prompt determinism (this doc) →  you cannot collapse modes via prompting
-Determinism (docs/11)         →  why generation settings still fail at scale
-Harness (docs/07)             →  what you control instead of the model
-Convergence (docs/09)         →  how you measure intent vs. execution deterministically
+Trust harness (docs/14)       ->  which harness is durable; integrate with native loops
+Dual-mode (docs/12)           ->  two modes, complementary roles
+Prompt determinism (this doc) ->  you cannot collapse modes via prompting
+Determinism (docs/11)         ->  why generation settings still fail at scale
+Harness (docs/07)             ->  what you still control; AX as a cost property
+Convergence (docs/09)         ->  how you measure intent vs. execution deterministically
 ```
 
 Read dual-mode first, then this doc when someone proposes "just tell it not to
@@ -156,7 +157,8 @@ scope probabilistic work; otito verifies deterministic facts about what actually
   <https://www.youtube.com/shorts/YRf_-mNEnvQ>
 - otito source referenced above: `src/lib/context-engine.js`, `src/lib/converge.js`,
   `src/lib/pass-local.js`, `src/lib/code-map/generate.js`, `src/lib/review.js`
-- Companions: [Dual-Mode Thesis](../12-dual-mode-thesis/README.md),
+- Companions: [Trust Harness Thesis](../14-trust-harness-thesis/README.md),
+  [Dual-Mode Thesis](../12-dual-mode-thesis/README.md),
   [Determinism Thesis](../11-determinism-thesis/README.md),
   [Harness Thesis](../07-harness-thesis/README.md),
   [Convergence Thesis](../09-convergence-thesis/README.md)

@@ -23,7 +23,9 @@ _"how cheap and safe is it for an agent to make a change here?"_ for a given tas
 
 It is the measurable form of the harness thesis (see
 [README.md](./README.md), lesson 2): a better codebase needs **fewer tokens** and has
-**better guardrails**, so a cheaper model can do the same work. The AX score rises as the
+**better guardrails**, so a cheaper model can do the same work. That remains a cost
+property. The product lead is independent merge evidence (see
+[the trust harness thesis](../14-trust-harness-thesis/README.md)). The AX score rises as the
 harness improves and falls when the codebase is hard to change. No competing tool ships this.
 
 Two framings, same engine:

@@ -133,11 +133,12 @@ variance with prompt settings, read
 this doc for why LLM variance is structural, not a settings bug.
 
 ```text
-Dual-mode (docs/12)           →  two modes, complementary roles
-Prompt determinism (docs/13)  →  you cannot collapse modes via prompting
-Determinism (this doc)        →  why the model cannot be the trust layer
-Harness (docs/07)             →  what you control instead of the model
-Convergence (docs/09)         →  how you measure intent vs. execution deterministically
+Trust harness (docs/14)       ->  which harness is durable; integrate with native loops
+Dual-mode (docs/12)           ->  two modes, complementary roles
+Prompt determinism (docs/13)  ->  you cannot collapse modes via prompting
+Determinism (this doc)        ->  why the model cannot be the trust layer
+Harness (docs/07)             ->  what you still control; AX as a cost property
+Convergence (docs/09)         ->  how you measure intent vs. execution deterministically
 ```
 
 ## Priorities
@@ -164,7 +165,8 @@ variance, ship deterministic verification, and keep the merge decision human.**
 - otito source referenced above: `src/lib/context-engine.js`, `src/lib/converge.js`,
   `src/lib/review.js`, `src/lib/pass-local.js`, `src/lib/impact.js`,
   `tests/telemetry.test.js`, `tests/context-engine.test.js`
-- Companions: [Harness Thesis](../07-harness-thesis/README.md),
+- Companions: [Trust Harness Thesis](../14-trust-harness-thesis/README.md),
+  [Harness Thesis](../07-harness-thesis/README.md),
   [Convergence Thesis](../09-convergence-thesis/README.md),
   [Dual-Mode Thesis](../12-dual-mode-thesis/README.md),
   [Prompt Determinism Thesis](../13-prompt-determinism-thesis/README.md)

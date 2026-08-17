@@ -83,3 +83,5 @@ merge-ready — the same trust-layer discipline otito uses on itself.
   agents plus deterministic merge evidence.
 - [Prompt Determinism Thesis & Settings Trap](../13-prompt-determinism-thesis/README.md) — why
   "tell it not to randomize" is not a merge gate.
+- [Trust Harness Thesis & Commodity Loop](../14-trust-harness-thesis/README.md) — why independent
+  merge evidence outlasts generic agent orchestration.

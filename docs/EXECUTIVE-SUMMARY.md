@@ -1,6 +1,6 @@
 # otito - Executive Summary
 
-**Purpose:** Context foundation for AI-assisted software teams<br>
+**Purpose:** Independent trust and merge evidence for AI-assisted software teams<br>
 **Maintainer:** Oluwasegun Olumbe<br>
 **Version:** See `package.json` in the repository root for the canonical version; `server.json` is kept in sync for the MCP manifest. The surface includes multi-domain discoverability, eval + data-access subcommands, code maps for C#, Python, Java, Ruby, and Rust, and the v1.0 absorption (`impact`, `pass`, `pass-pr`, `review`).
 
@@ -11,10 +11,10 @@
 otito answers one practical question:
 
 ```text
-What should an agent or reviewer know before changing this repository?
+Is this generated change safe to merge, and can a human recompute the evidence?
 ```
 
-It is a Node.js CLI and MCP server that produces deterministic, local-first repository context for coding agents, maintainers, and reviewers.
+It is a Node.js CLI and MCP server that produces deterministic, local-first repository context and merge evidence for coding agents, maintainers, and reviewers. Native agent harnesses generate the change. Otito proves whether it is safe to merge.
 
 ---
 
@@ -33,7 +33,7 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Governance            | CI gates, Òtítọ́ readiness, CODEOWNERS, SemVer guidance, security reporting, templates, and review policy      |
 | Demo packet           | Company-facing packet that links the executive summary, case study, proof run, launch note, and pilot checklist |
 | Pilot runbook         | Step-by-step first repository and pull request pilot with roles, evidence, stop conditions, and triage          |
-| Thesis pack           | Public explainer pages for harness, tutorials, convergence, usage, determinism, dual-mode, and prompt determinism |
+| Thesis pack           | Public explainer pages for harness, tutorials, convergence, usage, determinism, dual-mode, prompt determinism, and the trust harness |
 | Proof index           | Sanitized public evidence map plus private/internal evidence boundaries for company reviewers                  |
 | Review policy         | Branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision snapshot           |
 | Feedback loop         | Structured company pilot intake that turns reviewer concerns into docs, gates, proof, or roadmap work          |
@@ -45,15 +45,17 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 
 ## Product Position
 
-otito is part of a larger trust layer:
+otito is the independent trust layer beside native agent harnesses:
 
 ```text
-otito  -> context before change
-Òtítọ́ -> validation before merge
-Humans   -> accountability before release
+Models generate the change. Otito proves whether it is safe to merge.
+
+native hosts -> generation (Codex, Claude Code, Gemini, Cursor)
+otito        -> context before change, evidence before merge
+Humans       -> accountability before release
 ```
 
-This makes otito useful for maintainers who want AI-assisted development without losing the shape of the repository, test expectations, ownership boundaries, and review discipline.
+This makes otito useful for maintainers who want AI-assisted development without losing the shape of the repository, test expectations, ownership boundaries, and review discipline. It does not compete with generic orchestration. Deterministic merge evidence is the differentiated core; organisation-level governance is the commercial edge.
 
 ---
 

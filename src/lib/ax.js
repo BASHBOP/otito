@@ -1,8 +1,8 @@
-// Agent Experience (AX) score: a single 0–100 number answering "how cheap and
-// safe is it for an agent to make a change here?". It is the measurable form of
-// the harness thesis — a better codebase needs fewer tokens and has better
-// guardrails, so a cheaper model can do the same work. See
-// docs/07-harness-thesis/ax-score-spec.md.
+// Agent Experience (AX) score: a single 0-100 number answering "how cheap and
+// safe is it for an agent to make a change here?". It remains a cost and
+// guardrail diagnostic. The product lead is independent merge evidence, not a
+// cheaper model. See docs/07-harness-thesis/ax-score-spec.md and
+// docs/14-trust-harness-thesis/README.md.
 //
 // AX is a composition layer, not new analysis: Changeability/Containment/Clarity
 // come from generateImpact (token estimate + blast radius + concepts/risk), and
