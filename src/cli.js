@@ -895,7 +895,7 @@ async function handleHarness(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleEval(parsed) {
-  const { runEval, runHarnessExecutionEval, runRetrievalEval } = await import("./lib/eval.js");
+  const { runEval, runGateEffectivenessEval, runHarnessExecutionEval, runRetrievalEval } = await import("./lib/eval.js");
   // --accuracy runs the labeled corpus (retrieval precision + risk
   // classification) instead of the token-savings eval, and exits non-zero
   // when the scoreboard falls below the corpus thresholds so CI can gate on it.
@@ -927,6 +927,26 @@ async function handleEval(parsed) {
     } else if (parsed.flags.out) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Harness execution eval written: ${artifact.path}`);
+    } else {
+      printText(result.markdown);
+    }
+    if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  // --gate-effectiveness runs reviewed staged change-sets through the real
+  // local gate in isolated temporary Git repositories. It checks both the
+  // verdict and the encoded deterministic reason for each result.
+  if (parsed.flags.gate_effectiveness) {
+    const result = runGateEffectivenessEval({ corpusPath: parsed.flags.corpus });
+    noteResult(result.data);
+    if (parsed.flags.json) {
+      printJson(result.data);
+    } else if (parsed.flags.out) {
+      const artifact = writeArtifact(parsed.flags.out, result.markdown);
+      printText(`Gate effectiveness eval written: ${artifact.path}`);
     } else {
       printText(result.markdown);
     }
@@ -1173,9 +1193,10 @@ function handleHelp(_parsed) {
       "  otito gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
       "  otito workspace-gate <repo...> [--base ref] [--run-validation] [--policy x] [--governance x] [--request text] [--json]                           # one staged receipt across repositories",
       "",
-      "Accuracy eval (v2):",
+      "Evaluation gates (v2):",
       "  otito eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",
       "  otito eval --harness [--corpus path] [--json] [--out file]    # run inferred install/test/typecheck/build commands in isolated fixtures",
+      "  otito eval --gate-effectiveness [--corpus path] [--json] [--out file] # assert gate verdicts and deterministic reasons in isolated Git fixtures",
       "",
       "Canonical vs legacy commands:",
       "  gate                 canonical merge gate; `pass` (local) and `pass-pr` (PR) remain as legacy aliases",

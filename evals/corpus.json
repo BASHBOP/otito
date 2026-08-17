@@ -1,6 +1,6 @@
 {
   "$schema": "./corpus.schema.note",
-  "description": "Labeled evaluation corpus for otito retrieval (generateContextPack), risk classification (risk-paths), and fixture-backed harness command execution. Retrieval cases score precision@k / recall@k / MRR of expectedPrimary within primaryFiles. Risk cases assert conceptsFromQuery / classifyPath / isGateRiskPath / isSecretPath against expected and notExpected labels. Harness execution cases assert that an inferred command is present and runs in an isolated fixture copy. See docs/EVALS.md for how to add a case and how thresholds work.",
+  "description": "Labeled evaluation corpus for otito retrieval, risk classification, fixture-backed harness command execution, and gate effectiveness. Gate cases initialize an isolated Git repository from a committed base, apply one committed change-set, and assert both the verdict and deterministic check reason. See docs/EVALS.md for how to add a case and how thresholds work.",
   "k": 5,
   "thresholds": {
     "comment": "Floors set to current-baseline-minus-slack so the suite is green today but a regression trips it. Baseline (2026-06-10): retrieval p@5=0.933 r@5=1.0 mrr=1.0; risk accuracy=1.0 (16/16). Aggregate metrics must be >= these floors for exit code 0. Re-record both baseline and floors in docs/EVALS.md after any intentional behavior change.",
@@ -26,7 +26,8 @@
     "checkin-api": "evals/fixtures/checkin-api",
     "rsvp-configuration-web": "evals/fixtures/rsvp-configuration-web",
     "mobile-host-rsvp": "evals/fixtures/mobile-host-rsvp",
-    "campaign-email": "evals/fixtures/campaign-email"
+    "campaign-email": "evals/fixtures/campaign-email",
+    "gate-node": "evals/fixtures/gate-node"
   },
   "retrieval": [
     {
@@ -321,6 +322,133 @@
           "group": "validate",
           "command": "npm run build",
           "script": "build"
+        }
+      ]
+    }
+  ],
+  "gateEffectiveness": [
+    {
+      "name": "valid-control-passes",
+      "repoFixture": "gate-node",
+      "changeSet": "valid",
+      "expectedVerdict": "PASS",
+      "expectedChecks": [
+        {
+          "name": "Changed files",
+          "status": "PASS",
+          "summaryIncludes": "1 changed file"
+        },
+        {
+          "name": "Validation commands",
+          "status": "PASS"
+        },
+        {
+          "name": "Review state",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "name": "secret-file-is-blocked",
+      "repoFixture": "gate-node",
+      "changeSet": "secret",
+      "expectedVerdict": "FAIL",
+      "expectedChecks": [
+        {
+          "name": "Secret safety",
+          "status": "FAIL",
+          "summaryIncludes": "Potential secret or environment file changed",
+          "detailsInclude": ".env.production"
+        }
+      ]
+    },
+    {
+      "name": "high-risk-change-needs-remote-controls",
+      "repoFixture": "gate-node",
+      "changeSet": "high-risk",
+      "expectedVerdict": "FAIL",
+      "options": {
+        "policy": "high-risk",
+        "governance": "team"
+      },
+      "expectedChecks": [
+        {
+          "name": "Risk review",
+          "status": "WARN",
+          "detailsInclude": "prisma/schema.prisma"
+        },
+        {
+          "name": "Policy profile",
+          "status": "FAIL",
+          "summaryIncludes": "High-risk policy requires company controls",
+          "detailsInclude": "GitHub PR mode evidence"
+        }
+      ]
+    },
+    {
+      "name": "incomplete-release-is-blocked",
+      "repoFixture": "gate-node",
+      "changeSet": "release-incomplete",
+      "expectedVerdict": "FAIL",
+      "options": {
+        "governance": "team"
+      },
+      "expectedChecks": [
+        {
+          "name": "Release discipline",
+          "status": "FAIL",
+          "summaryIncludes": "without a changelog update"
+        }
+      ]
+    },
+    {
+      "name": "missing-validation-policy-is-blocked",
+      "repoFixture": "gate-node",
+      "changeSet": "validation-missing",
+      "expectedVerdict": "FAIL",
+      "options": {
+        "runValidation": true
+      },
+      "expectedChecks": [
+        {
+          "name": "Validation execution",
+          "status": "FAIL",
+          "summaryIncludes": "versioned validation policy"
+        }
+      ]
+    },
+    {
+      "name": "ownership-cannot-be-self-certified-locally",
+      "repoFixture": "gate-node",
+      "changeSet": "ownership-unverified",
+      "expectedVerdict": "FAIL",
+      "options": {
+        "policy": "company",
+        "governance": "team"
+      },
+      "expectedChecks": [
+        {
+          "name": "Policy profile",
+          "status": "FAIL",
+          "summaryIncludes": "verified GitHub PR controls",
+          "detailsInclude": "CODEOWNERS"
+        }
+      ]
+    },
+    {
+      "name": "scope-drift-fails-convergence",
+      "repoFixture": "gate-node",
+      "changeSet": "scope-drift",
+      "expectedVerdict": "FAIL",
+      "options": {
+        "request": "update the greeting function",
+        "minConvergence": 80
+      },
+      "expectedChecks": [
+        {
+          "name": "Convergence",
+          "status": "FAIL",
+          "summaryIncludes": "below the required minimum"
         }
       ]
     }

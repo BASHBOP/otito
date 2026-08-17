@@ -80,6 +80,7 @@ import { runCommand } from "./tools.js";
  * @property {RiskCase[]} risk
  * @property {CorpusThresholds} [thresholds]
  * @property {HarnessExecutionCase[]} [harnessExecution]
+ * @property {GateEffectivenessCase[]} [gateEffectiveness]
  */
 
 /**
@@ -118,6 +119,51 @@ import { runCommand } from "./tools.js";
  * @property {HarnessExecutionResult[]} commands
  * @property {boolean} pass
  * @property {string} [error]
+ */
+
+/**
+ * A fixture-backed assertion that the real local gate returns the expected
+ * verdict for a reviewed staged change-set.
+ * @typedef {object} GateEffectivenessCase
+ * @property {string} name
+ * @property {string} repoFixture
+ * @property {string} changeSet
+ * @property {"PASS"|"WARN"|"FAIL"} expectedVerdict
+ * @property {GateCheckExpectation[]} expectedChecks
+ * @property {{ policy?: string, governance?: string, request?: string, minConvergence?: number, runValidation?: boolean }} [options]
+ */
+
+/**
+ * @typedef {object} GateCheckExpectation
+ * @property {string} name
+ * @property {"PASS"|"WARN"|"FAIL"} status
+ * @property {string} [summaryIncludes]
+ * @property {string} [detailsInclude]
+ */
+
+/**
+ * @typedef {object} ScoredGateCheck
+ * @property {string} name
+ * @property {"PASS"|"WARN"|"FAIL"} expectedStatus
+ * @property {string|undefined} actualStatus
+ * @property {string|undefined} summary
+ * @property {boolean} pass
+ * @property {string|undefined} error
+ */
+
+/**
+ * @typedef {object} ScoredGateEffectivenessCase
+ * @property {string} name
+ * @property {"gate_effectiveness"} type
+ * @property {string} fixture
+ * @property {string} changeSet
+ * @property {"PASS"|"WARN"|"FAIL"} expectedVerdict
+ * @property {string|undefined} actualVerdict
+ * @property {string[]} changedFiles
+ * @property {ScoredGateCheck[]} checks
+ * @property {string[]} unexpectedFailures
+ * @property {boolean} pass
+ * @property {string|undefined} error
  */
 
 /**
@@ -684,6 +730,178 @@ export function runHarnessExecutionEval(options = {}) {
   return { data, markdown: formatHarnessExecutionEvalMarkdown(data) };
 }
 
+// ---------------------------------------------------------------------------
+// Gate effectiveness eval.
+//
+// This runner proves a different claim from retrieval accuracy and harness
+// command execution: given a reviewed staged change, does the real local gate
+// return the expected verdict for the expected deterministic reason? Each case
+// starts from a committed base fixture, applies one committed change-set in a
+// temporary Git repository, and rejects unexpected FAIL checks.
+// ---------------------------------------------------------------------------
+
+/**
+ * Run the fixture-backed gate-effectiveness corpus.
+ *
+ * @param {object} [options]
+ * @param {string} [options.corpusPath] absolute path to a corpus.json (defaults to evals/corpus.json)
+ * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the otito repo root)
+ * @returns {{ data: object, markdown: string }}
+ */
+export function runGateEffectivenessEval(options = {}) {
+  const corpusPath = options.corpusPath ? path.resolve(options.corpusPath) : defaultCorpusPath;
+  const root = options.repoRoot ? path.resolve(options.repoRoot) : repoRoot;
+  const corpus = loadCorpus(corpusPath);
+  const fixtureRoots = corpus.fixtureRoots ?? {};
+  const cases = corpus.gateEffectiveness;
+
+  if (!Array.isArray(cases) || cases.length === 0) {
+    throw new Error(`corpus must define a non-empty gateEffectiveness[] array: ${corpusPath}`);
+  }
+
+  const results = cases.map((testCase) => scoreGateEffectivenessCase(testCase, { root, fixtureRoots }));
+  const passedCases = results.filter((result) => result.pass).length;
+  const expectedBlocked = results.filter((result) => result.expectedVerdict === "FAIL").length;
+  const blockedAsExpected = results.filter((result) => result.expectedVerdict === "FAIL" && result.actualVerdict === "FAIL" && result.pass).length;
+  const passed = results.every((result) => result.pass);
+
+  const data = {
+    ok: true,
+    generatedAt: new Date().toISOString(),
+    evalKind: "gate-effectiveness",
+    corpusPath,
+    counts: {
+      cases: results.length,
+      passedCases,
+      expectedBlocked,
+      blockedAsExpected,
+    },
+    passed,
+    exitCode: passed ? 0 : 1,
+    cases: results,
+  };
+
+  return { data, markdown: formatGateEffectivenessEvalMarkdown(data) };
+}
+
+/**
+ * @param {GateEffectivenessCase} testCase
+ * @param {{ root: string, fixtureRoots: Record<string, string> }} context
+ * @returns {ScoredGateEffectivenessCase}
+ */
+function scoreGateEffectivenessCase(testCase, { root, fixtureRoots }) {
+  validateGateEffectivenessCase(testCase);
+  const source = resolveFixture(root, fixtureRoots, testCase.repoFixture);
+  assertGateFixtureRoot(root, source, testCase.repoFixture);
+  const temp = prepareGateFixture(source, testCase.changeSet);
+  /** @type {string|undefined} */
+  let actualVerdict;
+  /** @type {string[]} */
+  let changedFiles = [];
+  /** @type {ScoredGateCheck[]} */
+  let checks = [];
+  /** @type {string[]} */
+  let unexpectedFailures = [];
+  /** @type {string|undefined} */
+  let error;
+
+  try {
+    const gate = runGateFixture(temp.dir, testCase.options ?? {});
+    actualVerdict = gate.verdict;
+    changedFiles = Array.isArray(gate.changedFiles) ? gate.changedFiles.map(String) : [];
+    const actualChecks = Array.isArray(gate.checks) ? gate.checks : [];
+    checks = testCase.expectedChecks.map((expected) => scoreGateCheck(expected, actualChecks));
+    const allowedFailures = new Set(testCase.expectedChecks.filter((expected) => expected.status === "FAIL").map((expected) => expected.name));
+    unexpectedFailures = actualChecks
+      .filter((check) => check?.status === "FAIL" && !allowedFailures.has(String(check?.name ?? "")))
+      .map((check) => String(check?.name ?? "unknown check"));
+  } catch (err) {
+    error = err instanceof Error ? err.message : String(err);
+  } finally {
+    try {
+      fs.rmSync(temp.dir, { recursive: true, force: true });
+    } catch {
+      // Best-effort cleanup; the temporary Git fixture has no durable state.
+    }
+  }
+
+  return {
+    name: testCase.name,
+    type: "gate_effectiveness",
+    fixture: testCase.repoFixture,
+    changeSet: testCase.changeSet,
+    expectedVerdict: testCase.expectedVerdict,
+    actualVerdict,
+    changedFiles,
+    checks,
+    unexpectedFailures,
+    pass:
+      !error &&
+      actualVerdict === testCase.expectedVerdict &&
+      checks.length === testCase.expectedChecks.length &&
+      checks.every((check) => check.pass) &&
+      unexpectedFailures.length === 0,
+    error,
+  };
+}
+
+/** @param {GateEffectivenessCase} testCase */
+function validateGateEffectivenessCase(testCase) {
+  if (!testCase?.name || !testCase.repoFixture || !testCase.changeSet || !["PASS", "WARN", "FAIL"].includes(testCase.expectedVerdict)) {
+    throw new Error("each gateEffectiveness case needs name, repoFixture, changeSet, and expectedVerdict");
+  }
+  if (!/^[a-z0-9][a-z0-9_-]*$/.test(testCase.changeSet)) {
+    throw new Error(`gateEffectiveness changeSet must be a simple fixture name: ${testCase.changeSet}`);
+  }
+  if (!Array.isArray(testCase.expectedChecks) || testCase.expectedChecks.length === 0) {
+    throw new Error(`gateEffectiveness case "${testCase.name}" needs a non-empty expectedChecks[] array`);
+  }
+  for (const expected of testCase.expectedChecks) {
+    if (!expected?.name || !["PASS", "WARN", "FAIL"].includes(expected.status)) {
+      throw new Error(`gateEffectiveness case "${testCase.name}" has an invalid check expectation`);
+    }
+  }
+}
+
+/**
+ * @param {GateCheckExpectation} expected
+ * @param {Array<{ name?: string, status?: string, summary?: string, details?: string[] }>} actualChecks
+ * @returns {ScoredGateCheck}
+ */
+function scoreGateCheck(expected, actualChecks) {
+  const actual = actualChecks.find((check) => check?.name === expected.name);
+  if (!actual) {
+    return {
+      name: expected.name,
+      expectedStatus: expected.status,
+      actualStatus: undefined,
+      summary: undefined,
+      pass: false,
+      error: "expected check was not returned by the gate",
+    };
+  }
+
+  const summary = String(actual.summary ?? "");
+  const details = Array.isArray(actual.details) ? actual.details.map(String).join("\n") : "";
+  const mismatches = [];
+  if (actual.status !== expected.status) mismatches.push(`expected ${expected.status}, got ${actual.status ?? "missing"}`);
+  if (expected.summaryIncludes && !summary.toLowerCase().includes(expected.summaryIncludes.toLowerCase())) {
+    mismatches.push(`summary does not include ${JSON.stringify(expected.summaryIncludes)}`);
+  }
+  if (expected.detailsInclude && !details.toLowerCase().includes(expected.detailsInclude.toLowerCase())) {
+    mismatches.push(`details do not include ${JSON.stringify(expected.detailsInclude)}`);
+  }
+
+  return {
+    name: expected.name,
+    expectedStatus: expected.status,
+    actualStatus: actual.status,
+    summary,
+    pass: mismatches.length === 0,
+    error: mismatches.length > 0 ? mismatches.join("; ") : undefined,
+  };
+}
+
 /**
  * @param {HarnessExecutionCase} testCase
  * @param {{ root: string, fixtureRoots: Record<string, string> }} context
@@ -740,6 +958,142 @@ function assertHarnessFixtureRoot(root, source, fixtureName) {
   if (relative === "" || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
     throw new Error(`harness execution fixture "${fixtureName}" must be inside ${fixtureBase}`);
   }
+}
+
+/**
+ * Gate evaluation is limited to this package's committed fixtures. The corpus
+ * selects a reviewed change-set by name and cannot point at a customer repo or
+ * encode arbitrary file content.
+ *
+ * @param {string} root
+ * @param {string} source
+ * @param {string} fixtureName
+ */
+function assertGateFixtureRoot(root, source, fixtureName) {
+  const fixtureBase = path.resolve(root, "evals", "fixtures");
+  const relative = path.relative(fixtureBase, source);
+  if (relative === "" || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`gate effectiveness fixture "${fixtureName}" must be inside ${fixtureBase}`);
+  }
+}
+
+/**
+ * @param {string} source
+ * @param {string} changeSet
+ * @returns {{ dir: string }}
+ */
+function prepareGateFixture(source, changeSet) {
+  const baseDir = path.join(source, "base");
+  const changeDir = path.join(source, "changes", changeSet);
+  const changePatch = path.join(source, "changes", `${changeSet}.patch`);
+  if (!isDir(baseDir)) throw new Error(`gate effectiveness fixture is missing base/: ${source}`);
+  const hasDirectory = isDir(changeDir);
+  const hasPatch = isFile(changePatch);
+  if (hasDirectory === hasPatch) {
+    throw new Error(`gate effectiveness change-set "${changeSet}" must have exactly one reviewed directory or patch under ${source}`);
+  }
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gate-eval-"));
+  try {
+    copyDirectoryContents(baseDir, dir);
+    initGateFixtureGit(dir);
+    if (hasDirectory) copyDirectoryContents(changeDir, dir);
+    else runGateGit(dir, ["apply", "--whitespace=nowarn", changePatch]);
+    runGateGit(dir, ["add", "--all"]);
+    return { dir };
+  } catch (error) {
+    fs.rmSync(dir, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+/**
+ * @param {string} source
+ * @param {string} destination
+ */
+function copyDirectoryContents(source, destination) {
+  for (const ent of readDirEnts(source)) {
+    if (ent.name === ".git" || ent.name === "node_modules" || ent.name === ".otito") continue;
+    fs.cpSync(path.join(source, ent.name), path.join(destination, ent.name), { recursive: true });
+  }
+}
+
+/** @param {string} dir */
+function initGateFixtureGit(dir) {
+  runGateGit(dir, ["init", "--quiet"]);
+  runGateGit(dir, ["config", "user.email", "eval@otito.local"]);
+  runGateGit(dir, ["config", "user.name", "otito gate eval"]);
+  runGateGit(dir, ["add", "--all"]);
+  runGateGit(dir, ["-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "--quiet", "-m", "baseline"]);
+}
+
+/** @param {string} cwd @param {string[]} args */
+function runGateGit(cwd, args) {
+  const result = runCommand("git", args, {
+    cwd,
+    env: {
+      ...process.env,
+      GIT_AUTHOR_DATE: "2000-01-01T00:00:00Z",
+      GIT_COMMITTER_DATE: "2000-01-01T00:00:00Z",
+    },
+    timeout: 30000,
+  });
+  if (!result.ok) {
+    throw new Error(`gate effectiveness fixture git ${args[0]} failed: ${result.stderr.trim() || result.error?.message || result.status}`);
+  }
+}
+
+/**
+ * Run the installed source CLI in a subprocess so optional environment-driven
+ * analyzers and telemetry can be explicitly disabled for reproducible cases.
+ *
+ * @param {string} dir
+ * @param {{ policy?: string, governance?: string, request?: string, minConvergence?: number, runValidation?: boolean }} options
+ * @returns {{ verdict: "PASS"|"WARN"|"FAIL", changedFiles?: string[], checks?: Array<{ name?: string, status?: string, summary?: string, details?: string[] }> }}
+ */
+function runGateFixture(dir, options) {
+  const args = [
+    path.join(repoRoot, "src", "cli.js"),
+    "gate",
+    dir,
+    "--base",
+    "HEAD",
+    "--staged",
+    "--policy",
+    options.policy ?? "standard",
+    "--governance",
+    options.governance ?? "solo",
+    "--json",
+  ];
+  if (options.request) args.push("--request", options.request);
+  if (options.minConvergence !== undefined) args.push("--min-convergence", String(options.minConvergence));
+  if (options.runValidation) args.push("--run-validation");
+
+  const result = runCommand(process.execPath, args, {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      NO_COLOR: "1",
+      OTITO_AIGLARE: "0",
+      OTITO_BOUNCER_CONFIG: "",
+      OTITO_TIELINE_CONFIG: "",
+      OTITO_TELEMETRY: "0",
+      OTITO_TELEMETRY_SHARE: "0",
+    },
+    timeout: 60000,
+    maxBuffer: 2 * 1024 * 1024,
+  });
+
+  let parsed;
+  try {
+    parsed = JSON.parse(result.stdout);
+  } catch (error) {
+    throw new Error(`gate effectiveness fixture returned unreadable JSON: ${clipCommandOutput(result.stderr || result.stdout)}`, { cause: error });
+  }
+  if (!parsed || !["PASS", "WARN", "FAIL"].includes(parsed.verdict)) {
+    throw new Error("gate effectiveness fixture returned no recognized verdict");
+  }
+  return parsed;
 }
 
 /**
@@ -1212,6 +1566,40 @@ export function formatHarnessExecutionEvalMarkdown(data) {
 }
 
 /**
+ * @param {{ generatedAt: string, corpusPath: string, counts: { cases: number, passedCases: number, expectedBlocked: number, blockedAsExpected: number }, passed: boolean, exitCode: number, cases: ScoredGateEffectivenessCase[] }} data
+ * @returns {string}
+ */
+export function formatGateEffectivenessEvalMarkdown(data) {
+  const lines = [
+    "# otito Gate Effectiveness Eval",
+    "",
+    `Generated: ${data.generatedAt}`,
+    `Corpus: ${data.corpusPath}`,
+    `Cases: ${data.counts.passedCases}/${data.counts.cases} passed`,
+    `Expected blocks: ${data.counts.blockedAsExpected}/${data.counts.expectedBlocked} blocked for the encoded reason`,
+    "",
+    "## Results",
+    "",
+    "| Case | Change-set | Expected | Actual | Evidence checks | Pass |",
+    "|---|---|:---:|:---:|---|:---:|",
+    ...data.cases.map(
+      (testCase) =>
+        `| ${testCase.name} | ${testCase.changeSet} | ${testCase.expectedVerdict} | ${testCase.actualVerdict ?? "ERROR"} | ${testCase.checks.map((check) => `${check.name}=${check.actualStatus ?? "missing"}`).join("; ") || "-"} | ${testCase.pass ? "yes" : "NO"} |`,
+    ),
+    "",
+    `Overall: ${data.passed ? "PASS" : "FAIL"} (exit ${data.exitCode})`,
+    "",
+    "Each case initializes a temporary Git repository from a reviewed committed base, applies one reviewed change-set, stages it, and invokes the real local gate. Customer repositories and corpus-supplied commands are never executed.",
+    "",
+    "## Failing cases",
+    "",
+    ...formatFailingGateCases(data),
+    "",
+  ];
+  return lines.join("\n");
+}
+
+/**
  * @param {{ cases: ScoredHarnessExecutionCase[] }} data
  * @returns {string[]}
  */
@@ -1219,6 +1607,20 @@ function formatFailingHarnessCommands(data) {
   const failures = data.cases.flatMap((testCase) => testCase.commands.filter((command) => !command.pass).map((command) => ({ testCase, command })));
   if (failures.length === 0) return ["- none"];
   return failures.map(({ testCase, command }) => `- [${testCase.fixture}] ${command.command}: ${command.error ?? "failed"}`);
+}
+
+/**
+ * @param {{ cases: ScoredGateEffectivenessCase[] }} data
+ * @returns {string[]}
+ */
+function formatFailingGateCases(data) {
+  const failures = data.cases.filter((testCase) => !testCase.pass);
+  if (failures.length === 0) return ["- none"];
+  return failures.map((testCase) => {
+    const checkErrors = testCase.checks.filter((check) => !check.pass).map((check) => `${check.name}: ${check.error ?? "mismatch"}`);
+    const extras = testCase.unexpectedFailures.length > 0 ? [`unexpected FAIL checks: ${testCase.unexpectedFailures.join(", ")}`] : [];
+    return `- [${testCase.name}] expected ${testCase.expectedVerdict}, got ${testCase.actualVerdict ?? "ERROR"}: ${[testCase.error, ...checkErrors, ...extras].filter(Boolean).join("; ") || "case mismatch"}`;
+  });
 }
 
 /**

@@ -20,6 +20,22 @@ otito **is** that trust layer. It is deterministic, local-first, and model-agnos
 The generic loop belongs to Codex, Claude Code, Gemini, Cursor, and future native
 harnesses. See [the trust harness thesis](../14-trust-harness-thesis/README.md).
 
+## Why stronger models make the harness more important
+
+Model capability changes the amount of code an agent can produce; it does not turn model
+output into independent evidence. As agents become faster and more autonomous, three
+pressures rise together:
+
+1. More generated change reaches review in less time.
+2. A capable agent can make a larger coherent mistake before a human notices.
+3. The model that created a change is still not an independent authority for tests,
+   ownership, CI state, or merge approval.
+
+The product implication is clear: do not compete with model labs on generation. Build the
+stable trust layer around every model — scoped repository context before the edit,
+deterministic validation and gate evidence after the edit, and a named human decision
+before release.
+
 ## Eight lessons, mapped to otito
 
 ### 1. Own the word "harness" (positioning)
@@ -106,8 +122,9 @@ model cannot do for itself**, framed as the durable half of the stack.
 
 | Priority | Work | Why first | Effort |
 | --- | --- | --- | --- |
+| **P0** | Gate-effectiveness eval | Proves the gate allows a valid control and blocks known-bad changes for named deterministic reasons | Done — `otito eval --gate-effectiveness` |
 | **P0** | AX / tokens-to-change score (lesson 2) | Defensible, measurable, unique; reuses `tokens.js` + `impact.js` + `review.js` | Medium — see [spec](./ax-score-spec.md) |
-| **P0** | Harness + gate positioning (lessons 1, 6) | Low cost, reframes the whole product around a thesis going viral | Low — README done; carry into docs site + landing |
+| **P0** | Independent trust-harness positioning (lessons 1, 6) | Keeps the product durable as model capability and vendor choices change | Active — README and docs aligned |
 | **P1** | Tool-surface / context-leak audit (lesson 4) | Keeps otito lean enough to survive the "blank slate" test | Low–Medium |
 | **P1** | Scheduled cheap-model review mode (lesson 7) | Turns the gate into a self-improving loop | Medium |
 | **P2** | Procedure skills package (lesson 5) | Shipped under `codex/skills/otito-{context,review,scope}/` | Done |

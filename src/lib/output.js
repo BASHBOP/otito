@@ -90,6 +90,7 @@ Usage:
   otito workspace-gate <repo...> [--base ref] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--json]
   otito harness <path> [--out file] [--json]
   otito eval <path> [--query text] [--naive-cap n] [--out file] [--json]
+  otito eval --accuracy|--harness|--gate-effectiveness [--corpus file] [--out file] [--json]
   otito data-access <path> [--out file] [--json] [--mermaid]
   otito agent-tools [--json|--markdown]
   otito dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]   # local usage & performance UI (HTML)
@@ -124,6 +125,7 @@ Examples:
   node src/cli.js workspace ../web ../api --out .otito/workspace.md
   node src/cli.js structure ../web --pattern 'app/**/*.tsx' --out .otito/app.html
   node src/cli.js eval . --out .otito/eval.md
+  node src/cli.js eval --gate-effectiveness
 `);
 }
 

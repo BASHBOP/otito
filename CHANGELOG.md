@@ -6,9 +6,23 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-08-17
+
+### Added
+
+- **Gate-effectiveness evaluation.** `otito eval --gate-effectiveness` runs the real staged local gate against a committed valid control and six adversarial change-sets, asserting both the overall verdict and named deterministic reason. `npm run eval:gate` is part of the release quality gate, and tarball smoke verifies the installed package can run the corpus.
+
+### Safety
+
+- **Fixture-only gate proof.** Gate eval cases create isolated temporary Git repositories from reviewed committed fixtures. Corpus entries cannot supply commands, redirect execution outside `evals/fixtures/`, or use path-like change-set names; customer repositories are never executed.
+
 ### Docs
 
 - **Trust harness positioning.** Lead with independent merge evidence rather than a cheaper or smarter model loop. New thesis page: [docs/14-trust-harness-thesis/README.md](docs/14-trust-harness-thesis/README.md).
+
+### Maintenance
+
+- **Release metadata alignment.** npm package metadata, the package lockfile, and the MCP Registry manifest now agree on v1.7.0.
 
 ## [1.6.2] - 2026-08-15
 

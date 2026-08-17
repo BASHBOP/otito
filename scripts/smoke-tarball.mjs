@@ -58,8 +58,14 @@ try {
     throw new Error(`installed bin eval --accuracy failed: passed=${evalParsed?.passed} exitCode=${evalParsed?.exitCode}`);
   }
 
+  const gateEvalOutput = run(bin, ["eval", "--gate-effectiveness", "--json"], { cwd: projectDir });
+  const gateEvalParsed = JSON.parse(gateEvalOutput);
+  if (!gateEvalParsed?.ok || gateEvalParsed.evalKind !== "gate-effectiveness" || !gateEvalParsed.passed) {
+    throw new Error(`installed bin eval --gate-effectiveness failed: passed=${gateEvalParsed?.passed} exitCode=${gateEvalParsed?.exitCode}`);
+  }
+
   console.log(
-    `tarball smoke OK: installed bin reported v${packageVersion}, produced ${helpOutput.length} bytes of help, valid repo JSON, and eval --accuracy passed`,
+    `tarball smoke OK: installed bin reported v${packageVersion}, produced ${helpOutput.length} bytes of help, valid repo JSON, and packaged accuracy + gate evals passed`,
   );
 } finally {
   fs.rmSync(workDir, { recursive: true, force: true });
