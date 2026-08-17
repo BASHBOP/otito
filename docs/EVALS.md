@@ -1,6 +1,6 @@
 # otito Evals
 
-otito ships three evals. They answer different questions and must not be
+otito ships four evals. They answer different questions and must not be
 confused:
 
 | Eval | Entry point | Question it answers |
@@ -8,15 +8,16 @@ confused:
 | Token-savings | `runEval(repoPath)` | _Is the context pack **smaller** than a naive file dump?_ |
 | Accuracy | `runRetrievalEval()` | _Is the context pack **right** — does it surface the files an agent needs, and does the risk classifier label paths/queries correctly?_ |
 | Harness execution | `runHarnessExecutionEval()` | _Do the encoded setup and validation commands Otito inferred actually run?_ |
+| Gate effectiveness | `runGateEffectivenessEval()` | _Does the real local gate allow a valid change and block known-bad changes for the expected deterministic reason?_ |
 
 The token-savings eval is necessary but not sufficient: a randomly-ranked pack
-saves exactly as many tokens as a perfect one. The accuracy and harness
-execution evals close distinct gaps in that evidence.
+saves exactly as many tokens as a perfect one. Accuracy, harness execution, and
+gate effectiveness close distinct gaps in that evidence.
 
 ## What the corpus measures
 
-The corpus lives at `evals/corpus.json` and has two
-case types.
+The corpus lives at `evals/corpus.json` and contains retrieval, risk, harness
+execution, and gate-effectiveness cases.
 
 ### Retrieval cases
 
@@ -94,6 +95,38 @@ testing compiler semantics is the goal.
 This is execution evidence for the encoded fixture commands, not a claim that
 every command in every possible harness is safe or runnable. Add another small
 fixture when extending coverage to another ecosystem or command form.
+
+### Gate-effectiveness cases
+
+The `gateEffectiveness` corpus runs Otito's real local gate against reviewed,
+committed staged changes. The current fixture contains one valid control and
+six expected blocks:
+
+- a potential secret or environment file;
+- a high-risk schema change without independently verified PR controls;
+- version metadata changed without a changelog update;
+- requested validation without a base-committed validation policy;
+- company ownership rules that cannot be self-certified by a local run; and
+- a change that falls below the requested convergence threshold.
+
+Each case names a fixture, a committed change-set, an expected overall verdict,
+and one or more named gate checks. Expectations can assert status plus stable
+summary or detail fragments. The case fails when the verdict differs, an
+expected reason is missing, or the gate returns an unexpected `FAIL` check.
+
+The runner copies `base/` into an isolated temporary directory, creates a
+deterministic Git baseline, applies one reviewed `changes/<changeSet>/`
+directory or `changes/<changeSet>.patch`, stages the result, and invokes
+`otito gate --staged --json`. The patch form lets a safety case create a
+secret-like path only inside the temporary repository, without placing that
+path in Otito's own working tree. Corpus entries cannot provide shell commands,
+redirect execution outside `evals/fixtures/`, or use path-like change-set
+names. The source fixture and customer repositories are never mutated or
+executed.
+
+This is product evidence for the encoded local-gate behaviours. Hosted CI,
+GitHub approvals, CODEOWNERS approval state, unresolved conversations, and the
+human merge decision remain separate authorities.
 
 ## How thresholds work
 
@@ -188,14 +221,33 @@ headroom rather than a defect.
    }
    ```
 
+   Gate effectiveness:
+
+   ```json
+   {
+     "name": "secret-file-is-blocked",
+     "repoFixture": "gate-node",
+     "changeSet": "secret",
+     "expectedVerdict": "FAIL",
+     "expectedChecks": [
+       {
+         "name": "Secret safety",
+         "status": "FAIL",
+         "summaryIncludes": "Potential secret or environment file changed"
+       }
+     ]
+   }
+   ```
+
 3. **Run it.** `node --test tests/eval.test.js`, or run the runner directly to
    see the scoreboard. If you intentionally changed behavior, re-record the
    baseline above and re-set the thresholds to baseline-minus-slack.
 
 ## Running the eval
 
-`runRetrievalEval()` and `runHarnessExecutionEval()` are exported from
-`src/lib/eval.js`. Both suites are covered by `tests/eval.test.js`:
+`runRetrievalEval()`, `runHarnessExecutionEval()`, and
+`runGateEffectivenessEval()` are exported from `src/lib/eval.js`. All suites are
+covered by `tests/eval.test.js`:
 
 ```bash
 node --test tests/eval.test.js
@@ -206,7 +258,9 @@ Run the release-gating commands directly with:
 ```bash
 npm run eval:accuracy
 npm run eval:harness
+npm run eval:gate
 ```
 
-The CLI equivalents are `otito eval --accuracy` and `otito eval --harness`.
-Both exit non-zero on a failed corpus, and `npm run quality` runs both.
+The CLI equivalents are `otito eval --accuracy`, `otito eval --harness`, and
+`otito eval --gate-effectiveness`. Each exits non-zero on a failed corpus, and
+`npm run quality` runs all three release-gating suites.

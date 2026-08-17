@@ -1,0 +1,3 @@
+model AuditEvent {
+  id String @id
+}
