@@ -22,7 +22,7 @@ durable evidence
 
 ## Tool Boundaries
 
-Òtítọ́ is the product surface. Its context, impact, and gate commands provide repository context, PR review context, workspace reports, agent-facing evidence, and merge readiness.
+Òtítọ́ is the independent trust-harness surface. Its context, impact, and gate commands provide repository context, PR review context, workspace reports, agent-facing evidence, and merge readiness without competing with the coding agent's own loop.
 
 `otito impact` is the canonical change-impact analyzer. Use it when scope is unclear, when import-neighbor evidence matters, or when a diff needs validation against the original change request. The standalone `impact-map` work has been absorbed into otito for normal product and agent workflows.
 
@@ -34,7 +34,7 @@ The rule is simple:
 | Is this PR ready to merge under the repo's governance rules? | Òtítọ́ gate |
 | What files, import neighbors, tests, or missed diff areas might this change affect? | `otito impact` |
 
-This keeps the public story clear: one product, with context and impact analysis before its final merge-safety gate.
+This keeps the public story clear: model-native agents generate changes; one model-agnostic product provides context and impact analysis before its final merge-safety evidence.
 
 ---
 
@@ -151,7 +151,7 @@ The ledger can live in a PR description, merge note, release note, company pilot
 
 | Track | Question | Artifact |
 | --- | --- | --- |
-| Product | Is otito still the context foundation? | README, docs, CLI/MCP behavior, tests |
+| Product | Is otito still the independent context and merge-evidence layer? | README, docs, CLI/MCP behavior, tests |
 | Gate | Is Òtítọ́ still the merge-safety signal? | Òtítọ́ workflow, local report, PR check, policy mode |
 | Release | Can another maintainer understand what shipped? | SemVer impact, changelog, tag, GitHub release |
 | Governance | Can a company see who was accountable? | CODEOWNERS, review policy, branch protection, decision record |
