@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-08-15T18:43:05.612Z",
+  "generatedAt": "2026-08-17T08:57:40.416Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -18,23 +18,23 @@
         "riskFlags": []
       },
       {
-        "path": "scripts/benchmark-cli.mjs",
+        "path": "mkdocs.yml",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "server.json",
-        "score": 0,
+        "path": "src/lib/ax.js",
+        "score": 22,
         "riskFlags": []
       },
       {
-        "path": "src/cli.js",
-        "score": 15,
+        "path": "src/lib/review.js",
+        "score": 41,
         "riskFlags": []
       },
       {
-        "path": "tests/cli.test.js",
-        "score": 0,
+        "path": "src/lib/pr-review.js",
+        "score": 36,
         "riskFlags": []
       }
     ],
@@ -43,12 +43,12 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 9,
-    "additions": 208,
-    "deletions": 46,
+    "changedFiles": 16,
+    "additions": 284,
+    "deletions": 64,
     "riskLevel": "low",
     "riskFlags": [
-      "configuration"
+      "no test files changed"
     ],
     "reviewTargetsCount": 0
   },
@@ -60,7 +60,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "10 changed files found."
+        "summary": "17 changed files found."
       },
       {
         "name": "Secret safety",
@@ -69,13 +69,13 @@
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
@@ -100,6 +100,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 416
+    "fullJson": 408
   }
 }
