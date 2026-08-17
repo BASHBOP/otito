@@ -136,7 +136,8 @@ execution — the half of verification a model structurally cannot do for itself
 - otito source referenced above: `src/lib/impact.js` (`generateImpact`,
   `validateAgainstDiff`), `src/lib/review.js`, `src/lib/risk-paths.js`,
   `src/lib/codeowners.js`, `src/lib/ax.js`
-- Companions: [Dual-Mode Thesis](../12-dual-mode-thesis/README.md) (probabilistic vs deterministic 101),
+- Companions: [Trust Harness Thesis](../14-trust-harness-thesis/README.md) (which harness is durable),
+  [Dual-Mode Thesis](../12-dual-mode-thesis/README.md) (probabilistic vs deterministic 101),
   [Prompt Determinism Thesis](../13-prompt-determinism-thesis/README.md) (prompt settings are not a gate),
   [Determinism Thesis](../11-determinism-thesis/README.md) (why model output varies),
   [Harness Thesis](../07-harness-thesis/README.md)

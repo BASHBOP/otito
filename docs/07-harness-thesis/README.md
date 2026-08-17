@@ -1,6 +1,6 @@
 # Harness Thesis & Agent Experience
 
-> _Why otito bets on the harness, not the model — and the roadmap that follows from it._
+> _Why otito still bets on a harness, which harness is durable, and the AX roadmap that follows._
 
 This document maps a widely-shared argument about agentic engineering onto otito's
 existing surface, then turns it into a concrete, prioritised roadmap. The source is a
@@ -11,12 +11,14 @@ matters most, and naming it sharpens the product.
 
 ## The thesis in one line
 
-> Everyone obsesses over the model — the engine of the F1 car. The rest of the car is the
-> **harness**: prompts, skills, the codebase, the gates. You control the harness far more
-> than you control the model, and a tighter harness lets a cheaper model do the same work.
+> Everyone obsesses over the model. You still control a harness, but the generic
+> agent loop is becoming vendor infrastructure. Otito owns the **trust harness**:
+> context, gates, receipts, and independent merge evidence. A tighter repo still
+> lets a cheaper model do more; that is now the AX score, not the lead claim.
 
-otito **is** a harness tool. It is deterministic, local-first, and model-agnostic — the
-part of an AI stack that keeps working as models churn underneath it.
+otito **is** that trust layer. It is deterministic, local-first, and model-agnostic.
+The generic loop belongs to Codex, Claude Code, Gemini, Cursor, and future native
+harnesses. See [the trust harness thesis](../14-trust-harness-thesis/README.md).
 
 ## Eight lessons, mapped to otito
 
@@ -24,8 +26,11 @@ part of an AI stack that keeps working as models churn underneath it.
 
 The video reframes "code context tool" as something bigger: the environment an agent runs
 in. otito already generates harnesses (`otito harness`, `repo_harness`) and gates
-(`otito gate`, `review_gate`). The README now leads with this. The strategic claim —
-*the harness survives model churn* — is both true of otito and currently going viral.
+(`otito gate`, `review_gate`). Keep that vocabulary, then split it. The generic loop
+(prompts, retries, file tools) is becoming infrastructure. The **trust harness**
+(context, validation, owners, receipts) is the durable product. The README now leads
+with merge evidence, not cheaper models. See
+[the trust harness thesis](../14-trust-harness-thesis/README.md).
 
 ### 2. "A cheaper model works if the codebase is easy to change" → make it measurable
 
@@ -112,7 +117,8 @@ model cannot do for itself**, framed as the durable half of the stack.
 
 - Matt Pocock & David Ondrej, _Agentic Engineering Workflow_ — <https://www.youtube.com/watch?v=nQwJVHCtDDY>
 - otito source referenced above: `src/lib/tokens.js`, `src/lib/impact.js`, `src/lib/review.js`, `src/lib/risk-paths.js`, `src/lib/harness.js`
-- Companion: [Determinism Thesis](../11-determinism-thesis/README.md) (why the harness must be non-model),
+- Companion: [Trust Harness Thesis](../14-trust-harness-thesis/README.md) (which harness is durable),
+  [Determinism Thesis](../11-determinism-thesis/README.md) (why the harness must be non-model),
   [Dual-Mode Thesis](../12-dual-mode-thesis/README.md) (probabilistic generation + deterministic verification),
   [Prompt Determinism Thesis](../13-prompt-determinism-thesis/README.md) (prompt settings are not a gate),
   [Convergence Thesis](../09-convergence-thesis/README.md)

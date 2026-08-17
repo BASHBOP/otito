@@ -106,6 +106,8 @@ nav:
       - Overview: 12-dual-mode-thesis/README.md
   - Prompt Determinism Thesis:
       - Overview: 13-prompt-determinism-thesis/README.md
+  - Trust Harness Thesis:
+      - Overview: 14-trust-harness-thesis/README.md
   - Evaluation Guide: EVALS.md
   - Glossary: GLOSSARY.md
 
