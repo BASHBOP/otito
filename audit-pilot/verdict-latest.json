@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-08-17T08:57:40.416Z",
+  "generatedAt": "2026-08-17T09:14:41.083Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 70,
+  "confidence": 65,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -18,23 +18,23 @@
         "riskFlags": []
       },
       {
-        "path": "mkdocs.yml",
+        "path": "evals/corpus.json",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/ax.js",
-        "score": 22,
+        "path": "evals/fixtures/gate-node/base/src/greeting.js",
+        "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/review.js",
-        "score": 41,
+        "path": "evals/fixtures/gate-node/changes/ownership-unverified/src/greeting.js",
+        "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/pr-review.js",
-        "score": 36,
+        "path": "evals/fixtures/gate-node/changes/scope-drift/src/reporting/export.js",
+        "score": 0,
         "riskFlags": []
       }
     ],
@@ -43,12 +43,15 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 16,
-    "additions": 284,
-    "deletions": 64,
-    "riskLevel": "low",
+    "changedFiles": 27,
+    "additions": 854,
+    "deletions": 25,
+    "riskLevel": "medium",
     "riskFlags": [
-      "no test files changed"
+      "configuration",
+      "data model",
+      "large PR",
+      "large file diff"
     ],
     "reviewTargetsCount": 0
   },
@@ -60,7 +63,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "17 changed files found."
+        "summary": "28 changed files found."
       },
       {
         "name": "Secret safety",
@@ -69,13 +72,13 @@
       },
       {
         "name": "Risk review",
-        "status": "PASS",
-        "summary": "No obvious risk-sensitive file paths changed."
+        "status": "WARN",
+        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "No version metadata changes found."
+        "summary": "Version metadata is SemVer and changelog was updated."
       },
       {
         "name": "Validation commands",
@@ -100,6 +103,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 408
+    "fullJson": 462
   }
 }
