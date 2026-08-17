@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-08-17T09:14:41.083Z",
+  "generatedAt": "2026-08-17T10:06:45.655Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 65,
+  "confidence": 70,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -13,28 +13,28 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "CHANGELOG.md",
+        "path": "mkdocs.yml",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "evals/corpus.json",
-        "score": 0,
+        "path": "src/lib/review.js",
+        "score": 41,
         "riskFlags": []
       },
       {
-        "path": "evals/fixtures/gate-node/base/src/greeting.js",
-        "score": 0,
+        "path": "src/lib/pr-review.js",
+        "score": 36,
         "riskFlags": []
       },
       {
-        "path": "evals/fixtures/gate-node/changes/ownership-unverified/src/greeting.js",
-        "score": 0,
+        "path": "src/lib/agent-tools.js",
+        "score": 22,
         "riskFlags": []
       },
       {
-        "path": "evals/fixtures/gate-node/changes/scope-drift/src/reporting/export.js",
-        "score": 0,
+        "path": "src/lib/args.js",
+        "score": 22,
         "riskFlags": []
       }
     ],
@@ -43,15 +43,12 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 27,
-    "additions": 854,
-    "deletions": 25,
-    "riskLevel": "medium",
+    "changedFiles": 3,
+    "additions": 28,
+    "deletions": 11,
+    "riskLevel": "low",
     "riskFlags": [
-      "configuration",
-      "data model",
-      "large PR",
-      "large file diff"
+      "no test files changed"
     ],
     "reviewTargetsCount": 0
   },
@@ -63,7 +60,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "28 changed files found."
+        "summary": "4 changed files found."
       },
       {
         "name": "Secret safety",
@@ -72,13 +69,13 @@
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
@@ -103,6 +100,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 462
+    "fullJson": 411
   }
 }
