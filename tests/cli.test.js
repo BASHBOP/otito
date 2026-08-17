@@ -575,3 +575,13 @@ test("eval --harness runs the isolated fixture command corpus", async () => {
   assert.equal(payload.passed, true);
   assert.equal(payload.counts.passedCommands, 4);
 });
+
+test("eval --gate-effectiveness runs committed staged changes through the real gate", async () => {
+  const result = await runCli(["eval", "--gate-effectiveness", "--json"]);
+  assert.equal(result.exitCode, 0, "gate-effectiveness corpus must exit 0 at baseline");
+  const payload = parseJsonOutput(result.stdout);
+  assert.equal(payload.evalKind, "gate-effectiveness");
+  assert.equal(payload.passed, true);
+  assert.equal(payload.counts.cases, 7);
+  assert.equal(payload.counts.blockedAsExpected, 6);
+});

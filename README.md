@@ -42,6 +42,7 @@ Deterministic merge gates are the differentiated core. This is the human-in-the-
 - resolve CODEOWNERS to required reviewers and surface owner-decision warnings
 - check branch-protection expectations and required checks before merge
 - generate actionable PR review context from git diffs and optional GitHub comments
+- continuously prove the local gate against a committed valid control and adversarial change corpus with `otito eval --gate-effectiveness`
 
 Local-first context feeds the gates:
 
@@ -79,6 +80,7 @@ The published MkDocs site is a practical discovery and delivery guide:
 - [Dual-Mode Thesis & Complementary Stack](docs/12-dual-mode-thesis/README.md)
 - [Prompt Determinism Thesis & Settings Trap](docs/13-prompt-determinism-thesis/README.md)
 - [Trust Harness Thesis & Commodity Loop](docs/14-trust-harness-thesis/README.md)
+- [Evaluation Method and Gate-Effectiveness Corpus](docs/EVALS.md)
 - [Glossary](docs/GLOSSARY.md)
 
 Read it at:
@@ -197,12 +199,15 @@ The gate runs:
 - `npm run test:coverage`
 - `npm run eval:accuracy`
 - `npm run eval:harness`
+- `npm run eval:gate`
 - `npm run audit`
 - `npm run smoke`
 
 Coverage currently gates source files at 70% lines, 60% branches, and 75% functions. Generated artifacts under `.otito/` are ignored by git, linting, and formatting; keep durable reports there instead of committing them.
 
-The v1.1.0 harness execution evaluation runs only vetted install, test, typecheck, and build commands against committed fixtures. It disables install lifecycle scripts, applies timeouts, and never executes inferred commands from a customer repository.
+The harness execution evaluation runs only vetted install, test, typecheck, and build commands against committed fixtures. It disables install lifecycle scripts, applies timeouts, and never executes inferred commands from a customer repository.
+
+The gate-effectiveness evaluation creates isolated Git repositories from a committed base, applies reviewed change directories or patches, and invokes the real staged local gate. Its baseline proves one valid change is allowed and six known-bad changes are blocked for their encoded reasons. It cannot execute corpus-supplied commands or inspect a customer repository.
 
 ### Performance checks
 

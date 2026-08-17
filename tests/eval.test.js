@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runEval, runHarnessExecutionEval, runRetrievalEval } from "../src/lib/eval.js";
+import { runEval, runGateEffectivenessEval, runHarnessExecutionEval, runRetrievalEval } from "../src/lib/eval.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -151,6 +151,108 @@ test("runHarnessExecutionEval rejects a corpus that redirects execution outside 
   );
 
   assert.throws(() => runHarnessExecutionEval({ corpusPath }), /must be inside/);
+});
+
+test("runGateEffectivenessEval proves the committed gate cases and their deterministic reasons", () => {
+  const { data, markdown } = runGateEffectivenessEval();
+
+  assert.equal(data.evalKind, "gate-effectiveness");
+  assert.equal(data.passed, true, "committed gate-effectiveness corpus must pass");
+  assert.equal(data.exitCode, 0);
+  assert.equal(data.counts.cases, 7);
+  assert.equal(data.counts.passedCases, 7);
+  assert.equal(data.counts.expectedBlocked, 6);
+  assert.equal(data.counts.blockedAsExpected, 6);
+
+  const byName = new Map(data.cases.map((testCase) => [testCase.name, testCase]));
+  assert.equal(byName.get("valid-control-passes")?.actualVerdict, "PASS");
+  assert.equal(byName.get("secret-file-is-blocked")?.checks[0]?.name, "Secret safety");
+  assert.equal(byName.get("incomplete-release-is-blocked")?.checks[0]?.name, "Release discipline");
+  assert.equal(byName.get("scope-drift-fails-convergence")?.checks[0]?.name, "Convergence");
+  assert.ok(data.cases.every((testCase) => testCase.pass && testCase.unexpectedFailures.length === 0));
+
+  assert.match(markdown, /# otito Gate Effectiveness Eval/);
+  assert.match(markdown, /Expected blocks: 6\/6 blocked for the encoded reason/);
+  assert.match(markdown, /Overall: PASS/);
+});
+
+test("runGateEffectivenessEval fails when the real gate reason differs from the corpus expectation", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gate-corpus-"));
+  const corpusPath = path.join(dir, "corpus.json");
+  const fixture = path.join(repoRoot, "evals", "fixtures", "gate-node");
+  fs.writeFileSync(
+    corpusPath,
+    JSON.stringify({
+      fixtureRoots: { fixture },
+      retrieval: [],
+      risk: [],
+      gateEffectiveness: [
+        {
+          name: "wrong-reason",
+          repoFixture: "fixture",
+          changeSet: "secret",
+          expectedVerdict: "FAIL",
+          expectedChecks: [{ name: "Secret safety", status: "FAIL", summaryIncludes: "a reason the gate did not return" }],
+        },
+      ],
+    }),
+  );
+
+  const { data, markdown } = runGateEffectivenessEval({ corpusPath });
+  assert.equal(data.passed, false);
+  assert.equal(data.exitCode, 1);
+  assert.equal(data.cases[0].actualVerdict, "FAIL");
+  assert.equal(data.cases[0].checks[0].pass, false);
+  assert.match(data.cases[0].checks[0].error, /summary does not include/);
+  assert.match(markdown, /Overall: FAIL/);
+
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("runGateEffectivenessEval rejects external fixtures and path-like change-set names", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gate-unsafe-corpus-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gate-unsafe-fixture-"));
+  const corpusPath = path.join(dir, "corpus.json");
+  fs.writeFileSync(
+    corpusPath,
+    JSON.stringify({
+      fixtureRoots: { outside: fixture },
+      retrieval: [],
+      risk: [],
+      gateEffectiveness: [
+        {
+          name: "outside-fixture",
+          repoFixture: "outside",
+          changeSet: "valid",
+          expectedVerdict: "PASS",
+          expectedChecks: [{ name: "Changed files", status: "PASS" }],
+        },
+      ],
+    }),
+  );
+  assert.throws(() => runGateEffectivenessEval({ corpusPath }), /must be inside/);
+
+  fs.writeFileSync(
+    corpusPath,
+    JSON.stringify({
+      fixtureRoots: { fixture: path.join(repoRoot, "evals", "fixtures", "gate-node") },
+      retrieval: [],
+      risk: [],
+      gateEffectiveness: [
+        {
+          name: "path-traversal",
+          repoFixture: "fixture",
+          changeSet: "../secret",
+          expectedVerdict: "FAIL",
+          expectedChecks: [{ name: "Secret safety", status: "FAIL" }],
+        },
+      ],
+    }),
+  );
+  assert.throws(() => runGateEffectivenessEval({ corpusPath }), /simple fixture name/);
+
+  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(fixture, { recursive: true, force: true });
 });
 
 test("runRetrievalEval enforces the encoded risk false positives/negatives", () => {

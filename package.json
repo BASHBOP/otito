@@ -33,12 +33,13 @@
     "audit": "npm audit --omit=dev",
     "benchmark:cli": "node scripts/benchmark-cli.mjs",
     "smoke": "node src/cli.js doctor && node src/cli.js harness . --json && npm run smoke:tarball",
-    "quality": "npm run format:check && npm run lint && npm run typecheck && npm run version:check && npm test && npm run test:coverage && npm run eval:accuracy && npm run eval:harness && npm run audit && npm run smoke",
+    "quality": "npm run format:check && npm run lint && npm run typecheck && npm run version:check && npm test && npm run test:coverage && npm run eval:accuracy && npm run eval:harness && npm run eval:gate && npm run audit && npm run smoke",
     "ci": "npm run quality",
     "prepublishOnly": "npm run ci",
     "smoke:tarball": "node scripts/smoke-tarball.mjs",
     "eval:accuracy": "node src/cli.js eval --accuracy",
-    "eval:harness": "node src/cli.js eval --harness"
+    "eval:harness": "node src/cli.js eval --harness",
+    "eval:gate": "node src/cli.js eval --gate-effectiveness"
   },
   "engines": {
     "node": ">=18.18"
