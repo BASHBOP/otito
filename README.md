@@ -80,6 +80,7 @@ The published MkDocs site is a practical discovery and delivery guide:
 - [Dual-Mode Thesis & Complementary Stack](docs/12-dual-mode-thesis/README.md)
 - [Prompt Determinism Thesis & Settings Trap](docs/13-prompt-determinism-thesis/README.md)
 - [Trust Harness Thesis & Commodity Loop](docs/14-trust-harness-thesis/README.md)
+- [Herdr Integration](docs/15-herdr-integration/README.md)
 - [Evaluation Method and Gate-Effectiveness Corpus](docs/EVALS.md)
 - [Glossary](docs/GLOSSARY.md)
 
@@ -119,6 +120,15 @@ node src/cli.js doctor
 ```
 
 The current release is available through [npm](https://www.npmjs.com/package/@bashbop/otito), [GitHub Releases](https://github.com/BASHBOP/otito/releases), and the MCP Registry as `io.github.BASHBOP/otito`.
+
+Run Otito as the trust layer inside a Herdr agent workspace:
+
+```bash
+herdr plugin install BASHBOP/otito/integrations/herdr
+herdr plugin pane open --plugin bashbop.otito --entrypoint trust-status
+```
+
+The Herdr plugin uses the independently installed `otito` CLI. Herdr owns persistent agent terminals and worktrees; Otito owns context, impact, review, and deterministic gate evidence.
 
 ```bash
 otito repo . --json

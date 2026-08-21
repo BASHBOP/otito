@@ -108,6 +108,8 @@ nav:
       - Overview: 13-prompt-determinism-thesis/README.md
   - Trust Harness Thesis:
       - Overview: 14-trust-harness-thesis/README.md
+  - Herdr Integration:
+      - Overview: 15-herdr-integration/README.md
   - Evaluation Guide: EVALS.md
   - Glossary: GLOSSARY.md
 
