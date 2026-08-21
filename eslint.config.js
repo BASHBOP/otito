@@ -14,7 +14,7 @@ export default [
     ignores: [".otito/**", "coverage/**", "dist/**", "node_modules/**", "package-lock.json"],
   },
   {
-    files: ["src/**/*.js", "tests/**/*.js", "codex/skills/**/*.js"],
+    files: ["src/**/*.js", "tests/**/*.js", "codex/skills/**/*.js", "integrations/**/*.mjs"],
     languageOptions: {
       ecmaVersion: 2022,
       globals: nodeGlobals,
