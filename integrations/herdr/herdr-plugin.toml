@@ -1,0 +1,50 @@
+id = "bashbop.otito"
+name = "Otito Trust"
+version = "0.1.0"
+min_herdr_version = "0.8.2"
+description = "Local-first repository context, impact analysis, and merge evidence inside Herdr."
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "doctor"
+title = "Check Otito"
+description = "Verify the local Otito installation and optional tools."
+contexts = ["global", "workspace", "pane"]
+command = ["node", "action.mjs", "doctor"]
+
+[[actions]]
+id = "context"
+title = "Build Otito context"
+description = "Build task-aware repository context, using selected text as the request when available."
+contexts = ["selection", "workspace", "pane"]
+command = ["node", "action.mjs", "context"]
+
+[[actions]]
+id = "impact"
+title = "Map change impact"
+description = "Rank likely owner files and risks, using selected text as the change request when available."
+contexts = ["selection", "workspace", "pane"]
+command = ["node", "action.mjs", "impact"]
+
+[[actions]]
+id = "review"
+title = "Review current change"
+description = "Run Otito's composite impact, review-context, and local-gate verdict."
+contexts = ["workspace", "pane", "selection"]
+command = ["node", "action.mjs", "review"]
+
+[[actions]]
+id = "gate-staged"
+title = "Validate staged change"
+description = "Run the Otito gate and protected validation plan against the exact staged tree."
+contexts = ["workspace", "pane", "selection"]
+command = ["node", "action.mjs", "gate-staged"]
+
+[[panes]]
+id = "trust-status"
+title = "Otito · Trust status"
+description = "Open an interactive local trust review for the active repository."
+placement = "popup"
+width = "84%"
+height = "78%"
+command = ["node", "trust-pane.mjs"]

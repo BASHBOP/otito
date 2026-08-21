@@ -50,6 +50,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 | 12 | [Dual-Mode Thesis](./12-dual-mode-thesis/README.md) | Probabilistic generation beside deterministic verification | :material-check-circle: Active |
 | 13 | [Prompt Determinism Thesis](./13-prompt-determinism-thesis/README.md) | Why prompt settings do not turn a model into a gate | :material-check-circle: Active |
 | 14 | [Trust Harness Thesis](./14-trust-harness-thesis/README.md) | Why independent merge evidence outlasts generic agent orchestration | :material-check-circle: Active |
+| 15 | [Herdr Integration](./15-herdr-integration/README.md) | Run Otito context and merge evidence inside persistent agent workspaces | :material-check-circle: Active |
 
 ---
 
