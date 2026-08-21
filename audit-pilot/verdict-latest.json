@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-08-17T10:06:45.655Z",
+  "generatedAt": "2026-08-21T18:50:17.213Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -13,42 +13,45 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "mkdocs.yml",
+        "path": "eslint.config.js",
+        "score": 0,
+        "riskFlags": [
+          "configuration"
+        ]
+      },
+      {
+        "path": "integrations/herdr/action.mjs",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/review.js",
-        "score": 41,
+        "path": "integrations/herdr/runtime.mjs",
+        "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/pr-review.js",
-        "score": 36,
+        "path": "integrations/herdr/trust-pane.mjs",
+        "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/agent-tools.js",
-        "score": 22,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/args.js",
-        "score": 22,
+        "path": "mkdocs.yml",
+        "score": 0,
         "riskFlags": []
       }
     ],
     "risks": [
-      "No obvious high-risk domain detected. Main risk is missing a caller or test outside the matched files."
+      "Configuration change: verify environment variables, secrets, build output, and production defaults."
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 3,
-    "additions": 28,
-    "deletions": 11,
+    "changedFiles": 11,
+    "additions": 751,
+    "deletions": 1,
     "riskLevel": "low",
     "riskFlags": [
-      "no test files changed"
+      "configuration",
+      "large file diff"
     ],
     "reviewTargetsCount": 0
   },
@@ -60,7 +63,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "4 changed files found."
+        "summary": "12 changed files found."
       },
       {
         "name": "Secret safety",
@@ -69,8 +72,8 @@
       },
       {
         "name": "Risk review",
-        "status": "PASS",
-        "summary": "No obvious risk-sensitive file paths changed."
+        "status": "WARN",
+        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
       },
       {
         "name": "Release discipline",
@@ -100,6 +103,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 411
+    "fullJson": 430
   }
 }
