@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-08-21T18:50:17.213Z",
+  "generatedAt": "2026-08-21T19:27:44.084Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 70,
+  "confidence": 65,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -13,45 +13,43 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "eslint.config.js",
-        "score": 0,
-        "riskFlags": [
-          "configuration"
-        ]
-      },
-      {
-        "path": "integrations/herdr/action.mjs",
+        "path": "CHANGELOG.md",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "integrations/herdr/runtime.mjs",
+        "path": "server.json",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "integrations/herdr/trust-pane.mjs",
-        "score": 0,
+        "path": "src/lib/review.js",
+        "score": 41,
         "riskFlags": []
       },
       {
-        "path": "mkdocs.yml",
-        "score": 0,
+        "path": "src/lib/pr-review.js",
+        "score": 36,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/agent-tools.js",
+        "score": 22,
         "riskFlags": []
       }
     ],
     "risks": [
-      "Configuration change: verify environment variables, secrets, build output, and production defaults."
+      "No obvious high-risk domain detected. Main risk is missing a caller or test outside the matched files."
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 11,
-    "additions": 751,
-    "deletions": 1,
-    "riskLevel": "low",
+    "changedFiles": 5,
+    "additions": 25,
+    "deletions": 6,
+    "riskLevel": "medium",
     "riskFlags": [
       "configuration",
-      "large file diff"
+      "no test files changed"
     ],
     "reviewTargetsCount": 0
   },
@@ -63,7 +61,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "12 changed files found."
+        "summary": "6 changed files found."
       },
       {
         "name": "Secret safety",
@@ -78,7 +76,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "No version metadata changes found."
+        "summary": "Version metadata is SemVer and changelog was updated."
       },
       {
         "name": "Validation commands",
@@ -103,6 +101,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 430
+    "fullJson": 425
   }
 }
