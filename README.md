@@ -24,7 +24,7 @@ What remains strategically important is the **trust harness**: accurate reposito
 
 ## Trusted agent workflow
 
-> **New in v1.7.0:** `otito eval --gate-effectiveness` proves the real staged gate against one valid control and six adversarial changes, each with an expected deterministic reason.
+> **New in v1.8.0:** the Herdr integration brings Otito context, impact, review, exact staged-tree validation, and an interactive trust-status popup into persistent agent workspaces.
 
 ```text
 Request -> context -> scoped change -> exact validation -> review evidence -> human decision
