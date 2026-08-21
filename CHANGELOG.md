@@ -6,6 +6,25 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-08-21
+
+### Added
+
+- **Herdr trust workspace integration.** Run Otito context, impact, review, doctor, and exact staged-tree validation from Herdr while keeping the two tools as separate authorities.
+- **Interactive trust-status popup.** Scan repository, comparison base, verdict, confidence, change size, risk, and attention items in responsive terminal tables with semantic status colours and a `NO_COLOR` fallback.
+
+### Safety
+
+- **Explicit authority boundaries.** The plugin does not merge, push, commit, or approve changes, and its local evidence does not replace hosted CI, CODEOWNERS approval, unresolved-comment checks, or the human merge decision.
+
+### Docs
+
+- Added installation, local-development, action, popup, and agent-workspace guidance to the README and documentation site.
+
+### Maintenance
+
+- **Release metadata alignment.** npm package metadata, the package lockfile, and the MCP Registry manifest now agree on v1.8.0.
+
 ## [1.7.0] - 2026-08-17
 
 ### Added
