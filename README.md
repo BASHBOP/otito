@@ -426,6 +426,16 @@ otito context "add a new CLI command" --path . --out .otito/context-pack.md
 
 Use this before handing work to a coding agent. It is deterministic and local-first: it relies on repo indexes, code maps, import relationships, tests, and harness commands rather than an external model.
 
+### `obsidian <repo>`
+
+Exports an Obsidian-compatible Markdown vault from the repository map. The vault includes a navigable home note, repository files and entrypoints, an evidence index, and optional task-specific context and impact notes.
+
+```bash
+otito obsidian . --query "add a new MCP tool" --out .otito/obsidian
+```
+
+The default output directory is `.otito/obsidian`. The vault is a readable projection of Otito evidence; it does not replace exact staged-tree gates, hosted CI, CODEOWNERS, or human review.
+
 ### `harness <path>`
 
 Generates a repo harness with setup commands, validation scripts, runtime scripts, context commands, focus areas, and estimated context-token usage.

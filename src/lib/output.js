@@ -71,6 +71,7 @@ Usage:
   otito search <query> [--catalog file] [--limit n] [--offline] [--json]
   otito context <query> [--path repo] [--limit n] [--out file] [--json] [--no-emoji] [--color|--no-color] [--theme name]
   otito impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--mermaid] [--no-emoji] [--color|--no-color] [--theme name]
+  otito obsidian <repo> [--query text] [--out vault-dir] [--limit n] [--top n] [--json]
   otito ax <repo> <query> [--top n] [--out file] [--json]
   otito converge <repo> <query> --base <ref> [--staged] [--top n] [--out file] [--json]
   otito pass <repo> [--base ref] [--staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
