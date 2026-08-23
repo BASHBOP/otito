@@ -41,6 +41,7 @@ const commandHandlers = {
   search: handleSearch,
   context: handleContext,
   impact: handleImpact,
+  obsidian: handleObsidian,
   ax: handleAx,
   converge: handleConverge,
   dashboard: handleDashboard,
@@ -347,6 +348,26 @@ async function handleImpact(parsed) {
       createRenderer({ ...opts, emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }),
     ),
   );
+}
+
+/** @param {CliArgs} parsed */
+async function handleObsidian(parsed) {
+  const { writeObsidianVault } = await import("./lib/obsidian.js");
+  const repoPath = parsed.positionals[0] ?? ".";
+  const query = typeof parsed.flags.query === "string" ? parsed.flags.query : undefined;
+  const vaultPath = typeof parsed.flags.out === "string" ? parsed.flags.out : join(repoPath, ".otito", "obsidian");
+  const manifest = writeObsidianVault(repoPath, vaultPath, {
+    query,
+    limit: parsed.flags.limit,
+    top: parsed.flags.top,
+  });
+
+  if (parsed.flags.json) {
+    printJson(manifest);
+    return;
+  }
+
+  printText(`Obsidian vault written: ${manifest.vaultPath} (${manifest.noteCount} note(s))`);
 }
 
 /** @param {CliArgs} parsed */
