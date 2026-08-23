@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-08-21T19:27:44.084Z",
+  "generatedAt": "2026-08-23T22:06:03.216Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 65,
+  "confidence": 70,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -13,28 +13,28 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "CHANGELOG.md",
+        "path": "src/cli.js",
+        "score": 15,
+        "riskFlags": []
+      },
+      {
+        "path": "src/lib/obsidian.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "server.json",
+        "path": "src/lib/output.js",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
+        "path": "tests/obsidian.test.js",
         "score": 0,
         "riskFlags": []
       },
       {
         "path": "src/lib/review.js",
         "score": 41,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/pr-review.js",
-        "score": 36,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/agent-tools.js",
-        "score": 22,
         "riskFlags": []
       }
     ],
@@ -44,13 +44,10 @@
   },
   "prReviewSummary": {
     "changedFiles": 5,
-    "additions": 25,
-    "deletions": 6,
-    "riskLevel": "medium",
-    "riskFlags": [
-      "configuration",
-      "no test files changed"
-    ],
+    "additions": 277,
+    "deletions": 0,
+    "riskLevel": "low",
+    "riskFlags": [],
     "reviewTargetsCount": 0
   },
   "pass": {
@@ -70,13 +67,13 @@
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
@@ -101,6 +98,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 425
+    "fullJson": 405
   }
 }
