@@ -1,4 +1,5 @@
 .otito/
+.cursor/
 # Legacy generated reports from the pre-Otito name must not block source checks.
 .dev-context/
 **/.dev-context/

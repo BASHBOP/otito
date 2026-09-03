@@ -81,6 +81,7 @@ The published MkDocs site is a practical discovery and delivery guide:
 - [Prompt Determinism Thesis & Settings Trap](docs/13-prompt-determinism-thesis/README.md)
 - [Trust Harness Thesis & Commodity Loop](docs/14-trust-harness-thesis/README.md)
 - [Herdr Integration](docs/15-herdr-integration/README.md)
+- [Clean Code Thesis & the Smallest Owner File](docs/16-clean-code-thesis/README.md)
 - [Evaluation Method and Gate-Effectiveness Corpus](docs/EVALS.md)
 - [Glossary](docs/GLOSSARY.md)
 
@@ -236,9 +237,9 @@ For longer trust-layer work, use the [Builder-Founder Operating Loop](docs/06-bu
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), open an issue or draft PR for substantial changes, and run `npm run ci` before requesting review.
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), follow the [Code of Conduct](CODE_OF_CONDUCT.md), and read [Contributor Governance](docs/03-contributor-governance/README.md) for review and merge rules.
 
-All code changes must be reviewed by a maintainer/code owner before merge. The protected `main` branch requires maintainer approval, passing quality gates, and resolved PR conversations.
+Open an issue or draft PR for substantial changes, and run `npm run ci` before requesting review. All code changes must be reviewed by a maintainer/code owner before merge. The protected `main` branch requires maintainer approval, passing quality gates, and resolved PR conversations.
 
 ## Common Workflows
 

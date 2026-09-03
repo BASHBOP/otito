@@ -47,7 +47,7 @@ Use this loop at the start of every meaningful coding-agent session.
 | 1. Orient | Check git state, current branch, open PRs, and latest roadmap item | Clean or explained worktree, known base branch, no hidden conflict |
 | 2. Map | Run otito context for the task and `otito impact` when scope or risk is unclear | Primary files, related files, tests, risks, and validation commands |
 | 3. Choose | Pick one deliverable that moves the trust layer forward | A branch, issue, PR, docs page, release task, or proof artifact |
-| 4. Change | Make the smallest complete change that satisfies the deliverable | Focused diff with no unrelated cleanup |
+| 4. Change | Make the smallest complete change in the files that already own the behaviour | Focused diff with no unrelated cleanup. See the [clean code thesis](../16-clean-code-thesis/README.md). |
 | 5. Prove | Run the relevant local checks and record any skipped checks | CI command output, docs build, Òtítọ́ result, or explicit no-test rationale |
 | 6. Gate | Open or update a PR and let review gates speak before merge | CI, Òtítọ́ readiness, review state, CODEOWNERS state, conversations |
 | 7. Decide | Record the owner or reviewer decision | PR review, merge note, release note, or trust-layer decision record |

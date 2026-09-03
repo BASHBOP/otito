@@ -1,5 +1,6 @@
 .otito/
 .dev-context/
+.cursor/
 node_modules/
 dist/
 coverage/
