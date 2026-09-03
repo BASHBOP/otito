@@ -8,6 +8,8 @@ Security fixes are made against the default branch and the latest published pack
 
 Do not open public issues for suspected vulnerabilities. Use GitHub private vulnerability reporting for `BASHBOP/otito` when available, or contact the maintainers privately before sharing exploit details.
 
+Code of Conduct reports are not vulnerabilities. Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) instead of this policy.
+
 Please include:
 
 - Affected version or commit.

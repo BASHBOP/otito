@@ -122,8 +122,8 @@ jobs:
           name: otito-pr-review
           path: .otito/pr-review.md
 
-  pullpass-readiness:
-    name: PullPass readiness
+  otito-readiness:
+    name: Otito readiness
     runs-on: ubuntu-latest
 
     steps:

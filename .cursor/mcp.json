@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "otito": {
-      "command": "npm",
-      "args": ["run", "mcp", "--silent"],
-      "env": {}
-    }
-  }
-}

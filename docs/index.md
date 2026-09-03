@@ -3,7 +3,7 @@
 ## Independent trust infrastructure for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.7.0 published to npm, GitHub Releases, and the official MCP Registry<br>
+**Status:** v1.8.0 published to npm, GitHub Releases, and the official MCP Registry<br>
 **Category:** Practical AI governance for developers
 
 > A Bashbop Ltd product for teams that want any coding agent to produce evidence a human can trust before merge.
@@ -21,12 +21,12 @@
 
 ## What's New
 
-!!! tip "v1.7.0 published (2026-08-17)"
-    - `otito eval --gate-effectiveness` runs the real staged gate against one valid control and six adversarial changes.
-    - Every adversarial case must fail for its named deterministic reason, so gate behaviour is continuously proved rather than assumed.
-    - The trust-harness positioning is explicit: models generate changes; independent evidence supports the human merge decision.
+!!! tip "v1.8.0 published (2026-08-21)"
+    - Herdr integration brings Otito context, impact, review, and exact staged-tree validation into persistent agent workspaces.
+    - Interactive trust-status popup shows verdict, confidence, change size, risk, and attention items without replacing hosted CI or CODEOWNERS.
+    - `otito eval --gate-effectiveness` continues to prove one valid control and six adversarial blocks against the real staged gate.
 
-    [npm v1.7.0](https://www.npmjs.com/package/@bashbop/otito/v/1.7.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.7.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.8.0](https://www.npmjs.com/package/@bashbop/otito/v/1.8.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.8.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for the full history.
 
@@ -38,7 +38,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 | :-: | --- | --- | :-: |
 | 01 | [:material-map-marker-path: Context Foundation](./01-context-foundation/README.md) | Repository inspection, maps, search, context packs, and harnesses | :material-check-circle: Active |
 | 02 | [:material-lan-connect: MCP and Agents](./02-mcp-agent-workflows/README.md) | MCP tools and agent-facing workflows | :material-check-circle: Active |
-| 03 | Bashbop stewardship | Protected review, release discipline, and CODEOWNERS | :material-check-circle: Active |
+| 03 | [:material-account-group: Contributor Governance](./03-contributor-governance/README.md) | Protected review, CODEOWNERS, required checks, and merge authority | :material-check-circle: Active |
 | 04 | [:material-tag-check: Release Readiness](./04-release-readiness/README.md) | SemVer, changelog discipline, CI, and release gates | :material-check-circle: Active |
 | 05 | [:material-play-circle: Trust-Layer Demo](./05-trust-layer-demo/README.md) | Òtítọ́ as a repeatable review workflow | :material-check-circle: Active |
 | 06 | [:material-repeat: Builder-Founder Loop](./06-builder-founder-operating-loop/README.md) | Session rhythm, evidence ledger, governance ladder, and next-action rule | :material-check-circle: Active |
@@ -51,6 +51,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 | 13 | [Prompt Determinism Thesis](./13-prompt-determinism-thesis/README.md) | Why prompt settings do not turn a model into a gate | :material-check-circle: Active |
 | 14 | [Trust Harness Thesis](./14-trust-harness-thesis/README.md) | Why independent merge evidence outlasts generic agent orchestration | :material-check-circle: Active |
 | 15 | [Herdr Integration](./15-herdr-integration/README.md) | Run Otito context and merge evidence inside persistent agent workspaces | :material-check-circle: Active |
+| 16 | [Clean Code Thesis](./16-clean-code-thesis/README.md) | Clean code as owner files, focused diffs, and gates, not a cleaner agent | :material-check-circle: Active |
 
 ---
 
@@ -72,7 +73,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@1.7.0
+    npm install -g @bashbop/otito@1.8.0
     otito doctor
     otito context "review this change" --path .
     ```
@@ -80,7 +81,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@1.7.0 doctor
+    npx -y @bashbop/otito@1.8.0 doctor
     ```
 
 === "Source Checkout"

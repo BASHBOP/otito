@@ -33,10 +33,10 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Governance            | CI gates, Òtítọ́ readiness, CODEOWNERS, SemVer guidance, security reporting, templates, and review policy      |
 | Demo packet           | Company-facing packet that links the executive summary, case study, proof run, launch note, and pilot checklist |
 | Pilot runbook         | Step-by-step first repository and pull request pilot with roles, evidence, stop conditions, and triage          |
-| Thesis pack           | Public explainer pages for harness, tutorials, convergence, usage, determinism, dual-mode, prompt determinism, and the trust harness |
+| Thesis pack           | Public explainer pages for harness, tutorials, convergence, usage, determinism, dual-mode, prompt determinism, the trust harness, and clean code |
 | Proof index           | Sanitized public evidence map plus private/internal evidence boundaries for company reviewers                  |
 | Review policy         | Branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision snapshot           |
-| Feedback loop         | Structured company pilot intake that turns reviewer concerns into docs, gates, proof, or roadmap work          |
+| Feedback loop         | Structured public pilot intake that turns reviewer concerns into docs, gates, proof, or roadmap work           |
 | Company adoption      | Screenshot-style case study for evaluation, pilot rollout, and governance decision records                     |
 | Public launch note    | Short external-facing story for Òtítọ́, proof runs, and next trust-layer gates                                |
 | Operating loop        | Repeatable session rhythm for context, focused change, visible gates, human decisions, and durable evidence    |
@@ -65,13 +65,14 @@ This makes otito useful for maintainers who want AI-assisted development without
 | ----------------------------- | --------------------------------------------------------------------------------- |
 | Unknown repository shape      | `otito repo` surfaces package, language, script, and git state                  |
 | Unclear task scope            | `otito context` generates task-aware primary and related files                  |
+| Agent invents extra structure | Context packs and CONTRIBUTING keep the change in the smallest owner files      |
 | Multi-repo context missing    | `otito workspace` builds a product-level context report                         |
 | PR review surface hidden      | `otito pr` summarizes changed files, risks, prompts, and comments               |
 | Merge readiness hidden        | Òtítọ́ PR readiness runs on pull requests and records owner-decision warnings     |
 | Context evidence disconnected | Òtítọ́ reports include `Context Evidence` commands for context packs and PR review reports |
 | Agent tool integration needed | `otito mcp` exposes repository context through MCP                              |
 | MCP setup unclear             | MCP workflow docs include generic stdio, Claude Desktop, VS Code, and Cursor examples |
-| Contributor readiness         | CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
+| Contributor readiness         | CONTRIBUTING.md, Code of Conduct, CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
 | Review policy visibility      | Review-policy snapshot summarizes branch protection and owner/admin decision boundaries |
 | Gate behaviour needs proof    | `otito eval --gate-effectiveness` checks one valid control and six expected blocks against the real local gate |
 | Trust-layer demo              | Public walkthrough for Òtítọ́ context, PR review context, and human merge accountability |
