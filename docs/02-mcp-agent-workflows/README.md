@@ -149,7 +149,7 @@ Cursor uses `mcp.json` with a top-level `mcpServers` object.
 }
 ```
 
-Use a project config when otito should only be available for one workspace. Use a global config only when you want the server available across projects.
+Use a project config when otito should only be available for one workspace. Use a global config only when you want the server available across projects. Project `.cursor/mcp.json` is local editor config and is not committed in this repository.
 
 Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 
@@ -277,7 +277,7 @@ it does not establish hosted CI state, GitHub approval, or mergeability.
 ## Host Guidance
 
 !!! success "Recommended agent behavior"
-    Ask otito for context before planning broad work. Use the output to choose files to read, not as a replacement for source inspection.
+    Ask otito for context before planning broad work. Use the output to choose the smallest owner files to read, not as a replacement for source inspection. Prefer existing patterns over a new layer. See the [clean code thesis](../16-clean-code-thesis/README.md).
 
 !!! warning "Boundary"
     Òtítọ́ does not approve or merge code. Pair it with tests, code review, branch protection, and a human decision.

@@ -3,3 +3,9 @@ contact_links:
   - name: Security vulnerability
     url: https://github.com/BASHBOP/otito/security/advisories/new
     about: Please report suspected vulnerabilities privately.
+  - name: Contributor guide
+    url: https://github.com/BASHBOP/otito/blob/main/CONTRIBUTING.md
+    about: Setup, validation, and pull request expectations.
+  - name: Code of Conduct
+    url: https://github.com/BASHBOP/otito/blob/main/CODE_OF_CONDUCT.md
+    about: Community standards and how to report conduct issues privately.

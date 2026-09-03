@@ -42,7 +42,7 @@ Use this sequence for coding work. It is deliberately independent of the model o
 
 1. **Understand.** Run `otito context "<task>" --path . --json` before planning or editing. Read the matched source and tests; a context pack is a map, not proof.
 2. **Bound the work.** For unclear, broad, or risk-sensitive work, run `otito impact . "<task>" --json`. For a product change spanning repositories, start with `otito workspace <repo...> --out .otito/workspace.md`.
-3. **Change narrowly.** Keep one purpose, inspect the diff, and add targeted validation or an explicit no-test rationale.
+3. **Change narrowly.** Keep one purpose, inspect the diff, and add targeted validation or an explicit no-test rationale. Prefer the smallest owner files over a new helper or layer. Clean code is a focused, testable change, not a cleaner agent.
 4. **Prepare review.** Run `otito pr . --base origin/main --out .otito/pr-review.md` and `otito gate . --staged --base origin/main` before handing work to a maintainer. When using `workspace-gate` for a multi-repository change, describe it only as local staged evidence; GitHub review state, hosted CI, and mergeability remain separate authorities.
 5. **Hand off evidence.** State the intended change, changed scope, validation results, gate verdict, remaining risks, and the human decision required.
 

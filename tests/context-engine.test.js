@@ -54,6 +54,7 @@ test("generateContextPack returns task-aware files, tests, patterns, and command
   assert.ok(result.data.patterns.some((pattern) => pattern.includes("MCP tool changes")));
   assert.ok(result.data.commands.some((command) => command.command === "npm test"));
   assert.ok(result.data.agentPrompt.includes("Read these files first"));
+  assert.ok(result.data.agentPrompt.includes("smallest owner files"));
   assert.ok(result.data.tokenEstimate.fullJson > 0);
   assert.match(result.markdown, /# Context Pack: add a new MCP tool/);
 });

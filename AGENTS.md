@@ -23,5 +23,6 @@ For Codex Desktop, Cursor, VS Code, and other MCP hosts, follow the host config 
 
 - Read the relevant source files after getting Otito context.
 - Keep changes scoped to the smallest owner files that actually need to move.
+- Prefer existing patterns over a new abstraction. Clean code here means one purpose, a focused diff, and deterministic validation, not a cleaner agent.
 - Run the repo's validation commands before finishing a task.
 - Preserve the trust-layer framing: context, tests, permissions, review, and durable evidence.
