@@ -1,5 +1,5 @@
-name: Company pilot feedback
-description: Share structured feedback after reviewing the otito + PullPass packet or running the pilot runbook.
+name: Pilot feedback
+description: Share structured feedback after trying Otito on a real repository or pull request.
 title: "pilot: "
 labels:
   - enhancement
@@ -9,7 +9,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reviewing the trust-layer packet. Please keep feedback sanitized: do not include secrets, private source code, customer data, tokens, cookies, confidential repository output, or local absolute paths from your machine.
+        Thanks for trying Òtítọ́. Please keep feedback sanitized: do not include secrets, private source code, customer data, tokens, cookies, confidential repository output, or local absolute paths from your machine.
   - type: dropdown
     id: reviewer_role
     attributes:
@@ -68,14 +68,13 @@ body:
     id: useful_parts
     attributes:
       label: Most useful parts
-      description: Which parts of the packet were strongest?
+      description: Which parts were strongest?
       options:
-        - label: otito context before change
-        - label: otito PR review context
-        - label: PullPass merge gate
+        - label: Otito context before change
+        - label: Otito PR review context
+        - label: Otito merge gate
         - label: Governance modes
-        - label: Bashbop pilot proof
-        - label: Decision record template
+        - label: Documentation and examples
         - label: Release and proof-run discipline
   - type: checkboxes
     id: blockers
@@ -85,7 +84,7 @@ body:
       options:
         - label: Install path is unclear
         - label: MCP setup is unclear
-        - label: PullPass policy expectations are unclear
+        - label: Gate policy expectations are unclear
         - label: Evidence retention expectations are unclear
         - label: CODEOWNERS or branch protection requirements are unclear
         - label: CI cannot start or account/tooling setup is blocked
@@ -98,7 +97,7 @@ body:
     attributes:
       label: Missing evidence
       description: What proof, screenshot, command output, or policy example would make this easier to trust?
-      placeholder: "Example: show how PullPass behaves when a required reviewer approves but CODEOWNERS is missing. Use public links, repo-relative paths, or sanitized summaries."
+      placeholder: "Example: show how the Otito gate behaves when a required reviewer approves but CODEOWNERS is missing. Use public links, repo-relative paths, or sanitized summaries."
   - type: textarea
     id: pilot_shape
     attributes:
@@ -138,5 +137,5 @@ body:
       options:
         - label: I removed secrets, private source code, customer data, tokens, cookies, confidential output, and local absolute paths.
           required: true
-        - label: I reviewed the company demo packet or used the company pilot runbook before submitting this feedback.
+        - label: I ran Otito locally or reviewed the public documentation before submitting this feedback.
           required: true

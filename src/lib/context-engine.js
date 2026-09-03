@@ -1199,6 +1199,7 @@ function formatAgentPrompt(query, primaryFiles, relatedFiles, tests, commands, h
     `Read these files first: ${fileList}.`,
     `Check these tests: ${testList}.`,
     `Use the selected patterns before adding new structure.`,
+    `Keep the change in the smallest owner files.`,
     `Verify with: ${validation}.`,
   ].join("\n");
 }

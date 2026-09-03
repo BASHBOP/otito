@@ -141,6 +141,7 @@ Prompt determinism (docs/13)    ->  you cannot collapse modes via prompting
 Determinism (docs/11)           ->  why the probabilistic mode cannot self-verify
 Harness (docs/07)               ->  what you still control; AX as a cost property
 Convergence (docs/09)           ->  how you measure intent vs. execution deterministically
+Clean code (docs/16)            ->  craft as owner files, focused diffs, and gates
 ```
 
 Read this doc first for onboarding. Read
@@ -178,4 +179,5 @@ in a stack that still needs probabilistic generation.
   [Determinism Thesis](../11-determinism-thesis/README.md),
   [Harness Thesis](../07-harness-thesis/README.md),
   [Convergence Thesis](../09-convergence-thesis/README.md),
-  [Prompt Determinism Thesis](../13-prompt-determinism-thesis/README.md)
+  [Prompt Determinism Thesis](../13-prompt-determinism-thesis/README.md),
+  [Clean Code Thesis](../16-clean-code-thesis/README.md)

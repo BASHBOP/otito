@@ -84,6 +84,8 @@ nav:
   - MCP and Agents:
       - Overview: 02-mcp-agent-workflows/README.md
       - Publishing to npm + MCP Registry: 02-mcp-agent-workflows/publishing.md
+  - Contributor Governance:
+      - Overview: 03-contributor-governance/README.md
   - Release Readiness:
       - Overview: 04-release-readiness/README.md
   - Trust-Layer Demo:
@@ -110,6 +112,8 @@ nav:
       - Overview: 14-trust-harness-thesis/README.md
   - Herdr Integration:
       - Overview: 15-herdr-integration/README.md
+  - Clean Code Thesis:
+      - Overview: 16-clean-code-thesis/README.md
   - Evaluation Guide: EVALS.md
   - Glossary: GLOSSARY.md
 
