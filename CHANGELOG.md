@@ -6,11 +6,17 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-09-03
+
+### Changed
+
+- **Owner-file agent prompt.** Context packs now tell hosts to keep the change in the smallest owner files.
+
 ### Docs
 
 - **Clean code as a trust-layer principle.** New thesis page: [docs/16-clean-code-thesis/README.md](docs/16-clean-code-thesis/README.md). Contributor, agent, and context-pack guidance now name the smallest owner file instead of a cleaner agent.
 - **Public contributor path.** Add `CONTRIBUTING.md`, Contributor Covenant `CODE_OF_CONDUCT.md`, and [Contributor Governance](docs/03-contributor-governance/README.md) so the README links resolve and GitHub community files are present.
-- **Docs site current with v1.8.0.** Homepage status, install pins, and What's New now match the published package.
+- **Docs site current with v1.8.1.** Homepage status, install pins, and What's New now match the published package.
 - **License copyright.** MIT copyright holder is Oluwasegun Olumbe, matching the documentation site.
 
 ### Maintenance
@@ -18,6 +24,7 @@ This project follows SemVer.
 - **Otito readiness check name.** The required CI job, pull request template, and `main` branch protection use Otito naming instead of the old PullPass label.
 - **Public pilot intake.** Replace the company-packet issue template with a sanitized public pilot feedback form.
 - **Editor config stays local.** `.cursor/` is gitignored; checkout-local MCP setup is documented in CONTRIBUTING.md.
+- **Release metadata alignment.** npm package metadata, the package lockfile, and the MCP Registry manifest now agree on v1.8.1.
 
 ## [1.8.0] - 2026-08-21
 
