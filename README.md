@@ -24,7 +24,7 @@ What remains strategically important is the **trust harness**: accurate reposito
 
 ## Trusted agent workflow
 
-> **New in v1.8.0:** the Herdr integration brings Otito context, impact, review, exact staged-tree validation, and an interactive trust-status popup into persistent agent workspaces.
+> **New in v1.8.1:** context packs tell hosts to keep the change in the smallest owner files. Clean code is a focused, testable change, not a cleaner agent.
 
 ```text
 Request -> context -> scoped change -> exact validation -> review evidence -> human decision

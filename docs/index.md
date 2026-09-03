@@ -3,7 +3,7 @@
 ## Independent trust infrastructure for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.8.0 published to npm, GitHub Releases, and the official MCP Registry<br>
+**Status:** v1.8.1 published to npm, GitHub Releases, and the official MCP Registry<br>
 **Category:** Practical AI governance for developers
 
 > A Bashbop Ltd product for teams that want any coding agent to produce evidence a human can trust before merge.
@@ -21,12 +21,12 @@
 
 ## What's New
 
-!!! tip "v1.8.0 published (2026-08-21)"
-    - Herdr integration brings Otito context, impact, review, and exact staged-tree validation into persistent agent workspaces.
-    - Interactive trust-status popup shows verdict, confidence, change size, risk, and attention items without replacing hosted CI or CODEOWNERS.
-    - `otito eval --gate-effectiveness` continues to prove one valid control and six adversarial blocks against the real staged gate.
+!!! tip "v1.8.1 published (2026-09-03)"
+    - Context packs tell hosts to keep the change in the smallest owner files.
+    - Public contributor path: CONTRIBUTING, Code of Conduct, and contributor governance.
+    - Clean code thesis names owner-file targeting instead of a cleaner agent.
 
-    [npm v1.8.0](https://www.npmjs.com/package/@bashbop/otito/v/1.8.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.8.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.8.1](https://www.npmjs.com/package/@bashbop/otito/v/1.8.1) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.8.1) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for the full history.
 
@@ -73,7 +73,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@1.8.0
+    npm install -g @bashbop/otito@1.8.1
     otito doctor
     otito context "review this change" --path .
     ```
@@ -81,7 +81,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@1.8.0 doctor
+    npx -y @bashbop/otito@1.8.1 doctor
     ```
 
 === "Source Checkout"
