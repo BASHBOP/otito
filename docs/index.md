@@ -3,7 +3,7 @@
 ## Independent trust infrastructure for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.8.1 published to npm, GitHub Releases, and the official MCP Registry<br>
+**Status:** v1.9.0 published to npm, GitHub Releases, and the official MCP Registry<br>
 **Category:** Practical AI governance for developers
 
 > A Bashbop Ltd product for teams that want any coding agent to produce evidence a human can trust before merge.
@@ -21,12 +21,12 @@
 
 ## What's New
 
-!!! tip "v1.8.1 published (2026-09-03)"
-    - Context packs tell hosts to keep the change in the smallest owner files.
-    - Public contributor path: CONTRIBUTING, Code of Conduct, and contributor governance.
-    - Clean code thesis names owner-file targeting instead of a cleaner agent.
+!!! tip "v1.9.0 published (2026-09-06)"
+    - Herdr `model-route` recommends cheap / mid / premium from Otito AX before starting an agent.
+    - Host-agnostic `model-router` skill for Cursor, Codex, Claude Code, Herdr, and peers.
+    - Herdr docs cover optional `prefix+m` binding beside review and staged gate.
 
-    [npm v1.8.1](https://www.npmjs.com/package/@bashbop/otito/v/1.8.1) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.8.1) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.9.0](https://www.npmjs.com/package/@bashbop/otito/v/1.9.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.9.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for the full history.
 
@@ -73,7 +73,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@1.8.1
+    npm install -g @bashbop/otito@1.9.0
     otito doctor
     otito context "review this change" --path .
     ```
@@ -81,7 +81,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@1.8.1 doctor
+    npx -y @bashbop/otito@1.9.0 doctor
     ```
 
 === "Source Checkout"

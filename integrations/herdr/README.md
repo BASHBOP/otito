@@ -32,12 +32,15 @@ Set `OTITO_BIN` to an explicit executable path if `otito` is not on `PATH`. Set 
 
 ```bash
 herdr plugin action invoke bashbop.otito.doctor
+herdr plugin action invoke bashbop.otito.model-route
 herdr plugin action invoke bashbop.otito.review
 herdr plugin action invoke bashbop.otito.gate-staged
 herdr plugin pane open \
   --plugin bashbop.otito \
   --entrypoint trust-status
 ```
+
+`model-route` scores the selected task (or a default request) with Otito AX and prints a **cheap / mid / premium** recommendation before you spend tokens on a coding agent.
 
 The context and impact actions use selected terminal text as the task request when Herdr supplies a selection. The trust-status popup also lets you type a request interactively.
 
@@ -59,6 +62,12 @@ key = "prefix+g"
 type = "plugin_action"
 command = "bashbop.otito.gate-staged"
 description = "validate staged change with Otito"
+
+[[keys.command]]
+key = "prefix+m"
+type = "plugin_action"
+command = "bashbop.otito.model-route"
+description = "route model tier with Otito AX"
 ```
 
 Plugin code runs as your user and is not sandboxed by Herdr. Review the manifest and scripts before installation, just as you would any editor or agent extension.

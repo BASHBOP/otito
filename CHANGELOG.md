@@ -6,6 +6,22 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-06
+
+### Added
+
+- **Herdr model-route action.** `bashbop.otito.model-route` scores the selected task with Otito AX and recommends a cheap / mid / premium model tier before starting an agent. Optional `prefix+m` binding is documented in the Herdr plugin README.
+- **Host-agnostic model-router skill.** `codex/skills/model-router` maps AX bands (and risk bumps) to the same tiers for Cursor, Codex, Claude Code, Herdr, and other hosts.
+
+### Docs
+
+- **Herdr integration.** Docs site and plugin README list model-tier routing beside context, impact, review, and staged gate.
+- **Docs site current with v1.9.0.** Homepage status, install pins, and What's New now match the published package.
+
+### Maintenance
+
+- **Release metadata alignment.** npm package metadata, the package lockfile, and the MCP Registry manifest now agree on v1.9.0.
+
 ## [1.8.1] - 2026-09-03
 
 ### Changed

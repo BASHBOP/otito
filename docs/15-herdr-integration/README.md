@@ -17,6 +17,7 @@ The integration is a Herdr v1 plugin under `integrations/herdr`. It exposes:
 
 - task-aware context, using selected text when available
 - change-impact mapping against the active repository
+- model-tier routing from Otito AX (`model-route`: cheap / mid / premium)
 - the composite Otito review verdict
 - protected validation against the exact staged Git tree
 - an interactive trust-status popup
