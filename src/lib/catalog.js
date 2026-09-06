@@ -5,6 +5,7 @@ import path from "node:path";
 import { getCachedCodeMap } from "./index-cache.js";
 import { estimateTokens } from "./tokens.js";
 import { formatTerminalSummary } from "./output.js";
+import { computeTokenDocFrequency, extractPhrases, scorePhraseMatches, tokenWeightFactor } from "./context-engine.js";
 
 /**
  * @typedef {import('./index-cache.js').CodeMap} CodeMap
@@ -223,25 +224,38 @@ export function searchCatalog(query, options = {}) {
 
   const limit = normalizeLimit(options.limit, defaultLimit, 200);
   const { catalog, catalogPath } = loadCatalog(options);
-  /** @type {ReturnType<typeof scoreFile>[]} */
-  const matches = [];
+  /** @type {{ repository: CatalogRepository, map: CodeMap }[]} */
+  const loaded = [];
   /** @type {{ root: string, error: string }[]} */
   const errors = [];
 
   for (const repository of catalog.repositories) {
-    let map;
     try {
-      map = options.offline ? readIndexedMap(repository) : getCachedCodeMap(repository.root);
+      const map = options.offline ? readIndexedMap(repository) : getCachedCodeMap(repository.root);
+      loaded.push({ repository, map });
     } catch (error) {
       errors.push({
         root: repository.root,
         error: error instanceof Error ? error.message : String(error),
       });
-      continue;
     }
+  }
 
+  // A phrase/frequency pass over every loaded map first, so a compound
+  // identifier the query literally names (e.g. "date of birth" ->
+  // `dateOfBirth`) can outrank scattered hits on generic, high-frequency
+  // domain nouns (e.g. "date", "booking") shared across many unrelated files.
+  const phrases = extractPhrases(query);
+  const tokenStats = computeTokenDocFrequency(
+    loaded.map((entry) => entry.map),
+    tokens,
+  );
+
+  /** @type {ReturnType<typeof scoreFile>[]} */
+  const matches = [];
+  for (const { repository, map } of loaded) {
     for (const file of map.files ?? []) {
-      const scored = scoreFile(repository, file, tokens);
+      const scored = scoreFile(repository, file, tokens, phrases, tokenStats);
       if (scored.score > 0) {
         matches.push(scored);
       }
@@ -464,32 +478,39 @@ function readIndexedMap(repository) {
  * @param {CatalogRepository} repository
  * @param {CodeMapFile} file
  * @param {string[]} tokens
+ * @param {import('./context-engine.js').PhraseCandidate[]} [phrases]
+ * @param {import('./context-engine.js').TokenStats} [tokenStats]
  */
-function scoreFile(repository, file, tokens) {
+function scoreFile(repository, file, tokens, phrases = [], tokenStats) {
   /** @type {string[]} */
   const reasons = [];
   let score = 0;
 
-  score += scoreField(file.path, tokens, 8, "path", reasons);
-  score += scoreField(file.kind, tokens, 4, "kind", reasons);
-  score += scoreField(file.domains?.length ? file.domains.join(" ") : file.domain, tokens, 5, "domain", reasons);
-  score += scoreField(repository.name, tokens, 3, "repo", reasons);
-  score += scoreField(repository.package?.name, tokens, 3, "package", reasons);
-  score += scoreField(file.route, tokens, 6, "route", reasons);
-  score += scoreField(file.controllerBasePath, tokens, 6, "controller", reasons);
+  score += scoreField(file.path, tokens, 8, "path", reasons, tokenStats);
+  score += scoreField(file.kind, tokens, 4, "kind", reasons, tokenStats);
+  score += scoreField(file.domains?.length ? file.domains.join(" ") : file.domain, tokens, 5, "domain", reasons, tokenStats);
+  score += scoreField(repository.name, tokens, 3, "repo", reasons, tokenStats);
+  score += scoreField(repository.package?.name, tokens, 3, "package", reasons, tokenStats);
+  score += scoreField(file.route, tokens, 6, "route", reasons, tokenStats);
+  score += scoreField(file.controllerBasePath, tokens, 6, "controller", reasons, tokenStats);
 
   for (const method of file.httpMethods ?? []) {
-    score += scoreField(`${method.method} ${method.path}`, tokens, 7, "http", reasons);
+    score += scoreField(`${method.method} ${method.path}`, tokens, 7, "http", reasons, tokenStats);
   }
   for (const value of file.imports ?? []) {
-    score += scoreField(value, tokens, 3, "import", reasons);
+    score += scoreField(value, tokens, 3, "import", reasons, tokenStats);
   }
   for (const value of file.exports ?? []) {
-    score += scoreField(value, tokens, 8, "export", reasons);
+    score += scoreField(value, tokens, 8, "export", reasons, tokenStats);
   }
   for (const symbol of file.symbols ?? []) {
-    score += scoreField(`${symbol.type} ${symbol.name}`, tokens, 9, "symbol", reasons);
+    score += scoreField(`${symbol.type} ${symbol.name}`, tokens, 9, "symbol", reasons, tokenStats);
   }
+
+  // Hybrid literal pass: a file whose own text contains the exact multi-word
+  // phrase the query names (e.g. "date of birth") is far stronger evidence
+  // than several files each sharing one generic word with the query.
+  score += scorePhraseMatches(file, phrases, reasons);
 
   return {
     score,
@@ -519,9 +540,10 @@ function scoreFile(repository, file, tokens) {
  * @param {number} weight
  * @param {string} reason
  * @param {string[]} reasons
+ * @param {import('./context-engine.js').TokenStats} [tokenStats]
  * @returns {number}
  */
-function scoreField(value, tokens, weight, reason, reasons) {
+function scoreField(value, tokens, weight, reason, reasons, tokenStats) {
   if (!value) {
     return 0;
   }
@@ -529,10 +551,11 @@ function scoreField(value, tokens, weight, reason, reasons) {
   const normalized = normalizeText(String(value));
   let score = 0;
   for (const token of tokens) {
+    const factor = tokenWeightFactor(token, tokenStats);
     if (normalized === token) {
-      score += weight * 2;
+      score += Math.round(weight * 2 * factor);
     } else if (normalized.includes(token)) {
-      score += weight;
+      score += Math.round(weight * factor);
     }
   }
 
