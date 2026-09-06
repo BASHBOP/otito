@@ -272,3 +272,111 @@ test("generateContextPack ranks an explicit Handlebars message template ahead of
   assert.equal(result.data.primaryFiles[0].path, "src/email/template/campaign-message-responsive.hbs");
   assert.ok(result.data.primaryFiles.some((file) => file.path === "src/audience/campaign.service.ts"));
 });
+
+// Regression for a field-tracing query where "date" and "booking" recur across
+// many unrelated files: Hotspots/Primary Files must surface the files that
+// literally reference the compound field (dateOfBirth), not files that merely
+// share one or two generic single-token overlaps with the query.
+test("generateContextPack surfaces literal dateOfBirth references over generic date/booking token overlap", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-dob-"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "sample-events-app", scripts: { test: "node --test" } }));
+
+  const write = (relPath, content) => {
+    const full = path.join(root, relPath);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, content);
+  };
+
+  // Generic "date"/"booking" noise - these are the exact kind of false
+  // positives reported: symbols and paths that share single generic tokens
+  // ("date", "booking") with the query but have nothing to do with DOB.
+  write("src/booking/booking-helpers.ts", "export function formatBookingDate(date: string) { return date; }\n");
+  write("src/booking/event-types.ts", "export interface SelectedBookingDate { date: string; bookingId: string }\n");
+  write("src/booking/booking-api.ts", "export interface BookingApiResponse { bookingDate: string; checkoutDate: string; bookingId: string }\n");
+  write(
+    "src/booking/booking.controller.ts",
+    ["export class BookingController {", "  updateBookingDate() { return true; }", "  cancelBooking() { return true; }", "}", ""].join("\n"),
+  );
+  write("src/booking/booking.service.ts", ["export class BookingService {", "  rescheduleBookingDate() { return true; }", "}", ""].join("\n"));
+  write("src/booking/booking-summary.ts", "export function summarizeBookingDate(date: string) { return date; }\n");
+  write("src/checkout/checkout-date-picker.tsx", "export function CheckoutDatePicker() { return null; }\n");
+  write("src/checkout/checkout.service.ts", ["export class CheckoutService {", "  getCheckoutDate() { return new Date(); }", "}", ""].join("\n"));
+  write("src/event/event-date-utils.ts", "export function formatEventDate(date: string) { return date; }\n");
+  write("src/event/event-scheduler.ts", "export function scheduleEventDate(date: string) { return date; }\n");
+
+  // Unrelated filler across other domains so document-frequency ratios reflect
+  // a repo (like the ~1728-file one in the report) where "date"/"booking" are
+  // common but "birth" is rare.
+  const fillerDomains = ["payments", "notifications", "profile", "media", "search", "auth", "venue", "rsvp", "analytics", "settings", "api"];
+  fillerDomains.forEach((domain, index) => {
+    write(`src/${domain}/${domain}-service-${index}.ts`, `export function run${domain[0].toUpperCase()}${domain.slice(1)}Task${index}() { return true; }\n`);
+    write(`src/${domain}/${domain}-helper-${index}.ts`, `export function support${domain[0].toUpperCase()}${domain.slice(1)}Task${index}() { return true; }\n`);
+  });
+
+  // The files that actually collect date of birth.
+  write(
+    "src/utils/age-assurance.ts",
+    ["export function isValidDateOfBirth(dateOfBirth: string): boolean {", "  return Boolean(dateOfBirth);", "}", ""].join("\n"),
+  );
+  write(
+    "app/signup/SignUpPageClient.tsx",
+    [
+      "import { useForm } from 'react-hook-form';",
+      "export function SignUpPageClient() {",
+      "  const { register } = useForm();",
+      "  const dateOfBirth = register('dateOfBirth');",
+      "  return dateOfBirth;",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  write(
+    "app/signup/parentalConsent.ts",
+    [
+      "export function requiresParentalConsent(input: { dateOfBirth: string }) {",
+      "  const dateOfBirth = input.dateOfBirth;",
+      "  return Boolean(dateOfBirth);",
+      "}",
+      "",
+    ].join("\n"),
+  );
+  write("components/settings/account-privacy-defaults.ts", "export const dateOfBirthVisibility = 'private';\n");
+
+  const query =
+    "Why do we collect date of birth from every attendee? Find all places DOB/age is collected in signup, checkout, ticket booking, and attendee forms.";
+  const result = generateContextPack(query, { path: root });
+
+  const dobPaths = [
+    "src/utils/age-assurance.ts",
+    "app/signup/SignUpPageClient.tsx",
+    "app/signup/parentalConsent.ts",
+    "components/settings/account-privacy-defaults.ts",
+  ];
+  const genericBookingDatePaths = ["src/booking/booking-helpers.ts", "src/booking/event-types.ts", "src/booking/booking-api.ts"];
+
+  const allFiles = [...result.data.primaryFiles, ...result.data.relatedFiles];
+  const scoreOf = (filePath) => allFiles.find((file) => file.path === filePath)?.score ?? 0;
+
+  // The literal dateOfBirth identifier must outrank files that only share a
+  // generic single token ("date"/"booking") with the query.
+  for (const dobPath of dobPaths) {
+    for (const genericPath of genericBookingDatePaths) {
+      assert.ok(
+        scoreOf(dobPath) > scoreOf(genericPath),
+        `${dobPath} (score ${scoreOf(dobPath)}) should outrank ${genericPath} (score ${scoreOf(genericPath)})`,
+      );
+    }
+  }
+
+  // None of the reported false positives should lead Primary Files.
+  const primaryPaths = result.data.primaryFiles.map((file) => file.path);
+  assert.ok(!genericBookingDatePaths.includes(primaryPaths[0]), `expected a DOB file first, got ${primaryPaths[0]}`);
+  assert.ok(dobPaths.includes(primaryPaths[0]));
+
+  // The real hotspot (isValidDateOfBirth) must rank above the reported false
+  // positive hotspots (formatBookingDate / SelectedBookingDate).
+  const hotspotScore = (symbol) => result.data.hotspots.find((hotspot) => hotspot.symbol === symbol)?.score ?? -1;
+  assert.ok(hotspotScore("isValidDateOfBirth") >= 0, "isValidDateOfBirth should appear as a hotspot");
+  assert.ok(hotspotScore("isValidDateOfBirth") > hotspotScore("formatBookingDate"));
+  assert.ok(!result.data.hotspots.some((hotspot) => hotspot.symbol === "SelectedBookingDate"));
+});
