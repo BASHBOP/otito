@@ -10,7 +10,51 @@ export const DEFAULT_REQUESTS = Object.freeze({
   impact: "Review the current working tree changes and identify affected files",
   review: "Review current changes before merge",
   "gate-staged": "Validate the exact staged change before commit",
+  "model-route": "Route this coding task to a cheap, mid, or premium model tier",
 });
+
+/**
+ * Map Otito AX (0–100) to a vendor-neutral model tier.
+ * @param {number|null|undefined} ax
+ * @param {{ containment?: number|null, riskBump?: boolean }} [opts]
+ */
+export function routeModelTier(ax, opts = {}) {
+  const score = Number(ax);
+  let tier = "mid";
+  if (Number.isFinite(score)) {
+    if (score >= 75) tier = "cheap";
+    else if (score < 45) tier = "premium";
+  }
+
+  const containment = Number(opts.containment);
+  const risky = opts.riskBump === true || (Number.isFinite(containment) && containment < 20);
+
+  if (risky) {
+    if (tier === "cheap") tier = "mid";
+    else if (tier === "mid") tier = "premium";
+  }
+
+  return tier;
+}
+
+/**
+ * @param {"cheap"|"mid"|"premium"} tier
+ * @param {{ ax?: number|null, reason?: string, request?: string }} [meta]
+ */
+export function formatModelRoute(tier, meta = {}) {
+  const lines = [
+    `Model route: ${tier}`,
+    meta.ax != null && Number.isFinite(Number(meta.ax)) ? `AX: ${Math.round(Number(meta.ax))}` : null,
+    meta.reason ? `Reason: ${meta.reason}` : null,
+    meta.request ? `Request: ${meta.request}` : null,
+    "",
+    "Herdr tip: start the matching agent kind for this tier, or keep the current",
+    "agent and tell it to follow the model-router skill (cheap/mid/premium).",
+    "Premium: hard debug, auth/payments, multi-repo design.",
+    "Mid: default feature work. Cheap: typos, nits, single-file boilerplate.",
+  ].filter((line) => line !== null);
+  return `${lines.join("\n")}\n`;
+}
 
 export function parseInvocationContext(raw = process.env.HERDR_PLUGIN_CONTEXT_JSON) {
   if (!raw) return {};
@@ -106,6 +150,9 @@ export function buildOtitoArgs(action, { repo, request, base }) {
     const args = ["gate", repo, "--staged", "--run-validation", "--request", request];
     if (base) args.push("--base", base);
     return args;
+  }
+  if (action === "model-route") {
+    return ["ax", request, "--path", repo, "--json"];
   }
   throw new Error(`Unknown Otito Herdr action: ${action}`);
 }

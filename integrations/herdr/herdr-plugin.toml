@@ -40,6 +40,13 @@ description = "Run the Otito gate and protected validation plan against the exac
 contexts = ["workspace", "pane", "selection"]
 command = ["node", "action.mjs", "gate-staged"]
 
+[[actions]]
+id = "model-route"
+title = "Route model tier"
+description = "Score the task with Otito AX and recommend cheap, mid, or premium model tier before starting an agent."
+contexts = ["selection", "workspace", "pane"]
+command = ["node", "action.mjs", "model-route"]
+
 [[panes]]
 id = "trust-status"
 title = "Otito · Trust status"

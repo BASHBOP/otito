@@ -11,7 +11,7 @@ test("Herdr manifest exposes the bounded Otito trust workflow", () => {
   const manifest = readFileSync(manifestPath, "utf8");
   assert.match(manifest, /id = "bashbop\.otito"/);
   assert.match(manifest, /min_herdr_version = "0\.8\.2"/);
-  for (const action of ["doctor", "context", "impact", "review", "gate-staged"]) {
+  for (const action of ["doctor", "context", "impact", "review", "gate-staged", "model-route"]) {
     assert.match(manifest, new RegExp(`id = "${action}"`));
   }
   assert.match(manifest, /id = "trust-status"/);
@@ -32,6 +32,24 @@ test("staged gate arguments bind request, base, validation, and staged tree", ()
     base: "origin/main",
   });
   assert.deepEqual(args, ["gate", "/tmp/repo", "--staged", "--run-validation", "--request", "ship the plugin", "--base", "origin/main"]);
+});
+
+test("model-route arguments call otito ax as JSON", () => {
+  const args = buildOtitoArgs("model-route", {
+    repo: "/tmp/repo",
+    request: "fix a typo in README",
+  });
+  assert.deepEqual(args, ["ax", "fix a typo in README", "--path", "/tmp/repo", "--json"]);
+});
+
+test("routeModelTier maps AX bands and risk bumps", async () => {
+  const { routeModelTier, formatModelRoute } = await import("../integrations/herdr/runtime.mjs");
+  assert.equal(routeModelTier(80), "cheap");
+  assert.equal(routeModelTier(60), "mid");
+  assert.equal(routeModelTier(30), "premium");
+  assert.equal(routeModelTier(80, { containment: 10 }), "mid");
+  assert.equal(routeModelTier(60, { riskBump: true }), "premium");
+  assert.match(formatModelRoute("cheap", { ax: 88, request: "high AX" }), /Model route: cheap/);
 });
 
 test("trust status keeps hosted and human authority explicit", () => {
