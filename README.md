@@ -24,7 +24,7 @@ What remains strategically important is the **trust harness**: accurate reposito
 
 ## Trusted agent workflow
 
-> **New in v1.8.1:** context packs tell hosts to keep the change in the smallest owner files. Clean code is a focused, testable change, not a cleaner agent.
+> **New in v1.9.0:** Herdr `model-route` (and the host-agnostic model-router skill) score Otito AX and recommend cheap / mid / premium before you spend tokens on an agent.
 
 ```text
 Request -> context -> scoped change -> exact validation -> review evidence -> human decision
