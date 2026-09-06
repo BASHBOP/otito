@@ -3,7 +3,7 @@
 ## Independent trust infrastructure for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.9.0 published to npm, GitHub Releases, and the official MCP Registry<br>
+**Status:** v1.9.1 published to npm, GitHub Releases, and the official MCP Registry<br>
 **Category:** Practical AI governance for developers
 
 > A Bashbop Ltd product for teams that want any coding agent to produce evidence a human can trust before merge.
@@ -21,12 +21,11 @@
 
 ## What's New
 
-!!! tip "v1.9.0 published (2026-09-06)"
-    - Herdr `model-route` recommends cheap / mid / premium from Otito AX before starting an agent.
-    - Host-agnostic `model-router` skill for Cursor, Codex, Claude Code, Herdr, and peers.
-    - Herdr docs cover optional `prefix+m` binding beside review and staged gate.
+!!! tip "v1.9.1 published (2026-09-06)"
+    - `context_pack` / `repo_search` boost files that literally name the field a query traces (e.g. `dateOfBirth`) instead of ranking on generic single-token overlap.
+    - Token matches are weighted by how common they are across the repo, so a handful of high-frequency domain nouns can't outrank the files that actually reference the field.
 
-    [npm v1.9.0](https://www.npmjs.com/package/@bashbop/otito/v/1.9.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.9.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.9.1](https://www.npmjs.com/package/@bashbop/otito/v/1.9.1) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.9.1) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for the full history.
 
@@ -73,7 +72,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@1.9.0
+    npm install -g @bashbop/otito@1.9.1
     otito doctor
     otito context "review this change" --path .
     ```
@@ -81,7 +80,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@1.9.0 doctor
+    npx -y @bashbop/otito@1.9.1 doctor
     ```
 
 === "Source Checkout"

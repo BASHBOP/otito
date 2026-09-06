@@ -6,6 +6,12 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-09-06
+
+### Fixed
+
+- **context_pack / repo_search relevance for field-tracing queries.** Hotspots and Primary Files no longer get dominated by generic single-token overlap (e.g. "date", "booking" in an events app). Queries that name a specific field ("where is date of birth collected?") now boost files whose own text literally contains the compound identifier (`dateOfBirth`), and weight token matches by how common they are across the repo so a handful of high-frequency domain nouns can't outrank the files that actually reference the field.
+
 ## [1.9.0] - 2026-09-06
 
 ### Added
