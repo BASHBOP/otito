@@ -36,6 +36,7 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @property {string[]} [exports]
  * @property {CodeMapSymbol[]} [symbols]
  * @property {Array<{ type: string, name: string, line?: number, matchedTokens: string[], score: number }>} [matchedSymbols]
+ * @property {boolean} [hasPhraseMatch] - true when an exact multi-word query phrase (e.g. "date of birth") was found in this file's own text.
  */
 
 /**
@@ -121,14 +122,16 @@ export function generateContextPack(query, options = {}) {
   const maps = repoPaths.map((repoPath) => getCachedCodeMap(repoPath));
   const graphs = new Map(maps.map((map) => [map.repo.root, buildImportGraph(map.files)]));
   const tokens = tokenize(normalizedQuery);
+  const phrases = extractPhrases(normalizedQuery);
   const intent = inferIntent(normalizedQuery, tokens);
-  const scoredFiles = scoreMaps(maps, tokens, intent);
+  const tokenStats = computeTokenDocFrequency(maps, tokens);
+  const scoredFiles = scoreMaps(maps, tokens, intent, phrases, tokenStats);
   const matchedPrimaryFiles = selectPrimaryFiles(scoredFiles, limit);
   const usedFallback = matchedPrimaryFiles.length === 0;
   const primaryFiles = stripEvidence(usedFallback ? selectFallbackPrimaryFiles(maps, limit) : matchedPrimaryFiles, includeEvidence);
   const relatedFiles = stripEvidence(selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, limit), includeEvidence);
   const tests = stripEvidence(selectTests(maps, graphs, scoredFiles, primaryFiles, limit), includeEvidence);
-  const hotspots = buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens);
+  const hotspots = buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens, tokenStats);
   const commands = inferCommands(repoPaths, normalizedQuery);
   const patterns = inferPatterns(primaryFiles, relatedFiles, tests, intent);
   const conflicts = inferConflicts(maps);
@@ -397,14 +400,17 @@ function formatMatch(tokens) {
  * @param {CodeMap[]} maps
  * @param {string[]} tokens
  * @param {Intent} intent
+ * @param {PhraseCandidate[]} [phrases]
+ * @param {TokenStats} [tokenStats]
  * @returns {ScoredFile[]}
  */
-function scoreMaps(maps, tokens, intent) {
+function scoreMaps(maps, tokens, intent, phrases = [], tokenStats) {
   /** @type {ScoredFile[]} */
   const scored = [];
+  const stats = tokenStats ?? computeTokenDocFrequency(maps, tokens);
   for (const map of maps) {
     for (const file of map.files ?? []) {
-      const candidate = scoreFile(map, file, tokens, intent);
+      const candidate = scoreFile(map, file, tokens, intent, phrases, stats);
       if (candidate.score > 0) {
         scored.push(candidate);
       }
@@ -419,9 +425,11 @@ function scoreMaps(maps, tokens, intent) {
  * @param {CodeMapFile} file
  * @param {string[]} tokens
  * @param {Intent} intent
+ * @param {PhraseCandidate[]} phrases
+ * @param {TokenStats} tokenStats
  * @returns {ScoredFile}
  */
-function scoreFile(map, file, tokens, intent) {
+function scoreFile(map, file, tokens, intent, phrases = [], tokenStats) {
   /** @type {string[]} */
   const reasons = [];
   let score = 0;
@@ -430,26 +438,26 @@ function scoreFile(map, file, tokens, intent) {
     return summarizeFile(map, file, 0, []);
   }
 
-  score += scoreField(file.path, tokens, 8, "path", reasons);
-  score += scoreField(file.kind, tokens, 4, "kind", reasons);
-  score += scoreField(file.domains?.length ? file.domains.join(" ") : file.domain, tokens, 5, "domain", reasons);
-  score += scoreField(file.route, tokens, 7, "route", reasons);
-  score += scoreField(file.controllerBasePath, tokens, 7, "controller", reasons);
-  score += scoreField(map.repo.name, tokens, 3, "repo", reasons);
-  score += scoreField(map.repo.package?.name, tokens, 3, "package", reasons);
+  score += scoreField(file.path, tokens, 8, "path", reasons, tokenStats);
+  score += scoreField(file.kind, tokens, 4, "kind", reasons, tokenStats);
+  score += scoreField(file.domains?.length ? file.domains.join(" ") : file.domain, tokens, 5, "domain", reasons, tokenStats);
+  score += scoreField(file.route, tokens, 7, "route", reasons, tokenStats);
+  score += scoreField(file.controllerBasePath, tokens, 7, "controller", reasons, tokenStats);
+  score += scoreField(map.repo.name, tokens, 3, "repo", reasons, tokenStats);
+  score += scoreField(map.repo.package?.name, tokens, 3, "package", reasons, tokenStats);
 
   let httpScore = 0;
   for (const method of file.httpMethods ?? []) {
-    httpScore += scoreField(`${method.method} ${method.path}`, tokens, 7, "http", reasons);
+    httpScore += scoreField(`${method.method} ${method.path}`, tokens, 7, "http", reasons, tokenStats);
   }
   score += Math.min(httpScore, 56);
-  score += scoreCollection(file.imports ?? [], tokens, 3, "import", reasons, 18);
-  score += scoreCollection(file.exports ?? [], tokens, 8, "export", reasons, 32);
-  score += scoreField((file.formFields ?? []).join(" "), tokens, 5, "form field", reasons);
-  score += scoreField((file.navigationTargets ?? []).join(" "), tokens, 7, "navigation", reasons);
-  score += scoreField((file.localIdentifiers ?? []).join(" "), tokens, 4, "local identifier", reasons);
+  score += scoreCollection(file.imports ?? [], tokens, 3, "import", reasons, 18, tokenStats);
+  score += scoreCollection(file.exports ?? [], tokens, 8, "export", reasons, 32, tokenStats);
+  score += scoreField((file.formFields ?? []).join(" "), tokens, 5, "form field", reasons, tokenStats);
+  score += scoreField((file.navigationTargets ?? []).join(" "), tokens, 7, "navigation", reasons, tokenStats);
+  score += scoreField((file.localIdentifiers ?? []).join(" "), tokens, 4, "local identifier", reasons, tokenStats);
 
-  const symbolMatch = scoreSymbols(file.symbols ?? [], tokens);
+  const symbolMatch = scoreSymbols(file.symbols ?? [], tokens, tokenStats);
   score += symbolMatch.score;
   reasons.push(...symbolMatch.reasons);
 
@@ -460,7 +468,10 @@ function scoreFile(map, file, tokens, intent) {
 
   score += scoreIntentHints(file, intent, reasons);
   score += scoreTemplateIntent(file, tokens, reasons);
-  score += scoreConceptCoverage(file, tokens, reasons);
+  score += scoreConceptCoverage(file, tokens, reasons, tokenStats);
+
+  const phraseScore = scorePhraseMatches(file, phrases, reasons);
+  score += phraseScore;
 
   if (isTypeOnlyFile(file)) {
     score = Math.floor(score * 0.4);
@@ -474,6 +485,7 @@ function scoreFile(map, file, tokens, intent) {
 
   const summarized = summarizeFile(map, file, score, reasons);
   summarized.matchedSymbols = symbolMatch.matches;
+  summarized.hasPhraseMatch = phraseScore > 0;
   return summarized;
 }
 
@@ -567,8 +579,9 @@ function scoreIntentHints(file, intent, reasons) {
  * @param {CodeMapFile} file
  * @param {string[]} tokens
  * @param {string[]} reasons
+ * @param {TokenStats} [tokenStats]
  */
-function scoreConceptCoverage(file, tokens, reasons) {
+function scoreConceptCoverage(file, tokens, reasons, tokenStats) {
   const text = normalizeText(
     `${file.path} ${file.kind} ${file.domain} ${file.route ?? ""} ${file.controllerBasePath ?? ""} ${file.exports?.join(" ")} ${symbolTerms(file.symbols)} ${file.formFields?.join(" ")} ${file.navigationTargets?.join(" ")} ${file.localIdentifiers?.join(" ")}`,
   );
@@ -577,8 +590,209 @@ function scoreConceptCoverage(file, tokens, reasons) {
   if (matched.length < 3) {
     return 0;
   }
+  // Weight each matched token by its rarity across the repo so a file that
+  // only echoes a handful of high-frequency domain nouns (e.g. "date",
+  // "booking" everywhere in an events app) doesn't earn a multi-concept
+  // bonus it hasn't actually demonstrated.
+  const weightSum = matched.reduce((sum, token) => sum + tokenWeightFactor(token, tokenStats), 0);
+  if (weightSum < 3) {
+    return 0;
+  }
   reasons.push("multi-concept match");
-  return Math.min(36, (matched.length - 2) * 12);
+  return Math.min(36, Math.round((weightSum - 2) * 12));
+}
+
+/**
+ * Per-token document frequency across the indexed repo(s), used to weight
+ * down generic domain nouns that recur in many unrelated files.
+ * @typedef {object} TokenStats
+ * @property {number} totalFiles
+ * @property {Map<string, number>} docFreq
+ */
+
+/**
+ * A multi-word span pulled from the raw query that looks like it could name a
+ * compound identifier (e.g. "date of birth" -> `dateOfBirth` / `date_of_birth`).
+ * @typedef {object} PhraseCandidate
+ * @property {string} normalized - space-joined form, matching normalizeText's camelCase/snake_case splitting.
+ * @property {string} contentOnly - the same phrase with connector words (of/to/in/for) dropped.
+ * @property {number} weight
+ */
+
+const phraseConnectors = new Set(["of", "in", "to", "for", "on", "at", "with"]);
+const maxPhraseContentWords = 4;
+
+/**
+ * Build a per-token document-frequency table across every indexed, non-vendor
+ * file. Only used as an IDF-style dampener: a token that shows up in a large
+ * share of the repo (e.g. "date" or "booking" in an events codebase) carries
+ * far less evidentiary weight than one that appears in a handful of files.
+ * Skipped (falls back to a neutral weight) on small repos/fixtures where
+ * frequency alone isn't a meaningful signal.
+ * @param {CodeMap[]} maps
+ * @param {string[]} tokens
+ * @returns {TokenStats}
+ */
+export function computeTokenDocFrequency(maps, tokens) {
+  /** @type {Map<string, number>} */
+  const docFreq = new Map();
+  let totalFiles = 0;
+
+  if (!tokens.length) {
+    return { totalFiles, docFreq };
+  }
+
+  for (const map of maps) {
+    for (const file of map.files ?? []) {
+      if (file.isVendor) {
+        continue;
+      }
+      totalFiles += 1;
+      const text = normalizeText(
+        `${file.path} ${file.kind} ${file.domains?.length ? file.domains.join(" ") : file.domain} ${file.route ?? ""} ${file.controllerBasePath ?? ""} ${file.exports?.join(" ") ?? ""} ${symbolTerms(file.symbols)} ${file.formFields?.join(" ") ?? ""} ${file.navigationTargets?.join(" ") ?? ""} ${file.localIdentifiers?.join(" ") ?? ""} ${file.imports?.join(" ") ?? ""}`,
+      );
+      const fileTokens = new Set(tokenize(text));
+      for (const token of tokens) {
+        if (tokenVariants(token).some((variant) => fileTokens.has(variant))) {
+          docFreq.set(token, (docFreq.get(token) ?? 0) + 1);
+        }
+      }
+    }
+  }
+
+  return { totalFiles, docFreq };
+}
+
+/**
+ * IDF-style multiplier for a single query token's contribution to a score.
+ * Below a minimum repo size the signal is too noisy to trust, so every token
+ * is treated as neutral (matching prior, pre-dampening behaviour exactly).
+ * @param {string} token
+ * @param {TokenStats} [tokenStats]
+ * @returns {number}
+ */
+export function tokenWeightFactor(token, tokenStats) {
+  if (!tokenStats || tokenStats.totalFiles < 12) {
+    return 1;
+  }
+  const df = tokenStats.docFreq.get(token) ?? 0;
+  if (df === 0) {
+    return 1;
+  }
+  const ratio = df / tokenStats.totalFiles;
+  if (ratio <= 0.02) return 1.4;
+  if (ratio <= 0.06) return 1;
+  if (ratio <= 0.15) return 0.55;
+  return 0.2;
+}
+
+/**
+ * Pull multi-word, identifier-shaped spans out of the raw query, e.g. "date
+ * of birth" or "next of kin" — a single connector word (of/to/in/for/...) may
+ * sit between two content words, mirroring how normalizeText() splits
+ * `dateOfBirth` / `date_of_birth` back into space-separated words. Longer
+ * spans (more content words) are recorded with a higher weight.
+ * @param {string} query
+ * @returns {PhraseCandidate[]}
+ */
+export function extractPhrases(query) {
+  const rawWords =
+    String(query)
+      .toLowerCase()
+      .match(/[a-z0-9]+/g) ?? [];
+  /** @type {Map<string, PhraseCandidate>} */
+  const phraseMap = new Map();
+
+  for (let start = 0; start < rawWords.length; start++) {
+    if (stopWords.has(rawWords[start]) || rawWords[start].length <= 1) {
+      continue;
+    }
+
+    const words = [rawWords[start]];
+    let contentCount = 1;
+    let pendingConnector = /** @type {string|null} */ (null);
+
+    for (let i = start + 1; i < rawWords.length && contentCount < maxPhraseContentWords; i++) {
+      const word = rawWords[i];
+      if (word.length <= 1) {
+        break;
+      }
+      if (stopWords.has(word)) {
+        if (pendingConnector !== null || !phraseConnectors.has(word)) {
+          break;
+        }
+        pendingConnector = word;
+        continue;
+      }
+
+      if (pendingConnector !== null) {
+        words.push(pendingConnector);
+        pendingConnector = null;
+      }
+      words.push(word);
+      contentCount += 1;
+
+      // A bare two-content-word span (no connector) is too weak a signal on
+      // its own — two adjacent nouns in a natural-language question collide
+      // with unrelated identifiers far too often (e.g. "campaign email"
+      // matching a local `campaignEmailTemplate` that has nothing to do with
+      // the query). Only treat a 2-content-word span as a phrase when a
+      // preposition ties the words together (e.g. "date of birth"), which is
+      // exactly the shape of a real compound identifier; anything looser
+      // needs a third content word before it counts as identifier-shaped.
+      const isPrepositionLinkedPair = contentCount === 2 && words.length === 3;
+      if (contentCount >= 3 || isPrepositionLinkedPair) {
+        const normalized = words.join(" ");
+        const contentOnly = words.filter((w) => !phraseConnectors.has(w)).join(" ");
+        const weight = Math.min(40 + (contentCount - 2) * 25, 110);
+        const existing = phraseMap.get(normalized);
+        if (!existing || existing.weight < weight) {
+          phraseMap.set(normalized, { normalized, contentOnly, weight });
+        }
+      }
+    }
+  }
+
+  return [...phraseMap.values()];
+}
+
+/**
+ * Hybrid literal-match pass: rather than relying only on scattered
+ * single-token overlap, check whether the file's own text (path, symbols,
+ * exports, form fields, etc.) contains an exact multi-word phrase pulled
+ * from the query, e.g. "date of birth". A hit here is a much stronger signal
+ * than several files each sharing one generic word with the query, so it is
+ * scored well above ordinary token overlap.
+ * @param {CodeMapFile} file
+ * @param {PhraseCandidate[]} phrases
+ * @param {string[]} reasons
+ * @returns {number}
+ */
+export function scorePhraseMatches(file, phrases, reasons) {
+  if (!phrases.length) {
+    return 0;
+  }
+
+  const text = normalizeText(
+    `${file.path} ${file.kind} ${file.domain} ${file.route ?? ""} ${file.controllerBasePath ?? ""} ${file.exports?.join(" ")} ${symbolTerms(file.symbols)} ${file.formFields?.join(" ")} ${file.navigationTargets?.join(" ")} ${file.localIdentifiers?.join(" ")}`,
+  );
+
+  let score = 0;
+  let matched = false;
+  for (const phrase of phrases) {
+    if (text.includes(phrase.normalized)) {
+      score += phrase.weight;
+      matched = true;
+    } else if (phrase.contentOnly !== phrase.normalized && text.includes(phrase.contentOnly)) {
+      score += Math.round(phrase.weight * 0.7);
+      matched = true;
+    }
+  }
+
+  if (matched) {
+    reasons.push("exact phrase match");
+  }
+  return Math.min(score, 200);
 }
 
 /**
@@ -635,9 +849,10 @@ function scoreAuthSignupVerificationFlow(file, reasons) {
  * single-token symbol match in large Nest services.
  * @param {CodeMapSymbol[]} symbols
  * @param {string[]} tokens
+ * @param {TokenStats} [tokenStats]
  * @returns {{ score: number, matches: Array<{ type: string, name: string, line?: number, matchedTokens: string[], score: number }>, reasons: string[] }}
  */
-function scoreSymbols(symbols, tokens) {
+function scoreSymbols(symbols, tokens, tokenStats) {
   if (!symbols.length || !tokens.length) {
     return { score: 0, matches: [], reasons: [] };
   }
@@ -656,13 +871,20 @@ function scoreSymbols(symbols, tokens) {
     }
 
     const variantHits = tokens.flatMap((token) => tokenVariants(token).filter((variant) => nameTokens.has(variant)));
-    let hitScore = matchedTokens.length * 9 + Math.max(0, variantHits.length - matchedTokens.length) * 9;
+    // Two matched tokens that are both repo-wide generic nouns (e.g. "date"
+    // and "booking" hitting `formatBookingDate` in an events app) shouldn't
+    // score the same as two genuinely distinctive tokens. Weight each match
+    // by its rarity across the indexed repo instead of counting it flatly.
+    const weightSum = matchedTokens.reduce((sum, token) => sum + tokenWeightFactor(token, tokenStats), 0);
+    const avgWeight = weightSum / matchedTokens.length;
+    let hitScore = weightSum * 9 + Math.max(0, variantHits.length - matchedTokens.length) * 9 * avgWeight;
     if (symbol.type === "method" && matchedTokens.length >= 2) {
-      hitScore += matchedTokens.length * 12;
+      hitScore += weightSum * 12;
     }
     if (symbol.type === "method" && matchedTokens.length >= 3) {
-      hitScore += 24;
+      hitScore += 24 * avgWeight;
     }
+    hitScore = Math.round(hitScore);
 
     if (matchedTokens.length >= 2 || variantHits.length >= 2) {
       strongScore += hitScore;
@@ -744,8 +966,9 @@ function diversifyByDomain(files, limit, maxPerDomain = 3) {
  * @param {ScoredFile[]} primaryFiles
  * @param {ScoredFile[]} relatedFiles
  * @param {string[]} tokens
+ * @param {TokenStats} [tokenStats]
  */
-function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens) {
+function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens, tokenStats) {
   const focusKeys = new Set([...primaryFiles, ...relatedFiles].map(fileKey));
   /** @type {Array<{ repo: string, path: string, kind: string, domain: string, symbol: string, type: string, line?: number, matchedTokens: string[], score: number, rank: number }>} */
   const hotspots = [];
@@ -756,7 +979,12 @@ function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens) {
     }
     for (const match of file.matchedSymbols) {
       const topPrimary = primaryFiles.slice(0, 2).some((primary) => fileKey(primary) === fileKey(file));
-      if (match.matchedTokens.length < 2 && !tokens.some((token) => token === normalizeText(file.domain)) && !topPrimary) {
+      // Require the matched tokens to carry real specificity (rare across the
+      // repo), not just a raw count of 2+ - two generic domain nouns (e.g.
+      // "date" and "booking" both hitting `formatBookingDate`) shouldn't
+      // qualify a symbol as a hotspot on their own.
+      const specificity = match.matchedTokens.reduce((sum, token) => sum + tokenWeightFactor(token, tokenStats), 0);
+      if (specificity < 1.15 && !tokens.some((token) => token === normalizeText(file.domain)) && !topPrimary && !file.hasPhraseMatch) {
         continue;
       }
       hotspots.push({
@@ -1301,7 +1529,7 @@ function summarizeFile(map, file, score, reasons) {
 // useful when an agent wants the evidence trail. They are dropped by default
 // (includeEvidence:false) so the packet stays compact; path/kind/score/reasons
 // and routing fields are always kept.
-const evidenceFields = ["imports", "exports", "symbols", "matchedSymbols"];
+const evidenceFields = ["imports", "exports", "symbols", "matchedSymbols", "hasPhraseMatch"];
 
 /**
  * @param {ScoredFile[]} files
@@ -1328,9 +1556,10 @@ function stripEvidence(files, includeEvidence) {
  * @param {number} weight
  * @param {string} reason
  * @param {string[]} reasons
+ * @param {TokenStats} [tokenStats]
  * @returns {number}
  */
-function scoreField(value, tokens, weight, reason, reasons) {
+function scoreField(value, tokens, weight, reason, reasons, tokenStats) {
   if (!value) {
     return 0;
   }
@@ -1340,10 +1569,11 @@ function scoreField(value, tokens, weight, reason, reasons) {
   let score = 0;
   for (const token of tokens) {
     const variants = tokenVariants(token);
+    const factor = tokenWeightFactor(token, tokenStats);
     if (variants.some((variant) => normalized === variant)) {
-      score += weight * 2;
+      score += Math.round(weight * 2 * factor);
     } else if (variants.some((variant) => normalizedTokens.has(variant) || normalized.includes(variant))) {
-      score += weight;
+      score += Math.round(weight * factor);
     }
   }
 
@@ -1364,8 +1594,9 @@ function scoreField(value, tokens, weight, reason, reasons) {
  * @param {string} reason
  * @param {string[]} reasons
  * @param {number} cap
+ * @param {TokenStats} [tokenStats]
  */
-function scoreCollection(values, tokens, weight, reason, reasons, cap) {
+function scoreCollection(values, tokens, weight, reason, reasons, cap, tokenStats) {
   /** @type {Map<string, number>} */
   const scoreByToken = new Map();
   for (const value of values) {
@@ -1373,10 +1604,11 @@ function scoreCollection(values, tokens, weight, reason, reasons, cap) {
     const normalizedTokens = new Set(tokenize(value));
     for (const token of tokens) {
       const variants = tokenVariants(token);
+      const factor = tokenWeightFactor(token, tokenStats);
       const hit = variants.some((variant) => normalized === variant)
-        ? weight * 2
+        ? Math.round(weight * 2 * factor)
         : variants.some((variant) => normalizedTokens.has(variant) || normalized.includes(variant))
-          ? weight
+          ? Math.round(weight * factor)
           : 0;
       if (hit > 0) {
         scoreByToken.set(token, Math.max(scoreByToken.get(token) ?? 0, hit));
