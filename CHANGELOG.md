@@ -6,6 +6,12 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-09-07
+
+### Docs
+
+- **mcpservers.org listing.** otito's submission to [mcpservers.org](https://mcpservers.org/servers/bashbop/otito) was approved; added the listing badge to the README.
+
 ## [1.9.1] - 2026-09-06
 
 ### Fixed
