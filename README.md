@@ -24,7 +24,7 @@ What remains strategically important is the **trust harness**: accurate reposito
 
 ## Trusted agent workflow
 
-> **New in v1.9.1:** `context_pack` and `repo_search` now boost files that literally name the field a query traces (e.g. `dateOfBirth`) over files that only share a generic word like "date" or "booking".
+> **New in v1.9.2:** otito is now listed on [mcpservers.org](https://mcpservers.org/servers/bashbop/otito).
 
 ```text
 Request -> context -> scoped change -> exact validation -> review evidence -> human decision
