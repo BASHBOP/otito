@@ -2,7 +2,7 @@
   "name": "@bashbop/otito",
   "version": "1.10.0",
   "mcpName": "io.github.BASHBOP/otito",
-  "description": "Òtítọ́: deterministic local repository context, impact analysis, and merge evidence.",
+  "description": "\u00d2t\u00edt\u1ecd\u0301: deterministic local repository context, impact analysis, and merge evidence.",
   "type": "module",
   "bin": {
     "otito": "src/cli.js"
@@ -33,13 +33,15 @@
     "audit": "npm audit --omit=dev",
     "benchmark:cli": "node scripts/benchmark-cli.mjs",
     "smoke": "node src/cli.js doctor && node src/cli.js harness . --json && npm run smoke:tarball",
-    "quality": "npm run format:check && npm run lint && npm run typecheck && npm run version:check && npm test && npm run test:coverage && npm run eval:accuracy && npm run eval:harness && npm run eval:gate && npm run audit && npm run smoke",
+    "quality": "npm run format:check && npm run lint && npm run typecheck && npm run version:check && npm run docs:diagram:check && npm test && npm run test:coverage && npm run eval:accuracy && npm run eval:harness && npm run eval:gate && npm run audit && npm run smoke",
     "ci": "npm run quality",
     "prepublishOnly": "npm run ci",
     "smoke:tarball": "node scripts/smoke-tarball.mjs",
     "eval:accuracy": "node src/cli.js eval --accuracy",
     "eval:harness": "node src/cli.js eval --harness",
-    "eval:gate": "node src/cli.js eval --gate-effectiveness"
+    "eval:gate": "node src/cli.js eval --gate-effectiveness",
+    "docs:diagram": "node scripts/generate-how-it-works.mjs",
+    "docs:diagram:check": "node scripts/generate-how-it-works.mjs --check"
   },
   "engines": {
     "node": ">=18.18"
