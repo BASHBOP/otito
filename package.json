@@ -27,7 +27,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "version:check": "node scripts/check-version.js",
-    "version": "node scripts/sync-server-version.mjs && git add server.json",
+    "version": "node scripts/sync-server-version.mjs && git add server.json docs/index.md RELEASE.md",
     "test": "node --test tests/*.test.js",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" --test-coverage-lines=70 --test-coverage-branches=60 --test-coverage-functions=75 tests/*.test.js",
     "audit": "npm audit --omit=dev",
