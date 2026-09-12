@@ -97,5 +97,23 @@ jobs:
       - name: Log in to the MCP Registry (GitHub OIDC)
         run: ./mcp-publisher login github-oidc
 
+      # The MCP Registry validates server.json's npm package/version against
+      # the public registry. A fresh `npm publish` can take a few minutes to
+      # propagate (npm says so itself), so poll for it instead of racing it.
+      - name: Wait for npm registry propagation
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Waiting for @bashbop/otito@$VERSION to be visible on the npm registry..."
+          for i in $(seq 1 20); do
+            if curl -sf "https://registry.npmjs.org/@bashbop/otito/$VERSION" > /dev/null; then
+              echo "Found @bashbop/otito@$VERSION on the registry."
+              exit 0
+            fi
+            echo "Not yet available (attempt $i/20), retrying in 15s..."
+            sleep 15
+          done
+          echo "Timed out waiting for @bashbop/otito@$VERSION to appear on the npm registry." >&2
+          exit 1
+
       - name: Publish server.json
         run: ./mcp-publisher publish
