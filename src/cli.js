@@ -125,7 +125,7 @@ async function main(argv = process.argv.slice(2)) {
     await handler(parsed);
   } catch (error) {
     caughtError = error;
-    const message = error instanceof Error ? error.message : String(error);
+    const message = explainError(error instanceof Error ? error.message : String(error));
     if (parsed.flags.json) {
       printJson({ ok: false, error: message });
     } else {
@@ -1266,6 +1266,22 @@ function formatRepoSummary(result, options = {}) {
     ],
     options,
   });
+}
+
+/**
+ * Turn a bare module-resolution failure into an actionable one. `typescript` is
+ * a runtime dependency (the code-map AST parser), so a broken or partial
+ * install surfaces as "Cannot find package 'typescript'" from deep inside the
+ * code map with no hint about what the user should do.
+ *
+ * @param {string} message
+ * @returns {string}
+ */
+function explainError(message) {
+  if (/Cannot find (?:package|module) ['"]typescript['"]/.test(message)) {
+    return `${message}\n\notito needs its bundled \`typescript\` dependency to build code maps. Reinstall it with \`npm install -g @bashbop/otito\`, or run \`npm install\` in a source checkout.`;
+  }
+  return message;
 }
 
 export { main };
