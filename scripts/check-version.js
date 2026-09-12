@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { findPinnedDocVersionDrift } from "../src/lib/version-docs.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packageJson = readJson(path.join(root, "package.json"));
@@ -37,7 +38,21 @@ if (serverManifest) {
   }
 }
 
+checkPinnedDocVersions(path.join(root, "docs", "index.md"), packageJson.version);
+checkPinnedDocVersions(path.join(root, "RELEASE.md"), packageJson.version);
+
 console.log(`ok: otito version ${packageJson.version} is SemVer`);
+
+function checkPinnedDocVersions(filePath, expectedVersion) {
+  if (!fs.existsSync(filePath)) return;
+
+  const relativePath = path.relative(root, filePath);
+  const content = fs.readFileSync(filePath, "utf8");
+
+  for (const issue of findPinnedDocVersionDrift(content, expectedVersion)) {
+    fail(`${relativePath} ${issue} (run \`node scripts/sync-server-version.mjs\` to resync)`);
+  }
+}
 
 function readJson(filePath, { optional = false } = {}) {
   if (optional && !fs.existsSync(filePath)) {
