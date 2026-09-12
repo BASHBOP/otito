@@ -3,7 +3,7 @@
 ## Independent trust infrastructure for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.9.2 published to npm, GitHub Releases, and the official MCP Registry<br>
+**Status:** v1.9.3 published to npm, GitHub Releases, and the official MCP Registry<br>
 **Category:** Practical AI governance for developers
 
 > A Bashbop Ltd product for teams that want any coding agent to produce evidence a human can trust before merge.
@@ -20,6 +20,11 @@
 ---
 
 ## What's New
+
+!!! tip "v1.9.3 published (2026-09-12)"
+    - Fixed stale version references in `RELEASE.md` and the MCP docs, and automated the doc/version sync so pinned install commands can't go stale silently again.
+
+    [npm v1.9.3](https://www.npmjs.com/package/@bashbop/otito/v/1.9.3) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.9.3) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v1.9.2 published (2026-09-07)"
     - otito is now listed on [mcpservers.org](https://mcpservers.org/servers/bashbop/otito); README carries the listing badge.
@@ -71,7 +76,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@1.9.2
+    npm install -g @bashbop/otito@1.9.3
     otito doctor
     otito context "review this change" --path .
     ```
@@ -79,7 +84,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@1.9.2 doctor
+    npx -y @bashbop/otito@1.9.3 doctor
     ```
 
 === "Source Checkout"

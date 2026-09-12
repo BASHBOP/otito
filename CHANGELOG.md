@@ -6,6 +6,17 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-09-12
+
+### Fixed
+
+- **Stale version references in docs.** `RELEASE.md`'s verify-binary example was pinned to `@bashbop/otito@1.0.2`, six releases behind. Removed the stale `(v2.3+)` tags on `agent_experience`/`convergence_score` in `docs/02-mcp-agent-workflows/README.md`, since both have shipped in every release since 2.3.0.
+
+### Chore
+
+- **Automate release-doc version sync.** `scripts/sync-server-version.mjs` now also rewrites the pinned `@bashbop/otito@X.Y.Z` install/verify commands and the docs "Status" line in `docs/index.md` and `RELEASE.md` on every `npm version` bump, alongside the existing `server.json` sync. `scripts/check-version.js` now fails `version:check` if those pins drift from `package.json`. Logic lives in `src/lib/version-docs.js`, unit tested.
+- Bumped `@types/node` and `eslint` (dev dependencies) via Dependabot.
+
 ## [1.9.2] - 2026-09-07
 
 ### Docs
