@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-12T16:01:58.357Z",
+  "generatedAt": "2026-09-12T17:18:29.227Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
-  "verdict": "WARN",
-  "confidence": 65,
+  "verdict": "FAIL",
+  "confidence": 35,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -12,13 +12,6 @@
   "impactSummary": {
     "concepts": [],
     "topFiles": [
-      {
-        "path": ".github/workflows/release.yml",
-        "score": 0,
-        "riskFlags": [
-          "configuration"
-        ]
-      },
       {
         "path": "src/lib/review.js",
         "score": 41,
@@ -38,37 +31,51 @@
         "path": "src/lib/args.js",
         "score": 22,
         "riskFlags": []
+      },
+      {
+        "path": "src/lib/ax.js",
+        "score": 22,
+        "riskFlags": []
       }
     ],
     "risks": [
-      "Configuration change: verify environment variables, secrets, build output, and production defaults."
+      "No obvious high-risk domain detected. Main risk is missing a caller or test outside the matched files."
     ]
   },
   "prReviewSummary": {
     "changedFiles": 1,
-    "additions": 18,
+    "additions": 56,
     "deletions": 0,
-    "riskLevel": "medium",
+    "riskLevel": "low",
     "riskFlags": [
-      "configuration",
       "no test files changed"
     ],
     "reviewTargetsCount": 0
   },
   "pass": {
-    "verdict": "WARN",
+    "verdict": "FAIL",
     "policy": "standard",
     "governance": "team",
     "checks": [
       {
+        "name": "PR state",
+        "status": "WARN",
+        "summary": "GitHub mergeability is not settled yet."
+      },
+      {
+        "name": "PR snapshot",
+        "status": "PASS",
+        "summary": "GitHub returned exact base/head commits and the complete changed-file set."
+      },
+      {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "2 changed files found."
+        "summary": "21 changed files reported."
       },
       {
         "name": "Secret safety",
         "status": "PASS",
-        "summary": "No obvious secret file changes found."
+        "summary": "No secret file paths found. Changed content was not available to scan for credential values."
       },
       {
         "name": "Risk review",
@@ -78,22 +85,32 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "No version metadata changes found."
+        "summary": "Version metadata is SemVer and changelog was updated."
       },
       {
-        "name": "Validation commands",
-        "status": "PASS",
-        "summary": "Validation commands are available."
-      },
-      {
-        "name": "Dependency audit",
-        "status": "PASS",
-        "summary": "Dependency audit commands are available."
-      },
-      {
-        "name": "Review state",
+        "name": "Review decision",
         "status": "WARN",
-        "summary": "Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet."
+        "summary": "GitHub did not return a review decision; verify required reviewers manually."
+      },
+      {
+        "name": "CODEOWNERS",
+        "status": "FAIL",
+        "summary": "CODEOWNERS approval is missing for one or more changed files."
+      },
+      {
+        "name": "Review conversations",
+        "status": "PASS",
+        "summary": "No unresolved PR review conversations found."
+      },
+      {
+        "name": "Branch protection",
+        "status": "WARN",
+        "summary": "Could not inspect branch protection: gh api repos/BASHBOP/otito/branches/main/protection: gh: Resource not accessible by integration (HTTP 403)"
+      },
+      {
+        "name": "Status checks",
+        "status": "PASS",
+        "summary": "All returned status checks passed."
       },
       {
         "name": "Policy profile",
@@ -103,6 +120,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 428
+    "fullJson": 565
   }
 }
