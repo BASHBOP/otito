@@ -228,8 +228,8 @@ Reference: [Grok custom MCP connectors](https://docs.x.ai/grok/connectors).
 | `repo_search`      | Search cataloged repositories by path, route, import, export, symbol, or domain; omit `query` to list the catalog |
 | `context_pack`     | Build a task-aware context packet                                                     |
 | `change_impact`    | Rank files most likely to own a plain-English change request                          |
-| `agent_experience` | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity (v2.3+) |
-| `convergence_score`| Score intent vs. execution (0–100) with a recomputable receipt (v2.3+)                |
+| `agent_experience` | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity    |
+| `convergence_score`| Score intent vs. execution (0–100) with a recomputable receipt                        |
 | `review_context`   | Diff/comment review context (no verdict)                                              |
 | `review_gate`      | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`; optionally enforces a convergence floor/receipt |
 | `review_verdict`   | Composite verdict: impact + review_context + review_gate                              |
