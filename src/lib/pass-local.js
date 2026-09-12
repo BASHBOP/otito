@@ -8,9 +8,11 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { runCommand } from "./tools.js";
 import { matchRiskPaths, matchSecretPaths, classifyPath, glyphFor } from "./risk-paths.js";
+import { MAX_SCAN_BYTES, scanSecretContent, summarizeSecretFindings } from "./secret-scan.js";
 import { checkRelease } from "./release-check.js";
 import { aggregateVerdict, normalizeGovernance, normalizeProfile, policyCheck, STATUS } from "./policy.js";
 import { estimateTokens } from "./tokens.js";
@@ -36,6 +38,15 @@ import { executeValidationPlan } from "./validation-attestation.js";
  */
 
 const passEngineVersion = 2;
+
+/** Sentinel for a blob that exists but is too large to scan. */
+const OVERSIZED = "\u0000otito:oversized";
+
+/** Ceiling on one batched `git cat-file` read of a whole changed-file set. */
+const MAX_BATCH_BYTES = 256 * 1024 * 1024;
+
+/** Stop collecting once a change is this obviously compromised. */
+const MAX_FINDINGS = 40;
 
 /**
  * @param {string} repoPath
@@ -66,11 +77,17 @@ export function evaluateLocal(repoPath, options = {}) {
 
   /** @param {string} file */
   const baseContent = (file) => gitShowContent(root, subject?.baseSha ?? base, file);
+  // Secret scanning reads the exact subject: the staged tree when the gate is
+  // running in staged mode, the working tree otherwise. It must never fall back
+  // to the base commit — the credential being introduced is only in the change.
+  const subjectContent = subject?.treeSha
+    ? treeContentReader(root, String(subject.treeSha), files)
+    : (/** @type {string} */ file) => readWorkingTreeFile(root, file);
   const validationExecution = options.runValidation ? executeValidationPlan({ root, subject }) : null;
   const checks = [
     changedFilesCheck(files),
     ...(staged ? [changeSubjectCheck(subject, subjectError)] : []),
-    secretCheck(files),
+    secretCheck(files, subjectContent),
     riskCheck(files),
     checkRelease(root, files, { baseContent, governance }),
     validationCommandsCheck(root),
@@ -379,15 +396,171 @@ function changedFilesCheck(files) {
 }
 
 /**
+ * Secret safety has two independent halves: a credential-shaped *path* and a
+ * credential-shaped *value*. The path half alone let a live key pasted into
+ * ordinary source through, so the content half scans the exact changed blob.
+ *
  * @param {string[]} files
+ * @param {(file: string) => string | null} readContent
  * @returns {Check}
  */
-function secretCheck(files) {
+export function secretCheck(files, readContent) {
   const matches = matchSecretPaths(files);
-  if (matches.length > 0) {
-    return { name: "Secret safety", status: STATUS.fail, summary: "Potential secret or environment file changed.", details: matches.slice(0, 20) };
+  const { findings, skipped, scanned } = scanChangedFilesForSecrets(files, readContent);
+  const content = summarizeSecretFindings(findings);
+  // A PR gate without the head commit fetched locally, or a tree read that
+  // failed outright, yields no content at all. Reporting that as a clean scan
+  // would be the same false assurance the path-only check used to give, so the
+  // check says which half of it actually ran.
+  const contentUnavailable = scanned === 0 && (files ?? []).length > 0;
+
+  /** @type {string[]} */
+  const details = [];
+  if (matches.length) details.push(...matches.slice(0, 20));
+  if (content.details.length) details.push(...content.details.slice(0, 20));
+  if (skipped.length) details.push(`Not scanned (too large): ${skipped.slice(0, 5).join(", ")}`);
+
+  if (matches.length || content.severity === "fail") {
+    const reasons = [];
+    if (matches.length) reasons.push("secret or environment file changed");
+    if (content.severity === "fail") reasons.push("credential value found in changed content");
+    return { name: "Secret safety", status: STATUS.fail, summary: `Potential ${reasons.join(" and ")}.`, details };
   }
-  return { name: "Secret safety", status: STATUS.pass, summary: "No obvious secret file changes found." };
+  if (content.severity === "warn") {
+    return {
+      name: "Secret safety",
+      status: STATUS.warn,
+      summary: "A changed line assigns a high-entropy literal to a credential-shaped name.",
+      details,
+    };
+  }
+  if (contentUnavailable) {
+    return {
+      name: "Secret safety",
+      status: STATUS.pass,
+      summary: "No secret file paths found. Changed content was not available to scan for credential values.",
+      details: details.length ? details : undefined,
+    };
+  }
+  return {
+    name: "Secret safety",
+    status: STATUS.pass,
+    summary: "No secret file paths and no credential values found in the changed content.",
+    details: details.length ? details : undefined,
+  };
+}
+
+/**
+ * @param {string[]} files
+ * @param {(file: string) => string | null} readContent
+ * @returns {{ findings: import("./secret-scan.js").SecretFinding[], skipped: string[], scanned: number }}
+ */
+function scanChangedFilesForSecrets(files, readContent) {
+  /** @type {import("./secret-scan.js").SecretFinding[]} */
+  const findings = [];
+  /** @type {string[]} */
+  const skipped = [];
+  let scanned = 0;
+  if (typeof readContent !== "function") return { findings, skipped, scanned };
+  for (const file of files ?? []) {
+    let text;
+    try {
+      text = readContent(file);
+    } catch {
+      text = null;
+    }
+    // A deleted file has no content in the subject tree; nothing to scan and
+    // nothing to report.
+    if (text === null || text === undefined) continue;
+    if (text === OVERSIZED || text.length > MAX_SCAN_BYTES) {
+      skipped.push(file);
+      continue;
+    }
+    scanned += 1;
+    findings.push(...scanSecretContent(text, { file }));
+    if (findings.length >= MAX_FINDINGS) break;
+  }
+  return { findings, skipped, scanned };
+}
+
+/**
+ * Read many blobs from one tree with a single `git cat-file --batch` process.
+ *
+ * One `git show` per changed file turned a 0.45s gate into a 10s gate on an
+ * 800-file change; the cost is process spawns, not I/O. This reads every
+ * changed blob in one pass and returns a plain lookup, so the scan stays
+ * proportional to the diff rather than to the number of spawns.
+ *
+ * @param {string} root
+ * @param {string} treeSha
+ * @param {string[]} files
+ * @returns {(file: string) => string | null}
+ */
+function treeContentReader(root, treeSha, files) {
+  /** @type {Map<string, string>} */
+  const blobs = new Map();
+  const wanted = (files ?? []).filter((file) => typeof file === "string" && file.trim());
+  if (wanted.length === 0) return () => null;
+
+  const result = spawnSync("git", ["cat-file", "--batch"], {
+    cwd: root,
+    input: wanted.map((file) => `${treeSha}:${file}`).join("\n") + "\n",
+    maxBuffer: MAX_BATCH_BYTES,
+    timeout: 120000,
+  });
+  // On any batch failure the caller sees "unreadable" for every file, which the
+  // check reports as unscanned rather than as a clean scan.
+  if (result.status !== 0 || !result.stdout) return () => null;
+
+  const out = Buffer.isBuffer(result.stdout) ? result.stdout : Buffer.from(String(result.stdout));
+  let offset = 0;
+  for (const file of wanted) {
+    const newline = out.indexOf(0x0a, offset);
+    if (newline < 0) break;
+    const header = out.subarray(offset, newline).toString("utf8");
+    offset = newline + 1;
+    // `<oid> missing` / `<oid> <type> <size>` — a deleted path is simply absent.
+    const parts = header.split(" ");
+    const size = Number(parts[2]);
+    if (parts[1] !== "blob" || !Number.isFinite(size)) continue;
+    if (size <= MAX_SCAN_BYTES) blobs.set(file, out.subarray(offset, offset + size).toString("utf8"));
+    else blobs.set(file, OVERSIZED);
+    // Git writes a trailing newline after each object's content.
+    offset += size + 1;
+  }
+  return (file) => blobs.get(file) ?? null;
+}
+
+/**
+ * @param {string} root
+ * @param {string} file
+ * @returns {string | null}
+ */
+function readWorkingTreeFile(root, file) {
+  try {
+    const resolved = path.resolve(root, file);
+    // Never follow a changed path out of the repository root.
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) return null;
+    const stat = fs.statSync(resolved);
+    if (!stat.isFile()) return null;
+    // Read a bounded prefix only. Returning one byte over the cap is what tells
+    // the caller to report the file as skipped rather than silently unscanned,
+    // without ever pulling a large blob into memory.
+    const limit = MAX_SCAN_BYTES + 1;
+    if (stat.size > limit) {
+      const handle = fs.openSync(resolved, "r");
+      try {
+        const buffer = Buffer.alloc(limit);
+        const read = fs.readSync(handle, buffer, 0, limit, 0);
+        return buffer.subarray(0, read).toString("utf8");
+      } finally {
+        fs.closeSync(handle);
+      }
+    }
+    return fs.readFileSync(resolved, "utf8");
+  } catch {
+    return null;
+  }
 }
 
 /**

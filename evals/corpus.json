@@ -349,6 +349,23 @@
       ]
     },
     {
+      "name": "aligned-change-to-source-kind-owner-converges",
+      "repoFixture": "gate-node",
+      "changeSet": "valid",
+      "expectedVerdict": "PASS",
+      "options": {
+        "request": "update the greeting message",
+        "minConvergence": 80
+      },
+      "expectedChecks": [
+        {
+          "name": "Convergence",
+          "status": "PASS",
+          "summaryIncludes": "satisfy the convergence requirement"
+        }
+      ]
+    },
+    {
       "name": "secret-file-is-blocked",
       "repoFixture": "gate-node",
       "changeSet": "secret",
@@ -359,6 +376,20 @@
           "status": "FAIL",
           "summaryIncludes": "Potential secret or environment file changed",
           "detailsInclude": ".env.production"
+        }
+      ]
+    },
+    {
+      "name": "secret-value-in-source-is-blocked",
+      "repoFixture": "gate-node",
+      "changeSet": "secret-content",
+      "expectedVerdict": "FAIL",
+      "expectedChecks": [
+        {
+          "name": "Secret safety",
+          "status": "FAIL",
+          "summaryIncludes": "credential value found in changed content",
+          "detailsInclude": "src/greeting.js"
         }
       ]
     },

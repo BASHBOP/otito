@@ -7,7 +7,8 @@
 /// <reference types="node" />
 import path from "node:path";
 import { getCachedCodeMap } from "./index-cache.js";
-import { conceptsFromQuery, classifyPath, CONCEPT_SYNONYMS, RISK_FLAGS, glyphFor, singularizeToken } from "./risk-paths.js";
+import { conceptsFromQuery, classifyPath, CONCEPT_SYNONYMS, RISK_FLAGS, glyphFor, isDocPath, singularizeToken } from "./risk-paths.js";
+import { isTestFilePath } from "./code-map/classify.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 import { runCommand } from "./tools.js";
 
@@ -171,6 +172,20 @@ const CONFIG_HINTS = {
 const OWNER_KINDS = new Set(["controller", "service", "route", "apiRoute", "apiClient", "schema", "dto", "module", "component", "template"]);
 const REQUEST_BOUNDARY_KINDS = new Set(["controller", "route", "apiRoute", "apiClient", "dto"]);
 const REQUIRED_OWNER_SCORE_RATIO = 0.8;
+
+// Kinds that can never own an implementation change, so they are excluded from
+// the generic-source fallback below. Everything else — notably plain `source`,
+// `hook`, and `use` — is eligible once it matches the request directly.
+const NEVER_OWNER_KINDS = new Set(["test", "changelog", "config", "translation"]);
+
+// Libraries, CLIs, and most utility code classify as `source`, which is not in
+// OWNER_KINDS. Without a fallback those repositories can never ground a task:
+// `requiredOwners` stays empty, convergence reports `grounded: false`, and the
+// score collapses to the same value for an exactly-correct change and a wholly
+// unrelated one. The fallback only engages when no conventional owner kind
+// matched, and only for a candidate whose own lexical evidence is strong, so a
+// weak incidental match never becomes a coverage obligation.
+const FALLBACK_OWNER_MIN_SCORE = 20;
 
 // Paths that are usually not the owner of a behavior change. Demoted but not
 // dropped — sometimes the right answer IS a script.
@@ -816,7 +831,8 @@ function classifyImpactRoles(heuristicRanked, allFiles, query) {
   // than an additional required owner. This avoids making every similarly
   // named layout a coverage obligation.
   const nonTemplateCandidates = directCandidates.filter((entry) => entry.file.kind !== "template");
-  const ownerPool = nonTemplateCandidates.length ? nonTemplateCandidates : directCandidates;
+  const conventionalPool = nonTemplateCandidates.length ? nonTemplateCandidates : directCandidates;
+  const ownerPool = conventionalPool.length ? conventionalPool : genericOwnerFallback(heuristicRanked);
   const strongestScore = ownerPool[0]?.score ?? 0;
   const directOwners = ownerPool
     .filter((entry) => entry.score >= strongestScore * REQUIRED_OWNER_SCORE_RATIO)
@@ -865,6 +881,22 @@ function classifyImpactRoles(heuristicRanked, allFiles, query) {
     .map(([file]) => file)
     .sort();
   return { byPath, requiredOwners, supportingFiles, advisoryFiles };
+}
+
+/**
+ * Owner candidates for repositories whose implementation files do not carry a
+ * conventional owner kind (libraries, CLIs, most `kind: "source"` code). Only
+ * reached when `classifyImpactRoles` found no conventional owner at all.
+ *
+ * @param {ScoredEntry[]} heuristicRanked
+ * @returns {ScoredEntry[]}
+ */
+function genericOwnerFallback(heuristicRanked) {
+  const candidates = heuristicRanked.filter(
+    (entry) => !NEVER_OWNER_KINDS.has(entry.file.kind) && !isTestFilePath(entry.file.path) && !isDocPath(entry.file.path) && hasDirectIntentMatch(entry),
+  );
+  if ((candidates[0]?.score ?? 0) < FALLBACK_OWNER_MIN_SCORE) return [];
+  return candidates;
 }
 
 /** @param {ScoredEntry} entry */
@@ -939,6 +971,13 @@ function validateChangedFiles(base, files, roles) {
   const confirmedRelated = changedFiles.filter((file) => !predictedDirect.has(file) && predictedRelated.has(file));
   const unconfirmedCandidates = [...predictedDirect].filter((file) => !changedFiles.includes(file));
   const advisory = new Set(roles.advisoryFiles);
+  // Changed files that were ranked, but only as non-load-bearing advisory
+  // leads. They are neither a confirmed prediction nor an unexplained change,
+  // and reporting them separately is what keeps a `missed` verdict readable:
+  // without this bucket a run can report "missed" while `missedChangedFiles`
+  // is empty, which reads as a contradiction rather than as "ranked, but never
+  // promoted to an owner".
+  const advisoryChangedFiles = changedFiles.filter((file) => !predictedDirect.has(file) && !predictedRelated.has(file) && advisory.has(file));
   const missedChangedFiles = changedFiles.filter((file) => !predictedDirect.has(file) && !predictedRelated.has(file) && !advisory.has(file));
 
   let verdict = "partial";
@@ -953,6 +992,7 @@ function validateChangedFiles(base, files, roles) {
     confirmedRelated,
     unconfirmedCandidates,
     missedChangedFiles,
+    advisoryChangedFiles,
     verdict,
     heuristic: {
       confirmedDirect: confirmedDirect,

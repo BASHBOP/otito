@@ -103,6 +103,7 @@ export function generateConvergence(query, options = {}) {
   const confirmedRelated = validation.confirmedRelated ?? [];
   const unconfirmedCandidates = validation.unconfirmedCandidates ?? [];
   const missedChangedFiles = validation.missedChangedFiles ?? [];
+  const advisoryChangedFiles = validation.advisoryChangedFiles ?? [];
 
   const predictedDirect = confirmedDirect.length + unconfirmedCandidates.length;
   const grounded = predictedDirect > 0;
@@ -137,6 +138,7 @@ export function generateConvergence(query, options = {}) {
     confirmedRelated,
     unconfirmedCandidates,
     missedChangedFiles,
+    advisoryChangedFiles,
     grounded,
     riskyDrift,
   };
@@ -157,7 +159,7 @@ export function generateConvergence(query, options = {}) {
       riskAlignment: Math.round(riskAlignment),
     },
     drivers,
-    recommendations: buildRecommendations({ grounded, unconfirmedCandidates, missedChangedFiles, riskyDrift }),
+    recommendations: buildRecommendations({ grounded, unconfirmedCandidates, missedChangedFiles, advisoryChangedFiles, riskyDrift }),
     weights: WEIGHTS,
   };
   if (subject) data.subject = subject;
@@ -568,14 +570,19 @@ function riskWeightFor(file) {
 }
 
 /**
- * @param {{ grounded: boolean, unconfirmedCandidates: string[], missedChangedFiles: string[], riskyDrift: {file: string}[] }} input
+ * @param {{ grounded: boolean, unconfirmedCandidates: string[], missedChangedFiles: string[], advisoryChangedFiles?: string[], riskyDrift: {file: string}[] }} input
  * @returns {string[]}
  */
-function buildRecommendations({ grounded, unconfirmedCandidates, missedChangedFiles, riskyDrift }) {
+function buildRecommendations({ grounded, unconfirmedCandidates, missedChangedFiles, advisoryChangedFiles = [], riskyDrift }) {
   /** @type {string[]} */
   const recs = [];
   if (!grounded) {
     recs.push("The task did not ground to any predicted owner files; rephrase it or run `otito impact` to check grounding before trusting this score.");
+    if (advisoryChangedFiles.length) {
+      recs.push(
+        `Changed files were ranked only as advisory leads, never as owners: ${formatList(advisoryChangedFiles)} — this is why the score reports no coverage rather than scope drift.`,
+      );
+    }
   }
   if (riskyDrift.length) {
     recs.push(

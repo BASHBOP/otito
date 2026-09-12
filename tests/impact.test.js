@@ -339,3 +339,85 @@ function gitFixture(prefix, files) {
   spawnSync("git", ["commit", "-q", "-m", "init"], { cwd: root });
   return root;
 }
+
+// Regression: a library/CLI repository whose implementation files all classify
+// as `kind: "source"` could never ground a task. `requiredOwners` stayed empty,
+// convergence reported `grounded: false`, and an exactly-correct change scored
+// identically to a wholly unrelated one — which made `--min-convergence`
+// unusable on that shape of repository.
+test("generateImpact grounds a source-kind owner when no conventional owner kind matches", () => {
+  const root = writeFixture("source-kind-grounding", {
+    "package.json": JSON.stringify({ name: "lib-fixture", scripts: { test: "node --test" } }),
+    "src/lib/telemetry.js": [
+      "export const DEFAULT_TELEMETRY_SHARE_ENDPOINT = 'https://example.test/analytics';",
+      "export function shareTelemetryEvent(record) { return record; }",
+      "",
+    ].join("\n"),
+    "src/lib/obsidian.js": "export function exportObsidianVault() { return 'vault'; }\n",
+    "src/lib/catalog.js": "export function listCatalog() { return []; }\n",
+  });
+
+  const result = generateImpact("change the telemetry share endpoint", { path: root, top: 10 });
+  assert.equal(result.data.topFiles[0]?.path, "src/lib/telemetry.js");
+  assert.ok(
+    result.data.classifications.requiredOwners.includes("src/lib/telemetry.js"),
+    `expected the source-kind owner to ground, got: ${result.data.classifications.requiredOwners.join(", ") || "(none)"}`,
+  );
+  assert.ok(!result.data.classifications.requiredOwners.includes("src/lib/obsidian.js"), "an unrelated source file must not become a coverage obligation");
+});
+
+test("convergence separates an aligned change from drift in a source-kind repository", () => {
+  const files = {
+    "package.json": JSON.stringify({ name: "lib-fixture", scripts: { test: "node --test" } }),
+    "src/lib/telemetry.js": "export const TELEMETRY_SHARE_ENDPOINT = 'https://example.test/a';\n",
+    "src/lib/obsidian.js": "export function exportObsidianVault() { return 'vault'; }\n",
+  };
+
+  const aligned = gitFixture("source-kind-aligned", files);
+  fs.writeFileSync(path.join(aligned, "src/lib/telemetry.js"), "export const TELEMETRY_SHARE_ENDPOINT = 'https://example.test/b';\n");
+  spawnSync("git", ["add", "."], { cwd: aligned });
+  const alignedScore = generateConvergence("change the telemetry share endpoint", { path: aligned, base: "HEAD", staged: true });
+
+  const drifted = gitFixture("source-kind-drift", files);
+  fs.writeFileSync(path.join(drifted, "src/lib/telemetry.js"), "export const TELEMETRY_SHARE_ENDPOINT = 'https://example.test/c';\n");
+  spawnSync("git", ["add", "."], { cwd: drifted });
+  const driftedScore = generateConvergence("rewrite the obsidian vault export layout", { path: drifted, base: "HEAD", staged: true });
+
+  assert.equal(alignedScore.drivers.grounded, true, "an exactly-correct change must ground");
+  assert.ok(alignedScore.convergence >= 80, `aligned change should score high, got ${alignedScore.convergence}`);
+  assert.ok(
+    driftedScore.convergence < alignedScore.convergence,
+    `an unrelated request must score below an aligned one (drift ${driftedScore.convergence} vs aligned ${alignedScore.convergence})`,
+  );
+});
+
+test("a weak incidental match does not become a coverage obligation", () => {
+  const root = writeFixture("weak-fallback", {
+    "package.json": JSON.stringify({ name: "lib-fixture", scripts: { test: "node --test" } }),
+    "src/lib/catalog.js": "export function listCatalog() { return []; }\n",
+    "src/lib/report.js": "export function buildReport() { return 'report'; }\n",
+  });
+
+  const result = generateImpact("integrate a third-party payment provider", { path: root, top: 10 });
+  assert.deepEqual(result.data.classifications.requiredOwners, [], "no file matches this request; nothing should ground");
+});
+
+// Regression: a run could report `verdict: "missed"` while `missedChangedFiles`
+// was empty, which reads as a contradiction. Files that were ranked but only as
+// advisory leads now have their own bucket, so the verdict is explainable.
+test("changed files ranked only as advisory leads are reported separately from drift", () => {
+  const root = gitFixture("advisory-changed", {
+    "package.json": JSON.stringify({ name: "advisory-fixture", scripts: { test: "node --test" } }),
+    "src/orders/orders.controller.ts": "export class OrdersController { list() { return []; } }\n",
+    "src/orders/orders.service.ts": "export class OrdersService { list() { return []; } }\n",
+  });
+  fs.writeFileSync(path.join(root, "src/orders/orders.service.ts"), "export class OrdersService { list() { return [1]; } }\n");
+
+  const result = generateImpact("update the orders controller", { path: root, diffBase: "HEAD", top: 10 });
+  const validation = result.data.validation;
+  assert.ok(Array.isArray(validation.advisoryChangedFiles), "validation must expose an advisoryChangedFiles bucket");
+  const accounted = [...validation.confirmedDirect, ...validation.confirmedRelated, ...validation.advisoryChangedFiles, ...validation.missedChangedFiles];
+  for (const file of validation.changedFiles) {
+    assert.ok(accounted.includes(file), `${file} must land in exactly one reported bucket`);
+  }
+});
