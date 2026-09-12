@@ -25,7 +25,7 @@ Preserve this discipline across the stable 1.x line. Reserve the next major vers
 13. Verify the published binary:
 
 ```bash
-npm install -g @bashbop/otito@1.0.2
+npm install -g @bashbop/otito@1.9.2
 otito doctor
 ```
 
