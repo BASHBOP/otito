@@ -6,6 +6,24 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-09-12
+
+### Added
+
+- Content-aware secret detection in the merge gates. `Secret safety` previously matched only file _names_, so a live credential pasted into ordinary source (`src/config.js`) passed the gate. Both the local and GitHub PR gates now also scan the exact changed blob — the staged tree in staged mode, the working tree otherwise, the PR head for a PR gate — against high-precision vendor credential formats (AWS, Stripe live, GitHub, Slack, Google, Anthropic, OpenAI, npm, PEM private keys) plus one entropy-gated generic rule that warns rather than blocks. Findings report `file:line` and never echo the matched value. An `otito:allow-secret` marker on the matching line (or the line above) suppresses a reviewed false positive.
+- `validation.advisoryChangedFiles` in `change_impact` output and `drivers.advisoryChangedFiles` in `convergence_score`: changed files that were ranked, but only as non-load-bearing advisory leads.
+- Two gate-effectiveness corpus cases: `secret-value-in-source-is-blocked` and `aligned-change-to-source-kind-owner-converges`. The corpus now proves one valid control, one convergence control, and seven blocked changes.
+
+### Fixed
+
+- Convergence could never ground a task in a repository whose implementation files classify as `kind: "source"` — libraries, CLIs, and most utility code. `requiredOwners` stayed empty, `grounded` was always false, and an exactly-correct change scored identically to a wholly unrelated one, which made `--min-convergence` unusable on that shape of repository. Impact role classification now falls back to the strongest directly-matching non-test, non-doc candidate when no conventional owner kind matches, guarded by a minimum score so a weak incidental match never becomes a coverage obligation.
+- `change_impact` could report `verdict: "missed"` while `missedChangedFiles` was empty, which reads as a contradiction. Advisory-ranked changed files now have their own bucket, and every changed file lands in exactly one reported bucket.
+- A missing or broken `typescript` install surfaced as a bare `Cannot find package 'typescript'` from deep inside the code map. The CLI now explains that it is a runtime dependency and how to reinstall it.
+
+### Changed
+
+- README trimmed from 610 to 139 lines: it now leads with real `impact` and `gate` output, and the design theses live on the documentation site rather than in a sixteen-item link list.
+
 ## [1.9.3] - 2026-09-12
 
 ### Fixed

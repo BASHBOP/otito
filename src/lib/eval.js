@@ -8,6 +8,7 @@ import { generateCodeMap } from "./code-map.js";
 import { generateHarness } from "./harness.js";
 import { generateContextPack } from "./context-engine.js";
 import { classifyPath, conceptsFromQuery, isGateRiskPath, isSecretPath } from "./risk-paths.js";
+import { ALLOW_MARKER } from "./secret-scan.js";
 import { runCommand } from "./tools.js";
 
 /**
@@ -999,12 +1000,50 @@ function prepareGateFixture(source, changeSet) {
     initGateFixtureGit(dir);
     if (hasDirectory) copyDirectoryContents(changeDir, dir);
     else runGateGit(dir, ["apply", "--whitespace=nowarn", changePatch]);
+    stripAllowMarkers(dir);
     runGateGit(dir, ["add", "--all"]);
     return { dir };
   } catch (error) {
     fs.rmSync(dir, { recursive: true, force: true });
     throw error;
   }
+}
+
+/**
+ * Credential-shaped fixture lines carry an `otito:allow-secret` marker so the
+ * committed corpus never trips otito's own secret gate. The marker is removed
+ * from the isolated copy before the gate runs, so the case exercises real
+ * detection rather than the suppression path. This only deletes a suppression
+ * comment from reviewed fixture files; it cannot introduce content.
+ *
+ * @param {string} dir
+ */
+function stripAllowMarkers(dir) {
+  /** @param {string} current */
+  const walk = (current) => {
+    for (const ent of readDirEnts(current)) {
+      if (ent.name === ".git" || ent.name === "node_modules") continue;
+      const full = path.join(current, ent.name);
+      if (ent.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      let text;
+      try {
+        text = fs.readFileSync(full, "utf8");
+      } catch {
+        continue;
+      }
+      if (!text.includes(ALLOW_MARKER)) continue;
+      const stripped = text
+        .split(/\r?\n/)
+        .filter((line) => line.trim() !== `// ${ALLOW_MARKER}`)
+        .map((line) => line.replace(new RegExp(`\\s*(?://|#)\\s*${ALLOW_MARKER}\\s*$`), ""))
+        .join("\n");
+      fs.writeFileSync(full, stripped);
+    }
+  };
+  walk(dir);
 }
 
 /**

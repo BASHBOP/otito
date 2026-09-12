@@ -7,10 +7,10 @@
 import path from "node:path";
 import * as codeowners from "./codeowners.js";
 import { defaultGhRunner } from "./gh.js";
-import { convergenceCheck, gitRoot, gitShowContent } from "./pass-local.js";
+import { convergenceCheck, gitRoot, gitShowContent, secretCheck } from "./pass-local.js";
 import { aggregateVerdict, normalizeGovernance, normalizeProfile, policyCheck, STATUS } from "./policy.js";
 import { checkRelease } from "./release-check.js";
-import { matchRiskPaths, matchSecretPaths } from "./risk-paths.js";
+import { matchRiskPaths } from "./risk-paths.js";
 import { estimateTokens } from "./tokens.js";
 import { runCommand } from "./tools.js";
 
@@ -114,11 +114,18 @@ export async function evaluatePR(repoPath, selector, options = {}) {
       ? `GitHub reported ${pr.changedFiles ?? "an unknown number of"} changed files but returned ${files.length}; an exact receipt requires the complete file set.`
       : "";
 
+  // Content-aware secret scanning needs the PR head blobs. They are present
+  // whenever the head commit has been fetched locally; when it has not, the
+  // reader returns null and the check degrades to its path-only half rather
+  // than reporting a clean scan it did not perform.
+  /** @param {string} file */
+  const prHeadContent = (file) => (subject?.headSha ? gitShowContent(root, String(subject.headSha), file) : null);
+
   const checks = [
     prStateCheck(pr),
     pullRequestSnapshotCheck(subject, filesComplete, subjectError),
     changedFilesCheck(files),
-    secretCheck(files),
+    secretCheck(files, prHeadContent),
     riskCheck(files),
     checkRelease(root, files, { baseContent: prBaseContent(root, pr.baseRefOid, pr.baseRefName), governance }),
     reviewDecisionCheck(pr.reviewDecision, governance),
@@ -311,18 +318,6 @@ function changedFilesCheck(files) {
     summary: `${files.length} changed file${files.length === 1 ? "" : "s"} reported.`,
     details: files.slice(0, 20),
   };
-}
-
-/**
- * @param {string[]} files
- * @returns {Check}
- */
-function secretCheck(files) {
-  const matches = matchSecretPaths(files);
-  if (matches.length > 0) {
-    return { name: "Secret safety", status: STATUS.fail, summary: "Potential secret or environment file changed.", details: matches.slice(0, 20) };
-  }
-  return { name: "Secret safety", status: STATUS.pass, summary: "No obvious secret file changes found." };
 }
 
 /**

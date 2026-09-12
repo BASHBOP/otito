@@ -582,6 +582,6 @@ test("eval --gate-effectiveness runs committed staged changes through the real g
   const payload = parseJsonOutput(result.stdout);
   assert.equal(payload.evalKind, "gate-effectiveness");
   assert.equal(payload.passed, true);
-  assert.equal(payload.counts.cases, 7);
-  assert.equal(payload.counts.blockedAsExpected, 6);
+  assert.equal(payload.counts.cases, 9);
+  assert.equal(payload.counts.blockedAsExpected, 7);
 });

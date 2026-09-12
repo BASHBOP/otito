@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { evaluateLocal, formatPassMarkdown } from "../src/lib/pass-local.js";
+import { evaluateLocal, formatPassMarkdown, secretCheck } from "../src/lib/pass-local.js";
 import { generateConvergence } from "../src/lib/converge.js";
 
 function git(cwd, ...args) {
@@ -803,4 +803,119 @@ test("evaluateLocal markdown rendering includes the verdict and check names", ()
   assert.match(markdown, /# otito pass/);
   assert.match(markdown, /Verdict:/);
   assert.match(markdown, /Secret safety/);
+});
+
+// Regression: "Secret safety" only ever matched file *names*, so a live
+// credential pasted into ordinary source passed the gate. Credential literals
+// are assembled at runtime — a live-format key committed to this repository
+// would be caught by the gate these tests cover.
+const FIXTURE_AWS_KEY = "AKIA" + "3F7QZL2MXN8RTVWB";
+
+test("evaluateLocal blocks a credential value pasted into ordinary source", () => {
+  const root = initRepo("secret-content");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "secret-fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "src/config.js": "export const config = { region: 'eu-west-1' };\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "src/config.js"), `export const config = { key: "${FIXTURE_AWS_KEY}" };\n`);
+  git(root, "add", ".");
+
+  const data = evaluateLocal(root, { base: "HEAD", staged: true });
+  const check = data.checks.find((entry) => entry.name === "Secret safety");
+  assert.equal(check.status, "FAIL");
+  assert.match(check.summary, /credential value found in changed content/);
+  assert.ok(
+    check.details.some((detail) => detail.startsWith("src/config.js:1")),
+    `expected a file:line detail, got ${JSON.stringify(check.details)}`,
+  );
+  assert.ok(!JSON.stringify(data).includes(FIXTURE_AWS_KEY), "the receipt must never echo the credential");
+  assert.equal(data.verdict, "FAIL");
+});
+
+test("evaluateLocal scans the staged tree, not the working tree, for credentials", () => {
+  const root = initRepo("secret-staged-only");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "secret-fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "src/config.js": "export const config = {};\n",
+    },
+    "init",
+  );
+  // Staged content is clean; the credential exists only in the unstaged working
+  // tree, so a staged-scope gate must not report it.
+  fs.writeFileSync(path.join(root, "src/config.js"), "export const config = { region: 'eu-west-1' };\n");
+  git(root, "add", ".");
+  fs.writeFileSync(path.join(root, "src/config.js"), `export const config = { key: "${FIXTURE_AWS_KEY}" };\n`);
+
+  const staged = evaluateLocal(root, { base: "HEAD", staged: true });
+  assert.equal(staged.checks.find((entry) => entry.name === "Secret safety").status, "PASS");
+
+  // The working-tree gate sees the same file and must block it.
+  const workingTree = evaluateLocal(root, { base: "HEAD" });
+  assert.equal(workingTree.checks.find((entry) => entry.name === "Secret safety").status, "FAIL");
+});
+
+test("evaluateLocal still passes clean changes and reports the path half separately", () => {
+  const root = initRepo("secret-clean");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "secret-fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "src/config.js": "export const config = {};\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "src/config.js"), "export const config = { region: 'eu-west-1' };\n");
+  git(root, "add", ".");
+
+  const data = evaluateLocal(root, { base: "HEAD", staged: true });
+  const check = data.checks.find((entry) => entry.name === "Secret safety");
+  assert.equal(check.status, "PASS");
+  assert.match(check.summary, /no credential values found/);
+});
+
+test("the batched blob reader scans every changed file, including after a deletion", () => {
+  const root = initRepo("secret-batch");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "batch-fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "src/a.js": "export const a = 1;\n",
+      "src/b.js": "export const b = 2;\n",
+      "src/c.js": "export const c = 3;\n",
+      "src/gone.js": "export const gone = true;\n",
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "src/a.js"), "export const a = 11;\n");
+  fs.writeFileSync(path.join(root, "src/b.js"), "export const b = 22;\n");
+  // The credential sits behind a deletion in the same change: a reader that
+  // loses alignment after a missing object would never reach it.
+  fs.rmSync(path.join(root, "src/gone.js"));
+  fs.writeFileSync(path.join(root, "src/c.js"), `export const c = "${FIXTURE_AWS_KEY}";\n`);
+  git(root, "add", "-A");
+
+  const data = evaluateLocal(root, { base: "HEAD", staged: true });
+  const check = data.checks.find((entry) => entry.name === "Secret safety");
+  assert.equal(check.status, "FAIL");
+  assert.ok(
+    check.details.some((detail) => detail.startsWith("src/c.js:1")),
+    `expected the credential behind the deletion to be found, got ${JSON.stringify(check.details)}`,
+  );
+});
+
+test("secretCheck reports that content was unavailable instead of claiming a clean scan", () => {
+  const files = ["src/config.js"];
+  const unavailable = secretCheck(files, () => null);
+  assert.equal(unavailable.status, "PASS");
+  assert.match(unavailable.summary, /not available to scan/);
+
+  const scanned = secretCheck(files, () => "export const config = {};\n");
+  assert.equal(scanned.status, "PASS");
+  assert.match(scanned.summary, /no credential values found/);
 });
