@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-12T15:48:08.918Z",
+  "generatedAt": "2026-09-12T16:01:58.357Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -13,14 +13,11 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "CHANGELOG.md",
+        "path": ".github/workflows/release.yml",
         "score": 0,
-        "riskFlags": []
-      },
-      {
-        "path": "server.json",
-        "score": 0,
-        "riskFlags": []
+        "riskFlags": [
+          "configuration"
+        ]
       },
       {
         "path": "src/lib/review.js",
@@ -36,16 +33,21 @@
         "path": "src/lib/agent-tools.js",
         "score": 22,
         "riskFlags": []
+      },
+      {
+        "path": "src/lib/args.js",
+        "score": 22,
+        "riskFlags": []
       }
     ],
     "risks": [
-      "No obvious high-risk domain detected. Main risk is missing a caller or test outside the matched files."
+      "Configuration change: verify environment variables, secrets, build output, and production defaults."
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 6,
-    "additions": 25,
-    "deletions": 9,
+    "changedFiles": 1,
+    "additions": 18,
+    "deletions": 0,
     "riskLevel": "medium",
     "riskFlags": [
       "configuration",
@@ -61,7 +63,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "7 changed files found."
+        "summary": "2 changed files found."
       },
       {
         "name": "Secret safety",
@@ -76,7 +78,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
@@ -101,6 +103,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 425
+    "fullJson": 428
   }
 }
