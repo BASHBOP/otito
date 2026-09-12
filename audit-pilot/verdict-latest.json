@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-07T16:55:32.531Z",
+  "generatedAt": "2026-09-12T15:09:23.595Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
-  "confidence": 65,
+  "confidence": 70,
   "repo": {
     "root": "/home/runner/work/otito/otito",
     "name": "otito"
@@ -13,28 +13,28 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+        "path": "scripts/check-version.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "CHANGELOG.md",
+        "path": "scripts/sync-server-version.mjs",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "server.json",
+        "path": "src/lib/version-docs.js",
+        "score": 0,
+        "riskFlags": []
+      },
+      {
+        "path": "tests/version-docs.test.js",
         "score": 0,
         "riskFlags": []
       },
       {
         "path": "src/lib/review.js",
         "score": 41,
-        "riskFlags": []
-      },
-      {
-        "path": "src/lib/pr-review.js",
-        "score": 36,
         "riskFlags": []
       }
     ],
@@ -44,12 +44,11 @@
   },
   "prReviewSummary": {
     "changedFiles": 7,
-    "additions": 19,
-    "deletions": 14,
-    "riskLevel": "medium",
+    "additions": 152,
+    "deletions": 6,
+    "riskLevel": "low",
     "riskFlags": [
-      "configuration",
-      "no test files changed"
+      "configuration"
     ],
     "reviewTargetsCount": 0
   },
@@ -76,7 +75,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "Version metadata changed but the project version is unchanged (dependency or lockfile update)."
       },
       {
         "name": "Validation commands",
@@ -101,6 +100,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 428
+    "fullJson": 438
   }
 }
