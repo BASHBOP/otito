@@ -21,6 +21,13 @@
 
 ## What's New
 
+!!! tip "v1.10.0 published (2026-09-12)"
+    - `Secret safety` now scans the exact changed blob, not just file names: a live credential pasted into ordinary source used to pass the gate.
+    - Convergence can ground a task in `kind: "source"` repositories — libraries and CLIs, where it previously scored an exactly-correct change the same as an unrelated one.
+    - `change_impact` and `convergence_score` report `advisoryChangedFiles`, so a `missed` verdict is always explainable.
+
+    [npm v1.10.0](https://www.npmjs.com/package/@bashbop/otito/v/1.10.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.10.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+
 !!! tip "v1.9.3 published (2026-09-12)"
     - Fixed stale version references in `RELEASE.md` and the MCP docs, and automated the doc/version sync so pinned install commands can't go stale silently again.
 
