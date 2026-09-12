@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-12T17:18:29.227Z",
+  "generatedAt": "2026-09-12T17:41:12.067Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "FAIL",
@@ -44,7 +44,7 @@
   },
   "prReviewSummary": {
     "changedFiles": 1,
-    "additions": 56,
+    "additions": 57,
     "deletions": 0,
     "riskLevel": "low",
     "riskFlags": [
@@ -70,7 +70,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "21 changed files reported."
+        "summary": "6 changed files reported."
       },
       {
         "name": "Secret safety",
@@ -85,7 +85,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "Version metadata changed but the project version is unchanged (dependency or lockfile update)."
       },
       {
         "name": "Review decision",
@@ -120,6 +120,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 565
+    "fullJson": 575
   }
 }
