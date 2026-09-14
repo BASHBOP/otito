@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-12T17:41:12.067Z",
+  "generatedAt": "2026-09-14T08:28:22.219Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "FAIL",
@@ -44,7 +44,7 @@
   },
   "prReviewSummary": {
     "changedFiles": 1,
-    "additions": 57,
+    "additions": 58,
     "deletions": 0,
     "riskLevel": "low",
     "riskFlags": [
@@ -70,22 +70,22 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "6 changed files reported."
+        "summary": "1 changed file reported."
       },
       {
         "name": "Secret safety",
         "status": "PASS",
-        "summary": "No secret file paths found. Changed content was not available to scan for credential values."
+        "summary": "No secret file paths and no credential values found in the changed content."
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata changed but the project version is unchanged (dependency or lockfile update)."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Review decision",
@@ -120,6 +120,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 575
+    "fullJson": 550
   }
 }
