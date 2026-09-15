@@ -1,0 +1,15 @@
+.git
+node_modules
+coverage
+dist
+site
+.otito
+.dev-context
+.cursor
+.claude
+audit-pilot
+docs
+tests
+evals
+*.gif
+.DS_Store
