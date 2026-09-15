@@ -20,6 +20,7 @@
   "scripts": {
     "start": "node src/cli.js",
     "postinstall": "node scripts/postinstall.mjs",
+    "build": "echo \"no build step required\"",
     "mcp": "node src/cli.js mcp",
     "doctor": "node src/cli.js doctor",
     "lint": "eslint .",
