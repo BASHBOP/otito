@@ -130,6 +130,52 @@ test("generatePrReview still flags a genuine token.service.ts change as auth/sec
   assert.ok(authFile.riskFlags.includes("auth/security"), `token.service.ts should be auth/security, got ${authFile.riskFlags.join(", ")}`);
 });
 
+// A test for a payment flow is not a payment flow. `isGateRiskPath` already
+// says so on the gate path; the scoring path collected flags from every file.
+
+test("generatePrReview does not score a test file's risk flags", () => {
+  const fixture = createSpecOnlyFixture();
+
+  const result = generatePrReview(fixture, { base: "main" });
+  const spec = result.data.changedFiles.find((file) => file.path === "tests/checkout.spec.ts");
+
+  assert.ok(spec, "spec file missing from changed files");
+  assert.equal(spec.kind, "test");
+  // Still reported per file as evidence a reviewer can see...
+  assert.ok(spec.riskFlags.includes("money flow"));
+  // ...but it must not drive the PR-level risk.
+  assert.ok(!result.data.risk.flags.includes("money flow"), `spec-only diff should not score money flow, got ${result.data.risk.flags.join(", ")}`);
+  assert.equal(result.data.risk.score, 0);
+});
+
+test("generatePrReview still scores money flow when the service itself changes", () => {
+  const fixture = createSpecOnlyFixture({ withService: true });
+
+  const result = generatePrReview(fixture, { base: "main" });
+  assert.ok(result.data.risk.flags.includes("money flow"), `service change should score money flow, got ${result.data.risk.flags.join(", ")}`);
+});
+
+function createSpecOnlyFixture({ withService = false } = {}) {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-spec-"));
+  fs.mkdirSync(path.join(fixture, "tests"), { recursive: true });
+  fs.mkdirSync(path.join(fixture, "src", "payment"), { recursive: true });
+  fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
+  fs.writeFileSync(path.join(fixture, "tests", "checkout.spec.ts"), "export const a = 1;\n");
+  fs.writeFileSync(path.join(fixture, "src", "payment", "checkout.service.ts"), "export const c = 1;\n");
+
+  git(fixture, "init", "-b", "main");
+  git(fixture, "add", ".");
+  git(fixture, "-c", "user.name=Test User", "-c", "user.email=test@example.com", "commit", "-m", "base");
+  git(fixture, "checkout", "-b", "feature/spec");
+  fs.writeFileSync(path.join(fixture, "tests", "checkout.spec.ts"), "export const a = 2;\n");
+  if (withService) {
+    fs.writeFileSync(path.join(fixture, "src", "payment", "checkout.service.ts"), "export const c = 2;\n");
+  }
+  git(fixture, "add", ".");
+  git(fixture, "-c", "user.name=Test User", "-c", "user.email=test@example.com", "commit", "-m", "touch spec");
+  return fixture;
+}
+
 // --- Finding #7: raw package.json scripts map is dropped from the payload ---
 
 test("generatePrReview omits the raw package.json scripts map from the result payload", () => {

@@ -1154,7 +1154,15 @@ function inferRisk(files, diff, comments) {
   const behaviorFiles = nonTestFiles.filter((file) => !["config", "dependency"].includes(file.kind));
   const testFiles = files.filter((file) => file.kind === "test");
 
-  for (const file of files) {
+  // Risk flags come from non-test files only. `tests/checkout.spec.ts` is a
+  // test for a payment flow, not a payment flow: scoring it as `money flow`
+  // told a reviewer to "verify idempotency, webhook behavior and refunds" for
+  // a diff that touched one spec file. The shared classifier says the same —
+  // `isGateRiskPath` exists precisely so a checkout spec does not trip the
+  // money-flow gate — but that filter sat on the gate path while this scoring
+  // path collected flags from every file. Test files still count for the
+  // `no test files changed` rule and the tests-present credit below.
+  for (const file of nonTestFiles) {
     for (const flag of /** @type {string[]} */ (file.riskFlags)) {
       flags.add(flag);
     }
