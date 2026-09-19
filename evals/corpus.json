@@ -3,7 +3,7 @@
   "description": "Labeled evaluation corpus for otito retrieval, risk classification, fixture-backed harness command execution, and gate effectiveness. Gate cases initialize an isolated Git repository from a committed base, apply one committed change-set, and assert both the verdict and deterministic check reason. See docs/EVALS.md for how to add a case and how thresholds work.",
   "k": 5,
   "thresholds": {
-    "comment": "Floors set to current-baseline-minus-slack so the suite is green today but a regression trips it. Baseline (2026-09-19): retrieval p@5=0.867 r@5=1.0 mrr=1.0; risk accuracy=1.0 (21/21). Aggregate metrics must be >= these floors for exit code 0. The risk floor is 0.96 so that a single failing case (20/21 = 0.952) still trips the gate. Re-record both baseline and floors in docs/EVALS.md after any intentional behavior change.",
+    "comment": "Floors set to current-baseline-minus-slack so the suite is green today but a regression trips it. Baseline (2026-09-19): retrieval p@5=0.867 r@5=1.0 mrr=1.0; risk accuracy=1.0 (22/22). Aggregate metrics must be >= these floors for exit code 0. The risk floor is 0.96 so that a single failing case (21/22 = 0.955) still trips the gate. Re-record both baseline and floors in docs/EVALS.md after any intentional behavior change.",
     "retrieval": {
       "precisionAtK": 0.85,
       "recallAtK": 0.9,
@@ -301,6 +301,14 @@
       "comment": "Regression guard: tests/checkout.spec.ts must NOT trip the merge gate even though it mentions checkout.",
       "mode": "gate",
       "path": "tests/checkout.spec.ts",
+      "expectedConcepts": [],
+      "notExpectedConcepts": ["gate"]
+    },
+    {
+      "name": "gate-dependency-bump-no-gate",
+      "comment": "A lockfile bump carries the zero-weight `dependency` flag; it must not demand maintainer sign-off on a risk-sensitive scope. Supply chain is covered by the separate dependency audit check.",
+      "mode": "gate",
+      "path": "package-lock.json",
       "expectedConcepts": [],
       "notExpectedConcepts": ["gate"]
     },

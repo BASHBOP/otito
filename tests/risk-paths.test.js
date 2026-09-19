@@ -276,3 +276,24 @@ test("excludeTestData is opt-in — other flags still classify fixture and test 
   assert.ok(classifyPath("evals/fixtures/auth-signup-api/src/session.ts").includes(RISK_FLAGS.authSecurity));
   assert.ok(classifyPath("tests/checkout.spec.ts").includes(RISK_FLAGS.moneyFlow));
 });
+
+// A flag the scorer weighs at zero must not independently gate a merge, or
+// every dependabot bump warns. Supply-chain risk, which the `repaired` proxy
+// cannot see, is covered by the separate dependency audit check.
+test("zero-weight dependency paths do not trip the merge gate", () => {
+  for (const path of ["package.json", "package-lock.json", "yarn.lock", "go.sum"]) {
+    assert.equal(isGateRiskPath(path), false, `${path} should not gate a merge`);
+    // Still classified — the evidence is reported, it just does not gate.
+    assert.ok(classifyPath(path).includes(RISK_FLAGS.dependency));
+  }
+});
+
+test("scoring paths still gate, including real configuration", () => {
+  for (const path of ["src/auth/roles.guard.ts", "src/payment/checkout.service.ts", "prisma/schema.prisma", "tsconfig.json", ".github/workflows/ci.yml"]) {
+    assert.equal(isGateRiskPath(path), true, `${path} should gate a merge`);
+  }
+});
+
+test("a manifest alongside a scoring path still gates via that path", () => {
+  assert.equal(matchRiskPaths(["package-lock.json", "src/auth/session.ts"], { gate: true }).length, 1);
+});

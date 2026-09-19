@@ -461,10 +461,22 @@ export function matchSecretPaths(paths) {
 }
 
 // True when a path is risk-sensitive AND should gate a merge — i.e. it is not a
-// test file and not documentation. The classifier itself still reports concepts
-// for ranking; this gate-facing predicate filters the noise the gates care
-// about (a `checkout.spec.ts` test or a `git-checkout-guide.md` doc must not
-// trip the money-flow risk gate).
+// test file, not documentation, and carries at least one flag that actually
+// scores. The classifier itself still reports concepts for ranking; this
+// gate-facing predicate filters the noise the gates care about (a
+// `checkout.spec.ts` test or a `git-checkout-guide.md` doc must not trip the
+// money-flow risk gate).
+//
+// The score-weight condition is what keeps `dependency` out. A flag the scorer
+// weighs at zero, because it was measured to carry no signal, must not
+// independently demand that a maintainer sign off on a "risk-sensitive scope"
+// — otherwise every lockfile bump warns. Supply-chain concerns, which the
+// `repaired` proxy cannot see at all, are covered by the separate dependency
+// audit check rather than by this one.
+//
+// An unrecognised flag gates by default: only an explicit zero opts out, so
+// adding a flag without a weight fails safe rather than silently disabling
+// the gate for it.
 /**
  * @param {string} filePath
  * @returns {boolean}
@@ -474,7 +486,8 @@ export function isGateRiskPath(filePath) {
   if (!path.trim()) return false;
   if (isTestFilePath(path)) return false;
   if (isDocPath(path)) return false;
-  return classifyPath(path).length > 0;
+  const weights = /** @type {Record<string, number>} */ (RISK_SCORE_WEIGHTS);
+  return classifyPath(path).some((flag) => (weights[flag] ?? 1) > 0);
 }
 
 // Default matcher reports any path the classifier flags — used where concept
