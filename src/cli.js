@@ -44,6 +44,7 @@ const commandHandlers = {
   obsidian: handleObsidian,
   ax: handleAx,
   converge: handleConverge,
+  calibrate: handleCalibrate,
   dashboard: handleDashboard,
   telemetry: handleTelemetry,
   pass: handlePass,
@@ -401,6 +402,25 @@ async function handleAx(parsed) {
   }
 
   printText(formatAxMarkdown(data));
+}
+
+/** @param {CliArgs} parsed */
+async function handleCalibrate(parsed) {
+  const { formatCalibrationMarkdown, generateCalibration } = await import("./lib/calibrate.js");
+  const data = generateCalibration(parsed.positionals[0] ?? parsed.flags.path ?? ".", {
+    window: parsed.flags.window,
+    minSample: parsed.flags.min_sample,
+    since: parsed.flags.since,
+    max: parsed.flags.max,
+  });
+  noteResult(data);
+
+  if (parsed.flags.json) {
+    printJson(data);
+    return;
+  }
+
+  printText(formatCalibrationMarkdown(data));
 }
 
 /** @param {CliArgs} parsed */

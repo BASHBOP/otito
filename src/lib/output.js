@@ -74,6 +74,7 @@ Usage:
   otito obsidian <repo> [--query text] [--out vault-dir] [--limit n] [--top n] [--json]
   otito ax <repo> <query> [--top n] [--out file] [--json]
   otito converge <repo> <query> --base <ref> [--staged] [--top n] [--out file] [--json]
+  otito calibrate <repo> [--window days] [--min-sample n] [--since date] [--max n] [--json]   # grade risk flags against this repo's own history
   otito pass <repo> [--base ref] [--staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
   otito gate <repo> [--base ref] [--staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
   otito pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
