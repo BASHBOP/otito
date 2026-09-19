@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bandFor, makeReceipt } from "../src/lib/converge.js";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { bandFor, generateConvergence, makeReceipt } from "../src/lib/converge.js";
 
 // The engine's git/diff scoring path is integration-tested end-to-end in
 // tests/mcp-dispatch.test.js ("convergence_score scores intent vs diff against a
@@ -135,4 +139,68 @@ test("band thresholds: aligned >= 80, partial >= 50, else drift", () => {
   assert.equal(bandFor(50), "partial");
   assert.equal(bandFor(49), "drift");
   assert.equal(bandFor(0), "drift");
+});
+
+// --- drift weighting: a file is not the risk surface its name mentions ---
+
+function convergeGit(cwd, ...args) {
+  const result = spawnSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, GIT_AUTHOR_NAME: "T", GIT_AUTHOR_EMAIL: "t@t", GIT_COMMITTER_NAME: "T", GIT_COMMITTER_EMAIL: "t@t" },
+  });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr || result.stdout}`);
+  return result.stdout;
+}
+
+function driftFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-converge-drift-"));
+  for (const [file, body] of Object.entries({
+    "src/index.ts": "export const a = 1;\n",
+    "src/payment/checkout.service.ts": "export const c = 1;\n",
+    "docs/auth-guide.md": "# auth\n",
+    "docs/setup-guide.md": "# setup\n",
+    "tests/checkout.spec.ts": "export const t = 1;\n",
+    "tests/util.spec.ts": "export const u = 1;\n",
+  })) {
+    fs.mkdirSync(path.join(root, path.dirname(file)), { recursive: true });
+    fs.writeFileSync(path.join(root, file), body);
+  }
+  convergeGit(root, "init", "-q", "-b", "main");
+  convergeGit(root, "config", "commit.gpgsign", "false");
+  convergeGit(root, "add", ".");
+  convergeGit(root, "commit", "-q", "-m", "base");
+  return root;
+}
+
+function riskAlignmentAfterDrifting(root, file) {
+  fs.appendFileSync(path.join(root, file), "// drift\n");
+  convergeGit(root, "add", file);
+  try {
+    return generateConvergence("update the index module", { path: root, base: "HEAD", staged: true }).subScores.riskAlignment;
+  } finally {
+    convergeGit(root, "restore", "--staged", file);
+    convergeGit(root, "checkout", "--", file);
+  }
+}
+
+test("drifted docs are weighted by being docs, not by the concept their name mentions", () => {
+  const root = driftFixture();
+  const auth = riskAlignmentAfterDrifting(root, "docs/auth-guide.md");
+  const setup = riskAlignmentAfterDrifting(root, "docs/setup-guide.md");
+  assert.equal(auth, setup, `two docs should carry the same drift weight, got auth=${auth} setup=${setup}`);
+});
+
+test("drifted specs are weighted by being tests, not by the domain they test", () => {
+  const root = driftFixture();
+  const checkout = riskAlignmentAfterDrifting(root, "tests/checkout.spec.ts");
+  const util = riskAlignmentAfterDrifting(root, "tests/util.spec.ts");
+  assert.equal(checkout, util, `two specs should carry the same drift weight, got checkout=${checkout} util=${util}`);
+});
+
+test("a genuinely risky drifted path is still penalised more than a doc", () => {
+  const root = driftFixture();
+  const service = riskAlignmentAfterDrifting(root, "src/payment/checkout.service.ts");
+  const doc = riskAlignmentAfterDrifting(root, "docs/auth-guide.md");
+  assert.ok(service < doc, `payment service drift should cost more than doc drift, got service=${service} doc=${doc}`);
 });
