@@ -8,7 +8,7 @@
 // The join is line-overlap (SZZ): for each fix commit, blame the exact
 // pre-image lines it modifies at its parent, and treat the commits owning those
 // lines as the ones it repairs. Joining on "same file" instead measures
-// co-change, not repair — on a 1,064-commit corpus the file-level join marks
+// co-change, not repair — on a 1,178-commit corpus the file-level join marks
 // 91% of commits repaired at a 90-day window against 31% for this one.
 //
 // Everything here is a pure function of repository state: local, offline, and
