@@ -112,7 +112,12 @@ function companyCheck({ governance, checks, remote }) {
  * @returns {import('./pass-local.js').Check}
  */
 function highRiskCheck({ governance, files, checks, remote }) {
-  const riskFiles = matchRiskPaths(files);
+  // `{ gate: true }` applies the same test/doc/zero-weight filtering the merge
+  // gates use. Without it this check contradicted its own run: Risk review
+  // reported "no risk-sensitive file paths changed" while the high-risk
+  // profile failed the merge citing `tests/checkout.spec.ts` and
+  // `docs/auth-guide.md` as high-risk file changes.
+  const riskFiles = matchRiskPaths(files, { gate: true });
   const issues = companyIssues({ governance, checks, remote });
   if (!remote && riskFiles.length > 0) {
     issues.push("High-risk file changes require GitHub PR mode evidence.");
