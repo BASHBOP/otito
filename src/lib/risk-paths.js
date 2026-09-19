@@ -171,6 +171,21 @@ const TEST_DATA_SEGMENTS = new Set(["fixtures", "__fixtures__", "testdata", "tes
 // in. Keeps the 300-line boundary used by the existing pr-review heuristic.
 export const LARGE_DIFF_LINES = 300;
 
+// Score contribution per flag, summed by `inferRisk`. Exported so `otito
+// calibrate` can report a measured lift beside the weight that flag actually
+// carries, instead of keeping a second copy of these numbers in sync by hand.
+// `dependency` is deliberately zero — see the pattern comment above.
+export const RISK_SCORE_WEIGHTS = {
+  [RISK_FLAGS.requestSurface]: 2,
+  [RISK_FLAGS.contract]: 2,
+  [RISK_FLAGS.dataModel]: 3,
+  [RISK_FLAGS.authSecurity]: 3,
+  [RISK_FLAGS.moneyFlow]: 3,
+  [RISK_FLAGS.configuration]: 2,
+  [RISK_FLAGS.dependency]: 0,
+  [RISK_FLAGS.largeFileDiff]: 2,
+};
+
 // Concept synonyms: when one of these words appears in a free-text query, the
 // associated canonical flag should be considered relevant. Used by the impact
 // scorer so "add Apple sign-in" boosts auth/security paths even though the
