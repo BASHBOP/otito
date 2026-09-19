@@ -1162,11 +1162,11 @@ function inferRisk(files, diff, comments) {
 
   // Per-flag weights live in risk-paths.js so `otito calibrate` can report a
   // measured lift beside the weight the flag actually carries. `dependency`
-  // weighs zero there: a line-overlap backtest over a 1,064-commit service
-  // repository put manifest-only commits at 0.39x the repair base rate —
-  // measurably safer than an average change — and the +2 they used to carry as
+  // weighs zero there: across two corpora it lifts 0.53x and 1.05x — no
+  // consistent signal in either direction — and the +2 it used to carry as
   // `configuration` inverted the band ordering, making `medium` changes less
-  // likely to be repaired than `low` at every window from 7 to 90 days. See
+  // likely to be repaired than `low` at every window from 7 to 90 days.
+  // Ordering is monotonic on all three corpora measured since. See
   // docs/17-calibration-thesis.
   for (const [flag, weight] of Object.entries(RISK_SCORE_WEIGHTS)) {
     if (flags.has(flag)) score += weight;

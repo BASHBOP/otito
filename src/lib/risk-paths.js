@@ -102,13 +102,18 @@ export const RISK_PATTERNS = [
   },
   {
     // Dependency manifests and lockfiles were part of `configuration` until a
-    // line-overlap (SZZ) backtest over a 1,064-commit service repository
-    // separated them: commits touching only a manifest were repaired at 0.39x
-    // the base rate, while commits touching a real config file were repaired
-    // at 2.25x — a 5.7x separation that held at every window from 7 to 90
-    // days. Reported as its own flag so the evidence still surfaces, and
-    // scored at zero in `inferRisk`, because a dependency bump is measurably
-    // *safer* than an average change rather than riskier.
+    // line-overlap (SZZ) backtest separated them: on a 1,178-commit service
+    // repository, commits touching only a manifest were repaired at 0.39x the
+    // base rate against 2.25x for commits touching a real config file — a
+    // 5.7x separation that held at every window from 7 to 90 days.
+    //
+    // Reported as its own flag so the evidence still surfaces, and scored at
+    // zero in `inferRisk` because dependency churn carries no *consistent*
+    // signal: 0.53x the base rate on that corpus and 1.05x on a second one of
+    // 1,026 commits — below average in one, indistinguishable from average in
+    // the other, and predictive in neither. Zero is the weight that claim
+    // supports. "Safer than average" is what one corpus alone suggested, and
+    // it did not replicate.
     flag: RISK_FLAGS.dependency,
     kinds: [],
     pathParts: [],
