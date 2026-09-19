@@ -17,7 +17,7 @@ import path from "node:path";
 import { generateCodeMapFromSources } from "./code-map.js";
 import { isSourceFilePath } from "./code-map/generate.js";
 import { DIFF_RENAME_LIMIT, generateImpact } from "./impact.js";
-import { classifyPath, isSecretPath, RISK_FLAGS } from "./risk-paths.js";
+import { classifyPath, isDocPath, isSecretPath, isTestDataPath, RISK_FLAGS } from "./risk-paths.js";
 import { runCommand } from "./tools.js";
 import { estimateTokens } from "./tokens.js";
 
@@ -552,7 +552,22 @@ function repositoryRoot(repoPath) {
  * @returns {string[]}
  */
 function riskFlagsFor(file) {
-  const flags = classifyPath(file);
+  // Documentation and test paths are not the risk surface they are named
+  // after. Unfiltered, `docs/auth-guide.md` carried the auth/security weight
+  // of 25 while `docs/setup-guide.md` carried the default 5 — a 20-point
+  // difference between two documentation files, decided by a substring. The
+  // same held for `tests/checkout.spec.ts` against `tests/util.spec.ts`.
+  //
+  // Such a file is still drift and still penalised, at the default weight.
+  // What it no longer does is inherit the weight of the concept its filename
+  // mentions. If test drift deserves a heavy penalty of its own — an agent
+  // quietly rewriting a spec to make it pass is real — that is a deliberate
+  // rule to add, not an accident of which tests happen to be named after a
+  // risky domain.
+  //
+  // `secret` is deliberately still checked: a credential committed under a
+  // fixture directory is a credential. `isSecretPath` already excludes docs.
+  const flags = isDocPath(file) || isTestDataPath(file) ? [] : classifyPath(file);
   if (isSecretPath(file)) flags.push("secret");
   return flags;
 }
