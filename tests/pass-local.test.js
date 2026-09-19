@@ -719,6 +719,44 @@ test("evaluateLocal makes staged production configuration warnings actionable", 
   assert.ok(risk.details.some((detail) => detail.includes("git restore --staged -- 'src/feature-flags/config/environments/production.json'")));
 });
 
+// The high-risk profile used the unfiltered risk matcher, so it listed test
+// files and documentation as "High-risk file changes" — contradicting the Risk
+// review check in the same run, which correctly reported none.
+test("high-risk policy does not count test or documentation files as high-risk changes", () => {
+  const root = initRepo("highrisk-noise");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
+      "tests/checkout.spec.ts": "export const a = 1;\n",
+      "docs/auth-guide.md": "# auth\n",
+    },
+    "init",
+  );
+  writeAndCommit(root, { "tests/checkout.spec.ts": "export const a = 2;\n", "docs/auth-guide.md": "# auth v2\n" }, "touch test and doc");
+
+  const result = evaluateLocal(root, { base: "HEAD~1", policy: "high-risk" });
+  const policy = result.checks.find((c) => c.name === "Policy profile");
+  const risk = result.checks.find((c) => c.name === "Risk review");
+  // Risk review already filtered these; the policy profile must agree.
+  assert.equal(risk.status, "PASS");
+  assert.ok(
+    !policy.details.some((line) => line.includes("High-risk file changes")),
+    `policy should not claim high-risk file changes, got: ${policy.details.join(" | ")}`,
+  );
+  assert.ok(!policy.details.some((line) => line.includes("checkout.spec.ts") || line.includes("auth-guide.md")));
+});
+
+test("high-risk policy still names a genuine risk path", () => {
+  const root = initRepo("highrisk-real");
+  writeAndCommit(root, { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) }, "init");
+  writeAndCommit(root, { "src/auth/session.ts": "export const s = 1;\n" }, "auth");
+
+  const result = evaluateLocal(root, { base: "HEAD~1", policy: "high-risk" });
+  const policy = result.checks.find((c) => c.name === "Policy profile");
+  assert.ok(policy.details.some((line) => line.includes("src/auth/session.ts")));
+});
+
 test("evaluateLocal escalates to FAIL under high-risk policy when prisma changes locally", () => {
   const root = initRepo("highrisk");
   writeAndCommit(
