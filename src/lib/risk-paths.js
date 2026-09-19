@@ -103,9 +103,9 @@ export const RISK_PATTERNS = [
   {
     // Dependency manifests and lockfiles were part of `configuration` until a
     // line-overlap (SZZ) backtest separated them: on a 1,178-commit service
-    // repository, commits touching only a manifest were repaired at 0.39x the
-    // base rate against 2.25x for commits touching a real config file — a
-    // 5.7x separation that held at every window from 7 to 90 days.
+    // repository, commits touching only a manifest were repaired at 0.42x the
+    // base rate against 2.03x for commits touching a real config file — a
+    // 4.8x separation that held at every window from 7 to 90 days.
     //
     // Reported as its own flag so the evidence still surfaces, and scored at
     // zero in `inferRisk` because dependency churn carries no *consistent*

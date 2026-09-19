@@ -195,6 +195,24 @@ but it was never what made the flag fire on most changes. **Dependency-manifest
 churn is** — which is a claim about outcomes, and therefore one the base rate
 could not settle. So it was measured.
 
+## A note on the numbers
+
+The sections above were produced by a prototype, before `otito calibrate`
+existed. Its `scoreable` filter excluded any commit with the word "fix"
+anywhere in the subject; the shipped command matches a `fix:`-style prefix
+instead. That is why bashbop-api appears as **1,064 scoreable commits** in the
+base-rate section and **1,178** from here onward — the same repository under
+two slightly different definitions of "a commit that could be graded".
+
+The prototype figures are left as they were measured rather than retro-fitted,
+because rewriting a recorded measurement to match a later tool is how a record
+stops being one. Everything from this point on is reproducible with the
+shipped command, and each run carries a receipt:
+
+```bash
+otito calibrate /path/to/repo --window 30
+```
+
 ## The first calibration (2026-09-19)
 
 The line-overlap join specified above was implemented and run against
@@ -222,15 +240,17 @@ Base rate 25.8%, 30-day window:
 
 | Subset of `configuration` | n | repaired | lift |
 | --- | ---: | ---: | ---: |
-| manifest / lockfile only | 501 | 9.4% | **0.39x** |
-| includes a real config file | 102 | 53.9% | **2.25x** |
-| _combined, as it shipped_ | 603 | 16.9% | _0.71x_ |
+| manifest / lockfile only | 513 | 10.7% | **0.42x** |
+| includes a real config file | 107 | 52.3% | **2.03x** |
+| _combined, as it shipped_ | 620 | 17.9% | _0.69x_ |
 
-A 5.7x separation, stable at every window from 7 to 90 days. Merged, the two
+A 4.8x separation, stable at every window from 7 to 90 days. Merged, the two
 destroyed each other: the combined flag scored below even the commits carrying
 no flag at all. Real configuration predicts repair about as strongly as
-auth/security does; dependency churn predicts the opposite, and is measurably
-*safer* than an average change.
+auth/security does; dependency churn does not predict it at all. (An earlier
+revision of this section called dependency churn *measurably safer* than an
+average change. A third corpus put it at 1.05x — see below — so the claim that
+survives is the weaker one: no consistent signal, in either direction.)
 
 ### The bands were mis-sorted
 
