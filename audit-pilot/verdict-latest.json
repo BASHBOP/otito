@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-19T09:00:52.069Z",
+  "generatedAt": "2026-09-19T09:03:52.633Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "FAIL",
@@ -44,7 +44,7 @@
   },
   "prReviewSummary": {
     "changedFiles": 1,
-    "additions": 64,
+    "additions": 65,
     "deletions": 0,
     "riskLevel": "low",
     "riskFlags": [
@@ -70,7 +70,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "1 changed file reported."
+        "summary": "2 changed files reported."
       },
       {
         "name": "Secret safety",
