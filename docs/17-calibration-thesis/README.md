@@ -270,6 +270,53 @@ this corpus raises and does not settle. Nothing else was touched: calibration
 grades the signal, it does not tune it, and a measured weight is still a
 human-reviewed code change.
 
+## A third corpus, and two claims it revises (2026-09-19)
+
+`bashbop-event-web` — 2,027 non-merge commits, 1,026 scoreable, 977 fix
+commits — was measured next, chosen because it is a **frontend** repository.
+A question about request surfaces answered only on an API is a question
+answered on one kind of code.
+
+Its base rate is 47.1%, nearly double bashbop-api's 25.8%: roughly half of all
+commits in it announce themselves as fixes. Lift compresses toward 1.0 as the
+base rate rises, so the magnitudes are not comparable across the two corpora —
+only the ordering is.
+
+| Flag | n | repaired | lift | weight |
+| --- | ---: | ---: | ---: | ---: |
+| data model | 51 | 70.6% | 1.50x | +3 |
+| large file diff | 329 | 69.0% | 1.47x | +2 |
+| configuration | 149 | 63.8% | 1.35x | +2 |
+| auth/security | 144 | 61.1% | 1.30x | +3 |
+| request surface | 515 | 60.8% | 1.29x | +2 |
+| frontend/backend contract | 175 | 60.6% | 1.29x | +2 |
+| dependency | 234 | 49.6% | 1.05x | **+0** |
+| money flow | 53 | 47.2% | 1.00x | +3 |
+| (no flag) | 223 | 29.1% | 0.62x | — |
+
+**The band ordering holds.** Monotonic again — low 35.4%, medium 63.3%, high
+76.1% — on a repository that had no part in the change that fixed it. That is
+the first genuinely independent check on the correction above.
+
+**The open weight question closes, in favour of leaving it alone.** On
+bashbop-api `request surface` (+2) outranked `data model` (+3), which looked
+like an argument for re-weighting. Here the order is reversed and `data model`
+is the strongest flag in the table while `request surface` sits near the
+bottom. The inversion does not replicate; it was one repository's shape — an
+API whose data model is stable and whose routes churn — not a property of the
+signals. **The current weights stand.**
+
+**A claim made here last iteration was too strong.** `dependency` was
+described as *measurably safer than an average change*. It lifts 1.05x on this
+corpus: indistinguishable from average, not safer. What survives both is the
+weaker and more useful claim — dependency churn carries **no consistent
+signal**, 0.53x in one repository and 1.05x in another, predictive in neither
+direction. Zero is still the right weight; "safer" was one corpus talking.
+
+That correction is the method working rather than a lapse in it. A rate from a
+single repository is a hypothesis, and the thesis says so; this is what it
+looks like when the second one disagrees.
+
 ### Ship the instrument, not just the number
 
 All of the above now comes from `otito calibrate <repo>`, not a scratch
@@ -320,11 +367,11 @@ incremental.
 | Priority | Work | Why first | Effort |
 | --- | --- | --- | --- |
 | ~~P0~~ | ~~Line-overlap join, plus a minimum-sample rule~~ — shipped as `otito calibrate` | The first measurement showed both are load-bearing, not refinements | Done |
-| **P0** | A multi-repository corpus to measure against | One young repository cannot produce enough events to conclude anything. A second repository (1,064 scoreable commits) now exists for base rates; outcome proxies still need it | Medium |
+| **P0** | A multi-repository corpus to measure against | Three repositories measured (152 / 1,178 / 1,026 scoreable). Enough to check that a finding replicates; not yet a representative sample | Medium |
 | ~~P1~~ | ~~`otito calibrate` — per-flag hit rate and lift~~ — shipped | Turns the risk score from assertion into measurement | Done |
 | **P1** | Calibration receipt + fixture-based eval in CI | Keeps the numbers reproducible and offline | Medium |
 | **P2** | Publish the numbers in the [evaluation guide](../EVALS.md) | Only once a corpus can support them | Low |
-| **P2** | Revisit the remaining `inferRisk` weights and band thresholds | `dependency` is done; `request surface` vs `data model` is the open question, and needs more than one corpus | Medium |
+| **P2** | Revisit the remaining `inferRisk` weights and band thresholds | `dependency` is done, and a third corpus closed the `request surface` vs `data model` question in favour of the current weights. No weight currently has measured cause to move | Low |
 | **P2** | Reconsider an external calibrated signal | Only if a measured blind spot survives path rules | Low |
 
 ## How the thesis docs fit together
