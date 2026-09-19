@@ -142,6 +142,60 @@ One finding survives the sample-size problem: `configuration` fires on 89 of the
 time. A flag that fires on most changes carries little information whatever
 calibration eventually says about it.
 
+## Second corpus (2026-09-19)
+
+The `configuration` finding above was the one result the first measurement could
+support, so it was the first thing checked against a second repository:
+`bashbop-api`, a production service with **2,680 commits, 2,303 non-merge, 1,064
+scoreable** — seven times otito's corpus.
+
+It reproduces, and sharpens.
+
+| | otito | bashbop-api |
+| --- | ---: | ---: |
+| Scoreable commits | 152 | 1,064 |
+| `configuration` fires on | 63.2% | **56.8%** |
+
+A flag firing on well over half of all changes is therefore not an artifact of
+otito's own young, chore-heavy history. Decomposing each firing by its sole
+cause says what is actually driving it:
+
+| Sole cause of the firing | bashbop-api | otito |
+| --- | ---: | ---: |
+| Dependency manifest / lockfile | **83%** | 61% |
+| CI workflow | 4% | 18% |
+| First-party application config | 6% | 4% |
+| Mixed causes | 6% | 15% |
+
+`configuration` is, in practice, a dependency-bump detector. On bashbop-api,
+five firings in six are a lockfile or a manifest and nothing else.
+
+Two caveats keep this honest. This is a **base-rate measurement, not a
+calibration** — no outcome proxy was joined against the bashbop-api corpus, so
+it says how often the flag fires and on what, never whether those commits were
+worse. And the corpus is a second repository, not a representative sample of
+repositories; two is better than one and still not many.
+
+### What was changed, and what was not
+
+The loose path matching that contributed to the rate was narrowed — `"config"`,
+`"lock"` and `"env"` matched as bare word tokens, and `"package.json"` as a raw
+substring, so ordinary source modules and every nested fixture manifest flagged.
+Anchoring those removed 20 of 35 matching paths on otito and 7 of 58 on
+bashbop-api, with nothing newly matched and no risk band changed in either.
+
+The rate barely moved: 65.1% → 63.2% on otito, 56.8% → 56.7% on bashbop-api.
+
+That is the useful part of the result. The breadth was real and worth fixing,
+but it was never what made the flag fire on most changes. **Dependency-manifest
+churn is**, and separating it — whether by excluding manifests from
+`configuration`, which `inferRisk` already classifies as kind `dependency` and
+already excludes from `behaviorFiles`, or by giving dependency changes a flag
+and a weight of their own — remains a weight decision, which this document
+holds to the same standard as every other: measured first, reviewed as a code
+change, never tuned automatically. Excluding manifests would move 37 of otito's
+152 commits down a band, all medium to low.
+
 ## What changes because of it
 
 1. **Weights stop being folklore.** Changing one becomes a reviewed code change
@@ -172,7 +226,7 @@ incremental.
 | Priority | Work | Why first | Effort |
 | --- | --- | --- | --- |
 | **P0** | Line-overlap join, plus a minimum-sample rule that refuses to publish a rate beneath it | The first measurement showed both are load-bearing, not refinements | Medium |
-| **P0** | A multi-repository corpus to measure against | One young repository cannot produce enough events to conclude anything | Medium |
+| **P0** | A multi-repository corpus to measure against | One young repository cannot produce enough events to conclude anything. A second repository (1,064 scoreable commits) now exists for base rates; outcome proxies still need it | Medium |
 | **P1** | `otito calibrate` over that corpus — per-flag hit rate and lift | Turns the risk score from assertion into measurement | Medium |
 | **P1** | Calibration receipt + fixture-based eval in CI | Keeps the numbers reproducible and offline | Medium |
 | **P2** | Publish the numbers in the [evaluation guide](../EVALS.md) | Only once a corpus can support them | Low |
