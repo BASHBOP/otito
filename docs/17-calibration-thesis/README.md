@@ -25,7 +25,8 @@ question it raises about otito itself:
 
 > **Is otito's own risk score calibrated?**
 
-Today, no. It has never been checked.
+Today, no. It had never been checked — and the first attempt to check it,
+recorded below, says more about the measurement than about the score.
 
 ## The thesis in one line
 
@@ -102,6 +103,45 @@ timestamp-free payload recording the commit range, the window, the outcome
 definitions, the counts, and the resulting rates — so a number in a README can
 be traced to the run that produced it.
 
+## First measurement (2026-09-19)
+
+A throwaway prototype ran the `repaired` proxy over this repository — 283
+commits since 2026-05-18, 192 non-merge, 152 scoreable — using a deliberately
+weaker join than the one specified above: same file, not same lines.
+
+**`reverted` has no events.** Not one revert in the repository's history, so
+that proxy cannot be validated here in either direction.
+
+**A file-level `repaired` join measures co-change, not repair.** The base rate
+tracks the window almost linearly:
+
+| Window | 3 days | 7 days | 14 days | 30 days |
+| --- | --- | --- | --- | --- |
+| Repaired | 22.9% | 30.1% | 54.6% | 71.2% |
+
+A defect signal should not triple as the window widens. Wait long enough in an
+active repository and some fix touches every file. This is the evidence that the
+line-overlap requirement above is load-bearing rather than decorative.
+
+**This repository cannot calibrate this repository.** Per-flag counts:
+
+| Flag | n | Repaired | Lift |
+| --- | --- | --- | --- |
+| configuration | 89 | 64.0% | 1.17x |
+| auth/security | 2 | 50.0% | 0.92x |
+| data model | 3 | 33.3% | 0.61x |
+| money flow | 1 | 0.0% | — |
+| (no flag) | 63 | 41.3% | 0.76x |
+
+Every lift sits within noise of 1x, and the three flags the gate weights most
+heavily carry n = 2, 3 and 1. Nothing can be concluded about them from this
+corpus, in either direction.
+
+One finding survives the sample-size problem: `configuration` fires on 89 of the
+152 scoreable commits — 59% — contributing +2 to the risk score nearly every
+time. A flag that fires on most changes carries little information whatever
+calibration eventually says about it.
+
 ## What changes because of it
 
 1. **Weights stop being folklore.** Changing one becomes a reviewed code change
@@ -131,10 +171,11 @@ incremental.
 
 | Priority | Work | Why first | Effort |
 | --- | --- | --- | --- |
-| **P0** | Outcome definitions, documented and separately reported | Everything downstream inherits their honesty | Low |
-| **P0** | `otito calibrate` — backtest local history, report per-flag hit rate and lift | Turns the risk score from assertion into measurement | Medium |
+| **P0** | Line-overlap join, plus a minimum-sample rule that refuses to publish a rate beneath it | The first measurement showed both are load-bearing, not refinements | Medium |
+| **P0** | A multi-repository corpus to measure against | One young repository cannot produce enough events to conclude anything | Medium |
+| **P1** | `otito calibrate` over that corpus — per-flag hit rate and lift | Turns the risk score from assertion into measurement | Medium |
 | **P1** | Calibration receipt + fixture-based eval in CI | Keeps the numbers reproducible and offline | Medium |
-| **P1** | Publish otito's own numbers in the [evaluation guide](../EVALS.md) | Dogfooding is the proof | Low |
+| **P2** | Publish the numbers in the [evaluation guide](../EVALS.md) | Only once a corpus can support them | Low |
 | **P2** | Revisit `inferRisk` weights and band thresholds as a reviewed change | Only defensible once measured | Medium |
 | **P2** | Reconsider an external calibrated signal | Only if a measured blind spot survives path rules | Low |
 
