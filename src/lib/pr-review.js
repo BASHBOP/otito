@@ -1166,6 +1166,12 @@ function inferRisk(files, diff, comments) {
   if (flags.has("auth/security")) score += 3;
   if (flags.has("money flow")) score += 3;
   if (flags.has("configuration")) score += 2;
+  // `dependency` is reported but deliberately scores zero. A line-overlap
+  // backtest over a 1,064-commit service repository put manifest-only commits
+  // at 0.39x the repair base rate — measurably safer than an average change —
+  // and the +2 they used to carry as `configuration` inverted the band
+  // ordering, making `medium` changes less likely to be repaired than `low`
+  // at every window from 7 to 90 days. See docs/17-calibration-thesis.
   if (flags.has("large file diff")) score += 2;
 
   if (diff.insertions + diff.deletions >= 800) {

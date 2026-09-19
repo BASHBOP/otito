@@ -223,11 +223,24 @@ for (const path of CONFIGURATION_FALSE_POSITIVES) {
   });
 }
 
+// Dependency manifests moved out of `configuration` into their own flag after
+// the line-overlap backtest separated them: manifest-only commits repaired at
+// 0.39x the base rate, real-config commits at 2.25x.
+const DEPENDENCY_PATHS = ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "go.sum", "cargo.lock"];
+
+for (const path of DEPENDENCY_PATHS) {
+  test(`classifyPath flags dependency, not configuration, for ${path}`, () => {
+    const flags = classifyPath(path);
+    assert.ok(flags.includes(RISK_FLAGS.dependency), `${path} should imply dependency, got ${flags.join(", ")}`);
+    assert.ok(!flags.includes(RISK_FLAGS.configuration), `${path} should not imply configuration, got ${flags.join(", ")}`);
+  });
+}
+
+test("a manifest inside a fixture corpus carries no flag at all", () => {
+  assert.deepEqual(classifyPath("evals/fixtures/shop-api/package.json"), []);
+});
+
 const CONFIGURATION_TRUE_POSITIVES = [
-  "package.json",
-  "package-lock.json",
-  "yarn.lock",
-  "go.sum",
   "tsconfig.json",
   "eslint.config.js",
   "vite.config.ts",
