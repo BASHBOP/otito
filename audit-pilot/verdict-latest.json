@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-19T18:58:54.024Z",
+  "generatedAt": "2026-09-19T21:03:23.073Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "FAIL",
@@ -44,7 +44,7 @@
   },
   "prReviewSummary": {
     "changedFiles": 1,
-    "additions": 75,
+    "additions": 76,
     "deletions": 0,
     "riskLevel": "low",
     "riskFlags": [
@@ -70,7 +70,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "6 changed files reported."
+        "summary": "3 changed files reported."
       },
       {
         "name": "Secret safety",
@@ -85,7 +85,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Review decision",
@@ -120,6 +120,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 555
+    "fullJson": 550
   }
 }
