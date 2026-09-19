@@ -11,6 +11,7 @@ export const RISK_FLAGS = {
   authSecurity: "auth/security",
   moneyFlow: "money flow",
   configuration: "configuration",
+  dependency: "dependency",
   largeFileDiff: "large file diff",
   secret: "secret risk",
   releaseDiscipline: "release discipline",
@@ -27,6 +28,18 @@ export const RISK_FLAGS = {
 //                      word with the concept.
 //
 // `excludeTestData` opts a flag out of classifying tests and fixture corpora.
+/**
+ * @typedef {object} RiskPattern
+ * @property {string} flag canonical risk flag this pattern reports
+ * @property {string[]} kinds code-map `kind` values that imply the flag
+ * @property {string[]} pathParts loose word tokens or punctuated substrings
+ * @property {string[]} [basenames] exact whole basenames
+ * @property {RegExp[]} [basenamePatterns] basename families
+ * @property {string[]} [segments] whole directory segments
+ * @property {boolean} [excludeTestData] skip tests and fixture corpora
+ */
+
+/** @type {RiskPattern[]} */
 export const RISK_PATTERNS = [
   {
     flag: RISK_FLAGS.requestSurface,
@@ -63,11 +76,6 @@ export const RISK_PATTERNS = [
     // `generate-tsconfig.mjs`) that no basename rule covers. "config", "lock"
     // and "env" are ordinary programming words and are anchored below.
     pathParts: [".github/workflows", ".circleci", "docker", "tsconfig"],
-    // Whole basenames. The previous rule matched "package.json" as a raw
-    // substring of the path, so every nested manifest in the tree flagged —
-    // on this repository 14 of the 17 matching manifests were eval fixtures
-    // and sample apps, which are inert test data.
-    basenames: ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "cargo.lock", "gemfile.lock", "poetry.lock", "composer.lock", "go.sum"],
     // Basename families. `*.config.*` replaces the bare "config" word token,
     // which also matched source modules (`src/lib/config.js`) and their tests
     // (`tests/config.test.js`); `.env*` replaces the bare "env" token, which
@@ -90,6 +98,32 @@ export const RISK_PATTERNS = [
     // must not flag. Opt-in per pattern: every other flag keeps classifying
     // tests and fixtures, and the merge gates keep filtering them downstream
     // via `isGateRiskPath`.
+    excludeTestData: true,
+  },
+  {
+    // Dependency manifests and lockfiles were part of `configuration` until a
+    // line-overlap (SZZ) backtest over a 1,064-commit service repository
+    // separated them: commits touching only a manifest were repaired at 0.39x
+    // the base rate, while commits touching a real config file were repaired
+    // at 2.25x — a 5.7x separation that held at every window from 7 to 90
+    // days. Reported as its own flag so the evidence still surfaces, and
+    // scored at zero in `inferRisk`, because a dependency bump is measurably
+    // *safer* than an average change rather than riskier.
+    flag: RISK_FLAGS.dependency,
+    kinds: [],
+    pathParts: [],
+    basenames: [
+      "package.json",
+      "package-lock.json",
+      "npm-shrinkwrap.json",
+      "yarn.lock",
+      "pnpm-lock.yaml",
+      "cargo.lock",
+      "gemfile.lock",
+      "poetry.lock",
+      "composer.lock",
+      "go.sum",
+    ],
     excludeTestData: true,
   },
 ];
@@ -213,6 +247,7 @@ export const RISK_GLYPHS = {
   [RISK_FLAGS.authSecurity]: "🔐",
   [RISK_FLAGS.moneyFlow]: "💳",
   [RISK_FLAGS.configuration]: "⚙️",
+  [RISK_FLAGS.dependency]: "⬆️",
   [RISK_FLAGS.largeFileDiff]: "📦",
   [RISK_FLAGS.secret]: "🚨",
   [RISK_FLAGS.releaseDiscipline]: "🏷️",
