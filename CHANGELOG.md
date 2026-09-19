@@ -6,6 +6,33 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-09-19
+
+### Added
+
+- **`otito calibrate <repo>` — grade the risk flags against the repository's own history.** Walks history, recovers which commits each later fix actually repaired, and reports per-flag hit rate and lift beside the weight that flag carries today. Local, offline, and a pure function of repository state, with a receipt over a canonical timestamp-free payload so a number quoted in a README can be traced to the run that produced it.
+  - The join is line-overlap (SZZ): for each fix commit, blame the exact pre-image lines it modifies at its parent, and treat the commits owning those lines as the ones it repairs. Joining on "same file" instead measures co-change — on a 1,178-commit corpus that join calls 91.4% of commits repaired at a 90-day window against 30.7% for this one.
+  - A minimum-sample rule withholds rate and lift for any row beneath the floor (default 30) rather than publishing noise, and reports band ordering as `unknown` rather than true or false when a band never cleared it. Pointed at this repository the command declines to answer most rows, which is the honest result for a corpus this small.
+- **`dependency` risk flag**, reported for manifests and lockfiles. It is scored at **zero**: measured across two corpora it lifts 0.53x and 1.05x against the repair base rate — no consistent signal in either direction.
+
+### Fixed
+
+- **`configuration` fired on most changes and inverted the risk bands.** It was two signals under one name: commits touching only a manifest were repaired at 0.42x the base rate, commits touching a real config file at 2.03x — a 4.8x separation stable at every window from 7 to 90 days. Merged, the two cancelled out, and the +2 a lockfile bump carried pushed hundreds of low-risk commits into `medium`, making `medium` changes _less_ likely to be repaired than `low` at every window. Separating dependency churn restores monotonic ordering, confirmed independently on a third repository that had no part in the change.
+- **`configuration` matched far more than configuration.** `"package.json"` matched as a raw substring of any path, so every nested manifest flagged — on this repository 14 of 17 matching manifests were eval fixtures. `"config"`, `"lock"` and `"env"` matched as bare word tokens, flagging `src/lib/config.js`, `src/lib/locks/advisory-lock.ts` and `src/env/index.ts`. Matching is now anchored to whole basenames, basename families, and whole directory segments; `"docker"` and `"tsconfig"` survive as tokens because across 3,455 commits in two repositories they produced no false positives.
+- **A zero-weight flag could gate a merge on its own.** `isGateRiskPath` gated on any flag being present, so a lockfile bump demanded that a maintainer record explicit review of a "risk-sensitive scope" while the scorer weighed the same change at zero. Gating now requires a flag that scores; an unrecognised flag still gates, so adding one without a weight fails safe. Supply-chain concerns remain covered by the separate dependency audit check.
+- **The high-risk policy profile contradicted its own run.** It called the unfiltered risk matcher, so a change touching only `tests/checkout.spec.ts` and `docs/auth-guide.md` produced `Risk review: PASS — No obvious risk-sensitive file paths changed` alongside `Policy profile: FAIL` naming those exact files as high-risk changes.
+- **PR risk scored test files' flags.** A diff touching only `tests/checkout.spec.ts` scored `["money flow"]` and shipped a review prompt about idempotency, webhooks and refunds. Flags now come from non-test files; per-file `riskFlags` are unchanged, so a reviewer still sees why a spec was included. Measured over 2,294 commits: 3.8% change score, 1.0% change band.
+- **Convergence weighted drifted files by the concept their name mentions.** `docs/auth-guide.md` cost 20 more risk-alignment points than `docs/setup-guide.md` — two documentation files separated by a substring — and appeared in the "Drift touches risk-sensitive paths" recommendation at the same weight as a genuine auth path. This restores the behaviour the convergence spec already documented: "a drifted README barely moves it".
+
+### Changed
+
+- Risk score weights are exported as `RISK_SCORE_WEIGHTS` and summed by `inferRisk`, replacing eight hand-written conditionals with the same numbers, so `otito calibrate` can report a measured lift beside the real weight instead of keeping a second copy in sync by hand.
+- The risk eval corpus grows to 22 cases with guards for the dependency split, the anchored configuration matching, and the zero-weight gating rule. Its accuracy floor moves to 0.96 so that a single failing case still trips the gate at the new corpus size.
+
+### Docs
+
+- The [calibration thesis](docs/17-calibration-thesis/README.md) records the first measurement, the second corpus, and the first real calibration — including a claim it had to withdraw once a third corpus disagreed, and a note explaining why the same repository appears with two different scoreable-commit counts.
+
 ## [1.10.1] - 2026-09-15
 
 ### Docs
