@@ -25,8 +25,14 @@ question it raises about otito itself:
 
 > **Is otito's own risk score calibrated?**
 
-Today, no. It had never been checked — and the first attempt to check it,
-recorded below, says more about the measurement than about the score.
+It had never been checked. The first attempt, recorded below, said more about
+the measurement than about the score; the second one — with the join that
+attempt proved was load-bearing — found a flag carrying weight it had not
+earned, and a band ordering that was inverted. Both are now fixed, and the
+question is answerable on demand rather than by argument: `otito calibrate`.
+
+Partly, then. For the flags a repository has enough history to grade, and not
+otherwise — which is itself a result this document takes seriously.
 
 ## The thesis in one line
 
@@ -170,11 +176,9 @@ cause says what is actually driving it:
 `configuration` is, in practice, a dependency-bump detector. On bashbop-api,
 five firings in six are a lockfile or a manifest and nothing else.
 
-Two caveats keep this honest. This is a **base-rate measurement, not a
-calibration** — no outcome proxy was joined against the bashbop-api corpus, so
-it says how often the flag fires and on what, never whether those commits were
-worse. And the corpus is a second repository, not a representative sample of
-repositories; two is better than one and still not many.
+One caveat keeps this honest: the corpus is a second repository, not a
+representative sample of repositories. Two is better than one and still not
+many.
 
 ### What was changed, and what was not
 
@@ -188,13 +192,103 @@ The rate barely moved: 65.1% → 63.2% on otito, 56.8% → 56.7% on bashbop-api.
 
 That is the useful part of the result. The breadth was real and worth fixing,
 but it was never what made the flag fire on most changes. **Dependency-manifest
-churn is**, and separating it — whether by excluding manifests from
-`configuration`, which `inferRisk` already classifies as kind `dependency` and
-already excludes from `behaviorFiles`, or by giving dependency changes a flag
-and a weight of their own — remains a weight decision, which this document
-holds to the same standard as every other: measured first, reviewed as a code
-change, never tuned automatically. Excluding manifests would move 37 of otito's
-152 commits down a band, all medium to low.
+churn is** — which is a claim about outcomes, and therefore one the base rate
+could not settle. So it was measured.
+
+## The first calibration (2026-09-19)
+
+The line-overlap join specified above was implemented and run against
+bashbop-api: 1,178 scoreable commits, 1,066 fix commits, 936 joined to a
+parent. For each fix, blame the exact pre-image lines it modifies at its
+parent; the commits owning those lines are the ones it repairs.
+
+**The join matters more than any number it produces.** Against the same
+corpus, the file-level join the first measurement used behaves completely
+differently:
+
+| Join | 3 days | 30 days | 90 days |
+| --- | ---: | ---: | ---: |
+| same file | 38.3% | 79.5% | **91.4%** |
+| line overlap | 12.0% | 24.0% | **30.7%** |
+
+At 90 days the file-level join calls 91% of all commits repaired. A proxy that
+fires on nearly everything cannot separate anything, which is why the first
+measurement could conclude so little. The line-overlap join leaves roughly
+seven commits in ten unrepaired, and discriminates.
+
+### `configuration` was two signals wearing one name
+
+Base rate 25.8%, 30-day window:
+
+| Subset of `configuration` | n | repaired | lift |
+| --- | ---: | ---: | ---: |
+| manifest / lockfile only | 501 | 9.4% | **0.39x** |
+| includes a real config file | 102 | 53.9% | **2.25x** |
+| _combined, as it shipped_ | 603 | 16.9% | _0.71x_ |
+
+A 5.7x separation, stable at every window from 7 to 90 days. Merged, the two
+destroyed each other: the combined flag scored below even the commits carrying
+no flag at all. Real configuration predicts repair about as strongly as
+auth/security does; dependency churn predicts the opposite, and is measurably
+*safer* than an average change.
+
+### The bands were mis-sorted
+
+This is the finding that made the change urgent rather than tidy. Band
+ordering was **non-monotonic at every window** — `medium` changes were
+consistently *less* likely to be repaired than `low`, because +2 from a
+lockfile bump pushed hundreds of otherwise-low commits into medium:
+
+| Window | before (low / med / high) | after |
+| --- | --- | --- |
+| 7d | 17.3% / 11.7% / 34.8% | 6.7% / 28.4% / 33.8% |
+| 30d | 26.9% / 17.3% / 53.2% | 10.1% / 42.1% / 52.6% |
+| 90d | 34.1% / 23.4% / 63.1% | 12.8% / 56.8% / 61.7% |
+
+A gate whose `medium` is safer than its `low` is mis-sorting changes whatever
+its per-flag numbers say. Dependency manifests now carry a `dependency` flag
+of their own, scored at zero — still surfaced as evidence, because a reviewer
+wants to see a lockfile moved, but no longer inflating the score.
+
+### What the surviving weights look like
+
+With dependency churn separated out, every remaining flag lands where its
+weight roughly implies:
+
+| Flag | n | repaired | lift | weight |
+| --- | ---: | ---: | ---: | ---: |
+| money flow | 64 | 62.5% | 2.42x | +3 |
+| auth/security | 186 | 58.1% | 2.25x | +3 |
+| configuration | 107 | 52.3% | 2.03x | +2 |
+| request surface | 410 | 51.7% | 2.00x | +2 |
+| large file diff | 209 | 49.3% | 1.91x | +2 |
+| data model | 230 | 46.5% | 1.80x | +3 |
+| dependency | 545 | 13.8% | 0.53x | **+0** |
+
+Whether `request surface` deserves more than `data model` is a real question
+this corpus raises and does not settle. Nothing else was touched: calibration
+grades the signal, it does not tune it, and a measured weight is still a
+human-reviewed code change.
+
+### Ship the instrument, not just the number
+
+All of the above now comes from `otito calibrate <repo>`, not a scratch
+script — with the minimum-sample rule enforced in code rather than by hand,
+and a receipt over a canonical timestamp-free payload so every number here can
+be traced to the run that produced it.
+
+Pointed at otito itself, the command mostly declines to answer:
+
+```text
+| money flow    | +3 | 1 | — (n < 30, withheld) | — |
+| auth/security | +3 | 2 | — (n < 30, withheld) | — |
+| data model    | +3 | 3 | — (n < 30, withheld) | — |
+
+Monotonic (low < medium < high): unknown (a band fell below the minimum sample)
+```
+
+That is the rule working. This repository still cannot calibrate this
+repository, and the tool now says so rather than printing a decimal.
 
 ## What changes because of it
 
@@ -225,12 +319,12 @@ incremental.
 
 | Priority | Work | Why first | Effort |
 | --- | --- | --- | --- |
-| **P0** | Line-overlap join, plus a minimum-sample rule that refuses to publish a rate beneath it | The first measurement showed both are load-bearing, not refinements | Medium |
+| ~~P0~~ | ~~Line-overlap join, plus a minimum-sample rule~~ — shipped as `otito calibrate` | The first measurement showed both are load-bearing, not refinements | Done |
 | **P0** | A multi-repository corpus to measure against | One young repository cannot produce enough events to conclude anything. A second repository (1,064 scoreable commits) now exists for base rates; outcome proxies still need it | Medium |
-| **P1** | `otito calibrate` over that corpus — per-flag hit rate and lift | Turns the risk score from assertion into measurement | Medium |
+| ~~P1~~ | ~~`otito calibrate` — per-flag hit rate and lift~~ — shipped | Turns the risk score from assertion into measurement | Done |
 | **P1** | Calibration receipt + fixture-based eval in CI | Keeps the numbers reproducible and offline | Medium |
 | **P2** | Publish the numbers in the [evaluation guide](../EVALS.md) | Only once a corpus can support them | Low |
-| **P2** | Revisit `inferRisk` weights and band thresholds as a reviewed change | Only defensible once measured | Medium |
+| **P2** | Revisit the remaining `inferRisk` weights and band thresholds | `dependency` is done; `request surface` vs `data model` is the open question, and needs more than one corpus | Medium |
 | **P2** | Reconsider an external calibrated signal | Only if a measured blind spot survives path rules | Low |
 
 ## How the thesis docs fit together
