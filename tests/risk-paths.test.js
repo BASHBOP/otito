@@ -8,6 +8,7 @@ import {
   isDocPath,
   isGateRiskPath,
   isSecretPath,
+  isTestDataPath,
   matchRiskPaths,
   matchSecretPaths,
   singularizeToken,
@@ -196,4 +197,69 @@ test("isSecretPath flags real secret/credential file-name patterns", () => {
 test("matchSecretPaths returns only true secret files, excluding env-substring sources", () => {
   const paths = ["src/config/dev.environments.ts", "docs/secrets-management.md", ".env", "secrets/db.json"];
   assert.deepEqual(matchSecretPaths(paths), [".env", "secrets/db.json"]);
+});
+
+// The `configuration` flag fired on 65% of this repository's scoreable commits
+// because its path rules matched loosely: "config", "lock" and "env" as bare
+// word tokens anywhere in a path, and "package.json" as a raw substring. The
+// tests below pin each false positive the anchored rules removed, and the real
+// configuration paths that must keep flagging.
+
+const CONFIGURATION_FALSE_POSITIVES = [
+  "src/lib/config.js",
+  "tests/config.test.js",
+  "src/lib/lock.js",
+  "src/lib/locks/advisory-lock.ts",
+  "src/env/index.ts",
+  "evals/fixtures/shop-api/package.json",
+  "evals/fixtures/gate-node/base/package-lock.json",
+  "codex/skills/otito/evals/files/sample-api/package.json",
+];
+
+for (const path of CONFIGURATION_FALSE_POSITIVES) {
+  test(`classifyPath does not flag configuration for ${path}`, () => {
+    const flags = classifyPath(path);
+    assert.ok(!flags.includes(RISK_FLAGS.configuration), `${path} should not imply configuration, got ${flags.join(", ")}`);
+  });
+}
+
+const CONFIGURATION_TRUE_POSITIVES = [
+  "package.json",
+  "package-lock.json",
+  "yarn.lock",
+  "go.sum",
+  "tsconfig.json",
+  "eslint.config.js",
+  "vite.config.ts",
+  "next.config.mjs",
+  "Dockerfile",
+  "Dockerfile.release",
+  "docker-compose.yml",
+  "docker-compose.dev.yml",
+  "scripts/sync-dev-with-prod-docker.sh",
+  "generate-tsconfig.mjs",
+  "tsconfig.base.json",
+  ".env.production",
+  ".github/workflows/ci.yml",
+  "config/app.yml",
+  "src/feature-flags/config/environments/production.json",
+];
+
+for (const path of CONFIGURATION_TRUE_POSITIVES) {
+  test(`classifyPath flags configuration for ${path}`, () => {
+    const flags = classifyPath(path);
+    assert.ok(flags.includes(RISK_FLAGS.configuration), `${path} should imply configuration, got ${flags.join(", ")}`);
+  });
+}
+
+test("isTestDataPath separates fixture corpora from the repository's own files", () => {
+  assert.equal(isTestDataPath("evals/fixtures/shop-api/package.json"), true);
+  assert.equal(isTestDataPath("tests/config.test.js"), true);
+  assert.equal(isTestDataPath("package.json"), false);
+  assert.equal(isTestDataPath("src/lib/risk-paths.js"), false);
+});
+
+test("excludeTestData is opt-in — other flags still classify fixture and test paths", () => {
+  assert.ok(classifyPath("evals/fixtures/auth-signup-api/src/session.ts").includes(RISK_FLAGS.authSecurity));
+  assert.ok(classifyPath("tests/checkout.spec.ts").includes(RISK_FLAGS.moneyFlow));
 });
