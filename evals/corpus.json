@@ -3,14 +3,14 @@
   "description": "Labeled evaluation corpus for otito retrieval, risk classification, fixture-backed harness command execution, and gate effectiveness. Gate cases initialize an isolated Git repository from a committed base, apply one committed change-set, and assert both the verdict and deterministic check reason. See docs/EVALS.md for how to add a case and how thresholds work.",
   "k": 5,
   "thresholds": {
-    "comment": "Floors set to current-baseline-minus-slack so the suite is green today but a regression trips it. Baseline (2026-06-10): retrieval p@5=0.933 r@5=1.0 mrr=1.0; risk accuracy=1.0 (16/16). Aggregate metrics must be >= these floors for exit code 0. Re-record both baseline and floors in docs/EVALS.md after any intentional behavior change.",
+    "comment": "Floors set to current-baseline-minus-slack so the suite is green today but a regression trips it. Baseline (2026-09-19): retrieval p@5=0.867 r@5=1.0 mrr=1.0; risk accuracy=1.0 (20/20). Aggregate metrics must be >= these floors for exit code 0. The risk floor is 0.96 rather than 0.95 so that a single failing case (19/20 = 0.95) still trips the gate. Re-record both baseline and floors in docs/EVALS.md after any intentional behavior change.",
     "retrieval": {
       "precisionAtK": 0.85,
       "recallAtK": 0.9,
       "mrr": 0.9
     },
     "risk": {
-      "accuracy": 0.95
+      "accuracy": 0.96
     }
   },
   "fixtureRoots": {
@@ -254,6 +254,38 @@
       "mode": "path",
       "path": "prisma/schema.prisma",
       "expectedConcepts": ["data model"],
+      "notExpectedConcepts": []
+    },
+    {
+      "name": "path-config-module-not-configuration",
+      "comment": "Regression guard: a source module named config.js is code, not configuration — the bare 'config' word token used to match it.",
+      "mode": "path",
+      "path": "src/lib/config.js",
+      "expectedConcepts": [],
+      "notExpectedConcepts": ["configuration"]
+    },
+    {
+      "name": "path-fixture-manifest-not-configuration",
+      "comment": "Regression guard: a manifest inside a fixture corpus is test input, not this repository's configuration — 'package.json' used to match as a raw substring anywhere in the path.",
+      "mode": "path",
+      "path": "evals/fixtures/shop-api/package.json",
+      "expectedConcepts": [],
+      "notExpectedConcepts": ["configuration"]
+    },
+    {
+      "name": "path-root-manifest-is-configuration",
+      "comment": "The narrowing must keep the repository's own manifest flagged.",
+      "mode": "path",
+      "path": "package.json",
+      "expectedConcepts": ["configuration"],
+      "notExpectedConcepts": []
+    },
+    {
+      "name": "path-environment-config-is-configuration",
+      "comment": "A config/ directory holding environment JSON is real configuration and must keep flagging.",
+      "mode": "path",
+      "path": "src/feature-flags/config/environments/production.json",
+      "expectedConcepts": ["configuration"],
       "notExpectedConcepts": []
     },
     {

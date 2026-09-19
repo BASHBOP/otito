@@ -136,7 +136,7 @@ without touching code:
 ```json
 "thresholds": {
   "retrieval": { "precisionAtK": 0.85, "recallAtK": 0.9, "mrr": 0.9 },
-  "risk": { "accuracy": 0.95 }
+  "risk": { "accuracy": 0.96 }
 }
 ```
 
@@ -144,13 +144,14 @@ The runner computes the aggregate metrics, compares each against its floor, and
 sets `exitCode` to `0` only when **every** check passes. Thresholds are set to
 **current-baseline-minus-slack**: high enough that a real regression trips the
 gate, low enough that the suite is green today. (At the recorded baseline a
-single risk-case regression drops accuracy to 15/16 = 0.9375, below the 0.95
-floor — so the gate catches it.)
+single risk-case regression drops accuracy to 19/20 = 0.95, below the 0.96
+floor — so the gate catches it. The risk floor is 0.96 rather than 0.95
+precisely because 20 cases put a single failure exactly on 0.95.)
 
 ## Current baseline
 
-Recorded **2026-08-02** by running `runRetrievalEval()` against the committed
-corpus (21 retrieval + 16 risk cases):
+Recorded **2026-09-19** by running `runRetrievalEval()` against the committed
+corpus (21 retrieval + 20 risk cases):
 
 ```
 | Group     | Metric       | Value | Threshold | Pass |
@@ -158,10 +159,10 @@ corpus (21 retrieval + 16 risk cases):
 | retrieval | precisionAtK | 0.867 |      0.85 | yes  |
 | retrieval | recallAtK    | 1.0   |      0.9  | yes  |
 | retrieval | mrr          | 1.0   |      0.9  | yes  |
-| risk      | accuracy     | 1.0   |      0.95 | yes  |
+| risk      | accuracy     | 1.0   |      0.96 | yes  |
 
 Retrieval: p@5=0.867, r@5=1.0, mrr=1.0 (21/21 cases pass)
-Risk:      accuracy=1.0 (16/16 cases pass)
+Risk:      accuracy=1.0 (20/20 cases pass)
 Overall:   PASS (exit 0)
 ```
 

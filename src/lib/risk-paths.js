@@ -16,9 +16,17 @@ export const RISK_FLAGS = {
   releaseDiscipline: "release discipline",
 };
 
-// Path/keyword groups for each canonical flag. Lowercased substrings — match
-// any path containing the substring. Each flag may match by path tokens or by
-// the code-map `kind` field.
+// Path/keyword groups for each canonical flag. Each flag may match by the
+// code-map `kind` field or by the path. Path matchers come in two strengths:
+//
+//   pathParts          loose — a whole word token anywhere in the path, or a
+//                      raw substring when the part contains punctuation.
+//   basenames /        anchored — a whole basename, a basename pattern, or a
+//   basenamePatterns / whole directory segment. Use these when the loose form
+//   segments           would match ordinary source files that merely share a
+//                      word with the concept.
+//
+// `excludeTestData` opts a flag out of classifying tests and fixture corpora.
 export const RISK_PATTERNS = [
   {
     flag: RISK_FLAGS.requestSurface,
@@ -48,7 +56,41 @@ export const RISK_PATTERNS = [
   {
     flag: RISK_FLAGS.configuration,
     kinds: ["config"],
-    pathParts: ["package.json", "lock", "docker", "next.config", "vite.config", "tsconfig", "env", ".github/workflows", "config", "dockerfile", "go.sum"],
+    // Path prefixes, plus the two word tokens that survive anchoring:
+    // "docker" and "tsconfig" are unambiguous — measured across this repo and
+    // a 2,303-commit service repo they produced no false positives, and they
+    // reach build and ops scripts (`scripts/sync-dev-with-prod-docker.sh`,
+    // `generate-tsconfig.mjs`) that no basename rule covers. "config", "lock"
+    // and "env" are ordinary programming words and are anchored below.
+    pathParts: [".github/workflows", ".circleci", "docker", "tsconfig"],
+    // Whole basenames. The previous rule matched "package.json" as a raw
+    // substring of the path, so every nested manifest in the tree flagged —
+    // on this repository 14 of the 17 matching manifests were eval fixtures
+    // and sample apps, which are inert test data.
+    basenames: ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "cargo.lock", "gemfile.lock", "poetry.lock", "composer.lock", "go.sum"],
+    // Basename families. `*.config.*` replaces the bare "config" word token,
+    // which also matched source modules (`src/lib/config.js`) and their tests
+    // (`tests/config.test.js`); `.env*` replaces the bare "env" token, which
+    // matched any `env/` directory or `src/env/index.ts`. The compose pattern
+    // carries the environment-suffixed forms (`docker-compose.dev.yml`) that
+    // the bare "docker" token used to reach.
+    basenamePatterns: [
+      /^dockerfile(\.[^/]+)?$/,
+      /^docker-compose(\.[^/]+)?\.ya?ml$/,
+      /^tsconfig(\.[^/]+)?\.json$/,
+      /^[^/]+\.config\.[cm]?[jt]sx?$/,
+      /^\.env(\.[^/]+)?$/,
+    ],
+    // Whole directory segments. Replaces the bare "config" and "lock" word
+    // tokens, which matched any path component — including `src/lib/lock.js`
+    // and `src/lib/locks/advisory-lock.ts`.
+    segments: ["config", "configs", "docker"],
+    // Configuration describes how *this* repository is built and deployed, so
+    // a config-shaped file that is test input rather than real configuration
+    // must not flag. Opt-in per pattern: every other flag keeps classifying
+    // tests and fixtures, and the merge gates keep filtering them downstream
+    // via `isGateRiskPath`.
+    excludeTestData: true,
   },
 ];
 
@@ -85,6 +127,11 @@ export const SECRET_SEGMENTS = new Set(["secret", "secrets", "credentials"]);
 // word (e.g. `docs/secrets-management.md`, `auth-guide.md`).
 const DOC_EXTENSIONS = new Set([".md", ".mdx", ".markdown", ".rst", ".txt", ".adoc"]);
 const DOC_SEGMENTS = new Set(["docs", "doc", "documentation"]);
+
+// Directories that hold test input rather than the repository's own code and
+// configuration. A `package.json` or `Dockerfile` under one of these describes
+// a fixture repository the evals run against, not how this repository ships.
+const TEST_DATA_SEGMENTS = new Set(["fixtures", "__fixtures__", "testdata", "test-data", "evals", "eval"]);
 
 // Threshold used by `classifyPath` when a file's additions+deletions are passed
 // in. Keeps the 300-line boundary used by the existing pr-review heuristic.
@@ -212,8 +259,27 @@ export function classifyPath(filePath, options = {}) {
   /** @type {Set<string>} */
   const flags = new Set();
 
+  const segments = path.replaceAll("\\", "/").split("/").filter(Boolean);
+  const basename = segments[segments.length - 1] ?? "";
+  const directories = new Set(segments.slice(0, -1));
+
   for (const pattern of RISK_PATTERNS) {
+    if (pattern.excludeTestData && isTestDataPath(filePath)) {
+      continue;
+    }
     if (pattern.kinds.includes(kind)) {
+      flags.add(pattern.flag);
+      continue;
+    }
+    if (pattern.basenames?.includes(basename)) {
+      flags.add(pattern.flag);
+      continue;
+    }
+    if (pattern.basenamePatterns?.some((candidate) => candidate.test(basename))) {
+      flags.add(pattern.flag);
+      continue;
+    }
+    if (pattern.segments?.some((segment) => directories.has(segment))) {
       flags.add(pattern.flag);
       continue;
     }
@@ -292,6 +358,27 @@ export function isDocPath(filePath) {
   const dot = path.lastIndexOf(".");
   if (dot >= 0 && DOC_EXTENSIONS.has(path.slice(dot))) return true;
   return path.split("/").some((segment) => DOC_SEGMENTS.has(segment));
+}
+
+// True when the path is a test file or lives in a fixture corpus. Used by
+// patterns that opt in via `excludeTestData`, so a config-shaped fixture is
+// not mistaken for this repository's own configuration. Note the evals run
+// otito *inside* those fixture directories, where paths are fixture-relative
+// (`package.json`, not `evals/fixtures/x/package.json`), so this never hides
+// a fixture's configuration from the run it is a fixture for.
+/**
+ * @param {string} filePath
+ * @returns {boolean}
+ */
+export function isTestDataPath(filePath) {
+  const path = String(filePath ?? "");
+  if (!path.trim()) return false;
+  if (isTestFilePath(path)) return true;
+  return path
+    .toLowerCase()
+    .replaceAll("\\", "/")
+    .split("/")
+    .some((segment) => TEST_DATA_SEGMENTS.has(segment));
 }
 
 /**
