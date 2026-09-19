@@ -6,6 +6,19 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-09-19
+
+### Added
+
+- **Model routing (`scripts/model-route.mjs`) and [the routing doc](docs/18-model-routing/README.md).** Score a coding task before any tokens are spent on it and recommend a cheap, mid, or premium model tier. otito answers the repository half deterministically (AX, containment, canonical risk flags); a System One model answers the request half with calibrated probabilities over three narrow typed questions. Host agnostic by design: `--tier-only` prints the tier for any host to map, `--host <id>` prints that host's model name, and maps live in `.otito/model-route.json` so nothing about the scoring is specific to one IDE.
+  - **The router runs before work starts and never touches the gate.** It decides how much model to spend; the gate decides whether a change may merge. A failed, unreachable, or unkeyed model call falls back to a local estimate that labels itself uncalibrated, and costs a tier, never a verdict. The gate never asks.
+  - It ships **advisory**: it prints a recommendation and does not pick a model. The share weights and the band thresholds were chosen by judgement and have never been compared to an outcome, which is the same critique [the calibration thesis](docs/17-calibration-thesis/README.md) makes of `inferRisk`. Promoting it past advisory needs a backtest measuring regret, tasks routed cheap that ended in a revert or repair, against the spend avoided.
+  - Dogfooded on a production Next.js application, where the first pass routed every request to premium and surfaced two defects worth recording. A question whose answer never moves carries no information however well calibrated it is: asked as a yes/no, "is this request ambiguous enough that a wrong reading produces the wrong change?" returned 0.57 to 0.81 for every request including a typo fix. And band thresholds belong to the quantity they were drawn for: subtracting flat points from AX while still banding at AX's own 45/75 is sufficient on its own to push a whole corpus into the most expensive tier.
+
+### Changed
+
+- **`docs/index.md` lists the calibration thesis.** Doc 17 shipped in 1.11.0 without its row in the documentation pack table.
+
 ## [1.11.0] - 2026-09-19
 
 ### Added
