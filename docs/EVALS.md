@@ -144,14 +144,15 @@ The runner computes the aggregate metrics, compares each against its floor, and
 sets `exitCode` to `0` only when **every** check passes. Thresholds are set to
 **current-baseline-minus-slack**: high enough that a real regression trips the
 gate, low enough that the suite is green today. (At the recorded baseline a
-single risk-case regression drops accuracy to 19/20 = 0.95, below the 0.96
+single risk-case regression drops accuracy to 20/21 = 0.952, below the 0.96
 floor — so the gate catches it. The risk floor is 0.96 rather than 0.95
-precisely because 20 cases put a single failure exactly on 0.95.)
+because at this corpus size a single failure would otherwise land on or above
+the older floor.)
 
 ## Current baseline
 
 Recorded **2026-09-19** by running `runRetrievalEval()` against the committed
-corpus (21 retrieval + 20 risk cases):
+corpus (21 retrieval + 21 risk cases):
 
 ```
 | Group     | Metric       | Value | Threshold | Pass |
@@ -162,7 +163,7 @@ corpus (21 retrieval + 20 risk cases):
 | risk      | accuracy     | 1.0   |      0.96 | yes  |
 
 Retrieval: p@5=0.867, r@5=1.0, mrr=1.0 (21/21 cases pass)
-Risk:      accuracy=1.0 (20/20 cases pass)
+Risk:      accuracy=1.0 (21/21 cases pass)
 Overall:   PASS (exit 0)
 ```
 

@@ -679,6 +679,8 @@ function riskSentence(flag) {
       return "Frontend/backend contract change: verify the client and server agree on payload, status codes, and error shapes.";
     case RISK_FLAGS.configuration:
       return "Configuration change: verify environment variables, secrets, build output, and production defaults.";
+    case RISK_FLAGS.dependency:
+      return "Dependency change: check the lockfile diff for unexpected transitive bumps and confirm the build and audit still pass.";
     case RISK_FLAGS.largeFileDiff:
       return "Large-file change: review for unrelated edits and consider splitting follow-up PRs.";
     case RISK_FLAGS.secret:
