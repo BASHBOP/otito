@@ -114,6 +114,8 @@ nav:
       - Overview: 15-herdr-integration/README.md
   - Clean Code Thesis:
       - Overview: 16-clean-code-thesis/README.md
+  - Calibration Thesis:
+      - Overview: 17-calibration-thesis/README.md
   - Evaluation Guide: EVALS.md
   - Glossary: GLOSSARY.md
 
