@@ -62,6 +62,8 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 | 14 | [Trust Harness Thesis](./14-trust-harness-thesis/README.md) | Why independent merge evidence outlasts generic agent orchestration | :material-check-circle: Active |
 | 15 | [Herdr Integration](./15-herdr-integration/README.md) | Run Otito context and merge evidence inside persistent agent workspaces | :material-check-circle: Active |
 | 16 | [Clean Code Thesis](./16-clean-code-thesis/README.md) | Clean code as owner files, focused diffs, and gates, not a cleaner agent | :material-check-circle: Active |
+| 17 | [Calibration Thesis](./17-calibration-thesis/README.md) | Grading risk flags against the repository's own history | :material-check-circle: Active |
+| 18 | [Model Routing](./18-model-routing/README.md) | Spending a calibrated model on the request side without touching the gate | :material-check-circle: Active |
 
 ---
 
