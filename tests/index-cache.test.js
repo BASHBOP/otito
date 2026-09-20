@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getCachedCodeMap, getCodeMapCachePath } from "../src/lib/index-cache.js";
+import { getCachedCodeMap, getCodeMapCachePath, resetIndexCacheMemo } from "../src/lib/index-cache.js";
+import { codeMapCapabilitySignature } from "../src/lib/code-map/capabilities.js";
 
 function makeRepo(name) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), name));
@@ -144,4 +145,125 @@ test("memo returns equivalent repo data across calls", () => {
   assert.equal(first.repo.name, second.repo.name);
   assert.deepEqual(first.summary, second.summary, "memoized summary is identical");
   assert.deepEqual(first.files, second.files, "memoized files are identical");
+});
+
+// Poison the on-disk index for `root` while keeping every other acceptance
+// check satisfied — current version, the repository's real (unchanged)
+// fingerprint, the right root. Only the capability signature differs, so a
+// miss here can have no other cause.
+function poisonIndexWithCapabilities(root, capabilities) {
+  const fresh = getCachedCodeMap(root);
+  const record = {
+    version: 11,
+    generatedAt: "2026-09-07T04:38:45.098Z",
+    fingerprint: fresh.cache.fingerprint,
+    map: { ok: true, repo: { root }, poisoned: true },
+  };
+  if (capabilities !== undefined) record.capabilities = capabilities;
+  fs.writeFileSync(cachePathFor(root), JSON.stringify(record, null, 2));
+  resetIndexCacheMemo();
+  return fresh;
+}
+
+test("an index written by an indexer with different capabilities is rebuilt", () => {
+  const root = makeRepo("otito-index-capability-");
+  poisonIndexWithCapabilities(root, "cap1:0000000000000000");
+
+  const result = getCachedCodeMap(root);
+  assert.equal(result.cache.hit, false, "a foreign capability signature is not trusted");
+  assert.ok(!("poisoned" in result), "the stale map is not served");
+  assert.equal(result.repo.name, "cached-repo");
+  assert.equal(result.cache.capabilities, codeMapCapabilitySignature(), "the served map reports today's capabilities");
+});
+
+test("an index written before capabilities were recorded is rebuilt", () => {
+  const root = makeRepo("otito-index-capability-absent-");
+  // Exactly what every index written before this field existed looks like:
+  // right version, right fingerprint, no capability signature at all.
+  poisonIndexWithCapabilities(root, undefined);
+
+  const result = getCachedCodeMap(root);
+  assert.equal(result.cache.hit, false, "a cache with no capability signature is not trusted");
+  assert.ok(!("poisoned" in result), "the stale map is not served");
+  assert.equal(result.repo.name, "cached-repo");
+});
+
+test("a matching capability signature is still a hit", () => {
+  // The guard must reject stale indexers without rejecting good ones: the
+  // same repository under the same indexer stays a disk hit across processes.
+  const root = makeRepo("otito-index-capability-match-");
+  const first = getCachedCodeMap(root);
+  assert.equal(first.cache.hit, false);
+
+  resetIndexCacheMemo();
+  const second = getCachedCodeMap(root);
+  assert.equal(second.cache.hit, true, "an unchanged repo and indexer is served from disk");
+  assert.equal(second.cache.source, "disk");
+});
+
+test("the written index records the capability signature", () => {
+  const root = makeRepo("otito-index-capability-write-");
+  const result = getCachedCodeMap(root);
+  assert.equal(result.cache.hit, false);
+  assert.equal(result.cache.capabilities, codeMapCapabilitySignature());
+
+  const onDisk = JSON.parse(fs.readFileSync(cachePathFor(root), "utf8"));
+  assert.equal(onDisk.capabilities, codeMapCapabilitySignature(), "the signature is persisted for the next process to check");
+});
+
+// The regression this mechanism exists for. PR #175 taught the indexer to
+// admit markdown but did not bump cacheVersion, so an untouched repository —
+// identical fingerprint, current version — kept serving a map with no .md
+// records. Every README/skill/doc request then matched nothing, the `no
+// evidence` fail-safe fired, and a one-line typo fix routed to premium.
+test("a pre-markdown index is rebuilt even though version and fingerprint still match", () => {
+  const root = makeRepo("otito-index-premarkdown-");
+  fs.writeFileSync(path.join(root, "README.md"), "# cached-repo\n\nA README with a typo.\n");
+
+  const fresh = getCachedCodeMap(root);
+  assert.ok(
+    fresh.files.some((file) => file.path === "README.md"),
+    "today's indexer records markdown",
+  );
+
+  // Rewrite the index exactly as the older indexer would have left it: same
+  // version, same (still-valid) fingerprint, markdown records absent, and the
+  // capability signature of an indexer that did not admit markdown.
+  const cachePath = cachePathFor(root);
+  fs.writeFileSync(
+    cachePath,
+    JSON.stringify(
+      {
+        version: 11,
+        generatedAt: "2026-09-07T04:38:45.098Z",
+        fingerprint: fresh.cache.fingerprint,
+        capabilities: "cap1:premarkdownindexer",
+        map: { ...fresh, cache: undefined, files: fresh.files.filter((file) => !file.path.endsWith(".md")) },
+      },
+      null,
+      2,
+    ),
+  );
+  resetIndexCacheMemo();
+
+  const served = getCachedCodeMap(root);
+  assert.equal(served.cache.hit, false, "the pre-markdown index is treated as stale");
+  assert.ok(
+    served.files.some((file) => file.path === "README.md"),
+    "the rebuilt index contains the markdown the old indexer could not see",
+  );
+});
+
+// Without the capability check, the same setup is served verbatim — this pins
+// the failure mode so a future refactor cannot quietly reintroduce it.
+test("fingerprint alone cannot detect an indexer change", () => {
+  const root = makeRepo("otito-index-fingerprint-blind-");
+  fs.writeFileSync(path.join(root, "README.md"), "# cached-repo\n");
+
+  const first = getCachedCodeMap(root);
+  resetIndexCacheMemo();
+  const second = getCachedCodeMap(root);
+
+  assert.equal(second.cache.hit, true, "an untouched repository is a hit");
+  assert.equal(first.cache.fingerprint, second.cache.fingerprint, "the fingerprint is blind to everything but the files themselves");
 });
