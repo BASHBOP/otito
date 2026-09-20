@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **`scripts/hooks/route-prompt.mjs`, a `UserPromptSubmit` hook that routes every request.** A skill only routes when the model remembers to invoke it, so the request most worth routing — a quick one — is the one least likely to trigger it. The hook scores the request before any work starts and returns the tier as context, every time. It is explicit about the ceiling, because the ceiling is low: no hook output carries a model, `PreModelSwitch` may only block a switch and `PostModelSwitch` is read-only, and a session cannot re-price its own turns. So the hook **advises the session and binds the subagent** — the Task/Agent tool takes a model, so delegated work genuinely runs on the routed tier — and says as much in the context it injects, because claiming the host switched models when it only recommended a tier is an anti-pattern the skill names. It never eats a prompt: every failure path exits 0 and writes nothing, the routing call is killed at six seconds, turn-taking prompts and slash commands are skipped, and a subagent never routes so a routed agent cannot launch another. See [model routing](docs/18-model-routing/README.md).
+
 ### Fixed
 
 - **The code map never indexed Markdown, so no skill or docs page could be found.** `isSourceFilePath` admitted a fixed list of code extensions plus a special case for `CHANGELOG.md`; every other `.md` file in the repository was invisible to impact analysis, `route`, and convergence. A request naming a skill therefore ranked whatever library files happened to share its vocabulary: _"make the model-router skill layout-agnostic"_ returned `integrations/herdr/runtime.mjs` and `src/lib/model-route.js` at containment 18, and `codex/skills/model-router/SKILL.md` — the file the request names — appeared at no rank at all. The same blind spot hid every page under `docs/`. This is the failure class the empty-match fix addressed one release earlier: a confident answer resting on the wrong evidence.
