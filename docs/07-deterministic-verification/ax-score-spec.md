@@ -1,6 +1,6 @@
 # Spec: Agent Experience (AX) Score
 
-**Status:** Implemented — task mode (`otito ax`). Repo mode + `ax_score` MCP tool pending.
+**Status:** Implemented in task mode (`otito ax`). Repo mode + `ax_score` MCP tool pending.
 **Owner:** TBD
 **Depends on:** `src/lib/tokens.js`, `src/lib/impact.js`, `src/lib/review.js`, `src/lib/risk-paths.js`, `src/lib/codeowners.js`, `src/lib/policy.js`
 **Implementation:** `src/lib/ax.js` (`generateAxScore`), CLI `otito ax`, tests in `tests/ax.test.js`.
@@ -25,13 +25,13 @@ It is the measurable form of the harness thesis (see
 [README.md](./README.md), lesson 2): a better codebase needs **fewer tokens** and has
 **better guardrails**, so a cheaper model can do the same work. That remains a cost
 property. The product lead is independent merge evidence (see
-[the trust harness thesis](../14-trust-harness-thesis/README.md)). The AX score rises as the
+[the trust harness thesis](../07-deterministic-verification/README.md)). The AX score rises as the
 harness improves and falls when the codebase is hard to change. No competing tool ships this.
 
 Two framings, same engine:
 
-- **Task AX** — `otito ax "<task>" --path .` — how agent-friendly is _this change_?
-- **Repo AX** — `otito ax --path .` — aggregate agent-friendliness of the repo, sampled
+- **Task AX**, `otito ax "<task>" --path .`: how agent-friendly is _this change_?
+- **Repo AX**, `otito ax --path .`: aggregate agent-friendliness of the repo, sampled
   across representative tasks/paths.
 
 ## 2. Why this is low-risk to build
@@ -40,9 +40,9 @@ Every input already exists; AX is a composition layer, not new analysis:
 
 | Signal | Source (already in repo) |
 | --- | --- |
-| Token cost of the context an agent needs | `estimateTokenSections` / `estimateTokens` — `src/lib/tokens.js`; surfaced as `data.tokenEstimate` in `generateImpact` |
-| Blast radius (files touched, dependency fan-out) | `generateImpact(query, opts).data.topFiles[]` (`score`, `relatedFiles`, `riskFlags`) — `src/lib/impact.js` |
-| Risk density | `classifyPath` / `RISK_FLAGS` — `src/lib/risk-paths.js`; `risks` array on impact data |
+| Token cost of the context an agent needs | `estimateTokenSections` / `estimateTokens` in `src/lib/tokens.js`; surfaced as `data.tokenEstimate` in `generateImpact` |
+| Blast radius (files touched, dependency fan-out) | `generateImpact(query, opts).data.topFiles[]` (`score`, `relatedFiles`, `riskFlags`) in `src/lib/impact.js` |
+| Risk density | `classifyPath` / `RISK_FLAGS` in `src/lib/risk-paths.js`; `risks` array on impact data |
 | Guardrail: tests exist for the change | `data.testSuggestions` + test-kind files in `topFiles` |
 | Guardrail: validation commands exist | `data.validation` from impact / harness |
 | Guardrail: ownership is resolvable | `src/lib/codeowners.js` |
@@ -63,7 +63,7 @@ AX = 0.35 * Changeability   // inverse of token cost to make the change
 
 ### 3.1 Changeability (inverse token cost)
 
-Lower tokens-to-change is better — this is Pocock's "employ a stupider model" lever.
+Lower tokens-to-change is better, which is Pocock's "employ a stupider model" lever.
 
 ```
 tokens   = impact.data.tokenEstimate.total      // context-pack tokens for this task
@@ -82,7 +82,7 @@ Containment = clamp(100 - (N * w_n + fanOut * w_f), 0, 100)
 ```
 
 Small, well-isolated changes score high; changes that ripple across many dependents score
-low — directly rewarding good module boundaries.
+low, directly rewarding good module boundaries.
 
 ### 3.3 Guardrails (boolean coverage, 25 pts each)
 
@@ -132,7 +132,7 @@ Clarity = 100
 ```
 
 `recommendations` is the payoff: every missing guardrail or oversized context pack becomes a
-concrete, point-valued harness improvement — the self-improving loop from lesson 7.
+concrete, point-valued harness improvement, closing the loop from measurement back to the repository.
 
 Renderers mirror the existing review surface: a terminal view (`src/lib/render/fancy.js`,
 matching `formatReviewTerminal`) and an optional Mermaid/HTML view for PR artifacts.
@@ -149,21 +149,21 @@ otito ax . --base origin/main                  # AX of the current diff
 
 ### MCP tool
 
-Add `ax_score` to `src/lib/mcp.js`, mirroring `review_gate`. Keep the description tight —
+Add `ax_score` to `src/lib/mcp.js`, mirroring `review_gate`. Keep the description tight:
 per lesson 4, every tool description is permanent context cost. One sentence:
 
-> `ax_score` — score how cheap and safe it is for an agent to make a change (0–100), with
+> `ax_score`: score how cheap and safe it is for an agent to make a change (0–100), with
 > ranked harness fixes.
 
 ## 6. Implementation phases
 
-1. **Engine** — `src/lib/ax.js`: `generateAxScore(query, options)` composing the existing
+1. **Engine**, `src/lib/ax.js`: `generateAxScore(query, options)` composing the existing
    functions; pure, deterministic, unit-testable. No new analysis.
-2. **CLI** — wire `ax` command in `src/cli.js`; Markdown + `--json`.
-3. **Renderer** — terminal view via `fancy.js`; reuse band glyphs from review.
-4. **MCP** — register `ax_score`; add to `agent-tools.js` metadata.
-5. **Repo mode** — sample representative paths/tasks, aggregate to a repo headline.
-6. **Recommendations** — map each failing sub-signal to a point-valued fix string.
+2. **CLI**: wire the `ax` command in `src/cli.js`; Markdown + `--json`.
+3. **Renderer**: terminal view via `fancy.js`; reuse band glyphs from review.
+4. **MCP**: register `ax_score`; add to `agent-tools.js` metadata.
+5. **Repo mode**: sample representative paths and tasks, aggregate to a repo headline.
+6. **Recommendations**: map each failing sub-signal to a point-valued fix string.
 
 ## 7. Tests (per repo convention, `tests/*.test.js`)
 

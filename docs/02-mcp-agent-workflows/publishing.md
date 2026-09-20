@@ -29,7 +29,7 @@ Two options:
 | Option | Format | When to use |
 | --- | --- | --- |
 | Bare name | `otito` | Only if `npm view <name>` returns 404 |
-| Scoped name | `@yourorg/otito` | **Recommended** — free, immediate, brand-consistent with your GitHub org |
+| Scoped name | `@yourorg/otito` | **Recommended**: free, immediate, brand-consistent with your GitHub org |
 
 Check availability before deciding:
 
@@ -212,7 +212,7 @@ your repo (next to `package.json`). Minimal valid example:
 | `name` | Must match `^[a-zA-Z0-9.-]+/[a-zA-Z0-9._-]+$`, max 200 chars | For GitHub auth, the prefix MUST be `io.github.<your-username>/` |
 | `title` | 1–100 chars | Human-readable display name shown in registry list views |
 | `description` | **1–100 chars** | ⚠️ Hard cap. Trim early. |
-| `websiteUrl` | URI | Canonical homepage — your docs site, not the GitHub repo |
+| `websiteUrl` | URI | Canonical homepage: your docs site, not the GitHub repo |
 | `repository.id` | string | GitHub repo numeric ID. Get it with `gh api repos/<owner>/<repo> --jq '.id'`. Prevents namespace-resurrection attacks. |
 | `version` | SemVer, not "latest", not a range | Must match `packages[0].version` |
 | `packages[0].registryType` | `npm` / `pypi` / `oci` / `nuget` / `mcpb` | |
@@ -305,7 +305,7 @@ In this repo, npm and the MCP Registry publish automatically when you push a
 
 1. Bump `package.json` and `package-lock.json` versions
 2. Bump `server.json.version` and `packages[0].version` to match
-3. `npm run ci` — `version:check` fails the build if `server.json` is out of
+3. `npm run ci`: `version:check` fails the build if `server.json` is out of
    sync, so the npm package and the MCP manifest can never drift apart
 4. Commit, then tag and push:
 
@@ -337,7 +337,7 @@ followed by `mcp-publisher publish` from a clean checkout.
 
 ## 🎁 What "being on the MCP Registry" actually buys you
 
-A discovery channel — nothing automatic beyond that:
+A discovery channel, with nothing automatic beyond that:
 
 - ✅ Registry-aware MCP hosts (Claude Desktop, Codex CLI, Cursor, Goose…) can find and install your server with one click
 - ✅ Third-party catalogs (Glama, MCP.so, awesome lists) often syndicate from the registry

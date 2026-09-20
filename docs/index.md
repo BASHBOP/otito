@@ -2,11 +2,9 @@
 
 ## Independent trust infrastructure for agents and reviewers
 
-**Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.13.0 published to npm, GitHub Releases, and the official MCP Registry<br>
-**Category:** Practical AI governance for developers
+> For teams that want any coding agent to produce evidence a human can trust before merge.
 
-> A Bashbop Ltd product for teams that want any coding agent to produce evidence a human can trust before merge.
+**v1.13.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
 
 ---
 
@@ -15,55 +13,80 @@
 
     Its command-line and package identity is `otito`.
 
-    :material-animation-play: See the [**How It Works** visual walkthrough](assets/otito-how-it-works.html) — a layered diagram of the discover → index → context → gate flow.
+    :material-animation-play: See the [**How It Works** visual walkthrough](assets/otito-how-it-works.html), a layered diagram of the discover → index → context → gate flow.
 
 ---
 
 ## What's New
 
-!!! tip "v1.10.0 published (2026-09-12)"
-    - `Secret safety` now scans the exact changed blob, not just file names: a live credential pasted into ordinary source used to pass the gate.
-    - Convergence can ground a task in `kind: "source"` repositories — libraries and CLIs, where it previously scored an exactly-correct change the same as an unrelated one.
-    - `change_impact` and `convergence_score` report `advisoryChangedFiles`, so a `missed` verdict is always explainable.
+!!! tip "v1.13.0 published (2026-09-20)"
+    - `otito route <repo> "<request>"` scores a coding task **before** tokens are spent on it and recommends a cheap, mid, or premium tier. otito answers the repository half deterministically; a System One model answers the request half with calibrated probabilities. It ships **advisory**, because the weights have never been graded against an outcome.
+    - The router is not the gate and cannot become one. It runs before work starts; the gate runs after the diff exists. An unreachable or unkeyed model costs a tier, never a verdict.
+    - Fixed: zero matched files read as a *contained* change, so the request a repository understood least was routed to the cheapest model. Absence now fails safe to the ceiling.
+    - Nineteen report commands moved onto the shared document renderer, so every command reads like `review` and `impact`.
 
-    [npm v1.10.0](https://www.npmjs.com/package/@bashbop/otito/v/1.10.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.10.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.13.0](https://www.npmjs.com/package/@bashbop/otito/v/1.13.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.13.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
-!!! tip "v1.9.3 published (2026-09-12)"
-    - Fixed stale version references in `RELEASE.md` and the MCP docs, and automated the doc/version sync so pinned install commands can't go stale silently again.
+!!! tip "v1.12.0 published (2026-09-19)"
+    - Model routing arrived as a prototype alongside [the routing doc](./18-model-routing/README.md), dogfooded on a production application where the first pass routed *every* request to premium and surfaced two defects worth recording.
+    - A question whose answer never moves carries no information however well calibrated it is: asked as a yes/no, "is this request ambiguous?" returned 0.57 to 0.81 for every request including a typo fix.
 
-    [npm v1.9.3](https://www.npmjs.com/package/@bashbop/otito/v/1.9.3) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.9.3) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.12.0](https://www.npmjs.com/package/@bashbop/otito/v/1.12.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.12.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
-!!! tip "v1.9.2 published (2026-09-07)"
-    - otito is now listed on [mcpservers.org](https://mcpservers.org/servers/bashbop/otito); README carries the listing badge.
+!!! tip "v1.11.0 published (2026-09-19)"
+    - `otito calibrate <repo>` grades the risk flags against the repository's own history, joining fix commits to the commits they repair by line overlap rather than by filename. Pointed at a small corpus it declines to answer most rows, which is the honest result.
+    - `configuration` was two signals under one name: manifest-only commits were repaired at 0.42x the base rate, real config files at 2.03x. Merged, they cancelled out and inverted the risk bands, leaving `medium` changes *less* likely to be repaired than `low` at every window.
+    - A zero-weight flag could gate a merge on its own; gating now requires a flag that scores.
 
-    [npm v1.9.2](https://www.npmjs.com/package/@bashbop/otito/v/1.9.2) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.9.2) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.11.0](https://www.npmjs.com/package/@bashbop/otito/v/1.11.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.11.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for the full history.
 
 ---
 
-## :material-file-document-multiple: Documentation Pack
+## :material-file-document-multiple: Documentation
 
-| # | Document | Description | Status |
-| :-: | --- | --- | :-: |
-| 01 | [:material-map-marker-path: Context Foundation](./01-context-foundation/README.md) | Repository inspection, maps, search, context packs, and harnesses | :material-check-circle: Active |
-| 02 | [:material-lan-connect: MCP and Agents](./02-mcp-agent-workflows/README.md) | MCP tools and agent-facing workflows | :material-check-circle: Active |
-| 03 | [:material-account-group: Contributor Governance](./03-contributor-governance/README.md) | Protected review, CODEOWNERS, required checks, and merge authority | :material-check-circle: Active |
-| 04 | [:material-tag-check: Release Readiness](./04-release-readiness/README.md) | SemVer, changelog discipline, CI, and release gates | :material-check-circle: Active |
-| 05 | [:material-play-circle: Trust-Layer Demo](./05-trust-layer-demo/README.md) | Òtítọ́ as a repeatable review workflow | :material-check-circle: Active |
-| 06 | [:material-repeat: Builder-Founder Loop](./06-builder-founder-operating-loop/README.md) | Session rhythm, evidence ledger, governance ladder, and next-action rule | :material-check-circle: Active |
-| 07 | [Harness Thesis & AX](./07-harness-thesis/README.md) | The original cost and agent-experience thesis, now subordinate to trust evidence | :material-check-circle: Active |
-| 08 | [Tutorials Integration](./08-tutorials-integration/README.md) | Codespaces setup and MCP onboarding for tutorials | :material-check-circle: Active |
-| 09 | [Convergence Thesis](./09-convergence-thesis/README.md) | Intent-vs-diff convergence scoring and receipts | :material-check-circle: Active |
-| 10 | [Usage Dashboard](./10-usage-dashboard/README.md) | Local usage logging and performance trends | :material-check-circle: Active |
-| 11 | [Determinism Thesis](./11-determinism-thesis/README.md) | Why model variance is structural and the harness is separate | :material-check-circle: Active |
-| 12 | [Dual-Mode Thesis](./12-dual-mode-thesis/README.md) | Probabilistic generation beside deterministic verification | :material-check-circle: Active |
-| 13 | [Prompt Determinism Thesis](./13-prompt-determinism-thesis/README.md) | Why prompt settings do not turn a model into a gate | :material-check-circle: Active |
-| 14 | [Trust Harness Thesis](./14-trust-harness-thesis/README.md) | Why independent merge evidence outlasts generic agent orchestration | :material-check-circle: Active |
-| 15 | [Herdr Integration](./15-herdr-integration/README.md) | Run Otito context and merge evidence inside persistent agent workspaces | :material-check-circle: Active |
-| 16 | [Clean Code Thesis](./16-clean-code-thesis/README.md) | Clean code as owner files, focused diffs, and gates, not a cleaner agent | :material-check-circle: Active |
-| 17 | [Calibration Thesis](./17-calibration-thesis/README.md) | Grading risk flags against the repository's own history | :material-check-circle: Active |
-| 18 | [Model Routing](./18-model-routing/README.md) | Spending a calibrated model on the request side without touching the gate | :material-check-circle: Active |
+### Getting started
+
+| Document | What it covers |
+| --- | --- |
+| [Context Foundation](./01-context-foundation/README.md) | Repository inspection, maps, search, context packs, and harnesses |
+| [MCP and Agents](./02-mcp-agent-workflows/README.md) | MCP tools and agent-facing workflows |
+| [Publishing to npm and the MCP Registry](./02-mcp-agent-workflows/publishing.md) | How Òtítọ́ itself is released |
+| [Codespaces and Tutorials](./08-tutorials-integration/README.md) | Setup and MCP onboarding alongside a tutorials repository |
+| [Herdr Integration](./15-herdr-integration/README.md) | Context and merge evidence inside persistent agent workspaces |
+
+### Using it
+
+| Document | What it covers |
+| --- | --- |
+| [Trust-Layer Demo](./05-trust-layer-demo/README.md) | Òtítọ́ as a repeatable review workflow |
+| [Contributor Governance](./03-contributor-governance/README.md) | Protected review, CODEOWNERS, required checks, and merge authority |
+| [Release Readiness](./04-release-readiness/README.md) | SemVer, changelog discipline, CI, and release gates |
+| [Usage Dashboard](./10-usage-dashboard/README.md) | Local usage logging and performance trends |
+| [Builder-Founder Loop](./06-builder-founder-operating-loop/README.md) | Session rhythm, evidence ledger, and governance ladder |
+
+### How it works
+
+| Document | What it covers |
+| --- | --- |
+| [Deterministic Verification](./07-deterministic-verification/README.md) | Why merge evidence is computed from the repository, never from the model that wrote the change |
+| [AX Score Spec](./07-deterministic-verification/ax-score-spec.md) | How agent experience is scored |
+| [Convergence Score Spec](./07-deterministic-verification/convergence-score-spec.md) | How intent is measured against the diff that appeared |
+
+### Measurement
+
+| Document | What it covers |
+| --- | --- |
+| [Calibration](./17-calibration-thesis/README.md) | Grading risk flags against a repository's own history |
+| [Model Routing](./18-model-routing/README.md) | Spending a calibrated model on the request side without touching the gate |
+
+### Reference
+
+| Document | What it covers |
+| --- | --- |
+| [Evaluation Guide](./EVALS.md) | The accuracy, harness, and gate-effectiveness evals |
+| [Glossary](./GLOSSARY.md) | Terms used across these pages |
 
 ---
 

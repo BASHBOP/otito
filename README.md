@@ -8,7 +8,7 @@
 
 [![Òtítọ́ MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/card.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
 
-Otito is a local-first, deterministic, model-agnostic trust layer for AI-assisted development. It builds task-aware repository context before an agent edits, scores how much a change actually touches, and gates merge readiness against the exact staged tree — with no server, no account, and no code leaving the machine.
+Otito is a local-first, deterministic, model-agnostic trust layer for AI-assisted development. It builds task-aware repository context before an agent edits, scores how much a change actually touches, and gates merge readiness against the exact staged tree, with no server, no account, and no code leaving the machine.
 
 It does not replace Claude Code, Codex, Cursor, Gemini, or any native agent harness. It runs beside them and keeps working as the models change underneath.
 
@@ -25,7 +25,7 @@ Or without installing: `npx -y @bashbop/otito doctor`.
 
 ## What it does
 
-**Rank what a change actually touches**, from the request alone — no model, no embeddings, no network:
+**Rank what a change actually touches**, from the request alone, with no model, no embeddings, and no network:
 
 ```console
 $ otito impact . "add refund handling to checkout" --top 3
@@ -88,7 +88,7 @@ Every command takes `--json`, and `otito help` lists the full set with flags.
 
 ## MCP
 
-Otito ships a stdio MCP server exposing **13 tools** — `repo_inspect`, `repo_map`, `repo_index`, `repo_search`, `context_pack`, `change_impact`, `agent_experience`, `convergence_score`, `review_context`, `review_gate`, `review_verdict`, `workspace_report`, and `repo_harness`.
+Otito ships a stdio MCP server exposing **13 tools**: `repo_inspect`, `repo_map`, `repo_index`, `repo_search`, `context_pack`, `change_impact`, `agent_experience`, `convergence_score`, `review_context`, `review_gate`, `review_verdict`, `workspace_report`, and `repo_harness`.
 
 ```json
 {
@@ -109,7 +109,7 @@ Published in the MCP Registry as `io.github.BASHBOP/otito`. Repo-map lookups use
 | --- | --- | --- |
 | Sourcegraph / Cody context | Powerful hosted code search and embedding-based context across an org | Local-first and deterministic: no server, no account, no code leaves the machine, and the same query always yields the same packet |
 | Hand-written `CLAUDE.md` / rules files | Curated, intent-rich guidance | Hand-written context goes stale; otito regenerates context from the actual code (symbols, imports, routes, tests) on every run and complements a short `CLAUDE.md` |
-| `grep` / `ripgrep` | Fast, universal text matching | otito ranks whole files by task intent across paths, symbols, exports, and tests, then adds patterns and validation commands — a context packet, not a list of matching lines |
+| `grep` / `ripgrep` | Fast, universal text matching | otito ranks whole files by task intent across paths, symbols, exports, and tests, then adds patterns and validation commands, producing a context packet rather than a list of matching lines |
 
 ## Documentation
 
@@ -126,7 +126,7 @@ cd otito && npm ci && npm run ci
 
 `npm run ci` is the full gate: format, lint, typecheck, version check, tests, coverage floors (70% lines / 60% branches / 75% functions), three evaluation corpora, dependency audit, and a packaged-tarball smoke test. Run it before requesting review.
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). All changes need maintainer review; `main` requires passing gates and resolved conversations. Otito follows Semantic Versioning — say whether a PR is no-impact, patch, minor, or major.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). All changes need maintainer review; `main` requires passing gates and resolved conversations. Otito follows Semantic Versioning, so say whether a PR is no-impact, patch, minor, or major.
 
 ---
 
