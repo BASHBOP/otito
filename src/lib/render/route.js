@@ -103,9 +103,15 @@ export function formatRouteTerminal(data, renderer) {
     out.push(`    ${mark} ${name}${dim(bump.note)}${bump.ceiling ? dim(" (already premium)") : ""}`);
   }
 
-  if (data.costUsd != null) {
+  // Gated on the token count, not on the cost: a call whose tokens were counted
+  // but could not be priced still happened, and its count and latency are worth
+  // printing. Where the price does not cover what was counted, the line says so
+  // instead of showing a number the rate does not support.
+  if (data.model.tokens != null) {
+    const kind = data.model.tokenKind === "total" ? "total " : "";
+    const cost = data.costUsd != null ? `$${data.costUsd.toFixed(6)}` : "not priced (rate covers input tokens only)";
     out.push("");
-    out.push(dim(`    route call: ${data.model.tokens} tokens, $${data.costUsd.toFixed(6)}, ${data.model.latencyMs} ms`));
+    out.push(dim(`    route call: ${data.model.tokens} ${kind}tokens, ${cost}, ${data.model.latencyMs} ms`));
   }
   if (data.model.fallbackReason) {
     out.push(dim(`    model call failed, fell back offline: ${data.model.fallbackReason}`));

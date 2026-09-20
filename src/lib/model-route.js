@@ -29,6 +29,22 @@ const JEV_MODEL = "jev-latest";
 /** Jev bills input tokens only, at $0.042 per million. */
 export const JEV_PER_MTOK = 0.042;
 
+/**
+ * Cost of one route call, in USD, from the tokens the rate actually covers.
+ *
+ * Null means "not measured", which is not the same as zero: a call that billed
+ * no input tokens cost nothing and is entitled to say so. Anything that is not
+ * a finite, non-negative count is not a measurement and prices to null rather
+ * than to a number nobody can trace.
+ *
+ * @param {number|null|undefined} inputTokens tokens JEV_PER_MTOK covers
+ * @returns {number|null}
+ */
+export function priceRouteCall(inputTokens) {
+  if (typeof inputTokens !== "number" || !Number.isFinite(inputTokens) || inputTokens < 0) return null;
+  return Number(((inputTokens * JEV_PER_MTOK) / 1e6).toFixed(6));
+}
+
 export const TIERS = /** @type {const} */ (["cheap", "mid", "premium"]);
 export const BAND_CHEAP = 75;
 export const BAND_MID = 45;
@@ -246,10 +262,24 @@ export async function askJev(request, signals, options = {}) {
   nameProbabilities(answers.blast_radius, BLAST_LEVELS);
   nameProbabilities(answers.specificity, SPECIFICITY_LEVELS);
 
+  // Report the count the response gave, and remember which quantity it is.
+  // JEV_PER_MTOK covers input tokens; a `total_tokens` figure also contains
+  // output, which this rate does not price. Collapsing the two into one number
+  // used to bill output at the input rate silently, so the two stay apart: the
+  // count is still shown, and only an input count is priced.
+  const usage = payload.usage ?? {};
+  const count = (/** @type {any} */ value) => (typeof value === "number" && Number.isFinite(value) ? value : null);
+  const inputTokens = count(usage.input_tokens);
+  const totalTokens = count(usage.total_tokens) ?? count(usage.tokens);
+
   return {
     source: "jev",
     model: payload.model ?? JEV_MODEL,
-    tokens: payload.usage?.input_tokens ?? payload.usage?.total_tokens ?? payload.usage?.tokens ?? null,
+    tokens: inputTokens ?? totalTokens,
+    /** Tokens JEV_PER_MTOK covers. Null when the response reported no input count. */
+    billableTokens: inputTokens,
+    /** Which quantity `tokens` holds, so no surface has to guess. */
+    tokenKind: inputTokens !== null ? "input" : totalTokens !== null ? "total" : null,
     latencyMs,
     answers,
   };
@@ -294,10 +324,12 @@ export function offlineAnswers(request, signals) {
   // request one tier. An estimate with no confidence says so with null and
   // leaves the low-confidence bump to answers that measured one.
 
-  return /** @type {{ source: string, model: string, tokens: number|null, latencyMs: number, answers: any, fallbackReason?: string }} */ ({
+  return /** @type {{ source: string, model: string, tokens: number|null, billableTokens: number|null, tokenKind: string|null, latencyMs: number, answers: any, fallbackReason?: string }} */ ({
     source: "offline",
     model: "offline-heuristic",
     tokens: null,
+    billableTokens: null,
+    tokenKind: null,
     latencyMs: 0,
     answers: {
       specificity: {
@@ -510,7 +542,7 @@ export async function generateRoute(request, options = {}) {
     scoring,
     model: jev,
     signals,
-    costUsd: jev.tokens ? Number(((jev.tokens * JEV_PER_MTOK) / 1e6).toFixed(6)) : null,
+    costUsd: priceRouteCall(jev.billableTokens),
   };
 }
 
