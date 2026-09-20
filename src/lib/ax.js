@@ -38,7 +38,8 @@ const WEIGHTS = { changeability: 0.35, containment: 0.3, guardrails: 0.25, clari
 
 /**
  * @param {string} query
- * @param {{ path?: string, top?: number }} [options]
+ * @param {{ path?: string, top?: number, impact?: any }} [options] `impact` lets a caller that already
+ *   ran the impact pass hand it in, so a composite command does not compute it twice.
  * @returns {Record<string, any>}
  */
 export function generateAxScore(query, options = {}) {
@@ -50,7 +51,9 @@ export function generateAxScore(query, options = {}) {
   }
 
   /** @type {any} */
-  const impact = generateImpact(normalizedQuery, { path: repoPath, top }).data;
+  // An impact pass is the expensive half of this score. A caller that already
+  // has one (for example `otito route`) hands it in rather than paying twice.
+  const impact = options.impact ?? generateImpact(normalizedQuery, { path: repoPath, top }).data;
   /** @type {any} */
   const repo = inspectRepo(repoPath);
   const root = repo.root ?? path.resolve(repoPath);

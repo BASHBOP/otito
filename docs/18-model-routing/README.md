@@ -123,32 +123,50 @@ impact once.
 ## Running it, any host, one contract
 
 ```bash
-node scripts/model-route.mjs <repo> "<prompt>" [--json|--tier-only|--host <id>]
+otito route <repo> "<request>" [--json|--tier-only|--host <id>] [--offline] [--out file]
 ```
 
 The router decides a **tier**. Each host turns that tier into whatever it calls
-a model, so nothing about the scoring is specific to one IDE:
+a model, so nothing about the scoring is specific to one editor:
 
 ```bash
-otito-route . "$PROMPT" --tier-only          # -> premium
-otito-route . "$PROMPT" --host claude-code   # -> claude-opus-5
-claude --model "$(otito-route . "$PROMPT" --host claude-code)" -p "$PROMPT"
+otito route . "$PROMPT" --tier-only          # -> premium
+otito route . "$PROMPT" --host claude-code   # -> claude-opus-5
+claude --model "$(otito route . "$PROMPT" --host claude-code)" -p "$PROMPT"
 ```
 
-Only `claude-code` ships filled in, because those are the ids this repo can
-verify. Add your own in `.otito/model-route.json` (repo) or
+Only `claude-code` ships filled in, because those are the ids this repository
+can verify. Add your own in `.otito/model-route.json` (repo) or
 `~/.otito/model-route.json` (user):
 
 ```json
-{ "hosts": { "cursor": { "cheap": "…", "mid": "…", "premium": "…" } } }
+{ "hosts": { "cursor": { "cheap": "...", "mid": "...", "premium": "..." } } }
 ```
 
 Hosts with no map still work through `--tier-only`. Terminal output uses otito's
 own renderer, so `--color`, `--no-color`, `--theme`, `NO_COLOR` and a piped
 stdout behave exactly as they do everywhere else in the CLI.
 
-Set `TYPESAFE_API_KEY` in your shell; without it the run falls back to a local
-heuristic and labels every line `[offline estimate, not calibrated]`.
+Set `TYPESAFE_API_KEY` in your shell to use the model. Without it, or with
+`--offline`, the run falls back to a local heuristic and labels every surface
+`offline estimate, not calibrated`.
+
+### The advisory footer
+
+`otito ax` and `otito impact` already compute everything the repository half
+needs, so both print one routing line under their normal output:
+
+```
+model route: premium (score 36) - offline estimate, advisory
+```
+
+That line is **offline by construction**. An ordinary otito command does not
+make a network call, and a failure inside the router is swallowed rather than
+allowed to change the output of the command you actually ran. `--json`,
+`--out` and `--mermaid` are untouched, so nothing that parses otito's output
+sees it; `--no-route` turns it off.
+
+Reach for `otito route` when you want the model's read and the full arithmetic.
 
 ## Dogfood, bashbop-event-web, 2026-09-19
 
@@ -241,9 +259,8 @@ savings is the table above.
 | Priority | Work | Why |
 | :-: | --- | --- |
 | 1 | Backtest tier against `reverted` and `repaired`, reusing the calibrate harness | Moves the router off judgement. The share weights are still ungraded |
-| 2 | `otito route` as a first-class command, computing impact once | Halves the 5s local cost |
-| 3 | Mid-session re-score once the real file set is known | Prompt-only routing misreads "fix this typo" that turns out to touch auth |
-| 4 | Widen the corpus beyond one repository | Five prompts in one app is an anecdote |
+| 2 | Mid-session re-score once the real file set is known | Prompt-only routing misreads "fix this typo" that turns out to touch auth |
+| 3 | Widen the corpus beyond one repository | Five prompts in one app is an anecdote |
 
 ## References
 
@@ -252,4 +269,6 @@ savings is the table above.
 - TypeSafe AI, _Confidence_: <https://docs.typesafe.ai/confidence>
 - otito, [Calibration Thesis](../17-calibration-thesis/README.md)
 - otito, [Determinism Thesis](../11-determinism-thesis/README.md)
-- Implementation: `scripts/model-route.mjs`; host-agnostic skill: `codex/skills/model-router/`
+- Implementation: `src/lib/model-route.js` and `src/lib/render/route.js`, reachable as `otito route`
+- `scripts/model-route.mjs` is a thin wrapper kept for the 1.12.0 prototype invocation
+- Host-agnostic skill: `codex/skills/model-router/`
