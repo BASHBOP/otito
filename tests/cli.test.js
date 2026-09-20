@@ -389,8 +389,11 @@ test("map renders json, markdown, and writes an artifact", async () => {
   assert.equal(json.exitCode, 0);
   assert.equal(parseJsonOutput(json.stdout).ok, true);
 
+  // The terminal view is rendered now, so assert on the report's content
+  // rather than on Markdown syntax. `--out` and `--json` still emit raw.
   const text = await runCli(["map", fixture]);
-  assert.match(text.stdout, /# /);
+  assert.match(text.stdout, /CODE MAP/);
+  assert.match(text.stdout, /Source files:/);
 
   const out = path.join(os.tmpdir(), `otito-cli-map-${Date.now()}.md`);
   const written = await runCli(["map", fixture, "--out", out]);

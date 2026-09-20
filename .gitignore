@@ -2,6 +2,13 @@
 .dev-context/
 .cursor/
 node_modules/
+
+# Secrets stay out of the tree. otito reads TYPESAFE_API_KEY (and anything
+# else) from the process environment and never loads a .env file, so these are
+# here to stop one being committed by accident rather than because we read them.
+.env
+.env.*
+!.env.example
 dist/
 coverage/
 site/
