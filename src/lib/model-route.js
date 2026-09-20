@@ -388,8 +388,28 @@ export function scoreDecision({ answers, signals }) {
   const confidence = measured.length ? Math.min(...measured) : null;
   const lowConfidence = confidence !== null && confidence < CONFIDENCE_FLOOR;
 
+  // Zero candidates is ABSENCE, not containment. When otito matches nothing, AX
+  // is describing an empty set and `containment` reads high for the same
+  // reason there is nothing to spread across — so the arithmetic produces a
+  // confident-looking cheap tier for the request the repository understood
+  // least. Measured on this repo: "fix scanning multi date event ticket" asked
+  // against a repository that has no such code scored containment 100 on zero
+  // files and routed `cheap`.
+  //
+  // The invariant below applies at its limit: never round down on a bad read,
+  // and no read is worse than no evidence at all.
+  const candidates = signals.candidates ?? 0;
+  const noEvidence = candidates === 0;
+
   /** @type {{ name: string, fired: boolean, note: string, ceiling?: boolean }[]} */
   const bumps = [
+    {
+      name: "no evidence",
+      fired: noEvidence,
+      note: noEvidence
+        ? "otito matched no files; the score describes an empty set, not a contained change"
+        : `${candidates} candidate file${candidates === 1 ? "" : "s"} matched`,
+    },
     {
       name: "risk path",
       fired: severe.length > 0,
@@ -411,6 +431,14 @@ export function scoreDecision({ answers, signals }) {
   // router that can round down on a bad read ships bad changes cheaply.
   for (const bump of bumps) {
     if (!bump.fired) continue;
+    // No evidence is not worth one tier, it invalidates the read. It goes
+    // straight to the ceiling rather than stepping, so a high AX cannot leave
+    // an unexplained request in a cheap lane.
+    if (bump.name === "no evidence") {
+      if (index === TIERS.length - 1) bump.ceiling = true;
+      index = TIERS.length - 1;
+      continue;
+    }
     if (index === TIERS.length - 1) {
       bump.ceiling = true;
       continue;
@@ -427,6 +455,11 @@ export function scoreDecision({ answers, signals }) {
     tier: TIERS[index],
     bumps,
     confidence,
+    // Carried so a caller can say "no recommendation" rather than printing a
+    // tier that rests on nothing. The tier itself stays a valid string, and
+    // fails safe, so a caller that ignores this field still cannot route an
+    // unexplained request cheaply.
+    evidence: { candidates, sufficient: !noEvidence },
   };
 }
 
