@@ -9,8 +9,10 @@ import {
   BAND_CHEAP,
   BAND_MID,
   CONFIDENCE_FLOOR,
+  JEV_PER_MTOK,
   loadHosts,
   offlineAnswers,
+  priceRouteCall,
   QUESTIONS,
   routeFooter,
   scoreDecision,
@@ -288,6 +290,8 @@ test("askJev normalises a level-indexed distribution onto level names", async ()
   const result = await askJev("a request", signals(), { apiKey: "test-key", fetchImpl });
   assert.equal(result.source, "jev");
   assert.equal(result.tokens, 700);
+  assert.equal(result.billableTokens, 700);
+  assert.equal(result.tokenKind, "input");
   assert.deepEqual(Object.keys(result.answers.specificity.probabilities), ["names the target", "names an area", "names a symptom"]);
   assert.deepEqual(Object.keys(result.answers.blast_radius.probabilities), ["one file", "one module", "cross-cutting"]);
   assert.equal(result.answers.blast_radius.probabilities["one file"], 0.6);
@@ -439,4 +443,84 @@ test("a request with evidence is unaffected by the floor", () => {
   assert.equal(scoring.evidence.sufficient, true);
   assert.equal(scoring.evidence.candidates, 3);
   assert.equal(scoring.bumps.find((bump) => bump.name === "no evidence")?.fired, false);
+});
+
+/** One fetch that answers with whatever usage block a test hands it. */
+function usageFetch(usage) {
+  return async () => ({
+    ok: true,
+    json: async () => ({ model: "jev-1.13.1", usage, answers: {} }),
+  });
+}
+
+test("askJev prices input tokens and refuses to price a total", async () => {
+  const input = await askJev("a request", signals(), { apiKey: "k", fetchImpl: usageFetch({ input_tokens: 700 }) });
+  assert.equal(input.tokens, 700);
+  assert.equal(input.billableTokens, 700);
+  assert.equal(input.tokenKind, "input");
+
+  // The rate covers input only. A total also contains output, so the count is
+  // reported and the cost is withheld rather than billed at the wrong rate.
+  const total = await askJev("a request", signals(), { apiKey: "k", fetchImpl: usageFetch({ total_tokens: 900 }) });
+  assert.equal(total.tokens, 900);
+  assert.equal(total.billableTokens, null);
+  assert.equal(total.tokenKind, "total");
+  assert.equal(priceRouteCall(total.billableTokens), null);
+
+  // A bare `tokens` field is no more specific than a total, and is read as one.
+  const bare = await askJev("a request", signals(), { apiKey: "k", fetchImpl: usageFetch({ tokens: 120 }) });
+  assert.equal(bare.tokenKind, "total");
+  assert.equal(bare.billableTokens, null);
+
+  // An input count alongside a total still prices on the input count.
+  const both = await askJev("a request", signals(), { apiKey: "k", fetchImpl: usageFetch({ input_tokens: 700, total_tokens: 900 }) });
+  assert.equal(both.tokens, 700);
+  assert.equal(both.billableTokens, 700);
+  assert.equal(priceRouteCall(both.billableTokens), Number(((700 * JEV_PER_MTOK) / 1e6).toFixed(6)));
+
+  const none = await askJev("a request", signals(), { apiKey: "k", fetchImpl: usageFetch(undefined) });
+  assert.equal(none.tokens, null);
+  assert.equal(none.tokenKind, null);
+});
+
+test("priceRouteCall separates a free call from an unmeasured one", () => {
+  // Zero is a measurement: the call billed nothing and costs nothing.
+  assert.equal(priceRouteCall(0), 0);
+  assert.equal(priceRouteCall(1_000_000), JEV_PER_MTOK);
+
+  // These are absences, not amounts, and must not read as free.
+  for (const missing of [null, undefined, Number.NaN, Number.POSITIVE_INFINITY, -1, "700"]) {
+    assert.equal(priceRouteCall(/** @type {any} */ (missing)), null, `${String(missing)} should not price`);
+  }
+});
+
+test("offlineAnswers reports no tokens of any kind", () => {
+  const offline = offlineAnswers("a request", signals());
+  assert.equal(offline.tokens, null);
+  assert.equal(offline.billableTokens, null);
+  assert.equal(offline.tokenKind, null);
+  assert.equal(priceRouteCall(offline.billableTokens), null);
+});
+
+test("the route call line reports a total it cannot price, and omits itself with no tokens", () => {
+  const base = {
+    request: "a request",
+    repo: { name: "fixture" },
+    scoring: scoreDecision({ answers: answers(), signals: signals() }),
+    signals: signals(),
+  };
+  const render = (/** @type {any} */ model, /** @type {number|null} */ costUsd) =>
+    formatRouteTerminal({ ...base, model: { source: "jev", answers: answers(), ...model }, costUsd }, createRenderer({ color: false, emoji: false }));
+
+  const priced = render({ tokens: 700, billableTokens: 700, tokenKind: "input", latencyMs: 40 }, 0.0000294);
+  assert.match(priced, /route call: 700 tokens, \$0\.000029, 40 ms/);
+
+  // A total is still worth printing; the price is not, so the line says why.
+  const unpriced = render({ tokens: 900, billableTokens: null, tokenKind: "total", latencyMs: 55 }, null);
+  assert.match(unpriced, /route call: 900 total tokens, not priced \(rate covers input tokens only\), 55 ms/);
+  assert.equal(/\$/.test(unpriced.split("route call:")[1]), false);
+
+  // An offline run measured no tokens at all, so there is no call to report.
+  const offline = render({ source: "offline", tokens: null, billableTokens: null, tokenKind: null, latencyMs: 0 }, null);
+  assert.equal(offline.includes("route call:"), false);
 });
