@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-20T04:14:18.789Z",
+  "generatedAt": "2026-09-20T04:30:19.052Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "FAIL",
@@ -44,7 +44,7 @@
   },
   "prReviewSummary": {
     "changedFiles": 1,
-    "additions": 78,
+    "additions": 79,
     "deletions": 0,
     "riskLevel": "low",
     "riskFlags": [
@@ -70,12 +70,12 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "8 changed files reported."
+        "summary": "5 changed files reported."
       },
       {
         "name": "Secret safety",
         "status": "PASS",
-        "summary": "No secret file paths found. Changed content was not available to scan for credential values."
+        "summary": "No secret file paths and no credential values found in the changed content."
       },
       {
         "name": "Risk review",
@@ -120,6 +120,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 554
+    "fullJson": 550
   }
 }
