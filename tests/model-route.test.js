@@ -309,9 +309,20 @@ test("askJev sends the request and repository evidence as state", async () => {
   assert.equal(sent.model, "jev-latest");
 });
 
-test("askJev surfaces an API failure rather than inventing an answer", async () => {
+test("askJev surfaces an API failure rather than inventing an answer", async (t) => {
   const fetchImpl = async () => ({ ok: false, status: 401, text: async () => "unauthorized" });
   await assert.rejects(() => askJev("q", signals(), { apiKey: "k", fetchImpl }), /401/);
+
+  // The missing-key path has to be asserted against a controlled environment,
+  // not the developer's. `askJev` falls back to process.env.TYPESAFE_API_KEY,
+  // so on a machine that exports one this test used to pass a real key to the
+  // stub and assert the wrong error.
+  const saved = process.env.TYPESAFE_API_KEY;
+  delete process.env.TYPESAFE_API_KEY;
+  t.after(() => {
+    if (saved === undefined) delete process.env.TYPESAFE_API_KEY;
+    else process.env.TYPESAFE_API_KEY = saved;
+  });
   await assert.rejects(() => askJev("q", signals(), { apiKey: undefined, fetchImpl }), /TYPESAFE_API_KEY/);
 });
 
@@ -397,4 +408,35 @@ test("AX accepts an injected impact pass, so a composite command pays for it onc
     cheapToChange.subScores.changeability > costlyToChange.subScores.changeability,
     `${cheapToChange.subScores.changeability} should beat ${costlyToChange.subScores.changeability}`,
   );
+});
+
+test("no evidence goes straight to the ceiling instead of reading as a contained change", () => {
+  // The failure this exists for: a request asked against a repository that has
+  // no such code matches nothing, so containment reads 100 for the same reason
+  // AX is high — there is nothing to spread across. Before the floor, that
+  // routed `cheap` on a score of 85.
+  const empty = scoreDecision({ answers: answers(), signals: signals({ ax: 84, containment: 100, candidates: 0, owners: 0, topFile: null }) });
+  assert.equal(empty.tier, "premium", "an unexplained request must never land in a cheap lane");
+  assert.equal(empty.evidence.sufficient, false);
+  assert.equal(empty.evidence.candidates, 0);
+
+  const fired = empty.bumps.find((bump) => bump.name === "no evidence");
+  assert.equal(fired?.fired, true);
+  assert.match(String(fired?.note), /matched no files/);
+});
+
+test("the evidence floor jumps the ceiling rather than stepping one tier", () => {
+  // A one-tier step would leave a high-AX empty read at `mid`, which is the
+  // same mistake one notch quieter.
+  const empty = scoreDecision({ answers: answers(), signals: signals({ ax: 95, containment: 100, candidates: 0 }) });
+  assert.equal(empty.baseTier, "cheap", "the arithmetic still reports what it computed");
+  assert.equal(empty.tier, "premium", "the floor overrides it outright");
+});
+
+test("a request with evidence is unaffected by the floor", () => {
+  const scoring = scoreDecision({ answers: answers(), signals: signals({ ax: 80, candidates: 3 }) });
+  assert.equal(scoring.tier, "cheap");
+  assert.equal(scoring.evidence.sufficient, true);
+  assert.equal(scoring.evidence.candidates, 3);
+  assert.equal(scoring.bumps.find((bump) => bump.name === "no evidence")?.fired, false);
 });
