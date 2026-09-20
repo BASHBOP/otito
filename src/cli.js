@@ -43,6 +43,7 @@ const commandHandlers = {
   impact: handleImpact,
   obsidian: handleObsidian,
   ax: handleAx,
+  route: handleRoute,
   converge: handleConverge,
   calibrate: handleCalibrate,
   dashboard: handleDashboard,
@@ -307,6 +308,26 @@ async function handleContext(parsed) {
   );
 }
 
+/**
+ * One advisory routing line under commands that already hold an impact pass and
+ * an AX score. Offline by construction: no ordinary otito command makes a
+ * network call, and a failure here must never change the command's own output.
+ * @param {CliArgs} parsed
+ * @param {string} query
+ * @param {any} impact
+ * @param {any} ax
+ */
+async function printRouteFooter(parsed, query, impact, ax) {
+  if (parsed.flags.json || parsed.flags.out || parsed.flags.mermaid) return;
+  if (parsed.flags.no_route === true) return;
+  try {
+    const { routeFooter } = await import("./lib/model-route.js");
+    printText(`\n${routeFooter(query, impact, ax).line}`);
+  } catch {
+    // Advisory only. A router problem must not break the command the user ran.
+  }
+}
+
 /** @param {CliArgs} parsed */
 async function handleImpact(parsed) {
   const { formatImpactMermaid, formatImpactTerminal, generateImpact } = await import("./lib/impact.js");
@@ -349,6 +370,9 @@ async function handleImpact(parsed) {
       createRenderer({ ...opts, emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }),
     ),
   );
+
+  const { generateAxScore } = await import("./lib/ax.js");
+  await printRouteFooter(parsed, query, result.data, generateAxScore(query, { path: repoPath, top: parsed.flags.top }));
 }
 
 /** @param {CliArgs} parsed */
@@ -402,6 +426,82 @@ async function handleAx(parsed) {
   }
 
   printText(formatAxMarkdown(data));
+
+  const { generateImpact } = await import("./lib/impact.js");
+  await printRouteFooter(parsed, query, generateImpact(query, { path: repoPath, top: parsed.flags.top }).data, data);
+}
+
+/** @param {CliArgs} parsed */
+async function handleRoute(parsed) {
+  const { generateRoute, loadHosts } = await import("./lib/model-route.js");
+  const { formatRouteMarkdown, formatRouteTerminal } = await import("./lib/render/route.js");
+
+  // Mirror `ax` and `impact` arg parsing.
+  let repoPath;
+  let query;
+  if (parsed.flags.path) {
+    repoPath = parsed.flags.path;
+    query = parsed.positionals.join(" ").trim();
+  } else {
+    repoPath = parsed.positionals[0] ?? ".";
+    query = parsed.positionals.slice(1).join(" ").trim();
+  }
+  if (!query) {
+    throw new Error('route requires a change request, e.g. `otito route . "add a --json flag"`');
+  }
+
+  const data = await generateRoute(query, {
+    path: repoPath,
+    top: parsed.flags.top,
+    offline: parsed.flags.offline === true,
+  });
+
+  // The router decides a TIER. Each host turns that tier into whatever it calls
+  // a model, so nothing about the scoring is specific to one editor.
+  if (typeof parsed.flags.host === "string") {
+    const hosts = loadHosts(repoPath);
+    const map = hosts[parsed.flags.host];
+    if (!map) {
+      throw new Error(
+        `no model map for host "${parsed.flags.host}". Known: ${Object.keys(hosts).join(", ")}. ` + "Add one in .otito/model-route.json, or use --tier-only.",
+      );
+    }
+    data.hostModel = map[data.tier];
+  }
+
+  noteResult(data);
+
+  if (parsed.flags.json) {
+    printJson(data);
+    return;
+  }
+
+  if (parsed.flags.tier_only) {
+    printText(data.tier);
+    return;
+  }
+
+  if (data.hostModel) {
+    printText(data.hostModel);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, formatRouteMarkdown(data));
+    printText(`Model route written: ${artifact.path}`);
+    return;
+  }
+
+  printText(
+    formatRouteTerminal(
+      data,
+      createRenderer({
+        emoji: emojiPreference(parsed),
+        color: colorPreference(parsed),
+        theme: themePreference(parsed),
+      }),
+    ),
+  );
 }
 
 /** @param {CliArgs} parsed */
