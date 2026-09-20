@@ -6,6 +6,22 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-09-20
+
+### Changed
+
+- **The documentation pack is written for a reader rather than for its author.** Nine of eighteen pages opened by saying they mapped an external source onto otito, seven built their main table around a video's claims, and eight carried a private backlog. Seven of those pages made one argument, that verification has to be computed from the repository rather than asked of the model that wrote the change, and they are replaced by a single [deterministic verification](docs/07-deterministic-verification/README.md) page that makes it once, for a reader who has watched nothing. Calibration and model routing are kept, because they carry original measurement rather than commentary. Priority tables are gone from public docs entirely.
+- **Site navigation is grouped by what a reader is trying to do** rather than by an eighteen-slot numbering that implied an order it did not have. The model routing page was missing from the navigation entirely.
+- **The model router skill can offer a realtime canvas**, at most once per session, only when `$OTITO_CANVAS_HOME` points at one, and only when that canvas is watching the repository being routed. A canvas is fixed to one repository at startup, so feeding it a request about a different codebase would score that request against a codebase that has never seen it.
+
+### Added
+
+- **`npm run skills:sync` and `npm run skills:check`.** The canonical skills in `codex/skills/` had drifted from the copies installed under host directories, and the repo copy, the one calling itself canonical, was the stale one. Syncing is now one-directional, and the check is local by design: a repository's CI cannot police files in a home directory, so it exits 0 where those directories do not exist rather than reporting a green tick for something it never examined.
+
+### Fixed
+
+- **A test that only passed on a machine without `TYPESAFE_API_KEY`.** `askJev` falls back to the environment, so the missing-key assertion was handing a real key to its own stub and asserting the wrong error. It now controls the variable instead of depending on it.
+
 ## [1.13.0] - 2026-09-20
 
 ### Added
