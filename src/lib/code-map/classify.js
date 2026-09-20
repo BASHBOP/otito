@@ -1,6 +1,13 @@
 import path from "node:path";
 import { readDecoratorCalls } from "./text.js";
 
+// Markdown this repository ships as source. `skill` files are agent
+// instructions the repository asks contributors to edit — they are the
+// implementation of a skill, not commentary about one — so they are indexed
+// and classified apart from prose documentation.
+const markdownExtensions = new Set([".md", ".mdx", ".markdown"]);
+const docExtensions = new Set([...markdownExtensions, ".rst", ".adoc"]);
+
 /**
  * @param {string} file
  * @returns {string}
@@ -12,6 +19,8 @@ export function classifyFile(file) {
   if (/(^|\/)(i18n|locale|locales|translations|messages|languages)(\/|$)/i.test(file) && /\.(json|ya?ml)$/i.test(base)) return "translation";
   if ((/\.(json|ya?ml)$/i.test(base) || base === ".snapshot") && /(feature[-_]?flag|flags|config|environment|settings)/i.test(file)) return "config";
   if (/^changelog(?:\.[a-z0-9_-]+)?\.md$/i.test(base)) return "changelog";
+  if (isSkillFilePath(file)) return "skill";
+  if (docExtensions.has(path.extname(base).toLowerCase())) return "doc";
   if (/(^|\/)app\/api\/.*\/route\.[cm]?[jt]s$/.test(file)) return "apiRoute";
   if (base === "page.tsx" || base === "page.ts" || base === "layout.tsx" || base === "layout.ts") return "route";
   if (base.endsWith(".controller.ts")) return "controller";
@@ -47,6 +56,37 @@ export function isTestFilePath(file) {
     /\.snap$/.test(normalized) ||
     /(^|\/)[^/]+_test\.go$/.test(normalized)
   );
+}
+
+// True for the markdown that makes up an agent skill package: any markdown
+// under a `skills/` directory, plus the conventional `SKILL.md` entrypoint
+// wherever it lives. Companion pages (examples.md, reference.md) ship with the
+// skill and are edited alongside it, so they carry the same kind.
+/**
+ * @param {string} file
+ * @returns {boolean}
+ */
+export function isSkillFilePath(file) {
+  const normalized = String(file ?? "").replaceAll("\\", "/");
+  const base = normalized.slice(normalized.lastIndexOf("/") + 1);
+  if (!markdownExtensions.has(path.extname(base).toLowerCase())) return false;
+  if (/^skill\.md$/i.test(base)) return true;
+  return normalized
+    .split("/")
+    .slice(0, -1)
+    .some((segment) => segment.toLowerCase() === "skills");
+}
+
+// True when the file is indexable markdown — a skill page or prose
+// documentation. Exposed so the code map and the impact ranker agree on what
+// counts as markdown without each re-deriving the extension list.
+/**
+ * @param {string} file
+ * @returns {boolean}
+ */
+export function isMarkdownFilePath(file) {
+  const normalized = String(file ?? "").replaceAll("\\", "/");
+  return markdownExtensions.has(path.extname(normalized).toLowerCase());
 }
 
 /**

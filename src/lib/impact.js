@@ -169,8 +169,18 @@ const CONFIG_HINTS = {
 
 // Kinds that are real implementation owners. The presence of one of these in
 // the top-5 is what we are optimizing for — these get the concept boost.
-const OWNER_KINDS = new Set(["controller", "service", "route", "apiRoute", "apiClient", "schema", "dto", "module", "component", "template"]);
+const OWNER_KINDS = new Set(["controller", "service", "route", "apiRoute", "apiClient", "schema", "dto", "module", "component", "template", "skill", "doc"]);
 const REQUEST_BOUNDARY_KINDS = new Set(["controller", "route", "apiRoute", "apiClient", "dto"]);
+
+// Markdown owner kinds only own the change when the request is actually about
+// them. A SKILL.md *is* the implementation of a skill and a docs page *is* the
+// implementation of documentation, so both must be able to carry a coverage
+// obligation — but neither owns a code change that merely shares vocabulary
+// with it. "Fix the model router scoring bug" is owned by src/lib/model-route.js,
+// not by codex/skills/model-router/SKILL.md, even though the skill's path
+// matches every term.
+const INTENT_GATED_OWNER_KINDS = new Set(["skill", "doc"]);
+const SKILL_REQUEST_TERMS = ["skill", "skills", "prompt", "prompts", "playbook", "rubric", "instruction", "instructions"];
 const REQUIRED_OWNER_SCORE_RATIO = 0.8;
 
 // Kinds that can never own an implementation change, so they are excluded from
@@ -825,9 +835,14 @@ function classifyImpactRoles(heuristicRanked, allFiles, query) {
   const byPath = new Map();
   const terms = new Set([...tokenize(query), ...weightedQueryTerms(query).keys()]);
   const requestBoundaryChange = ["api", "endpoint", "form", "payload", "request", "route", "submit"].some((term) => terms.has(term));
+  const skillChange = SKILL_REQUEST_TERMS.some((term) => terms.has(term));
+  const docsChange = ["doc", "docs", "documentation", "readme", "guide", "changelog"].some((term) => terms.has(term));
+  /** @param {string} kind */
+  const intentGatedOwnerAllowed = (kind) => (kind === "skill" ? skillChange : docsChange);
   const directCandidates = heuristicRanked
     .filter((entry) => OWNER_KINDS.has(entry.file.kind) && hasDirectIntentMatch(entry))
-    .filter((entry) => requestBoundaryChange || !REQUEST_BOUNDARY_KINDS.has(entry.file.kind));
+    .filter((entry) => requestBoundaryChange || !REQUEST_BOUNDARY_KINDS.has(entry.file.kind))
+    .filter((entry) => !INTENT_GATED_OWNER_KINDS.has(entry.file.kind) || intentGatedOwnerAllowed(entry.file.kind));
   // A rendered template is a real part of the behavior, but when a specific
   // implementation owner is already known it is supporting evidence rather
   // than an additional required owner. This avoids making every similarly

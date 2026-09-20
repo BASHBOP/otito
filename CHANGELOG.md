@@ -6,6 +6,12 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The code map never indexed Markdown, so no skill or docs page could be found.** `isSourceFilePath` admitted a fixed list of code extensions plus a special case for `CHANGELOG.md`; every other `.md` file in the repository was invisible to impact analysis, `route`, and convergence. A request naming a skill therefore ranked whatever library files happened to share its vocabulary: _"make the model-router skill layout-agnostic"_ returned `integrations/herdr/runtime.mjs` and `src/lib/model-route.js` at containment 18, and `codex/skills/model-router/SKILL.md` — the file the request names — appeared at no rank at all. The same blind spot hid every page under `docs/`. This is the failure class the empty-match fix addressed one release earlier: a confident answer resting on the wrong evidence.
+  - Markdown is now indexed with two kinds. **`skill`** covers `SKILL.md` and its companion pages under a `skills/` directory — these are instructions the repository ships and asks contributors to edit, so they are implementation, not commentary. **`doc`** covers the rest, and keeps the existing `docs/` ranking demotion. Frontmatter keys and values, headings, and relative links become the file's symbols and imports; Markdown never reaches the TypeScript parser, and SQL quoted in a document is no longer mined as data access.
+  - Both kinds own a change **only when the request is about them**. A skill can carry a coverage obligation for _"change the model-router skill"_, but `src/lib/model-route.js` still owns _"fix the model route scoring bug"_ — a skill whose path matches every term must not displace the code. The same request now ranks `codex/skills/model-router/SKILL.md` first at containment 90.
+
 ## [1.13.1] - 2026-09-20
 
 ### Changed

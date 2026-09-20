@@ -3,7 +3,7 @@ import path from "node:path";
 import { inspectRepo, listRepoFiles } from "../repo.js";
 import { estimateTokens, estimateTokenSections } from "../tokens.js";
 import { extractAstFacts } from "./ast.js";
-import { classifyFile, extractHttpMethods, inferControllerBasePath, inferDomainInfo, inferNextRoute } from "./classify.js";
+import { classifyFile, extractHttpMethods, inferControllerBasePath, inferDomainInfo, inferNextRoute, isMarkdownFilePath } from "./classify.js";
 import { extractDataAccess } from "./data-access.js";
 import { isVendorFile } from "./vendor.js";
 
@@ -28,6 +28,13 @@ const sourceExtensions = new Set([
   ".yaml",
   ".yml",
   ".snap",
+  // Markdown ships as source in this ecosystem: agent skills (SKILL.md and
+  // its companion pages) are instructions contributors are asked to edit, and
+  // docs/ pages are the thing a documentation request changes. Leaving them
+  // unindexed made every markdown-owned request rank library files instead.
+  ".md",
+  ".mdx",
+  ".markdown",
 ]);
 
 /** @param {string} file @returns {boolean} */
@@ -36,11 +43,7 @@ export function isSourceFilePath(file) {
   // Manifest and compiler metadata are ubiquitous but are not useful change
   // owners. Keep application JSON (translations and flag config) indexable.
   if (["package.json", "package-lock.json", "tsconfig.json"].includes(basename)) return false;
-  return (
-    sourceExtensions.has(path.posix.extname(file)) ||
-    (basename === ".snapshot" && /(^|\/)(feature[-_]?flags?|flags?|config)(\/|$)/i.test(file)) ||
-    /^changelog(?:\.[a-z0-9_-]+)?\.md$/i.test(basename)
-  );
+  return sourceExtensions.has(path.posix.extname(file)) || (basename === ".snapshot" && /(^|\/)(feature[-_]?flags?|flags?|config)(\/|$)/i.test(file));
 }
 
 /**
@@ -267,10 +270,16 @@ function analyzeSource(relativePath, text, maxSymbols) {
     return undefined;
   }
 
-  const ast = extractAstFacts(relativePath, text);
+  // Markdown carries no module graph, and running it through the TypeScript
+  // parser would mine prose and fenced examples for identifiers that name
+  // nothing. `extractArtifactFacts` reads its headings and frontmatter
+  // instead. Data access is skipped for the same reason: a SQL snippet quoted
+  // in a doc is an example, not a query this repository runs.
+  const markdown = isMarkdownFilePath(relativePath);
+  const ast = markdown ? emptyAstFacts() : extractAstFacts(relativePath, text);
   const artifactFacts = extractArtifactFacts(relativePath, text);
   const vendor = isVendorFile(relativePath, text);
-  const dataAccess = vendor ? [] : extractDataAccess(text);
+  const dataAccess = vendor || markdown ? [] : extractDataAccess(text);
   const domainInfo = inferDomainInfo(relativePath);
   /** @type {FileRecord} */
   const record = {
@@ -326,8 +335,33 @@ function extractArtifactFacts(relativePath, text) {
     for (const match of text.matchAll(/"([^"\\]{2,120})"\s*:/g)) add("config", match[1], match.index ?? 0);
   } else if (extension === ".yaml" || extension === ".yml") {
     for (const match of text.matchAll(/^\s*([A-Za-z_$][\w$.-]{1,120})\s*:/gm)) add("config", match[1], match.index ?? 0);
+  } else if (extension === ".md" || extension === ".mdx" || extension === ".markdown") {
+    // Frontmatter keys and their scalar values first: a skill's `name` is its
+    // identifier, and it is what a request naming that skill matches on.
+    const frontmatter = text.startsWith("---\n") ? text.slice(4, Math.max(4, text.indexOf("\n---", 3))) : "";
+    for (const match of frontmatter.matchAll(/^([A-Za-z_][\w.-]{0,80})\s*:[ \t]*(\S[^\n]{0,120})?$/gm)) {
+      add("frontmatter", match[1], match.index ?? 0);
+      const value = match[2]?.trim();
+      // Skip block scalars (`>-`, `|`) — the marker is not the value, and the
+      // prose that follows is description, not an identifier.
+      if (value && !/^[>|]/.test(value) && value.length <= 80) add("frontmatter", value, match.index ?? 0);
+    }
+    const body = text.slice(frontmatter.length);
+    for (const match of body.matchAll(/^#{1,6}[ \t]+(\S[^\n]{0,120})$/gm)) {
+      add("heading", match[1].trim().replace(/\s*#+\s*$/, ""), match.index ?? 0);
+    }
+    // Relative links and image targets are this document's edges to the rest
+    // of the repository, so they behave like imports for relatedness.
+    for (const match of body.matchAll(/]\(\s*(\.{0,2}\/[^)\s]{1,200})\s*\)/g)) {
+      imports.push(match[1].replace(/#.*$/, ""));
+    }
   }
   return { imports: [...new Set(imports)], symbols };
+}
+
+/** @returns {{ imports: string[], exports: string[], symbols: CodeSymbol[], formFields: string[], navigationTargets: string[], localIdentifiers: string[] }} */
+function emptyAstFacts() {
+  return { imports: [], exports: [], symbols: [], formFields: [], navigationTargets: [], localIdentifiers: [] };
 }
 
 /**

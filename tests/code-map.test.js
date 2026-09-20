@@ -512,3 +512,64 @@ test("generateCodeMap flags vendor files via isVendor and downstream filters the
   assert.equal(byPath["js/app.js"].isVendor, false);
   assert.equal(byPath["src/main.ts"].isVendor, false);
 });
+
+test("generateCodeMap indexes skill and documentation markdown with distinct kinds", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-markdown-"));
+  fs.mkdirSync(path.join(root, "codex", "skills", "model-router"), { recursive: true });
+  fs.mkdirSync(path.join(root, "docs", "routing"), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, "codex", "skills", "model-router", "SKILL.md"),
+    [
+      "---",
+      "name: model-router",
+      "description: >-",
+      "  Route a task to a model tier.",
+      "---",
+      "",
+      "# Model router",
+      "",
+      "## Sync",
+      "",
+      "See [the spec](../../../docs/routing/README.md).",
+      "",
+    ].join("\n"),
+  );
+  fs.writeFileSync(path.join(root, "codex", "skills", "model-router", "examples.md"), "# Examples\n");
+  fs.writeFileSync(path.join(root, "docs", "routing", "README.md"), "# Routing\n\n## Advisory footer\n");
+  fs.writeFileSync(path.join(root, "CHANGELOG.md"), "# Changelog\n");
+  fs.writeFileSync(path.join(root, "src.ts"), "export const noop = 1;\n");
+
+  const result = generateCodeMap(root);
+  const byPath = Object.fromEntries(result.files.map((file) => [file.path, file]));
+  const skill = byPath["codex/skills/model-router/SKILL.md"];
+
+  assert.ok(skill, `SKILL.md missing from code map: ${Object.keys(byPath).join(", ")}`);
+  assert.equal(skill.kind, "skill");
+  assert.equal(byPath["codex/skills/model-router/examples.md"].kind, "skill", "companion pages ship with the skill");
+  assert.equal(byPath["docs/routing/README.md"].kind, "doc");
+  assert.equal(byPath["CHANGELOG.md"].kind, "changelog", "changelog keeps its own kind");
+
+  // Frontmatter identifiers and headings are what a request naming the skill matches on.
+  assert.ok(
+    skill.symbols.some((symbol) => symbol.name === "model-router"),
+    `expected the frontmatter name as a symbol, got: ${skill.symbols.map((s) => s.name).join(" | ")}`,
+  );
+  assert.ok(skill.symbols.some((symbol) => symbol.name === "Model router"));
+  assert.ok(skill.symbols.some((symbol) => symbol.name === "Sync"));
+  // The `>-` block-scalar marker is not a value, and the prose under it is not an identifier.
+  assert.ok(!skill.symbols.some((symbol) => symbol.name.startsWith(">")));
+  assert.ok(skill.imports.includes("../../../docs/routing/README.md"), `expected the relative link as an import, got: ${skill.imports.join(", ")}`);
+  // Markdown never goes through the TypeScript parser, so prose yields no exports.
+  assert.deepEqual(skill.exports, []);
+});
+
+test("generateCodeMap does not mine data-access hits from SQL quoted in documentation", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-md-sql-"));
+  fs.mkdirSync(path.join(root, "docs"), { recursive: true });
+  fs.writeFileSync(path.join(root, "docs", "queries.md"), ["# Queries", "", "```sql", '"SELECT id FROM bookings WHERE paid = 1"', "```", ""].join("\n"));
+
+  const result = generateCodeMap(root);
+  const doc = result.files.find((file) => file.path === "docs/queries.md");
+  assert.equal(doc?.kind, "doc");
+  assert.equal(doc?.dataAccess, undefined, "a SQL example in prose is not a query this repository runs");
+});
