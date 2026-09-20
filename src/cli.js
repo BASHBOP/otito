@@ -328,6 +328,29 @@ async function printRouteFooter(parsed, query, impact, ax) {
   }
 }
 
+/**
+ * Render a command's Markdown report with otito's shared document treatment.
+ * Presentation only: the source Markdown still reaches the terminal, and
+ * `--json` / `--out` never reach this path.
+ * @param {CliArgs} parsed
+ * @param {string} markdown
+ * @param {{ title: string, glyph?: string, subtitle?: string }} meta
+ */
+async function printDocument(parsed, markdown, meta) {
+  const { renderDocument } = await import("./lib/render/document.js");
+  printText(
+    renderDocument(
+      markdown,
+      meta,
+      createRenderer({
+        emoji: emojiPreference(parsed),
+        color: colorPreference(parsed),
+        theme: themePreference(parsed),
+      }),
+    ),
+  );
+}
+
 /** @param {CliArgs} parsed */
 async function handleImpact(parsed) {
   const { formatImpactMermaid, formatImpactTerminal, generateImpact } = await import("./lib/impact.js");
@@ -425,7 +448,11 @@ async function handleAx(parsed) {
     return;
   }
 
-  printText(formatAxMarkdown(data));
+  await printDocument(parsed, formatAxMarkdown(data), {
+    title: `AGENT EXPERIENCE   ${data.repo?.name ?? ""}`,
+    glyph: "\u{1F9ED}",
+    subtitle: data.query,
+  });
 
   const { generateImpact } = await import("./lib/impact.js");
   await printRouteFooter(parsed, query, generateImpact(query, { path: repoPath, top: parsed.flags.top }).data, data);
@@ -520,7 +547,10 @@ async function handleCalibrate(parsed) {
     return;
   }
 
-  printText(formatCalibrationMarkdown(data));
+  await printDocument(parsed, formatCalibrationMarkdown(data), {
+    title: `CALIBRATION   ${data.repo?.name ?? ""}`,
+    glyph: "\u{1F4CF}",
+  });
 }
 
 /** @param {CliArgs} parsed */
@@ -564,7 +594,10 @@ async function handleConverge(parsed) {
     return;
   }
 
-  printText(formatConvergenceMarkdown(data));
+  await printDocument(parsed, formatConvergenceMarkdown(data), {
+    title: `CONVERGENCE   ${data.repo?.name ?? ""}`,
+    glyph: "\u{1F3AF}",
+  });
 }
 
 /** @param {CliArgs} parsed */
@@ -744,7 +777,10 @@ async function handleMap(parsed) {
     return;
   }
 
-  printText(formatCodeMapMarkdown(result));
+  await printDocument(parsed, formatCodeMapMarkdown(result), {
+    title: `CODE MAP   ${result.repo?.name ?? ""}`,
+    glyph: "\u{1F5FA}",
+  });
 }
 
 /** @param {CliArgs} parsed */
@@ -838,7 +874,10 @@ async function handleMatrix(parsed) {
     "|---|---|---|---|",
     ...matrix.tools.map((tool) => `| ${tool.name} | ${tool.role} | ${tool.pilotUse} | ${tool.notes} |`),
   ];
-  printText(["# Tool Evaluation Matrix", "", ...rows].join("\n"));
+  await printDocument(parsed, ["# Tool Evaluation Matrix", "", ...rows].join("\n"), {
+    title: "TOOL MATRIX",
+    glyph: "\u{1F4CA}",
+  });
 }
 
 /** @param {CliArgs} parsed */
@@ -983,7 +1022,10 @@ async function handleWorkspace(parsed) {
     return;
   }
 
-  printText(result.markdown);
+  await printDocument(parsed, result.markdown, {
+    title: "WORKSPACE",
+    glyph: "\u{1F5C2}",
+  });
 }
 
 /** @param {CliArgs} parsed */
@@ -1007,7 +1049,10 @@ async function handleWorkspaceGate(parsed) {
     const artifact = writeArtifact(parsed.flags.out, formatWorkspaceGateMarkdown(data));
     printText(`Workspace gate report written: ${artifact.path}`);
   } else {
-    printText(formatWorkspaceGateMarkdown(data));
+    await printDocument(parsed, formatWorkspaceGateMarkdown(data), {
+      title: "WORKSPACE GATE",
+      glyph: "\u{1F6A6}",
+    });
   }
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
@@ -1031,7 +1076,10 @@ async function handleHarness(parsed) {
     return;
   }
 
-  printText(result.markdown);
+  await printDocument(parsed, result.markdown, {
+    title: `HARNESS   ${result.data?.repo?.name ?? ""}`,
+    glyph: "\u{1F6E0}",
+  });
 }
 
 /** @param {CliArgs} parsed */
@@ -1222,7 +1270,10 @@ async function handleDataAccess(parsed) {
     printText(`Data-access report written: ${artifact.path}`);
     return;
   }
-  printText(result.markdown);
+  await printDocument(parsed, result.markdown, {
+    title: "DATA ACCESS",
+    glyph: "\u{1F5C4}",
+  });
 }
 
 /** @param {CliArgs} parsed */
