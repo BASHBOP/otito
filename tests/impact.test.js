@@ -421,3 +421,54 @@ test("changed files ranked only as advisory leads are reported separately from d
     assert.ok(accounted.includes(file), `${file} must land in exactly one reported bucket`);
   }
 });
+
+// Regression: markdown was absent from the code map entirely, so a request
+// naming a skill ranked unrelated library files that merely shared vocabulary
+// with it — a confident answer resting on the wrong evidence.
+function skillFixture(prefix) {
+  return writeFixture(prefix, {
+    "package.json": JSON.stringify({ name: "skill-fixture" }),
+    "codex/skills/model-router/SKILL.md": [
+      "---",
+      "name: model-router",
+      "---",
+      "",
+      "# Model router",
+      "",
+      "## Sync",
+      "",
+      "Canonical: `otito/codex/skills/model-router/`.",
+      "",
+    ].join("\n"),
+    "docs/18-model-routing/README.md": "# Model routing\n\n## The advisory footer\n",
+    "src/lib/model-route.js": "export function scoreModelRoute(containment) { return containment; }\n",
+    "src/lib/telemetry.js": "export function recordRoutePath(path) { return path; }\n",
+  });
+}
+
+test("generateImpact ranks a skill's SKILL.md as the owner of a request naming that skill", () => {
+  const root = skillFixture("skill-owner");
+  const result = generateImpact("make the model-router skill layout-agnostic: remove the canvas fallback path", { path: root });
+  const top = result.data.topFiles.map((file) => file.path);
+
+  assert.equal(top[0], "codex/skills/model-router/SKILL.md", `expected the skill at #1, got: ${top.join(", ")}`);
+  assert.deepEqual(result.data.classifications.requiredOwners, ["codex/skills/model-router/SKILL.md"]);
+});
+
+test("generateImpact keeps a skill advisory when the request is about the code, not the skill", () => {
+  const root = skillFixture("skill-not-owner");
+  const result = generateImpact("fix the model route scoring bug so containment is measured correctly", { path: root });
+  const byPath = Object.fromEntries(result.data.topFiles.map((file) => [file.path, file]));
+
+  assert.deepEqual(result.data.classifications.requiredOwners, ["src/lib/model-route.js"]);
+  assert.equal(byPath["codex/skills/model-router/SKILL.md"]?.role, "advisory", "a skill must not own a code change that merely shares its vocabulary");
+});
+
+test("generateImpact ranks a docs page as the owner of a documentation request", () => {
+  const root = skillFixture("docs-owner");
+  const result = generateImpact("update the model routing documentation to explain the advisory footer", { path: root });
+  const top = result.data.topFiles.map((file) => file.path);
+
+  assert.equal(top[0], "docs/18-model-routing/README.md", `expected the docs page at #1, got: ${top.join(", ")}`);
+  assert.deepEqual(result.data.classifications.requiredOwners, ["docs/18-model-routing/README.md"]);
+});
