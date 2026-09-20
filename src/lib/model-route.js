@@ -427,7 +427,8 @@ export async function generateRoute(request, options = {}) {
   const top = options.top ?? 8;
 
   const impact = generateImpact(normalized, { path: repoPath, top }).data;
-  const ax = generateAxScore(normalized, { path: repoPath, top });
+  // Hand the impact pass to AX so the expensive half runs once, not twice.
+  const ax = generateAxScore(normalized, { path: repoPath, top, impact });
   const signals = signalsFrom(impact, ax);
 
   let jev;

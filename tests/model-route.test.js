@@ -16,6 +16,7 @@ import {
   scoreDecision,
   signalsFrom,
 } from "../src/lib/model-route.js";
+import { generateAxScore } from "../src/lib/ax.js";
 import { formatRouteMarkdown, formatRouteTerminal } from "../src/lib/render/route.js";
 import { createRenderer } from "../src/lib/render/fancy.js";
 
@@ -313,4 +314,30 @@ test("markdown output records the tier, the source, and that it is advisory", ()
   assert.match(markdown, /# Model route: cheap/);
   assert.match(markdown, /offline estimate, not calibrated/);
   assert.match(markdown, /\*\*Advisory\*\*/);
+});
+
+test("AX accepts an injected impact pass, so a composite command pays for it once", () => {
+  // `otito route` needs the impact pass for its own signals and AX needs it for
+  // changeability. Without injection the expensive half runs twice, which was
+  // the whole of the prototype's local cost.
+  const impact = {
+    repo: { name: "fixture", root: "/tmp/fixture" },
+    topFiles: [],
+    classifications: { requiredOwners: [], supportingFiles: [] },
+    tokenEstimate: { total: 200 },
+    risks: [],
+    concepts: [],
+    validation: {},
+  };
+  const cheapToChange = generateAxScore("a request", { path: ".", impact });
+
+  const expensive = { ...impact, tokenEstimate: { total: 400000 } };
+  const costlyToChange = generateAxScore("a request", { path: ".", impact: expensive });
+
+  // The injected pass is what AX scored: a huge token estimate must lower
+  // changeability. If the option were ignored both calls would be identical.
+  assert.ok(
+    cheapToChange.subScores.changeability > costlyToChange.subScores.changeability,
+    `${cheapToChange.subScores.changeability} should beat ${costlyToChange.subScores.changeability}`,
+  );
 });
