@@ -1,6 +1,6 @@
 # Spec: Convergence Score
 
-**Status:** Implemented — task mode (`otito converge`) + `convergence_score` MCP tool, including exact change-subject receipt v2.
+**Status:** Implemented in task mode (`otito converge`) + `convergence_score` MCP tool, including exact change-subject receipt v2.
 **Depends on:** `src/lib/impact.js` (`generateImpact`, `validateAgainstDiff`),
 `src/lib/risk-paths.js` (`classifyPath`, `isSecretPath`, `RISK_FLAGS`),
 `src/lib/tools.js` (`runCommand`), `node:crypto`.
@@ -10,7 +10,7 @@ CLI `otito converge`, MCP `convergence_score`, tests in `tests/converge.test.js`
 ## 1. Summary
 
 A deterministic 0–100 score for the **distance between a stated task (intent) and the
-actual git diff (execution)** — the buildable core of the convergence thesis
+actual git diff (execution)**, the buildable core of the convergence argument
 ([README.md](./README.md)). It is not a proof of correctness; it is a reproducible
 *measurement*, computed out-of-band where the agent cannot fake it.
 
@@ -24,9 +24,9 @@ Every input already exists; convergence is a composition layer, not new analysis
 
 | Signal | Source (already in repo) |
 | --- | --- |
-| Predicted owner files for the task (intent) | `generateImpact(query).data.topFiles` — `src/lib/impact.js` |
+| Predicted owner files for the task (intent) | `generateImpact(query).data.topFiles` in `src/lib/impact.js` |
 | Predicted-vs-actual diff comparison | `validateAgainstDiff` (already inside `generateImpact` when `diffBase` is set): `confirmedDirect`, `confirmedRelated`, `unconfirmedCandidates`, `missedChangedFiles` |
-| Risk weight of a drifted path | `classifyPath` / `isSecretPath` / `RISK_FLAGS` — `src/lib/risk-paths.js` |
+| Risk weight of a drifted path | `classifyPath` / `isSecretPath` / `RISK_FLAGS` in `src/lib/risk-paths.js` |
 | Exact change subject for receipt v2 | Staged: resolved base + parent commit + `git write-tree`; PR: GitHub repository/number + exact base/head OIDs |
 | Precedent for a 0–100 composite + receipt-style evidence | `generateAxScore` (`src/lib/ax.js`), `review_verdict` |
 
@@ -58,7 +58,7 @@ Scope = changedFiles > 0 ? 100 * onTask / changedFiles : 0
 ```
 
 Share of the diff the task anticipated (directly or as a related dependency).
-`missedChangedFiles` — files that changed but nothing in the task predicted — are scope
+`missedChangedFiles`, files that changed but nothing in the task predicted, are scope
 drift. An empty diff converges on nothing, so Scope is 0.
 
 ### 3.3 Risk alignment (is the drift dangerous?)
@@ -93,7 +93,7 @@ id         = "rcpt_" + inputsHash[0:12]
 ```
 
 The canonical payload **excludes `generatedAt`** and **sorts every file list**, so the
-receipt is identity, not timestamp or ordering — the property that makes "recompute and
+receipt is identity, not timestamp or ordering, the property that makes "recompute and
 compare" meaningful in CI.
 
 Calls without an exact subject retain the byte-for-byte v1 canonical payload and receipt

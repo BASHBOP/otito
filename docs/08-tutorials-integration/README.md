@@ -1,7 +1,7 @@
 # Tutorials Integration (Codespaces)
 
-How to use otito alongside a tutorials/examples repo — such as
-[`bashbop/tutorials`](https://github.com/BASHBOP/tutorials) — inside a GitHub Codespace. A
+How to use otito alongside a tutorials/examples repo, such as
+[`bashbop/tutorials`](https://github.com/BASHBOP/tutorials), inside a GitHub Codespace. A
 Codespace is the natural home for this pairing: the repo is already checked out, GitHub auth
 is present, and otito runs entirely in-environment, so no code leaves the box.
 
@@ -17,7 +17,7 @@ otito is local-first and deterministic. In a Codespace that means:
   gives it deterministic context and a merge gate without a hosted code-search service.
 - Everything is reproducible: the same `otito map` / `otito gate` output every run, so a
   learner and an agent see the same picture.
-- Nothing is sent to a model to "understand" the repo — otito is static analysis.
+- Nothing is sent to a model to "understand" the repo, because otito is static analysis.
 
 ## One-time setup
 
@@ -69,19 +69,19 @@ Commit a `.vscode/mcp.json` so any agent host in the Codespace can call otito to
 
 Pair it with a short `CLAUDE.md` / `AGENTS.md` at the tutorials repo root that tells agents
 to run `otito context` before editing and `otito gate` before declaring a change
-merge-ready — the same trust-layer discipline otito uses on itself.
+merge-ready, using the same trust-layer discipline otito uses on itself.
 
 ## Related
 
-- [MCP and Agent Workflows](../02-mcp-agent-workflows/README.md) — host config for Claude
+- [MCP and Agent Workflows](../02-mcp-agent-workflows/README.md): host config for Claude
   Desktop, Cursor, VS Code, and other MCP hosts.
-- [Harness Thesis & Agent Experience](../07-harness-thesis/README.md) — why the harness
+- [Harness Thesis & Agent Experience](../07-deterministic-verification/README.md): why the harness
   (the Codespace + otito setup) matters more than the model.
-- [Determinism Thesis & Harness Boundary](../11-determinism-thesis/README.md) — why LLM
+- [Deterministic Verification](../07-deterministic-verification/README.md): why LLM
   output varies and what otito verifies instead.
-- [Dual-Mode Thesis & Complementary Stack](../12-dual-mode-thesis/README.md) — probabilistic
+- [Deterministic Verification](../07-deterministic-verification/README.md): probabilistic
   agents plus deterministic merge evidence.
-- [Prompt Determinism Thesis & Settings Trap](../13-prompt-determinism-thesis/README.md) — why
+- [Deterministic Verification](../07-deterministic-verification/README.md): why
   "tell it not to randomize" is not a merge gate.
-- [Trust Harness Thesis & Commodity Loop](../14-trust-harness-thesis/README.md) — why independent
+- [Deterministic Verification](../07-deterministic-verification/README.md): why independent
   merge evidence outlasts generic agent orchestration.

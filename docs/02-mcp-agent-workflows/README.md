@@ -231,7 +231,7 @@ Reference: [Grok custom MCP connectors](https://docs.x.ai/grok/connectors).
 | `agent_experience` | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity    |
 | `convergence_score`| Score intent vs. execution (0–100) with a recomputable receipt                        |
 | `review_context`   | Diff/comment review context (no verdict)                                              |
-| `review_gate`      | PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`; optionally enforces a convergence floor/receipt |
+| `review_gate`      | PASS/WARN/FAIL merge gate: local without `pr`, GitHub PR gate with `pr`; optionally enforces a convergence floor/receipt |
 | `review_verdict`   | Composite verdict: impact + review_context + review_gate                              |
 | `workspace_report` | Build product-level context across multiple repos                                     |
 | `repo_harness`     | Generate setup, validation, runtime, and context commands                             |
@@ -277,7 +277,7 @@ it does not establish hosted CI state, GitHub approval, or mergeability.
 ## Host Guidance
 
 !!! success "Recommended agent behavior"
-    Ask otito for context before planning broad work. Use the output to choose the smallest owner files to read, not as a replacement for source inspection. Prefer existing patterns over a new layer. See the [clean code thesis](../16-clean-code-thesis/README.md).
+    Ask otito for context before planning broad work. Use the output to choose the smallest owner files to read, not as a replacement for source inspection. Prefer existing patterns over a new layer. See the [clean code thesis](../07-deterministic-verification/README.md).
 
 !!! warning "Boundary"
     Òtítọ́ does not approve or merge code. Pair it with tests, code review, branch protection, and a human decision.

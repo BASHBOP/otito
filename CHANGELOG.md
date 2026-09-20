@@ -10,10 +10,10 @@ This project follows SemVer.
 
 ### Added
 
-- **`otito route <repo> "<request>"` — the model router, promoted out of `scripts/` into the CLI.** Score a coding task before any tokens are spent on it and recommend a cheap, mid, or premium tier. otito answers the repository half deterministically (AX, containment, canonical risk flags); a System One model answers the request half with calibrated probabilities over three narrow typed questions, in one call. `--tier-only` prints the tier for any host to map, `--host <id>` prints that host's model name, and maps live in `.otito/model-route.json`, so nothing about the scoring is specific to one IDE. `scripts/model-route.mjs` remains as a thin wrapper for the 1.12.0 prototype invocation.
+- **`otito route <repo> "<request>"`, the model router, promoted out of `scripts/` into the CLI.** Score a coding task before any tokens are spent on it and recommend a cheap, mid, or premium tier. otito answers the repository half deterministically (AX, containment, canonical risk flags); a System One model answers the request half with calibrated probabilities over three narrow typed questions, in one call. `--tier-only` prints the tier for any host to map, `--host <id>` prints that host's model name, and maps live in `.otito/model-route.json`, so nothing about the scoring is specific to one IDE. `scripts/model-route.mjs` remains as a thin wrapper for the 1.12.0 prototype invocation.
   - **The router is not the gate and must never become one.** It runs before work starts and decides how much model to spend; the gate runs after the diff exists and decides whether a change may merge. A failed, unreachable, or unkeyed model call falls back to a local estimate that labels itself uncalibrated, and costs a tier, never a verdict. The gate never asks.
-  - It stays **advisory**. The share weights and band thresholds were chosen by judgement and have never been compared to an outcome — the same critique [the calibration thesis](docs/17-calibration-thesis/README.md) makes of `inferRisk`. Promoting it past advisory needs a backtest measuring **regret**: tasks routed cheap that ended in a revert or a repair, weighed against the spend avoided.
-- **An advisory routing footer** under commands that already hold an impact pass and an AX score. Offline by construction — an ordinary otito command still makes no network call.
+  - It stays **advisory**. The share weights and band thresholds were chosen by judgement and have never been compared to an outcome, the same critique [the calibration thesis](docs/17-calibration-thesis/README.md) makes of `inferRisk`. Promoting it past advisory needs a backtest measuring **regret**: tasks routed cheap that ended in a revert or a repair, weighed against the spend avoided.
+- **An advisory routing footer** under commands that already hold an impact pass and an AX score. Offline by construction, an ordinary otito command still makes no network call.
 
 ### Changed
 
@@ -21,8 +21,8 @@ This project follows SemVer.
 
 ### Fixed
 
-- **The router read an empty match as a contained change.** Zero candidates is absence, not containment: when otito matches nothing, AX describes an empty set and `containment` reads high for the same reason there is nothing to spread across, so the arithmetic produced a confident-looking **cheap** tier for exactly the request the repository understood least. Found by dogfooding: _"fix scanning multi date event ticket"_, asked against a repository with no such code, scored containment 100 on zero files and routed `cheap`. The floor jumps straight to the ceiling rather than stepping one tier — a one-tier step would leave a high-AX empty read at `mid`, the same mistake one notch quieter. `scoring.evidence` carries the candidate count and a `sufficient` flag so a caller can say "no recommendation" instead of printing a tier that rests on nothing.
-- **The offline router escalated on evidence it never measured**, in two ways, both through a fail-safe bump rather than the score. Fixture corpora no longer carry a risk flag: otito has no checkout of its own, so `add refund handling to checkout` ranked an eval fixture first and escalated to premium on money-flow evidence from a corpus that ships nothing. Test data still counts toward reach — it is a real file the change touches — but risk has to be about shipped code. And the offline estimator now reports **no** confidence rather than the peak of its own distribution: `distribute(0.6)`, the baseline for any request the keyword lists do not recognise, peaks at 0.40, under the 0.55 floor, so every unrecognised request was bumped a tier and the offline default was "spend more". A measured confidence below the floor still escalates.
+- **The router read an empty match as a contained change.** Zero candidates is absence, not containment: when otito matches nothing, AX describes an empty set and `containment` reads high for the same reason there is nothing to spread across, so the arithmetic produced a confident-looking **cheap** tier for exactly the request the repository understood least. Found by dogfooding: _"fix scanning multi date event ticket"_, asked against a repository with no such code, scored containment 100 on zero files and routed `cheap`. The floor jumps straight to the ceiling rather than stepping one tier, a one-tier step would leave a high-AX empty read at `mid`, the same mistake one notch quieter. `scoring.evidence` carries the candidate count and a `sufficient` flag so a caller can say "no recommendation" instead of printing a tier that rests on nothing.
+- **The offline router escalated on evidence it never measured**, in two ways, both through a fail-safe bump rather than the score. Fixture corpora no longer carry a risk flag: otito has no checkout of its own, so `add refund handling to checkout` ranked an eval fixture first and escalated to premium on money-flow evidence from a corpus that ships nothing. Test data still counts toward reach, it is a real file the change touches, but risk has to be about shipped code. And the offline estimator now reports **no** confidence rather than the peak of its own distribution: `distribute(0.6)`, the baseline for any request the keyword lists do not recognise, peaks at 0.40, under the 0.55 floor, so every unrecognised request was bumped a tier and the offline default was "spend more". A measured confidence below the floor still escalates.
 - **A test that only passed on a machine without `TYPESAFE_API_KEY`.** `askJev` falls back to the environment, so the missing-key assertion was handing a real key to its own stub and asserting the wrong error. It now controls the variable instead of depending on it.
 
 ## [1.12.0] - 2026-09-19
@@ -42,19 +42,19 @@ This project follows SemVer.
 
 ### Added
 
-- **`otito calibrate <repo>` — grade the risk flags against the repository's own history.** Walks history, recovers which commits each later fix actually repaired, and reports per-flag hit rate and lift beside the weight that flag carries today. Local, offline, and a pure function of repository state, with a receipt over a canonical timestamp-free payload so a number quoted in a README can be traced to the run that produced it.
-  - The join is line-overlap (SZZ): for each fix commit, blame the exact pre-image lines it modifies at its parent, and treat the commits owning those lines as the ones it repairs. Joining on "same file" instead measures co-change — on a 1,178-commit corpus that join calls 91.4% of commits repaired at a 90-day window against 30.7% for this one.
+- **`otito calibrate <repo>`, grade the risk flags against the repository's own history.** Walks history, recovers which commits each later fix actually repaired, and reports per-flag hit rate and lift beside the weight that flag carries today. Local, offline, and a pure function of repository state, with a receipt over a canonical timestamp-free payload so a number quoted in a README can be traced to the run that produced it.
+  - The join is line-overlap (SZZ): for each fix commit, blame the exact pre-image lines it modifies at its parent, and treat the commits owning those lines as the ones it repairs. Joining on "same file" instead measures co-change, on a 1,178-commit corpus that join calls 91.4% of commits repaired at a 90-day window against 30.7% for this one.
   - A minimum-sample rule withholds rate and lift for any row beneath the floor (default 30) rather than publishing noise, and reports band ordering as `unknown` rather than true or false when a band never cleared it. Pointed at this repository the command declines to answer most rows, which is the honest result for a corpus this small.
-- **`dependency` risk flag**, reported for manifests and lockfiles. It is scored at **zero**: measured across two corpora it lifts 0.53x and 1.05x against the repair base rate — no consistent signal in either direction.
+- **`dependency` risk flag**, reported for manifests and lockfiles. It is scored at **zero**: measured across two corpora it lifts 0.53x and 1.05x against the repair base rate, no consistent signal in either direction.
 
 ### Fixed
 
-- **`configuration` fired on most changes and inverted the risk bands.** It was two signals under one name: commits touching only a manifest were repaired at 0.42x the base rate, commits touching a real config file at 2.03x — a 4.8x separation stable at every window from 7 to 90 days. Merged, the two cancelled out, and the +2 a lockfile bump carried pushed hundreds of low-risk commits into `medium`, making `medium` changes _less_ likely to be repaired than `low` at every window. Separating dependency churn restores monotonic ordering, confirmed independently on a third repository that had no part in the change.
-- **`configuration` matched far more than configuration.** `"package.json"` matched as a raw substring of any path, so every nested manifest flagged — on this repository 14 of 17 matching manifests were eval fixtures. `"config"`, `"lock"` and `"env"` matched as bare word tokens, flagging `src/lib/config.js`, `src/lib/locks/advisory-lock.ts` and `src/env/index.ts`. Matching is now anchored to whole basenames, basename families, and whole directory segments; `"docker"` and `"tsconfig"` survive as tokens because across 3,455 commits in two repositories they produced no false positives.
+- **`configuration` fired on most changes and inverted the risk bands.** It was two signals under one name: commits touching only a manifest were repaired at 0.42x the base rate, commits touching a real config file at 2.03x, a 4.8x separation stable at every window from 7 to 90 days. Merged, the two cancelled out, and the +2 a lockfile bump carried pushed hundreds of low-risk commits into `medium`, making `medium` changes _less_ likely to be repaired than `low` at every window. Separating dependency churn restores monotonic ordering, confirmed independently on a third repository that had no part in the change.
+- **`configuration` matched far more than configuration.** `"package.json"` matched as a raw substring of any path, so every nested manifest flagged, on this repository 14 of 17 matching manifests were eval fixtures. `"config"`, `"lock"` and `"env"` matched as bare word tokens, flagging `src/lib/config.js`, `src/lib/locks/advisory-lock.ts` and `src/env/index.ts`. Matching is now anchored to whole basenames, basename families, and whole directory segments; `"docker"` and `"tsconfig"` survive as tokens because across 3,455 commits in two repositories they produced no false positives.
 - **A zero-weight flag could gate a merge on its own.** `isGateRiskPath` gated on any flag being present, so a lockfile bump demanded that a maintainer record explicit review of a "risk-sensitive scope" while the scorer weighed the same change at zero. Gating now requires a flag that scores; an unrecognised flag still gates, so adding one without a weight fails safe. Supply-chain concerns remain covered by the separate dependency audit check.
-- **The high-risk policy profile contradicted its own run.** It called the unfiltered risk matcher, so a change touching only `tests/checkout.spec.ts` and `docs/auth-guide.md` produced `Risk review: PASS — No obvious risk-sensitive file paths changed` alongside `Policy profile: FAIL` naming those exact files as high-risk changes.
+- **The high-risk policy profile contradicted its own run.** It called the unfiltered risk matcher, so a change touching only `tests/checkout.spec.ts` and `docs/auth-guide.md` produced `Risk review: PASS, No obvious risk-sensitive file paths changed` alongside `Policy profile: FAIL` naming those exact files as high-risk changes.
 - **PR risk scored test files' flags.** A diff touching only `tests/checkout.spec.ts` scored `["money flow"]` and shipped a review prompt about idempotency, webhooks and refunds. Flags now come from non-test files; per-file `riskFlags` are unchanged, so a reviewer still sees why a spec was included. Measured over 2,294 commits: 3.8% change score, 1.0% change band.
-- **Convergence weighted drifted files by the concept their name mentions.** `docs/auth-guide.md` cost 20 more risk-alignment points than `docs/setup-guide.md` — two documentation files separated by a substring — and appeared in the "Drift touches risk-sensitive paths" recommendation at the same weight as a genuine auth path. This restores the behaviour the convergence spec already documented: "a drifted README barely moves it".
+- **Convergence weighted drifted files by the concept their name mentions.** `docs/auth-guide.md` cost 20 more risk-alignment points than `docs/setup-guide.md`, two documentation files separated by a substring, and appeared in the "Drift touches risk-sensitive paths" recommendation at the same weight as a genuine auth path. This restores the behaviour the convergence spec already documented: "a drifted README barely moves it".
 
 ### Changed
 
@@ -63,26 +63,26 @@ This project follows SemVer.
 
 ### Docs
 
-- The [calibration thesis](docs/17-calibration-thesis/README.md) records the first measurement, the second corpus, and the first real calibration — including a claim it had to withdraw once a third corpus disagreed, and a note explaining why the same repository appears with two different scoreable-commit counts.
+- The [calibration thesis](docs/17-calibration-thesis/README.md) records the first measurement, the second corpus, and the first real calibration, including a claim it had to withdraw once a third corpus disagreed, and a note explaining why the same repository appears with two different scoreable-commit counts.
 
 ## [1.10.1] - 2026-09-15
 
 ### Docs
 
-- **How It Works diagram generated from the live tool catalog.** `docs/assets/otito-how-it-works.html` was last touched at the v1.0.x rebrand and drifted from what ships in 1.10.0 — it still named a removed tool (`repo_catalog`), was missing two shipped MCP tools (`agent_experience`, `convergence_score`), and never mentioned Convergence, the project's core evidence argument. The diagram is now generated by `scripts/generate-how-it-works.mjs` from the same `getAgentTools()` catalog `mcp.js` and `otito agent-tools` use, so it can no longer drift from the shipped tool list.
+- **How It Works diagram generated from the live tool catalog.** `docs/assets/otito-how-it-works.html` was last touched at the v1.0.x rebrand and drifted from what ships in 1.10.0, it still named a removed tool (`repo_catalog`), was missing two shipped MCP tools (`agent_experience`, `convergence_score`), and never mentioned Convergence, the project's core evidence argument. The diagram is now generated by `scripts/generate-how-it-works.mjs` from the same `getAgentTools()` catalog `mcp.js` and `otito agent-tools` use, so it can no longer drift from the shipped tool list.
 - **Glama discoverability.** Added `glama.json` and a `Dockerfile` so the server can be claimed, built, and released on [Glama](https://glama.ai/mcp/servers/BASHBOP/otito).
 
 ## [1.10.0] - 2026-09-12
 
 ### Added
 
-- Content-aware secret detection in the merge gates. `Secret safety` previously matched only file _names_, so a live credential pasted into ordinary source (`src/config.js`) passed the gate. Both the local and GitHub PR gates now also scan the exact changed blob — the staged tree in staged mode, the working tree otherwise, the PR head for a PR gate — against high-precision vendor credential formats (AWS, Stripe live, GitHub, Slack, Google, Anthropic, OpenAI, npm, PEM private keys) plus one entropy-gated generic rule that warns rather than blocks. Findings report `file:line` and never echo the matched value. An `otito:allow-secret` marker on the matching line (or the line above) suppresses a reviewed false positive.
+- Content-aware secret detection in the merge gates. `Secret safety` previously matched only file _names_, so a live credential pasted into ordinary source (`src/config.js`) passed the gate. Both the local and GitHub PR gates now also scan the exact changed blob, the staged tree in staged mode, the working tree otherwise, the PR head for a PR gate, against high-precision vendor credential formats (AWS, Stripe live, GitHub, Slack, Google, Anthropic, OpenAI, npm, PEM private keys) plus one entropy-gated generic rule that warns rather than blocks. Findings report `file:line` and never echo the matched value. An `otito:allow-secret` marker on the matching line (or the line above) suppresses a reviewed false positive.
 - `validation.advisoryChangedFiles` in `change_impact` output and `drivers.advisoryChangedFiles` in `convergence_score`: changed files that were ranked, but only as non-load-bearing advisory leads.
 - Two gate-effectiveness corpus cases: `secret-value-in-source-is-blocked` and `aligned-change-to-source-kind-owner-converges`. The corpus now proves one valid control, one convergence control, and seven blocked changes.
 
 ### Fixed
 
-- Convergence could never ground a task in a repository whose implementation files classify as `kind: "source"` — libraries, CLIs, and most utility code. `requiredOwners` stayed empty, `grounded` was always false, and an exactly-correct change scored identically to a wholly unrelated one, which made `--min-convergence` unusable on that shape of repository. Impact role classification now falls back to the strongest directly-matching non-test, non-doc candidate when no conventional owner kind matches, guarded by a minimum score so a weak incidental match never becomes a coverage obligation.
+- Convergence could never ground a task in a repository whose implementation files classify as `kind: "source"`, libraries, CLIs, and most utility code. `requiredOwners` stayed empty, `grounded` was always false, and an exactly-correct change scored identically to a wholly unrelated one, which made `--min-convergence` unusable on that shape of repository. Impact role classification now falls back to the strongest directly-matching non-test, non-doc candidate when no conventional owner kind matches, guarded by a minimum score so a weak incidental match never becomes a coverage obligation.
 - `change_impact` could report `verdict: "missed"` while `missedChangedFiles` was empty, which reads as a contradiction. Advisory-ranked changed files now have their own bucket, and every changed file lands in exactly one reported bucket.
 - A missing or broken `typescript` install surfaced as a bare `Cannot find package 'typescript'` from deep inside the code map. The CLI now explains that it is a runtime dependency and how to reinstall it.
 
@@ -137,7 +137,7 @@ This project follows SemVer.
 
 ### Docs
 
-- **Clean code as a trust-layer principle.** New thesis page: [docs/16-clean-code-thesis/README.md](docs/16-clean-code-thesis/README.md). Contributor, agent, and context-pack guidance now name the smallest owner file instead of a cleaner agent.
+- **Clean code as a trust-layer principle.** New thesis page: [docs/07-deterministic-verification/README.md](docs/07-deterministic-verification/README.md). Contributor, agent, and context-pack guidance now name the smallest owner file instead of a cleaner agent.
 - **Public contributor path.** Add `CONTRIBUTING.md`, Contributor Covenant `CODE_OF_CONDUCT.md`, and [Contributor Governance](docs/03-contributor-governance/README.md) so the README links resolve and GitHub community files are present.
 - **Docs site current with v1.8.1.** Homepage status, install pins, and What's New now match the published package.
 - **License copyright.** MIT copyright holder is Oluwasegun Olumbe, matching the documentation site.
@@ -180,7 +180,7 @@ This project follows SemVer.
 
 ### Docs
 
-- **Trust harness positioning.** Lead with independent merge evidence rather than a cheaper or smarter model loop. New thesis page: [docs/14-trust-harness-thesis/README.md](docs/14-trust-harness-thesis/README.md).
+- **Trust harness positioning.** Lead with independent merge evidence rather than a cheaper or smarter model loop. New thesis page: [docs/07-deterministic-verification/README.md](docs/07-deterministic-verification/README.md).
 
 ### Maintenance
 
@@ -338,7 +338,7 @@ This project follows SemVer.
 - **TypeScript/JavaScript class methods in the code map** so Nest services expose `sendX` / `resolveY` symbols (including arrow property methods), not only top-level classes/types.
 - **Context engine v2 answer-shaped packs**: multi-token method hotspots, domain diversification in primary files, plural/British spelling token variants, and topic→domain implementation boosts so queries like email branding land on `email.service.ts` instead of flooding with booking controllers.
 - **Index cache version bump to 5** so existing `.dev-context/index.json` files regenerate and pick up method symbols.
-- **`repoctx-self-improve` skill** (gated self-eval loop): score context gaps, add corpus/fixture cases, fix ranking/extractors, verify with `score-gap.mjs` — commit/PR only when asked.
+- **`repoctx-self-improve` skill** (gated self-eval loop): score context gaps, add corpus/fixture cases, fix ranking/extractors, verify with `score-gap.mjs`, commit/PR only when asked.
 
 ### Changed
 
@@ -370,13 +370,13 @@ This project follows SemVer.
 
 ### Deprecated
 
-- **The `dev-context` command alias is deprecated and will be removed in v3.0.0.** Use `repoctx`. Invoking the CLI through the `dev-context` bin now prints a deprecation warning to stderr (never on `--json` stdout). The `.dev-context/` output directory is unaffected — it is not part of the deprecation.
+- **The `dev-context` command alias is deprecated and will be removed in v3.0.0.** Use `repoctx`. Invoking the CLI through the `dev-context` bin now prints a deprecation warning to stderr (never on `--json` stdout). The `.dev-context/` output directory is unaffected, it is not part of the deprecation.
 
 ### Added
 
-- **`repoctx dashboard` renders a local usage & performance UI.** A new opt-in telemetry layer records one JSONL line per CLI run and per MCP tool call to `~/.dev-context/usage.jsonl` (command, arg _shape_ — keys only — latency, outcome, and the value signals each command already produces). `repoctx dashboard` aggregates that log (plus existing `.dev-context` artifacts and recent git history) into ONE self-contained HTML file — no server, no chart library, no network — with interpretation tooltips on every tile and chart and a "what this can't show" honesty panel. Capture is **off by default** and strictly local: gated by the `telemetry` config key or `REPOCTX_TELEMETRY`, forced off under CI, never written to stdout or the MCP JSON-RPC channel (a determinism-firewall test enforces byte-identical output on/off), and error text is reduced to a code/class so no paths leak. Manage it with `repoctx telemetry status|on|off|clear`.
-- **`repoctx ax "<task>" --path .` scores Agent Experience (AX).** A single 0–100 number for "how cheap and safe is it for an agent to make this change here?", blending Changeability (token cost), Containment (blast radius), Guardrails (tests/validation/CODEOWNERS/CI), and Clarity. Deterministic and composed from the existing `impact`, `tokens`, and `codeowners` engines — no new analysis. Supports `--json` and `--out`, and is exposed over MCP as the `agent_experience` tool (the MCP surface bumps from 11 to 12 tools). See [docs/07-harness-thesis/ax-score-spec.md](docs/07-harness-thesis/ax-score-spec.md).
-- **`repoctx converge "<task>" --base <ref>` scores convergence.** A deterministic 0–100 measure of the distance between a stated task (intent) and the actual git diff (execution), with sub-scores for Coverage (did the intent happen?), Scope (did only the intent happen?), and Risk alignment (did unrequested drift land on risk-sensitive paths?). Emits a recomputable, timestamp-free receipt as durable evidence. Composed from the `change_impact` diff comparison and the shared risk vocabulary — no model, no new analysis. Supports `--json` and `--out`, and is exposed over MCP as the `convergence_score` tool (the MCP surface bumps from 12 to 13 tools). See [docs/09-convergence-thesis/convergence-score-spec.md](docs/09-convergence-thesis/convergence-score-spec.md).
+- **`repoctx dashboard` renders a local usage & performance UI.** A new opt-in telemetry layer records one JSONL line per CLI run and per MCP tool call to `~/.dev-context/usage.jsonl` (command, arg _shape_, keys only, latency, outcome, and the value signals each command already produces). `repoctx dashboard` aggregates that log (plus existing `.dev-context` artifacts and recent git history) into ONE self-contained HTML file, no server, no chart library, no network, with interpretation tooltips on every tile and chart and a "what this can't show" honesty panel. Capture is **off by default** and strictly local: gated by the `telemetry` config key or `REPOCTX_TELEMETRY`, forced off under CI, never written to stdout or the MCP JSON-RPC channel (a determinism-firewall test enforces byte-identical output on/off), and error text is reduced to a code/class so no paths leak. Manage it with `repoctx telemetry status|on|off|clear`.
+- **`repoctx ax "<task>" --path .` scores Agent Experience (AX).** A single 0–100 number for "how cheap and safe is it for an agent to make this change here?", blending Changeability (token cost), Containment (blast radius), Guardrails (tests/validation/CODEOWNERS/CI), and Clarity. Deterministic and composed from the existing `impact`, `tokens`, and `codeowners` engines, no new analysis. Supports `--json` and `--out`, and is exposed over MCP as the `agent_experience` tool (the MCP surface bumps from 11 to 12 tools). See [docs/07-deterministic-verification/ax-score-spec.md](docs/07-deterministic-verification/ax-score-spec.md).
+- **`repoctx converge "<task>" --base <ref>` scores convergence.** A deterministic 0–100 measure of the distance between a stated task (intent) and the actual git diff (execution), with sub-scores for Coverage (did the intent happen?), Scope (did only the intent happen?), and Risk alignment (did unrequested drift land on risk-sensitive paths?). Emits a recomputable, timestamp-free receipt as durable evidence. Composed from the `change_impact` diff comparison and the shared risk vocabulary, no model, no new analysis. Supports `--json` and `--out`, and is exposed over MCP as the `convergence_score` tool (the MCP surface bumps from 12 to 13 tools). See [docs/07-deterministic-verification/convergence-score-spec.md](docs/07-deterministic-verification/convergence-score-spec.md).
 - **`postinstall` runs `repoctx doctor` after a global install.** `npm install -g @nugehs/repoctx` now prints an environment readiness summary. The hook is guarded: it runs only for global installs (`npm_config_global=true`), skips in CI and when `REPOCTX_SKIP_POSTINSTALL` is set, and always exits 0 so it can never fail an install.
 
 ## [2.2.0] - 2026-06-17
@@ -392,13 +392,13 @@ This project follows SemVer.
 
 ### Added
 
-- **`repoctx init` now scaffolds a real CI quality gate and an optional pre-commit hook**, derived from `repoctx harness`. The generated `repoctx-ci.yml` gains a `quality` job that runs the project's detected setup + validation commands (install → lint/typecheck/test/build/audit, with toolchain setup for npm/pnpm/yarn/bun) alongside the existing PR-review job. A dependency-free `.githooks/pre-commit` hook runs only the fast static checks (lint/format:check/typecheck) — slow gates stay in CI. Repos with no detectable scripts are unchanged (review-only workflow, no hook).
-- `init` prompts interactively only at a TTY; MCP, agents, CI, and `--json`/`--yes` callers stay fully non-interactive. New flags: `--no-gates`, `--no-precommit`, `--hooks-path` (sets `git core.hooksPath .githooks` with consent), and `--yes`. `initProject()` stays pure — all decisions arrive as explicit options.
+- **`repoctx init` now scaffolds a real CI quality gate and an optional pre-commit hook**, derived from `repoctx harness`. The generated `repoctx-ci.yml` gains a `quality` job that runs the project's detected setup + validation commands (install → lint/typecheck/test/build/audit, with toolchain setup for npm/pnpm/yarn/bun) alongside the existing PR-review job. A dependency-free `.githooks/pre-commit` hook runs only the fast static checks (lint/format:check/typecheck), slow gates stay in CI. Repos with no detectable scripts are unchanged (review-only workflow, no hook).
+- `init` prompts interactively only at a TTY; MCP, agents, CI, and `--json`/`--yes` callers stay fully non-interactive. New flags: `--no-gates`, `--no-precommit`, `--hooks-path` (sets `git core.hooksPath .githooks` with consent), and `--yes`. `initProject()` stays pure, all decisions arrive as explicit options.
 - CI install steps use frozen lockfile installs only when the matching lockfile is present; lockfile-less repos keep a plain install command.
 
 ## [2.0.0] - 2026-06-10
 
-Major version: the MCP tool surface changed. Every legacy tool name still works via `tools/call` (guaranteed until 3.0) — see [docs/MIGRATION-2.0.md](docs/MIGRATION-2.0.md).
+Major version: the MCP tool surface changed. Every legacy tool name still works via `tools/call` (guaranteed until 3.0), see [docs/MIGRATION-2.0.md](docs/MIGRATION-2.0.md).
 
 ### Changed
 
@@ -408,14 +408,14 @@ Major version: the MCP tool surface changed. Every legacy tool name still works 
 ### Added
 
 - **Accuracy eval corpus.** `repoctx eval --accuracy` scores retrieval precision@5 / recall@5 / MRR and risk-classification accuracy against a 32-case labeled corpus, exiting non-zero below tunable thresholds. Wired into the quality gate so retrieval/risk regressions now block CI. Baseline: p@5 0.933, r@5 1.0, MRR 1.0, risk accuracy 1.0. See [docs/EVALS.md](docs/EVALS.md).
-- `repoctx gate <repo>` (local) / `gate --pr <selector>` (GitHub) — the canonical CLI merge-gate command; `pass`/`pass-pr` remain as aliases.
+- `repoctx gate <repo>` (local) / `gate --pr <selector>` (GitHub), the canonical CLI merge-gate command; `pass`/`pass-pr` remain as aliases.
 
 ## [1.5.0] - 2026-06-10
 
 ### Fixed
 
 - Risk classification precision: whole-token concept matching ('fix payload parsing' no longer flags money flow), singularized path tokens (`roles.guard.ts` now flags auth/security), basename-pattern secret detection (`dev.environments.ts` and docs no longer hard-fail the gate), and gate-mode filtering so test/doc-only changes stop drawing risk warnings.
-- `repoctx pr` now uses the shared risk classifier — `pr` and `pass` agree on the same diff.
+- `repoctx pr` now uses the shared risk classifier, `pr` and `pass` agree on the same diff.
 - Impact ranking: one stray concept can no longer halve every non-matching file's score.
 - Index cache: atomic writes, warn-once on write failure, bounded in-process memo for repeated MCP calls.
 - `init` adds `.dev-context/` to the target repo's `.gitignore`, so first-call index caching no longer dirties working trees.
@@ -445,7 +445,7 @@ Major version: the MCP tool surface changed. Every legacy tool name still works 
 
 ### Added
 
-- Packed-tarball smoke test (`npm run smoke:tarball`, part of `npm run smoke` / the quality gate): packs the real tarball, installs it into a temp project, and runs the installed bin — the seam that let the broken bins ship undetected.
+- Packed-tarball smoke test (`npm run smoke:tarball`, part of `npm run smoke` / the quality gate): packs the real tarball, installs it into a temp project, and runs the installed bin, the seam that let the broken bins ship undetected.
 
 ## [1.4.2] - 2026-06-10
 
@@ -465,7 +465,7 @@ Major version: the MCP tool surface changed. Every legacy tool name still works 
 ## [1.4.0] - 2026-06-09
 
 - **Fix `context_pack` returning zero primary files on small repos.** When task keywords match nothing in the index (common for broad queries like "improve SEO and performance" against a small Vite/React repo), `repoctx context` now falls back to a deterministic ranking of repo entrypoints, `main`/`app`/`index` files, and build configuration (`vite.config.*`, `webpack.config.*`, etc.), so `primaryFiles` is never empty while the repo has source files. An open question notes when the fallback was used; behavior for queries that do match the index is unchanged.
-- **Soften release discipline for private repos under solo governance.** "Version metadata changed without a changelog update" is now `WARN` instead of `FAIL` when the repo's `package.json` has `"private": true` and `--governance solo` is active — a private site repo bumping its version is not a release. Public or publishable packages and team governance keep the hard `FAIL`, and version-file mismatches ("Version metadata files do not agree") remain `FAIL` in every configuration.
+- **Soften release discipline for private repos under solo governance.** "Version metadata changed without a changelog update" is now `WARN` instead of `FAIL` when the repo's `package.json` has `"private": true` and `--governance solo` is active, a private site repo bumping its version is not a release. Public or publishable packages and team governance keep the hard `FAIL`, and version-file mismatches ("Version metadata files do not agree") remain `FAIL` in every configuration.
 - Brand alignment: toolchain footer/badges.
 - **GitHub Releases now cut automatically.** `.github/workflows/release.yml` gains a `github-release` job: after the npm publish succeeds, it extracts the matching version section from `CHANGELOG.md` and creates a GitHub Release for the pushed `v*` tag, so the Releases page stays in sync with npm.
 - **README comparison section.** Add a factual "repoctx vs alternatives" table (Sourcegraph/Cody context, hand-written `CLAUDE.md` rules files, `grep`/`ripgrep`) so newcomers can place the tool quickly.
@@ -492,7 +492,7 @@ Major version: the MCP tool surface changed. Every legacy tool name still works 
 ## v1.3.0 - 2026-06-02
 
 - **Documentation site brought current with v1.1 and v1.2.** Headline version stamps on `docs/index.md`, `docs/EXECUTIVE-SUMMARY.md`, and `docs/presentation.md` now reflect v1.2.0. Capability tables surface the `repoctx eval` token-savings suite, the `repoctx data-access` inline-SQL / Prisma surface, C# / Python / Java / Ruby / Rust code-map extractors, the vendor-bundle filter, and multi-domain file tagging (`domains: string[]`).
-- **ROADMAP** gains Phase 2.6 (v1.1.0 — eval, data-access, broader languages) and Phase 2.7 (v1.2.0 — multi-domain discoverability), both marked complete.
+- **ROADMAP** gains Phase 2.6 (v1.1.0, eval, data-access, broader languages) and Phase 2.7 (v1.2.0, multi-domain discoverability), both marked complete.
 - **MCP tool surface table** annotates `repo_map` with all eight supported languages, annotates `find_domain` with the multi-domain tag set, and adds two tools that were shipping but undocumented: `find_backend_route` and `find_frontend_api_client`.
 - **`deploy-docs.yml` now triggers on `CHANGELOG.md`** so release commits redeploy the published site automatically, not just commits that touch `docs/**` or `mkdocs.yml`.
 
@@ -513,7 +513,7 @@ Major version: the MCP tool surface changed. Every legacy tool name still works 
 
 ## v1.0.1 - 2026-05-29
 
-- Add `mcpName: "io.github.nugehs/repoctx"` to `package.json` — required by the MCP Registry's ownership-proof check (the registry verifies that the published npm tarball declares the registry name it's claiming).
+- Add `mcpName: "io.github.nugehs/repoctx"` to `package.json`, required by the MCP Registry's ownership-proof check (the registry verifies that the published npm tarball declares the registry name it's claiming).
 - Add `server.json` manifest at the repo root for publishing to the official MCP Registry at `https://registry.modelcontextprotocol.io/`. After this lands, `mcp-publisher publish` advertises `io.github.nugehs/repoctx` so any MCP host can discover and install repoctx as `npx -y @nugehs/repoctx mcp`.
 - Round out `server.json` with `title`, `websiteUrl`, and `repository.id` so registry list views render a real display name + homepage and the registry can detect repo-resurrection attempts on the namespace.
 - Trim the `server.json` description to fit the registry's 100-character cap (first publish attempt rejected at 272 chars).
@@ -521,10 +521,10 @@ Major version: the MCP tool surface changed. Every legacy tool name still works 
 
 ## v1.0.0 - 2026-05-29
 
-- **Phase 1 — shared risk vocabulary + fancy renderer.** New `src/lib/risk-paths.js` exports canonical risk flags (`auth/security`, `money flow`, `data model`, `request surface`, `frontend/backend contract`, `configuration`, `large file diff`, `secret risk`), `classifyPath()` with kind-aware matching, `conceptsFromQuery()` for closing the "Apple → auth" inference gap. New `src/lib/render/fancy.js` adds boxed headers, status glyphs, verdict blocks, and `--no-emoji` plain mode for CI logs.
-- **Phase 2 — `repoctx impact`.** Absorbs `impact-map`'s scoring formula and diff validation onto repoctx's AST code map. Concept-match boost, concept-mismatch penalty, path-token cap, owner-kind boost, and word-boundary risk classification fix the field-test regressions (Stripe refunds now ranks `stripe.processor.ts` #1, Apple sign-in now ranks `auth.controller.ts` #1).
-- **Phase 3 — `repoctx pass`.** Absorbs `pullpass`'s local merge gate. New `release-check.js`, `policy.js`, `pass-local.js` deliver the standard / company / high-risk policy profiles, team / solo governance, and the eight deterministic checks. Bashbop regression matches pullpass output exactly.
-- **Phase 4 — `repoctx pass-pr` + `repoctx review`.** Absorbs `pullpass`'s GitHub PR mode. New `codeowners.js`, `gh.js`, `pass-pr.js` deliver PR state, review decision, CODEOWNERS (with org/team membership), unresolved conversations (paginated GraphQL), branch protection, status checks (with annotation enrichment). New `review.js` ships the composite engine — impact + pr-review + pass in one call, with a derived confidence score.
+- **Phase 1, shared risk vocabulary + fancy renderer.** New `src/lib/risk-paths.js` exports canonical risk flags (`auth/security`, `money flow`, `data model`, `request surface`, `frontend/backend contract`, `configuration`, `large file diff`, `secret risk`), `classifyPath()` with kind-aware matching, `conceptsFromQuery()` for closing the "Apple → auth" inference gap. New `src/lib/render/fancy.js` adds boxed headers, status glyphs, verdict blocks, and `--no-emoji` plain mode for CI logs.
+- **Phase 2, `repoctx impact`.** Absorbs `impact-map`'s scoring formula and diff validation onto repoctx's AST code map. Concept-match boost, concept-mismatch penalty, path-token cap, owner-kind boost, and word-boundary risk classification fix the field-test regressions (Stripe refunds now ranks `stripe.processor.ts` #1, Apple sign-in now ranks `auth.controller.ts` #1).
+- **Phase 3, `repoctx pass`.** Absorbs `pullpass`'s local merge gate. New `release-check.js`, `policy.js`, `pass-local.js` deliver the standard / company / high-risk policy profiles, team / solo governance, and the eight deterministic checks. Bashbop regression matches pullpass output exactly.
+- **Phase 4, `repoctx pass-pr` + `repoctx review`.** Absorbs `pullpass`'s GitHub PR mode. New `codeowners.js`, `gh.js`, `pass-pr.js` deliver PR state, review decision, CODEOWNERS (with org/team membership), unresolved conversations (paginated GraphQL), branch protection, status checks (with annotation enrichment). New `review.js` ships the composite engine, impact + pr-review + pass in one call, with a derived confidence score.
 - **New MCP tools.** `change_impact`, `merge_readiness`, `pr_merge_readiness`, `review_pr`.
 - **Standalone repos.** `impact-map` and `pullpass` can be archived; repoctx is the canonical implementation.
 

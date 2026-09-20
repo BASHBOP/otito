@@ -1,22 +1,25 @@
-# Model Routing & the Question That Carries Information
+# Model Routing
 
-> _Why otito can ask a model for a probability without becoming probabilistic._
+> Why otito can ask a model for a probability without becoming probabilistic.
 
-This document maps a claim from the System One conversation onto otito's
-existing surface, then turns it into a concrete, prioritised roadmap. It mirrors
-[the calibration thesis](../17-calibration-thesis/README.md),
-[the determinism thesis](../11-determinism-thesis/README.md), and
-[the dual-mode thesis](../12-dual-mode-thesis/README.md): take a source, name
-what otito has quietly already built, and let the naming sharpen the product.
+Some questions about a coding task have no answer in repository state. How
+precisely a request names what has to change, and how far the edits it implies
+will reach, are properties of the sentence rather than of the code. otito has
+never read a request as language, so it cannot answer them.
 
-The source is the same one the calibration thesis used, TypeSafe's System One
-launch ([announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev),
-[concepts](https://docs.typesafe.ai/concepts/system-one)). There, the question
-was whether otito's own risk score is calibrated. Here it is the reverse
-direction: **can otito spend a calibrated model where it has no signal of its
-own, without giving up what makes otito trustworthy?**
+The question this document answers is whether otito can spend a calibrated
+model on that half without giving up what makes it trustworthy.
 
-The answer is yes, and the reason is a boundary, not a compromise.
+The answer is yes, and the reason is a boundary rather than a compromise: the
+model is asked **before** work starts, about how much model to spend, and
+nothing it says can reach the gate that decides whether a change may merge.
+
+The calibrated model used here is a System One model
+([announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev),
+[concepts](https://docs.typesafe.ai/concepts/system-one)), which takes typed
+questions and returns probabilities trained against outcomes rather than prose
+to be parsed. The reverse direction, grading otito's own signals against
+history, is in the [calibration](../17-calibration-thesis/README.md) page.
 
 ## The boundary, this does not weaken the gate
 
@@ -114,7 +117,7 @@ weights 3 in `RISK_SCORE_WEIGHTS`), and confidence below 0.55. A router that can
 round *down* on a bad read is a router that ships bad changes cheaply.
 
 Both bumps read evidence that has to be about shipped code. Tests and fixture
-corpora still count toward reach — they are real files the change touches — but
+corpora still count toward reach, because they are real files the change touches, but
 they never carry a risk flag. Routing otito itself is the case that shows why:
 the repository has no checkout and no auth controller, so `add refund handling
 to checkout` ranks `evals/fixtures/shop-api/.../checkout.service.ts` first and
@@ -160,8 +163,8 @@ Set `TYPESAFE_API_KEY` in your shell to use the model. Without it, or with
 `--offline`, the run falls back to a local heuristic and labels every surface
 `offline estimate, not calibrated`. That heuristic scores; it does not claim a
 confidence, so the offline path reports `confidence: not measured` and the
-low-confidence bump does not fire. Before that was true, `distribute(0.6)` —
-the baseline for any request the keyword lists do not recognise — peaked at
+low-confidence bump does not fire. Before that was true, `distribute(0.6)`,
+the baseline for any request the keyword lists do not recognise, peaked at
 0.40, and reading that shape as confidence escalated every unknown request one
 tier: the offline router's default was "spend more".
 
@@ -268,21 +271,13 @@ not accuracy. It is **regret**: changes routed cheap that ended in a revert or a
 repair, weighed against the spend avoided. A router with zero regret and zero
 savings is the table above.
 
-## Roadmap
-
-| Priority | Work | Why |
-| :-: | --- | --- |
-| 1 | Backtest tier against `reverted` and `repaired`, reusing the calibrate harness | Moves the router off judgement. The share weights are still ungraded |
-| 2 | Mid-session re-score once the real file set is known | Prompt-only routing misreads "fix this typo" that turns out to touch auth |
-| 3 | Widen the corpus beyond one repository | Five prompts in one app is an anecdote |
-
 ## References
 
 - TypeSafe AI, _System One_: <https://docs.typesafe.ai/concepts/system-one>
 - TypeSafe AI, _Composite scoring_: <https://docs.typesafe.ai/patterns/composite-scoring>
 - TypeSafe AI, _Confidence_: <https://docs.typesafe.ai/confidence>
 - otito, [Calibration Thesis](../17-calibration-thesis/README.md)
-- otito, [Determinism Thesis](../11-determinism-thesis/README.md)
+- otito, [Deterministic Verification](../07-deterministic-verification/README.md)
 - Implementation: `src/lib/model-route.js` and `src/lib/render/route.js`, reachable as `otito route`
 - `scripts/model-route.mjs` is a thin wrapper kept for the 1.12.0 prototype invocation
 - Host-agnostic skill: `codex/skills/model-router/`

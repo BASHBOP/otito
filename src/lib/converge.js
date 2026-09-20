@@ -1,6 +1,6 @@
 // otito convergence: a deterministic 0–100 measure of the distance between a
 // stated task (intent) and the actual git diff (execution). It is the buildable
-// core of the "prove software sanity" argument (docs/09-convergence-thesis):
+// core of the "prove software sanity" argument (docs/07-deterministic-verification):
 // not a proof, a *measurement*, computed out-of-band where the agent cannot fake
 // it — "the goal prompt read forward, the commit log read backward, and the
 // convergence grade is the distance between the two."
