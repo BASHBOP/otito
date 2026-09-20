@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { generateCodeMap } from "./code-map.js";
+import { codeMapCapabilitySignature } from "./code-map/capabilities.js";
 import { listRepoFiles } from "./repo.js";
 
 /**
@@ -106,6 +107,7 @@ import { listRepoFiles } from "./repo.js";
  * @property {string} path
  * @property {string} [generatedAt]
  * @property {string} fingerprint
+ * @property {string} capabilities - Signature of the indexer that produced the served map.
  */
 
 /**
@@ -123,9 +125,11 @@ import { listRepoFiles } from "./repo.js";
  * @property {CodeMapCacheInfo} [cache]
  */
 
-// Bump whenever code-map extraction or file eligibility changes. Otherwise an
-// existing on-disk map can silently omit newly-supported artifacts such as
-// templates and configuration snapshots.
+// Bump whenever code-map *extraction* changes in a way the capability
+// signature cannot observe — richer symbols for a file kind that was already
+// indexed, say. Changes to which files are eligible, or to how they are
+// classified, are caught automatically by `codeMapCapabilitySignature()`
+// below; they do not need a bump here.
 const cacheVersion = 11;
 const externalCacheDirectory = "otito-index-cache";
 
@@ -156,6 +160,11 @@ export function getCachedCodeMap(repoPath = ".") {
   const root = path.resolve(repoPath);
   const cachePath = getCodeMapCachePath(root);
   const fingerprint = repoFingerprint(root);
+  // The fingerprint answers "did the repository change?". It cannot answer
+  // "did the indexer change?" — an untouched repository has an identical
+  // fingerprint under an indexer that now understands a whole new file class.
+  // The capability signature answers that second question.
+  const capabilities = codeMapCapabilitySignature();
   const memoKey = `${root}\0${fingerprint}`;
 
   const memoized = readMemo(memoKey);
@@ -168,12 +177,13 @@ export function getCachedCodeMap(repoPath = ".") {
         path: cachePath,
         generatedAt: memoized.generatedAt,
         fingerprint,
+        capabilities,
       },
     };
   }
 
   const cached = readCache(cachePath);
-  if (cached?.version === cacheVersion && cached.fingerprint === fingerprint && cached.map?.repo?.root === root) {
+  if (cached?.version === cacheVersion && cached.capabilities === capabilities && cached.fingerprint === fingerprint && cached.map?.repo?.root === root) {
     writeMemo(memoKey, { map: cached.map, generatedAt: cached.generatedAt });
     return {
       ...cached.map,
@@ -183,6 +193,7 @@ export function getCachedCodeMap(repoPath = ".") {
         path: cachePath,
         generatedAt: cached.generatedAt,
         fingerprint,
+        capabilities,
       },
     };
   }
@@ -193,6 +204,7 @@ export function getCachedCodeMap(repoPath = ".") {
     version: cacheVersion,
     generatedAt,
     fingerprint,
+    capabilities,
     map,
   });
   writeMemo(memoKey, { map, generatedAt });
@@ -204,8 +216,14 @@ export function getCachedCodeMap(repoPath = ".") {
       source: "generated",
       path: cachePath,
       fingerprint,
+      capabilities,
     },
   };
+}
+
+/** Test seam: drop the in-process memo so the next call reads disk. */
+export function resetIndexCacheMemo() {
+  memo.clear();
 }
 
 /**
