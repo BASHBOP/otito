@@ -272,6 +272,78 @@ test("a fixture corpus counts toward reach but never carries a risk flag", () =>
   assert.ok(shipped.riskPaths.includes("money flow"));
 });
 
+test("documentation about a risky area is never evidence that a change touches it", () => {
+  // Regression: #175 indexed markdown, so `docs/AUTH_TOKEN_VALIDATION.md`
+  // became a candidate for "fix a typo in the README". It classified as
+  // auth/security on the "auth" and "token" path tokens and forced `premium`
+  // for a one-line doc edit. Prose about token validation does not validate
+  // tokens.
+  const ax = { ax: 60, subScores: { containment: 20 } };
+  const doc = signalsFrom(
+    {
+      repo: { name: "fixture" },
+      classifications: { requiredOwners: ["docs/AUTH_TOKEN_VALIDATION.md"], supportingFiles: [], advisoryFiles: [] },
+      topFiles: [{ path: "docs/AUTH_TOKEN_VALIDATION.md", kind: "doc", reasons: [] }],
+    },
+    ax,
+  );
+  assert.deepEqual(doc.riskPaths, []);
+  // Still a candidate: the doc is real evidence about reach, just not risk.
+  assert.equal(doc.candidates, 1);
+
+  // A skill page is markdown a contributor edits, not code it describes.
+  const skill = signalsFrom(
+    {
+      repo: { name: "fixture" },
+      classifications: { requiredOwners: ["skills/session-helper/SKILL.md"], supportingFiles: [], advisoryFiles: [] },
+      topFiles: [{ path: "skills/session-helper/SKILL.md", kind: "skill", reasons: [] }],
+    },
+    ax,
+  );
+  assert.deepEqual(skill.riskPaths, []);
+
+  // Owner buckets are bare paths, so a candidate the ranking never reached has
+  // no kind to read. The path-shape fallback still recognises the doc.
+  const unranked = signalsFrom(
+    {
+      repo: { name: "fixture" },
+      classifications: { requiredOwners: ["docs/AUTH_TOKEN_VALIDATION.md"], supportingFiles: [], advisoryFiles: [] },
+      topFiles: [],
+    },
+    ax,
+  );
+  assert.deepEqual(unranked.riskPaths, []);
+});
+
+test("auth code still carries the risk flag, and the doc beside it is not listed as evidence", () => {
+  // The bump itself is sound — excluding docs must not blunt it. Exclusion is
+  // outright rather than "only when the doc is the sole evidence": where real
+  // code carries the flag the doc adds nothing, so listing it would assert
+  // that a prose file is part of why the change is risky.
+  const derived = signalsFrom(
+    {
+      repo: { name: "fixture" },
+      classifications: {
+        requiredOwners: ["src/auth/session.service.ts"],
+        supportingFiles: ["docs/AUTH_TOKEN_VALIDATION.md"],
+        advisoryFiles: [],
+      },
+      topFiles: [
+        { path: "src/auth/session.service.ts", kind: "service", reasons: [] },
+        { path: "docs/AUTH_TOKEN_VALIDATION.md", kind: "doc", reasons: [] },
+      ],
+    },
+    { ax: 60, subScores: { containment: 20 } },
+  );
+  assert.deepEqual(derived.riskPaths, ["auth/security"]);
+  assert.deepEqual(derived.riskEvidence["auth/security"], ["src/auth/session.service.ts"]);
+  assert.equal(derived.candidates, 2);
+
+  // And the flag still bumps a mid read one tier.
+  const scoring = scoreDecision({ answers: answers(), signals: signals({ ax: 50, riskPaths: derived.riskPaths }) });
+  assert.equal(scoring.bumps.find((entry) => entry.name === "risk path").fired, true);
+});
+
 test("the offline estimate reports no confidence, so the fail-safe cannot read its shape", () => {
   // Regression: `distribute(0.6)` — the baseline for any request the keyword
   // lists do not recognise — peaks at 0.40, which read as confidence sat below

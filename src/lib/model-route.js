@@ -19,7 +19,7 @@ import path from "node:path";
 
 import { generateAxScore } from "./ax.js";
 import { generateImpact } from "./impact.js";
-import { classifyPath, isTestDataPath, RISK_SCORE_WEIGHTS } from "./risk-paths.js";
+import { classifyPath, isProseFile, isTestDataPath, RISK_SCORE_WEIGHTS } from "./risk-paths.js";
 
 export const modelRouteEngineVersion = "0.1.0";
 
@@ -167,16 +167,41 @@ export function signalsFrom(impact, ax) {
     if (!candidates.includes(file)) candidates.push(file);
   }
 
+  // The ranked files carry the code map's `kind`, which is the only place the
+  // risk filter below can learn that a path is prose. Owner and supporting
+  // buckets are bare paths, so a candidate the ranking did not reach falls
+  // back to the path-shape test inside `isProseFile`.
+  /** @type {Map<string, string>} */
+  const kindByPath = new Map((impact.topFiles ?? []).map((/** @type {any} */ f) => [f.path, f.kind]));
+
   // Fixture corpora and tests still count toward reach, but they never carry a
   // risk flag: routing this repository read its own shop-api eval fixture as
   // money-flow code and escalated a request that touched nothing shipped.
   // The evals run otito inside those fixture directories, where the paths
   // are fixture-relative, so a fixture's own risk is still visible to the run
   // it is a fixture for.
+  //
+  // Documentation is excluded for the same reason and one of its own: the risk
+  // bump escalates because a change *touches* a risky area, and prose about an
+  // area touches none of it. Since #175 indexed markdown, a README typo in a
+  // repository that happens to ship `docs/AUTH_TOKEN_VALIDATION.md` classified
+  // as auth/security and forced `premium` off that single file.
+  //
+  // Excluded outright, not merely when it is the sole evidence for a flag. A
+  // doc is never evidence that a change is risky: where real code carries the
+  // flag the doc adds nothing to the decision, and where it does not, listing
+  // the doc as "risk evidence" asserts something untrue. This is the rule
+  // `isGateRiskPath` already applies to the merge gates.
+  //
+  // Note this reads `kind` only to recognise prose. Feeding it to
+  // `classifyPath` would also switch on the kind-matched patterns (a `schema`
+  // file would newly flag data model, weight 3, and bump), which is a separate
+  // change that needs its own measurement.
   /** @type {Map<string, string[]>} */
   const flagged = new Map();
   for (const file of candidates) {
     if (isTestDataPath(file)) continue;
+    if (isProseFile(file, kindByPath.get(file))) continue;
     for (const flag of classifyPath(file)) {
       if (!flagged.has(flag)) flagged.set(flag, []);
       /** @type {string[]} */ (flagged.get(flag)).push(file);

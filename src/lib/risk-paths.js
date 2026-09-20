@@ -415,6 +415,31 @@ export function isDocPath(filePath) {
   return path.split("/").some((segment) => DOC_SEGMENTS.has(segment));
 }
 
+// Code-map kinds that hold prose ABOUT the system rather than the system. A
+// `doc`, a `skill` page and a `changelog` are all edited as English; none of
+// them executes, so none of them can carry the risk its subject matter names.
+const PROSE_KINDS = new Set(["doc", "skill", "changelog"]);
+
+// True when a file is prose rather than implementation, so it must not stand
+// as evidence that a change touches a risky area. `docs/AUTH_TOKEN_VALIDATION.md`
+// describes token validation; it does not validate tokens.
+//
+// The code map's `kind` is authoritative when the caller has it, because it is
+// the same classification the indexer applied — and it is more precise than
+// the path: `docs/api/schema.sql` is real SQL that happens to live under
+// `docs/`, and a known non-prose kind keeps its flags. Callers without a kind
+// fall back to `isDocPath`, the same extension/segment test the merge gates
+// have always used, which is a strict superset of the markdown kinds.
+/**
+ * @param {string} filePath
+ * @param {string} [kind] code-map kind, when the caller has it
+ * @returns {boolean}
+ */
+export function isProseFile(filePath, kind) {
+  if (kind) return PROSE_KINDS.has(kind);
+  return isDocPath(filePath);
+}
+
 // True when the path is a test file or lives in a fixture corpus. Used by
 // patterns that opt in via `excludeTestData`, so a config-shaped fixture is
 // not mistaken for this repository's own configuration. Note the evals run
