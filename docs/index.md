@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v1.13.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
+**v1.14.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
 
 ---
 
@@ -18,6 +18,18 @@
 ---
 
 ## What's New
+
+!!! tip "v1.14.0 published (2026-09-20)"
+    - A `UserPromptSubmit` hook routes **every** request before any work starts, not only the ones a skill remembers to route. It advises the session and binds the model on delegated subagents; it cannot switch the session's own model, and says so.
+    - Markdown is now indexed, so skills and docs pages can be found. A request naming a skill used to rank unrelated library files; it now ranks the skill first.
+    - Fixed: a stale stored index kept serving after the indexer changed, including on offline workspace search. Indexes now carry a capability signature and are rebuilt when it moves.
+    - Fixed: a doc *about* an auth-like area escalated a typo fix to premium; the router escalated two thirds of requests because it bumped on a model's self-reported confidence (now 0% escalation over nine requests); post-merge attestation died on `exit 128` and reported green when it had done nothing.
+
+    [npm v1.14.0](https://www.npmjs.com/package/@bashbop/otito/v/1.14.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.14.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+
+!!! tip "v1.13.1 published (2026-09-20)"
+    - The documentation pack is rewritten for a reader rather than its author: seven overlapping pages become one [deterministic verification](./07-deterministic-verification/README.md) page, and navigation is grouped by what you are trying to do.
+    - The model router skill can offer a realtime canvas, at most once per session.
 
 !!! tip "v1.13.0 published (2026-09-20)"
     - `otito route <repo> "<request>"` scores a coding task **before** tokens are spent on it and recommends a cheap, mid, or premium tier. otito answers the repository half deterministically; a System One model answers the request half with calibrated probabilities. It ships **advisory**, because the weights have never been graded against an outcome.
