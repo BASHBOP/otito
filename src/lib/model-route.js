@@ -48,6 +48,18 @@ export function priceRouteCall(inputTokens) {
 export const TIERS = /** @type {const} */ (["cheap", "mid", "premium"]);
 export const BAND_CHEAP = 75;
 export const BAND_MID = 45;
+/**
+ * Display threshold only: below this a rendered confidence reads as weak.
+ *
+ * Deliberately not a routing input. Confidence used to drive a tier bump off
+ * `Math.min` of both Score answers, which let one unsure question discard a
+ * confident one: a rename that named its own file and symbol scored specificity
+ * 1.00 at confidence 1.00, and still routed premium because `blast_radius` was
+ * a hundredth under the floor at 0.54. It also double-counted, because `score`
+ * is the expectation over that question's own level distribution, so a spread
+ * answer already pays through its own term. Measured on this repository it
+ * escalated 67% of requests. See docs/18-model-routing.
+ */
 export const CONFIDENCE_FLOOR = 0.55;
 
 /**
@@ -376,6 +388,9 @@ export function scoreDecision({ answers, signals }) {
   let running = ax;
   steps.push({ label: "AX", detail: "otito, deterministic", delta: null, from: 0, to: running });
 
+  // `score` is the expectation over that question's own level distribution, so
+  // a spread answer already pulls its own term toward the expensive end. That
+  // is the whole of the uncertainty this term is entitled to charge for.
   /** @type {Record<string, number>} */
   const fractions = {
     specificity: answers.specificity.score / 2,
@@ -414,11 +429,14 @@ export function scoreDecision({ answers, signals }) {
   let index = TIERS.indexOf(/** @type {any} */ (baseTier));
 
   const severe = (signals.riskPaths ?? []).filter((flag) => (RISK_SCORE_WEIGHTS[flag] ?? 0) >= BUMP_WEIGHT);
-  // Null when neither Score answer measured a confidence, as the offline
-  // estimate does not; a fail-safe that fires on an absent number is a default.
+  // Reported for display, never routed on. The weakest of the two Score answers
+  // is the honest summary of how well this read is supported, but it is NOT a
+  // tier input: each answer's uncertainty is already priced into its own term
+  // above. Bumping on the minimum as well let one unsure question throw away a
+  // confident one and double-counted the same doubt. Measured on this repo, it
+  // escalated 67% of requests, a one-file rename among them.
   const measured = [answers.blast_radius.confidence, answers.specificity.confidence].filter((/** @type {unknown} */ value) => typeof value === "number");
   const confidence = measured.length ? Math.min(...measured) : null;
-  const lowConfidence = confidence !== null && confidence < CONFIDENCE_FLOOR;
 
   // Zero candidates is ABSENCE, not containment. When otito matches nothing, AX
   // is describing an empty set and `containment` reads high for the same
@@ -446,16 +464,6 @@ export function scoreDecision({ answers, signals }) {
       name: "risk path",
       fired: severe.length > 0,
       note: severe.length ? `${severe.join(", ")}, one tier up` : "no top-severity risk flag",
-    },
-    {
-      name: "low confidence",
-      fired: lowConfidence,
-      note:
-        confidence === null
-          ? "offline estimate carries no confidence to read"
-          : lowConfidence
-            ? `score confidence ${confidence.toFixed(2)} < ${CONFIDENCE_FLOOR}, one tier up`
-            : `score confidence ${confidence.toFixed(2)} >= ${CONFIDENCE_FLOOR}`,
     },
   ];
 

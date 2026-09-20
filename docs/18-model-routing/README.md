@@ -254,6 +254,63 @@ change into a money-flow change. The router now classifies owners, supporting
 files, and the top three ranked predictions whatever bucket they landed in: rank
 is evidence, the bucket is a label.
 
+## Dogfood, otito, 2026-09-20
+
+The corpus above was measured against `bashbop-event-web`, whose AX tops out at
+74. Run against **this** repository, the same router escalated 67% of requests
+and put six of nine on the premium tier.
+
+| request | route | confidence | before | after |
+| --- | --- | --- | --- | --- |
+| fix a typo in the README | 54 | 0.79 | mid | mid |
+| sort the imports in `src/lib/ax.js` | 61 | 0.77 | mid | mid |
+| rename the variable `running` to `score` | 68 | 0.54 | **premium** | mid |
+| add a `--quiet` flag to the doctor command | 50 | 0.34 | **premium** | mid |
+| fix the off-by-one in the impact top-N slice | 60 | 0.39 | **premium** | mid |
+| add a retry with backoff to the auth token refresh | 78 | 0.00 | **mid** | cheap |
+| extract the render helpers into their own module | 50 | 0.26 | **premium** | mid |
+| redesign how the gate decides merge readiness | 44 | 0.74 | premium | premium |
+| add multi-tenant permissions to the whole MCP surface | 59 | 0.43 | **premium** | mid |
+
+One defect, and it is another instance of the same lesson: **do not charge for
+the same uncertainty twice.**
+
+`confidence` was `Math.min` of both Score answers, and a value under the floor
+bumped a tier. Two things were wrong with that.
+
+It **discarded the confident answer.** Take `rename the variable running to
+score in model-route.js`. Jev put the entire distribution — 1.00, confidence
+1.00 — on *"the request names the exact file, symbol, flag or user-visible
+string to change"*, which is exactly what that sentence does. `blast_radius`
+put 0.80 on *"contained to a single file"* at confidence 0.54. Both answers say
+trivial. The minimum kept 0.54, missed the floor by one hundredth, and routed a
+one-file rename to the premium tier. A perfectly certain answer had no effect on
+its own tier because a second question was a hundredth less sure.
+
+It **double-counted.** `score` is the expectation over that question's own level
+distribution, so a spread answer already pays through its own term — 1.56 out of
+2 on blast radius, for the `--quiet` flag, is most of a −20% share. Bumping a
+tier on the spread as well charged for it twice.
+
+The fix is to leave confidence where it belongs: each answer's uncertainty is
+priced into that answer's own term, and confidence is reported for a reader
+rather than read by the router. Same Jev answers, rescored: escalation 67% → 0%,
+premium 6/9 → 1/9.
+
+The remaining bumps — `no evidence` and `risk path` — are otito's own
+deterministic repository signals, which is the half of this pairing that is
+entitled to overrule a model. A vendor's self-reported certainty is not.
+
+The auth request moving to `cheap` is that division working, not a hole in it:
+`risk path` did not fire because this repository has no auth code for otito to
+match. In a repository that has some, the flag fires on repository evidence.
+
+What this run does **not** fix: the route score still separates the corpus
+poorly. An auth retry (78) reads as cheaper than sorting imports in one file
+(61), and a README typo (54) reads as more expensive than both. That is question
+quality and AX dominance, not the confidence defect, and it is unmeasured
+against outcomes like everything else below.
+
 ## What is not true yet
 
 The weights and the bands were chosen by judgement and have never been compared

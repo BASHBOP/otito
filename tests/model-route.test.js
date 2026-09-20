@@ -154,9 +154,43 @@ test("confidence reads the weaker of the two Score answers, because Noul carries
   });
   assert.equal(scoring.confidence, 0.2);
   assert.ok(scoring.confidence < CONFIDENCE_FLOOR);
-  // Low confidence escalates cheap to mid rather than leaving it cheap.
+  // Reported, but not routed on: both answers say the change is trivial, and a
+  // weak confidence on one of them does not make it less trivial.
   assert.equal(scoring.baseTier, "cheap");
-  assert.equal(scoring.tier, "mid");
+  assert.equal(scoring.tier, "cheap");
+});
+
+test("an unsure question does not discard a confident one", () => {
+  // Regression, measured: "rename the variable `running` to `score` in
+  // model-route.js". Jev put the whole distribution on "names the exact file,
+  // symbol, flag or user-visible string" at confidence 1.00 — as certain as an
+  // answer gets — and 0.80 on "contained to a single file" at confidence 0.54.
+  // Both say trivial. `Math.min` kept 0.54, missed the 0.55 floor by one
+  // hundredth, and routed a one-file rename to the premium tier.
+  const scoring = scoreDecision({
+    answers: answers({
+      specificity: { score: 0, confidence: 1, probabilities: {} },
+      blast_radius: { score: 0.31, confidence: 0.54, probabilities: {} },
+      novelty: { type: "noul", noul: 0.06 },
+    }),
+    signals: signals({ ax: 71, containment: 10, candidates: 3 }),
+  });
+  assert.ok(scoring.confidence < CONFIDENCE_FLOOR, "the weaker answer is still reported");
+  assert.equal(scoring.tier, scoring.baseTier, "a weak confidence must not move the tier");
+  assert.notEqual(scoring.tier, "premium");
+});
+
+test("no bump routes on confidence at all", () => {
+  // The remaining bumps are otito's own deterministic repository signals. A
+  // vendor answer's self-reported certainty is not one of them.
+  const scoring = scoreDecision({
+    answers: answers({ specificity: { score: 0, confidence: 0, probabilities: {} } }),
+    signals: signals({ ax: 80 }),
+  });
+  assert.deepEqual(
+    scoring.bumps.map((entry) => entry.name),
+    ["no evidence", "risk path"],
+  );
 });
 
 test("signals classify the top ranked predictions, not only the owner buckets", () => {
@@ -249,20 +283,24 @@ test("the offline estimate reports no confidence, so the fail-safe cannot read i
 
   const scoring = scoreDecision({ answers: offline.answers, signals: derived });
   assert.equal(scoring.confidence, null);
-  const bump = scoring.bumps.find((entry) => entry.name === "low confidence");
-  assert.equal(bump.fired, false);
-  assert.match(bump.note, /no confidence/);
+  assert.equal(
+    scoring.bumps.find((entry) => entry.name === "low confidence"),
+    undefined,
+  );
   assert.equal(scoring.tier, scoring.baseTier);
 });
 
-test("a measured confidence below the floor still escalates", () => {
+test("a measured confidence below the floor does not escalate", () => {
+  // The inverse of the bug: an unsure answer whose own score says "trivial"
+  // stays in the tier its score earned. Uncertainty is already priced into
+  // `score`, which is the expectation over that question's level distribution.
   const scoring = scoreDecision({
     answers: answers({ specificity: { score: 0, confidence: 0.2, probabilities: {} } }),
     signals: signals({ ax: 80 }),
   });
   assert.equal(scoring.confidence, 0.2);
-  assert.equal(scoring.bumps.find((entry) => entry.name === "low confidence").fired, true);
-  assert.equal(scoring.tier, "mid");
+  assert.equal(scoring.tier, scoring.baseTier);
+  assert.equal(scoring.tier, "cheap");
 });
 
 test("Score questions send criteria as an ordered list, which the API requires", () => {
