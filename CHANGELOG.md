@@ -6,6 +6,25 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-09-20
+
+### Added
+
+- **`otito route <repo> "<request>"` — the model router, promoted out of `scripts/` into the CLI.** Score a coding task before any tokens are spent on it and recommend a cheap, mid, or premium tier. otito answers the repository half deterministically (AX, containment, canonical risk flags); a System One model answers the request half with calibrated probabilities over three narrow typed questions, in one call. `--tier-only` prints the tier for any host to map, `--host <id>` prints that host's model name, and maps live in `.otito/model-route.json`, so nothing about the scoring is specific to one IDE. `scripts/model-route.mjs` remains as a thin wrapper for the 1.12.0 prototype invocation.
+  - **The router is not the gate and must never become one.** It runs before work starts and decides how much model to spend; the gate runs after the diff exists and decides whether a change may merge. A failed, unreachable, or unkeyed model call falls back to a local estimate that labels itself uncalibrated, and costs a tier, never a verdict. The gate never asks.
+  - It stays **advisory**. The share weights and band thresholds were chosen by judgement and have never been compared to an outcome — the same critique [the calibration thesis](docs/17-calibration-thesis/README.md) makes of `inferRisk`. Promoting it past advisory needs a backtest measuring **regret**: tasks routed cheap that ended in a revert or a repair, weighed against the spend avoided.
+- **An advisory routing footer** under commands that already hold an impact pass and an AX score. Offline by construction — an ordinary otito command still makes no network call.
+
+### Changed
+
+- **Nineteen report commands now get otito's shared document treatment.** Fourteen commands honoured colour and theme while nineteen printed raw Markdown and looked nothing like `review` or `impact`. `renderDocument` gives them all the same header box, headings that read as headings, and quiet rules, rather than a hand-written renderer per command.
+
+### Fixed
+
+- **The router read an empty match as a contained change.** Zero candidates is absence, not containment: when otito matches nothing, AX describes an empty set and `containment` reads high for the same reason there is nothing to spread across, so the arithmetic produced a confident-looking **cheap** tier for exactly the request the repository understood least. Found by dogfooding: _"fix scanning multi date event ticket"_, asked against a repository with no such code, scored containment 100 on zero files and routed `cheap`. The floor jumps straight to the ceiling rather than stepping one tier — a one-tier step would leave a high-AX empty read at `mid`, the same mistake one notch quieter. `scoring.evidence` carries the candidate count and a `sufficient` flag so a caller can say "no recommendation" instead of printing a tier that rests on nothing.
+- **The offline router escalated on evidence it never measured**, in two ways, both through a fail-safe bump rather than the score. Fixture corpora no longer carry a risk flag: otito has no checkout of its own, so `add refund handling to checkout` ranked an eval fixture first and escalated to premium on money-flow evidence from a corpus that ships nothing. Test data still counts toward reach — it is a real file the change touches — but risk has to be about shipped code. And the offline estimator now reports **no** confidence rather than the peak of its own distribution: `distribute(0.6)`, the baseline for any request the keyword lists do not recognise, peaks at 0.40, under the 0.55 floor, so every unrecognised request was bumped a tier and the offline default was "spend more". A measured confidence below the floor still escalates.
+- **A test that only passed on a machine without `TYPESAFE_API_KEY`.** `askJev` falls back to the environment, so the missing-key assertion was handing a real key to its own stub and asserting the wrong error. It now controls the variable instead of depending on it.
+
 ## [1.12.0] - 2026-09-19
 
 ### Added
