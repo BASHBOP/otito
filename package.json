@@ -2,7 +2,7 @@
   "name": "@bashbop/otito",
   "version": "1.13.0",
   "mcpName": "io.github.BASHBOP/otito",
-  "description": "Òtítọ́: deterministic local repository context, impact analysis, and merge evidence.",
+  "description": "\u00d2t\u00edt\u1ecd\u0301: deterministic local repository context, impact analysis, and merge evidence.",
   "type": "module",
   "bin": {
     "otito": "src/cli.js"
@@ -42,7 +42,9 @@
     "eval:harness": "node src/cli.js eval --harness",
     "eval:gate": "node src/cli.js eval --gate-effectiveness",
     "docs:diagram": "node scripts/generate-how-it-works.mjs",
-    "docs:diagram:check": "node scripts/generate-how-it-works.mjs --check"
+    "docs:diagram:check": "node scripts/generate-how-it-works.mjs --check",
+    "skills:sync": "node scripts/sync-skills.mjs",
+    "skills:check": "node scripts/sync-skills.mjs --check"
   },
   "engines": {
     "node": ">=18.18"
