@@ -185,6 +185,67 @@ sees it; `--no-route` turns it off.
 
 Reach for `otito route` when you want the model's read and the full arithmetic.
 
+### Routing every request, without pretending to switch the model
+
+A skill only routes when the model remembers to invoke it, which means the
+request most worth routing — a quick one — is the one least likely to trigger
+it. `scripts/hooks/route-prompt.mjs` is a Claude Code `UserPromptSubmit` hook
+that closes that half of the gap: it scores the request and returns the tier as
+context, before any work starts, every time.
+
+It is careful about what it claims, because the honest ceiling is low:
+
+| | possible? |
+| --- | --- |
+| Route every request deterministically | **yes**, this hook |
+| Name the model a subagent should run on | **yes**, the Task/Agent tool takes a model |
+| Change the model this session runs on | **no** |
+
+The third row is not a missing feature. No hook output carries a model:
+`PreModelSwitch` may block a switch and `PostModelSwitch` is read-only, and the
+app refuses to let a session re-price its own turns. So the hook advises the
+session and **binds the subagent**, and says so in as many words — claiming the
+host switched models when it only recommended a tier is an anti-pattern the
+skill names.
+
+Wire it up per repository, in `.claude/settings.local.json`:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "node \"/path/to/otito/scripts/hooks/route-prompt.mjs\"", "timeout": 10 }]
+      }
+    ]
+  }
+}
+```
+
+Three properties it has to have, and the reason for each:
+
+**It never eats a prompt.** Every failure path — unparseable stdin, a missing
+CLI, a crash, a repository it cannot score — exits 0 and writes nothing. A
+router that can swallow a request is worse than no router.
+
+**It has a deadline.** The routing call is killed at 6 seconds. A slow or huge
+repository costs the hint, not the turn.
+
+**It skips what is not work.** Turn-taking prompts (`ok`, `thanks`, `ship it`)
+and slash commands route nothing, because spending seconds of latency to score
+the word "ok" is a cost with no answer attached. The filter is deliberately
+permissive in the other direction: a skipped request loses a hint, while a
+spurious one loses seconds, so anything ambiguous routes.
+
+**A subagent never routes.** It was launched on a tier its caller already chose,
+so re-routing would second-guess that, and a subagent that routes could launch a
+subagent.
+
+Keying is the same as `otito route`: with `TYPESAFE_API_KEY` set it asks Jev,
+and without one it falls back to the offline estimate, which is weaker but free
+and needs no network.
+
 ## Dogfood, bashbop-event-web, 2026-09-19
 
 Five requests drawn from the repository's own recent work, run against
