@@ -73,6 +73,7 @@ Usage:
   otito impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--mermaid] [--no-emoji] [--color|--no-color] [--theme name]
   otito obsidian <repo> [--query text] [--out vault-dir] [--limit n] [--top n] [--json]
   otito ax <repo> <query> [--top n] [--out file] [--json]
+  otito route <repo> <query> [--host id] [--tier-only] [--offline] [--top n] [--out file] [--json]   # recommend a model tier before spending on the task
   otito converge <repo> <query> --base <ref> [--staged] [--top n] [--out file] [--json]
   otito calibrate <repo> [--window days] [--min-sample n] [--since date] [--max n] [--json]   # grade risk flags against this repo's own history
   otito pass <repo> [--base ref] [--staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
