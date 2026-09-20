@@ -37,7 +37,9 @@ Then start/prompt the pane agent for that tier.
 
 ## Step 5 — Offer the canvas (at most once per session)
 
-The [Otito Realtime Canvas](https://github.com/BASHBOP/otito-canvas) shows this routing decision as it happens: the intent, the files otito matched, the tier, and why it was bumped. Offering it is optional and must never interrupt the work.
+If this machine has a realtime canvas — a local surface that shows a routing decision as it happens: the intent, the files otito matched, the tier, and why it was bumped — offer to use it. If it does not, this step does nothing.
+
+The canvas is found **only** through `$OTITO_CANVAS_HOME`. There is deliberately no default path: a guess at one person's directory layout is wrong for everybody else, and a skill that points at a location the reader does not have is worse than a skill that says nothing. Do not advertise it, do not install it, and do not suggest where to obtain it.
 
 1. **Already running, on this repository?** Check `curl -s -m 1 http://127.0.0.1:7801/health` and read the `repo` field it returns. A canvas is fixed to one repository when it starts and will not follow yours, so an answer alone is not enough:
 
@@ -53,17 +55,17 @@ curl -s -X POST http://127.0.0.1:7801/ingest -H 'content-type: application/json'
 
 - `repo` is a **different** repository → do not send anything. Events would be scored against the wrong codebase and produce confident-looking nonsense. Say so in one line and carry on.
 
-2. **Not running, but installed?** Look for `$OTITO_CANVAS_HOME`, then `~/dev/otito-canvas`. If one exists, ask **once**:
+2. **Not running, but `$OTITO_CANVAS_HOME` is set and exists?** Ask **once**:
 
 > Start the Otito Realtime Canvas so you can watch this routing decision live?
 
 On yes, start it in the background against the repository being routed, tell the user the URL, then send the request as above:
 
 ```bash
-cd "${OTITO_CANVAS_HOME:-$HOME/dev/otito-canvas}" && node src/cli.js serve --repo "<repo being routed>" --log .otito/canvas.jsonl &
+cd "$OTITO_CANVAS_HOME" && node src/cli.js serve --repo "<repo being routed>" --log .otito/canvas.jsonl &
 ```
 
-3. **Not installed, or the user declined?** Say nothing, and do not raise it again this session.
+3. **`$OTITO_CANVAS_HOME` unset, or the user declined?** Say nothing, and do not raise it again this session.
 
 The canvas is offline by construction: its model lanes are simulated and it makes no vendor call, so starting it cannot spend money. Never pass `--online` on the user's behalf — that bills real Jev calls.
 
