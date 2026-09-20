@@ -151,6 +151,47 @@ const memo = new Map();
 const warnedPaths = new Set();
 
 /**
+ * The acceptance rule for a stored index envelope, minus the repository
+ * fingerprint. Everything checked here is a pure function of the envelope and
+ * of the running indexer: no directory walk, no `stat`, no regeneration.
+ *
+ * That split is the point. The fingerprint check answers "did the repository
+ * change?" and is the only expensive one — it walks and stats every tracked
+ * file. The three checks below answer "was this index written by an indexer
+ * this build still agrees with?", they are free, and they are the ones that
+ * catch the #175/#179 failure: an untouched repository whose stored map
+ * predates a capability the indexer has since gained, served with no signal
+ * that it is missing whole file classes.
+ *
+ * So a caller that cannot afford a fingerprint refresh — an offline workspace
+ * search across every catalogued repository — can still afford these, and
+ * therefore has no excuse for trusting an envelope blindly.
+ * @param {unknown} envelope - Parsed contents of an on-disk index file.
+ * @param {string} root - Absolute repository root the caller expects.
+ * @param {string} capabilities - Signature of the running indexer.
+ * @returns {{ ok: true } | { ok: false, reason: string }}
+ */
+export function checkIndexEnvelope(envelope, root, capabilities) {
+  if (!envelope || typeof envelope !== "object") {
+    return { ok: false, reason: "index file does not contain an index envelope" };
+  }
+  const stored = /** @type {{ version?: unknown, capabilities?: unknown, map?: { repo?: { root?: unknown } } }} */ (envelope);
+  if (stored.version !== cacheVersion) {
+    return { ok: false, reason: `index was written for cache version ${String(stored.version ?? "none")}, this build reads version ${cacheVersion}` };
+  }
+  if (stored.capabilities !== capabilities) {
+    return {
+      ok: false,
+      reason: `index was written by an indexer with different capabilities (${String(stored.capabilities ?? "none recorded")}, this build is ${capabilities})`,
+    };
+  }
+  if (stored.map?.repo?.root !== root) {
+    return { ok: false, reason: `index names repository root ${String(stored.map?.repo?.root ?? "none")}, expected ${root}` };
+  }
+  return { ok: true };
+}
+
+/**
  * Returns the code map for a repository, served from an in-process memo or an
  * external on-disk index when the repo fingerprint is unchanged, regenerating
  * otherwise. The inspected repository is never modified.
@@ -183,7 +224,7 @@ export function getCachedCodeMap(repoPath = ".") {
   }
 
   const cached = readCache(cachePath);
-  if (cached?.version === cacheVersion && cached.capabilities === capabilities && cached.fingerprint === fingerprint && cached.map?.repo?.root === root) {
+  if (cached?.fingerprint === fingerprint && checkIndexEnvelope(cached, root, capabilities).ok) {
     writeMemo(memoKey, { map: cached.map, generatedAt: cached.generatedAt });
     return {
       ...cached.map,

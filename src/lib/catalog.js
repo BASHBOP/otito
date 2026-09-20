@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { getCachedCodeMap } from "./index-cache.js";
+import { checkIndexEnvelope, getCachedCodeMap } from "./index-cache.js";
+import { codeMapCapabilitySignature } from "./code-map/capabilities.js";
 import { estimateTokens } from "./tokens.js";
 import { formatTerminalSummary } from "./output.js";
 import { computeTokenDocFrequency, extractPhrases, scorePhraseMatches, tokenWeightFactor } from "./context-engine.js";
@@ -229,9 +230,13 @@ export function searchCatalog(query, options = {}) {
   /** @type {{ root: string, error: string }[]} */
   const errors = [];
 
+  // One signature for the whole sweep: it is a pure hash of the running
+  // indexer's probe answers, identical for every repository in the loop.
+  const capabilities = options.offline ? codeMapCapabilitySignature() : "";
+
   for (const repository of catalog.repositories) {
     try {
-      const map = options.offline ? readIndexedMap(repository) : getCachedCodeMap(repository.root);
+      const map = options.offline ? readIndexedMap(repository, capabilities) : getCachedCodeMap(repository.root);
       loaded.push({ repository, map });
     } catch (error) {
       errors.push({
@@ -466,12 +471,34 @@ function upsertRepository(catalog, entry) {
 }
 
 /**
+ * Reads a catalogued repository's stored index without touching the repository
+ * itself, which is what `--offline` promises: "use stored index files without
+ * refreshing fingerprints".
+ *
+ * Not refreshing the fingerprint is not a licence to trust the file blindly.
+ * The envelope already carries the indexer's version, its capability signature
+ * and the root it was written for, and checking those three costs nothing
+ * beyond the parse we were doing anyway. Without them an offline workspace
+ * search happily serves a map from an indexer that, say, could not yet see
+ * markdown — the #175/#179 failure, one repository at a time and with no
+ * signal at all.
+ *
+ * A rejected index is skipped rather than rebuilt. Rebuilding here would
+ * re-fingerprint and possibly regenerate every catalogued repository on every
+ * search, which is the cost `--offline` exists to avoid; the caller records
+ * the reason instead and the message says how to refresh it.
  * @param {CatalogRepository} repository
+ * @param {string} capabilities - Signature of the running indexer.
  * @returns {CodeMap}
  */
-function readIndexedMap(repository) {
-  const cached = JSON.parse(fs.readFileSync(String(repository.indexPath), "utf8"));
-  return cached.map ?? cached;
+function readIndexedMap(repository, capabilities) {
+  const envelope = JSON.parse(fs.readFileSync(String(repository.indexPath), "utf8"));
+  const root = path.resolve(String(repository.root));
+  const verdict = checkIndexEnvelope(envelope, root, capabilities);
+  if (!verdict.ok) {
+    throw new Error(`stored index is stale: ${verdict.reason}. Re-run \`otito index\` for this repository, or search without --offline to rebuild it now`);
+  }
+  return envelope.map;
 }
 
 /**
