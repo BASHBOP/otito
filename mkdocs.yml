@@ -79,44 +79,27 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Executive Summary: EXECUTIVE-SUMMARY.md
-  - Context Foundation:
-      - Overview: 01-context-foundation/README.md
-  - MCP and Agents:
-      - Overview: 02-mcp-agent-workflows/README.md
+  - Getting Started:
+      - Context Foundation: 01-context-foundation/README.md
+      - MCP and Agents: 02-mcp-agent-workflows/README.md
       - Publishing to npm + MCP Registry: 02-mcp-agent-workflows/publishing.md
-  - Contributor Governance:
-      - Overview: 03-contributor-governance/README.md
-  - Release Readiness:
-      - Overview: 04-release-readiness/README.md
-  - Trust-Layer Demo:
-      - Overview: 05-trust-layer-demo/README.md
-  - Builder-Founder Loop:
-      - Overview: 06-builder-founder-operating-loop/README.md
-  - Harness Thesis & AX:
-      - Overview: 07-harness-thesis/README.md
-      - AX Score Spec: 07-harness-thesis/ax-score-spec.md
-  - Tutorials Integration:
-      - Codespaces: 08-tutorials-integration/README.md
-  - Convergence Thesis:
-      - Overview: 09-convergence-thesis/README.md
-      - Convergence Score Spec: 09-convergence-thesis/convergence-score-spec.md
-  - Usage Dashboard:
-      - Overview: 10-usage-dashboard/README.md
-  - Determinism Thesis:
-      - Overview: 11-determinism-thesis/README.md
-  - Dual-Mode Thesis:
-      - Overview: 12-dual-mode-thesis/README.md
-  - Prompt Determinism Thesis:
-      - Overview: 13-prompt-determinism-thesis/README.md
-  - Trust Harness Thesis:
-      - Overview: 14-trust-harness-thesis/README.md
-  - Herdr Integration:
-      - Overview: 15-herdr-integration/README.md
-  - Clean Code Thesis:
-      - Overview: 16-clean-code-thesis/README.md
-  - Calibration Thesis:
-      - Overview: 17-calibration-thesis/README.md
-  - Evaluation Guide: EVALS.md
-  - Glossary: GLOSSARY.md
+      - Codespaces and Tutorials: 08-tutorials-integration/README.md
+      - Herdr Integration: 15-herdr-integration/README.md
+  - Using Otito:
+      - Trust-Layer Demo: 05-trust-layer-demo/README.md
+      - Contributor Governance: 03-contributor-governance/README.md
+      - Release Readiness: 04-release-readiness/README.md
+      - Usage Dashboard: 10-usage-dashboard/README.md
+      - Builder-Founder Loop: 06-builder-founder-operating-loop/README.md
+  - How It Works:
+      - Deterministic Verification: 07-deterministic-verification/README.md
+      - AX Score Spec: 07-deterministic-verification/ax-score-spec.md
+      - Convergence Score Spec: 07-deterministic-verification/convergence-score-spec.md
+  - Measurement:
+      - Calibration: 17-calibration-thesis/README.md
+      - Model Routing: 18-model-routing/README.md
+  - Reference:
+      - Evaluation Guide: EVALS.md
+      - Glossary: GLOSSARY.md
 
 copyright: "(c) 2026 Oluwasegun Olumbe. MIT licensed."

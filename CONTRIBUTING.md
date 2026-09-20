@@ -50,7 +50,7 @@ Do not commit editor-specific config under `.cursor/`. Host setup for published 
 
 - Keep the diff focused on the requested change.
 - Change the smallest owner files that already hold the behaviour. Do not add a helper, wrapper, or new layer unless the owner file cannot express the change.
-- Leave unrelated cleanup, renaming, and formatting-only drive-bys out of the same PR. See the [clean code thesis](docs/16-clean-code-thesis/README.md).
+- Leave unrelated cleanup, renaming, and formatting-only drive-bys out of the same PR. See the [clean code thesis](docs/07-deterministic-verification/README.md).
 - Register new CLI commands, handlers, and help output in the same change.
 - Update README, skill docs, or eval metadata when commands, MCP tools, package scripts, schemas, or output shapes change.
 - Keep generated reports under `.otito/`. Do not commit them.

@@ -6,7 +6,7 @@ confused:
 | Eval | Entry point | Question it answers |
 |---|---|---|
 | Token-savings | `runEval(repoPath)` | _Is the context pack **smaller** than a naive file dump?_ |
-| Accuracy | `runRetrievalEval()` | _Is the context pack **right** — does it surface the files an agent needs, and does the risk classifier label paths/queries correctly?_ |
+| Accuracy | `runRetrievalEval()` | _Is the context pack **right**, meaning does it surface the files an agent needs, and does the risk classifier label paths/queries correctly?_ |
 | Harness execution | `runHarnessExecutionEval()` | _Do the encoded setup and validation commands Otito inferred actually run?_ |
 | Gate effectiveness | `runGateEffectivenessEval()` | _Does the real local gate allow a valid change and block known-bad changes for the expected deterministic reason?_ |
 
@@ -24,23 +24,23 @@ execution, and gate-effectiveness cases.
 Each retrieval case runs `generateContextPack(query)` against a fixture repo and
 scores whether the labeled files land in `primaryFiles`:
 
-- **precision@k** — of the files the pack returned (capped at `k`), how many
+- **precision@k**: of the files the pack returned (capped at `k`), how many
   were relevant. The denominator is _what was returned_, not `k`, because
   otito packs are intentionally tiny (often 1–3 files); dividing a single
   correct hit by a fixed `k=5` would score a perfect one-file pack at 0.2 and
   punish concision.
-- **recall@k** — of the relevant files, how many appeared in the top `k`.
-- **MRR** — reciprocal rank of the first relevant file (1.0 if the top hit is
+- **recall@k**: of the relevant files, how many appeared in the top `k`.
+- **MRR**: reciprocal rank of the first relevant file (1.0 if the top hit is
   relevant, 0 if none appear in the top `k`).
 
 A case **passes** when every `expectedPrimary` file is in the top `k` and, when
 `expectedAnyOf` is given, at least one of those files appears anywhere in the
-pack (`primaryFiles` **or** `relatedFiles` — `expectedAnyOf` encodes
+pack (`primaryFiles` **or** `relatedFiles`, since `expectedAnyOf` encodes
 related-file and route↔client pairing expectations, which the engine surfaces
 under `relatedFiles`).
 
 Pure-fallback cases (`expectedPrimary: []`) assert only that the pack falls back
-gracefully to a non-empty set — their precision/recall/MRR are reported as
+gracefully to a non-empty set, so their precision/recall/MRR are reported as
 `null` and excluded from the aggregate.
 
 The fixtures exercise: cross-language naming (TypeScript + Python + Go),
@@ -145,7 +145,7 @@ sets `exitCode` to `0` only when **every** check passes. Thresholds are set to
 **current-baseline-minus-slack**: high enough that a real regression trips the
 gate, low enough that the suite is green today. (At the recorded baseline a
 single risk-case regression drops accuracy to 21/22 = 0.955, below the 0.96
-floor — so the gate catches it. The risk floor is 0.96 rather than 0.95
+floor, so the gate catches it. The risk floor is 0.96 rather than 0.95
 because at this corpus size a single failure would otherwise land on or above
 the older floor.)
 
@@ -176,7 +176,7 @@ headroom rather than a defect.
 
 1. **Pick or add a fixture.** Reuse a name under `fixtureRoots` in
    `evals/corpus.json`, or add a small synthetic repo under `evals/fixtures/`
-   and register it in `fixtureRoots`. Keep fixtures tiny and synthetic — a few
+   and register it in `fixtureRoots`. Keep fixtures tiny and synthetic: a few
    files that exercise one behavior. Do **not** add a `.otito/` cache to a
    fixture; the runner copies each fixture to a temp dir and regenerates the map
    from source so the committed fixtures are never mutated.

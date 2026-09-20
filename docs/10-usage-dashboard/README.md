@@ -26,7 +26,7 @@ otito telemetry share on    # enables local capture and anonymous sharing
 This is never enabled by installation, `init`, local telemetry consent, or an
 upgrade.
 
-Open `.otito/dashboard.html` in any browser — it works straight off disk
+Open `.otito/dashboard.html` in any browser. It works straight off disk
 (`file://`), offline.
 
 ## What it shows
@@ -48,19 +48,19 @@ naive-savings number is a relative cross-build delta, not an absolute guarantee)
 
 - **Off by default.** Capture is gated by the `telemetry` config key or the
   `OTITO_TELEMETRY` env var, and is forced off under CI unless explicitly
-  opted in. There is no `init`-time nudge — you turn it on manually.
+  opted in. There is no `init`-time nudge: you turn it on manually.
 - **Local by default.** Events append to `~/.otito/usage.jsonl`. The derived
   HTML lives under the repo's gitignored `.otito/`. This local log is not sent.
 - **Sharing is separate.** `otito telemetry share on` sends a smaller event
   through Otito's public relay. Existing `telemetry: true` configurations remain
   local-only.
 - **Shape, not content.** Each event records the command name, the *shape* of its
-  arguments (key names only — never flag values, paths, or queries), latency,
+  arguments (key names only, never flag values, paths, or queries), latency,
   outcome, and the value signals the command already produced. Error text is
   reduced to a code/class (e.g. `ENOENT`), never the raw message.
 - **Never on a deterministic channel.** Telemetry is a side file. It is never
   written to stdout or the MCP JSON-RPC stream, and wall-clock timestamps never
-  feed a token estimate or a convergence receipt — enforced by a test that
+  feed a token estimate or a convergence receipt, enforced by a test that
   asserts `--json` and MCP output are byte-identical with telemetry on vs off.
 
 ### What anonymous sharing sends
@@ -87,5 +87,5 @@ otito dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-
 ```
 
 The repo grouping key in each event is a one-way hash of the repository root: it
-is non-reversible, but **confirmable** against a candidate path — it groups runs,
+is non-reversible, but **confirmable** against a candidate path: it groups runs,
 it is not anonymity.
