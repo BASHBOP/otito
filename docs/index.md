@@ -3,7 +3,7 @@
 ## Independent trust infrastructure for agents and reviewers
 
 **Prepared by:** Oluwasegun Olumbe<br>
-**Status:** v1.12.0 published to npm, GitHub Releases, and the official MCP Registry<br>
+**Status:** v1.13.0 published to npm, GitHub Releases, and the official MCP Registry<br>
 **Category:** Practical AI governance for developers
 
 > A Bashbop Ltd product for teams that want any coding agent to produce evidence a human can trust before merge.
@@ -85,7 +85,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@1.12.0
+    npm install -g @bashbop/otito@1.13.0
     otito doctor
     otito context "review this change" --path .
     ```
@@ -93,7 +93,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@1.12.0 doctor
+    npx -y @bashbop/otito@1.13.0 doctor
     ```
 
 === "Source Checkout"
