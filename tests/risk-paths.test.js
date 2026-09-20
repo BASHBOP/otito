@@ -7,6 +7,7 @@ import {
   glyphFor,
   isDocPath,
   isGateRiskPath,
+  isProseFile,
   isSecretPath,
   isTestDataPath,
   matchRiskPaths,
@@ -139,6 +140,29 @@ test("classifyPath does not flag a generic tokens.js as auth/security", () => {
 
 test("classifyPath still flags a literal token.service.ts as auth/security", () => {
   assert.ok(classifyPath("src/auth/token.service.ts").includes(RISK_FLAGS.authSecurity));
+});
+
+test("isProseFile reads the code map kind when the caller has one", () => {
+  // `doc`, `skill` and `changelog` are all edited as English. None of them
+  // executes, so none can carry the risk its subject matter names.
+  assert.equal(isProseFile("docs/AUTH_TOKEN_VALIDATION.md", "doc"), true);
+  assert.equal(isProseFile("skills/session-helper/SKILL.md", "skill"), true);
+  assert.equal(isProseFile("CHANGELOG.md", "changelog"), true);
+  assert.equal(isProseFile("src/auth/session.service.ts", "service"), false);
+});
+
+test("a known non-prose kind keeps its flags even under docs/", () => {
+  // The kind is more precise than the path: real SQL that happens to live
+  // under `docs/` is still a data-model change. The path-shape fallback, which
+  // the merge gates have always used, cannot make this distinction.
+  assert.equal(isProseFile("docs/api/payment-schema.sql", "source"), false);
+  assert.equal(isProseFile("docs/api/payment-schema.sql"), true);
+});
+
+test("isProseFile falls back to the path when no kind is available", () => {
+  assert.equal(isProseFile("docs/AUTH_TOKEN_VALIDATION.md"), true);
+  assert.equal(isProseFile("auth-guide.md"), true);
+  assert.equal(isProseFile("src/auth/session.service.ts"), false);
 });
 
 // --- Finding #3: gate-facing matcher ignores tests and docs ---
