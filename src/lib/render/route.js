@@ -80,8 +80,12 @@ export function formatRouteTerminal(data, renderer) {
       `${answers.blast_radius.score.toFixed(2)}  ${topLevel(answers.blast_radius)}`,
   );
   out.push(`    ${dim("novelty".padEnd(16))}${mini(answers.novelty.noul)}  ${answers.novelty.noul.toFixed(2)}`);
-  const confidenceCode = scoring.confidence < CONFIDENCE_FLOOR ? "31" : scoring.confidence < 0.8 ? "33" : "32";
-  out.push(`    ${dim("confidence".padEnd(16))}${mini(scoring.confidence)}  ` + paint(scoring.confidence.toFixed(2), confidenceCode));
+  if (scoring.confidence === null) {
+    out.push(`    ${dim("confidence".padEnd(16))}${dim("not measured")}`);
+  } else {
+    const confidenceCode = scoring.confidence < CONFIDENCE_FLOOR ? "31" : scoring.confidence < 0.8 ? "33" : "32";
+    out.push(`    ${dim("confidence".padEnd(16))}${mini(scoring.confidence)}  ` + paint(scoring.confidence.toFixed(2), confidenceCode));
+  }
   out.push("");
 
   out.push(renderer.section("repository signals  (deterministic, local)", ""));
@@ -131,7 +135,7 @@ export function formatRouteMarkdown(data) {
     `| specificity | ${answers.specificity.score.toFixed(2)} |`,
     `| blast_radius | ${answers.blast_radius.score.toFixed(2)} |`,
     `| novelty | ${answers.novelty.noul.toFixed(2)} |`,
-    `| confidence | ${scoring.confidence.toFixed(2)} |`,
+    `| confidence | ${scoring.confidence === null ? "not measured" : scoring.confidence.toFixed(2)} |`,
     `| AX | ${data.signals.ax} |`,
     `| containment | ${data.signals.containment} |`,
     `| risk paths | ${data.signals.riskPaths.join(", ") || "none"} |`,

@@ -19,7 +19,7 @@ import path from "node:path";
 
 import { generateAxScore } from "./ax.js";
 import { generateImpact } from "./impact.js";
-import { classifyPath, RISK_SCORE_WEIGHTS } from "./risk-paths.js";
+import { classifyPath, isTestDataPath, RISK_SCORE_WEIGHTS } from "./risk-paths.js";
 
 export const modelRouteEngineVersion = "0.1.0";
 
@@ -139,9 +139,16 @@ export function signalsFrom(impact, ax) {
     if (!candidates.includes(file)) candidates.push(file);
   }
 
+  // Fixture corpora and tests still count toward reach, but they never carry a
+  // risk flag: routing this repository read its own shop-api eval fixture as
+  // money-flow code and escalated a request that touched nothing shipped.
+  // The evals run otito inside those fixture directories, where the paths
+  // are fixture-relative, so a fixture's own risk is still visible to the run
+  // it is a fixture for.
   /** @type {Map<string, string[]>} */
   const flagged = new Map();
   for (const file of candidates) {
+    if (isTestDataPath(file)) continue;
     for (const flag of classifyPath(file)) {
       if (!flagged.has(flag)) flagged.set(flag, []);
       /** @type {string[]} */ (flagged.get(flag)).push(file);
@@ -281,6 +288,12 @@ export function offlineAnswers(request, signals) {
   const blast = distribute(spread);
   const spec = distribute(specificity);
 
+  // The distributions above are the shape of `distribute`, not a measurement:
+  // a request the keyword lists do not recognise sits at the 0.6 baseline,
+  // whose peak is 0.40, so reading it as confidence bumped every unknown
+  // request one tier. An estimate with no confidence says so with null and
+  // leaves the low-confidence bump to answers that measured one.
+
   return /** @type {{ source: string, model: string, tokens: number|null, latencyMs: number, answers: any, fallbackReason?: string }} */ ({
     source: "offline",
     model: "offline-heuristic",
@@ -290,13 +303,13 @@ export function offlineAnswers(request, signals) {
       specificity: {
         type: "score",
         score: round2(specificity),
-        confidence: peakConfidence(spec),
+        confidence: null,
         probabilities: named(spec, SPECIFICITY_LEVELS),
       },
       blast_radius: {
         type: "score",
         score: round2(spread),
-        confidence: peakConfidence(blast),
+        confidence: null,
         probabilities: named(blast, BLAST_LEVELS),
       },
       novelty: { type: "noul", noul: round2(clamp01(novelty)) },
@@ -318,7 +331,6 @@ function distribute(position) {
   return dist.map((value) => value / total);
 }
 const named = (/** @type {number[]} */ dist, /** @type {string[]} */ levels) => Object.fromEntries(levels.map((k, i) => [k, Number(dist[i].toFixed(3))]));
-const peakConfidence = (/** @type {number[]} */ dist) => Number(Math.min(0.95, Math.max(0.35, Math.max(...dist) * 1.05)).toFixed(2));
 const round2 = (/** @type {number} */ value) => Number(Number(value).toFixed(2));
 
 /**
@@ -370,7 +382,11 @@ export function scoreDecision({ answers, signals }) {
   let index = TIERS.indexOf(/** @type {any} */ (baseTier));
 
   const severe = (signals.riskPaths ?? []).filter((flag) => (RISK_SCORE_WEIGHTS[flag] ?? 0) >= BUMP_WEIGHT);
-  const confidence = Math.min(answers.blast_radius.confidence ?? 1, answers.specificity.confidence ?? 1);
+  // Null when neither Score answer measured a confidence, as the offline
+  // estimate does not; a fail-safe that fires on an absent number is a default.
+  const measured = [answers.blast_radius.confidence, answers.specificity.confidence].filter((/** @type {unknown} */ value) => typeof value === "number");
+  const confidence = measured.length ? Math.min(...measured) : null;
+  const lowConfidence = confidence !== null && confidence < CONFIDENCE_FLOOR;
 
   /** @type {{ name: string, fired: boolean, note: string, ceiling?: boolean }[]} */
   const bumps = [
@@ -381,11 +397,13 @@ export function scoreDecision({ answers, signals }) {
     },
     {
       name: "low confidence",
-      fired: confidence < CONFIDENCE_FLOOR,
+      fired: lowConfidence,
       note:
-        confidence < CONFIDENCE_FLOOR
-          ? `score confidence ${confidence.toFixed(2)} < ${CONFIDENCE_FLOOR}, one tier up`
-          : `score confidence ${confidence.toFixed(2)} >= ${CONFIDENCE_FLOOR}`,
+        confidence === null
+          ? "offline estimate carries no confidence to read"
+          : lowConfidence
+            ? `score confidence ${confidence.toFixed(2)} < ${CONFIDENCE_FLOOR}, one tier up`
+            : `score confidence ${confidence.toFixed(2)} >= ${CONFIDENCE_FLOOR}`,
     },
   ];
 
