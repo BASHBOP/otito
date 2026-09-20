@@ -91,7 +91,9 @@ evidence and verdict.
 
 Score `criteria` is an **ordered list**, not an object, index 0 is level 0.
 Noul answers carry no `confidence`, only Score and Choice do, so the router's
-confidence floor reads the weaker of the two Score answers.
+confidence floor reads the weaker of the two Score answers. The offline
+estimator reports `null` for both: it has a shape, not a measurement, and the
+floor is a fail-safe on a measured number rather than a default.
 
 ### The arithmetic
 
@@ -110,6 +112,13 @@ Then two fail-safe bumps, each moving **one tier toward the more capable model
 and never the other way**: a top-severity risk flag (anything otito already
 weights 3 in `RISK_SCORE_WEIGHTS`), and confidence below 0.55. A router that can
 round *down* on a bad read is a router that ships bad changes cheaply.
+
+Both bumps read evidence that has to be about shipped code. Tests and fixture
+corpora still count toward reach — they are real files the change touches — but
+they never carry a risk flag. Routing otito itself is the case that shows why:
+the repository has no checkout and no auth controller, so `add refund handling
+to checkout` ranks `evals/fixtures/shop-api/.../checkout.service.ts` first and
+used to escalate to premium on evidence from a corpus that ships nothing.
 
 ### Cost and latency
 
@@ -149,7 +158,12 @@ stdout behave exactly as they do everywhere else in the CLI.
 
 Set `TYPESAFE_API_KEY` in your shell to use the model. Without it, or with
 `--offline`, the run falls back to a local heuristic and labels every surface
-`offline estimate, not calibrated`.
+`offline estimate, not calibrated`. That heuristic scores; it does not claim a
+confidence, so the offline path reports `confidence: not measured` and the
+low-confidence bump does not fire. Before that was true, `distribute(0.6)` —
+the baseline for any request the keyword lists do not recognise — peaked at
+0.40, and reading that shape as confidence escalated every unknown request one
+tier: the offline router's default was "spend more".
 
 ### The advisory footer
 

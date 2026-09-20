@@ -206,6 +206,63 @@ test("offline answers are deterministic, bounded, and labelled as uncalibrated",
   assert.ok(vague > precise, `${vague} should exceed ${precise}`);
 });
 
+test("a fixture corpus counts toward reach but never carries a risk flag", () => {
+  // Regression: routing this repository read its own shop-api eval fixture as
+  // money-flow code, so a request that touched nothing shipped escalated to
+  // premium on evidence from a test corpus.
+  const impact = {
+    repo: { name: "fixture" },
+    classifications: {
+      requiredOwners: ["evals/fixtures/shop-api/src/payment/checkout.service.ts"],
+      supportingFiles: [],
+      advisoryFiles: [],
+    },
+    topFiles: [{ path: "evals/fixtures/shop-api/src/payment/checkout.service.ts", kind: "service", reasons: [] }],
+  };
+  const derived = signalsFrom(impact, { ax: 90, subScores: { containment: 80 } });
+  assert.deepEqual(derived.riskPaths, []);
+  // Still a candidate: the file is real evidence about reach, just not risk.
+  assert.equal(derived.candidates, 1);
+
+  // The same path shape outside a fixture corpus still flags.
+  const shipped = signalsFrom(
+    {
+      repo: { name: "fixture" },
+      classifications: { requiredOwners: ["src/payment/checkout.service.ts"], supportingFiles: [], advisoryFiles: [] },
+      topFiles: [],
+    },
+    { ax: 90, subScores: { containment: 80 } },
+  );
+  assert.ok(shipped.riskPaths.includes("money flow"));
+});
+
+test("the offline estimate reports no confidence, so the fail-safe cannot read its shape", () => {
+  // Regression: `distribute(0.6)` — the baseline for any request the keyword
+  // lists do not recognise — peaks at 0.40, which read as confidence sat below
+  // the floor and bumped every unknown request one tier.
+  const derived = signals();
+  const offline = offlineAnswers("add a --json flag to the seating export", derived);
+  assert.equal(offline.answers.specificity.confidence, null);
+  assert.equal(offline.answers.blast_radius.confidence, null);
+
+  const scoring = scoreDecision({ answers: offline.answers, signals: derived });
+  assert.equal(scoring.confidence, null);
+  const bump = scoring.bumps.find((entry) => entry.name === "low confidence");
+  assert.equal(bump.fired, false);
+  assert.match(bump.note, /no confidence/);
+  assert.equal(scoring.tier, scoring.baseTier);
+});
+
+test("a measured confidence below the floor still escalates", () => {
+  const scoring = scoreDecision({
+    answers: answers({ specificity: { score: 0, confidence: 0.2, probabilities: {} } }),
+    signals: signals({ ax: 80 }),
+  });
+  assert.equal(scoring.confidence, 0.2);
+  assert.equal(scoring.bumps.find((entry) => entry.name === "low confidence").fired, true);
+  assert.equal(scoring.tier, "mid");
+});
+
 test("Score questions send criteria as an ordered list, which the API requires", () => {
   for (const name of ["specificity", "blast_radius"]) {
     assert.equal(QUESTIONS[name].type, "score");
