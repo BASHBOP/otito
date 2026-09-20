@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-20T16:13:00.963Z",
+  "generatedAt": "2026-09-20T16:15:21.219Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "FAIL",
@@ -44,11 +44,10 @@
   },
   "prReviewSummary": {
     "changedFiles": 1,
-    "additions": 83,
+    "additions": 84,
     "deletions": 0,
     "riskLevel": "low",
     "riskFlags": [
-      "has PR discussion to resolve",
       "no test files changed"
     ],
     "reviewTargetsCount": 0
@@ -71,7 +70,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "4 changed files reported."
+        "summary": "25 changed files reported."
       },
       {
         "name": "Secret safety",
@@ -86,7 +85,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata changed but the project version is unchanged (dependency or lockfile update)."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Review decision",
@@ -121,6 +120,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 573
+    "fullJson": 550
   }
 }
