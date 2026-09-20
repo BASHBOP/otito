@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, realpathSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { parseArgv } from "./lib/args.js";
@@ -971,7 +971,10 @@ async function handlePr(parsed) {
     return;
   }
 
-  printText([result.markdown, formatCommentResult(result.data.comment)].filter(Boolean).join("\n"));
+  await printDocument(parsed, [result.markdown, formatCommentResult(result.data.comment)].filter(Boolean).join("\n"), {
+    title: `PULL REQUEST   ${result.data?.repo?.name ?? ""}`,
+    glyph: "\u{1F500}",
+  });
 }
 
 /** @param {CliArgs} parsed */
@@ -995,7 +998,11 @@ async function handleReport(parsed) {
     return;
   }
 
-  printText(formatReportTerminal(result.data, { columns: process.stdout.columns }));
+  await printDocument(parsed, formatReportTerminal(result.data, { columns: process.stdout.columns }), {
+    // report's RepoInfo carries a root path, not a name.
+    title: `REPORT   ${basename(result.data?.repo?.root ?? "")}`,
+    glyph: "\u{1F4C4}",
+  });
 }
 
 /** @param {CliArgs} parsed */
@@ -1097,7 +1104,7 @@ async function handleEval(parsed) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Accuracy eval written: ${artifact.path}`);
     } else {
-      printText(result.markdown);
+      await printDocument(parsed, result.markdown, { title: "ACCURACY EVAL", glyph: "\\u{1F9EA}" });
     }
     if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
@@ -1117,7 +1124,7 @@ async function handleEval(parsed) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Harness execution eval written: ${artifact.path}`);
     } else {
-      printText(result.markdown);
+      await printDocument(parsed, result.markdown, { title: "HARNESS EVAL", glyph: "\\u{1F9EA}" });
     }
     if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
@@ -1137,7 +1144,7 @@ async function handleEval(parsed) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Gate effectiveness eval written: ${artifact.path}`);
     } else {
-      printText(result.markdown);
+      await printDocument(parsed, result.markdown, { title: "GATE EFFECTIVENESS", glyph: "\\u{1F9EA}" });
     }
     if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
@@ -1162,7 +1169,7 @@ async function handleEval(parsed) {
     printText(`Eval written: ${artifact.path}`);
     return;
   }
-  printText(result.markdown);
+  await printDocument(parsed, result.markdown, { title: "EVAL", glyph: "\u{1F9EA}" });
 }
 
 /** @param {CliArgs} parsed */
