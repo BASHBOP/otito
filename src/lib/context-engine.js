@@ -103,6 +103,9 @@ const stopWords = new Set([
   "show",
 ]);
 
+/** Raised when no action word names the work; a model read that settles the intent withdraws it. */
+export const AMBIGUOUS_ACTION_QUESTION = "The requested action is ambiguous; clarify whether this is implementation, review, debugging, or exploration.";
+
 const actionWords = new Set(["add", "build", "change", "create", "debug", "fix", "implement", "refactor", "review", "test", "update"]);
 const importExtensions = ["", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", "/index.ts", "/index.tsx", "/index.js", "/index.jsx"];
 
@@ -157,6 +160,24 @@ export function generateContextPack(query, options = {}) {
     agentPrompt: formatAgentPrompt(normalizedQuery, primaryFiles, relatedFiles, tests, commands, hotspots),
   });
 
+  return finalizeContextPack(data);
+}
+
+/**
+ * Recompute what a pack derives from its file lists: the agent prompt, the
+ * token estimate and the markdown. For a caller that changed those lists after
+ * generation, such as the opt-in model read in context-read.js.
+ * @param {Record<string, any>} data
+ */
+export function rebuildContextPack(data) {
+  data.agentPrompt = formatAgentPrompt(data.query, data.primaryFiles, data.relatedFiles, data.tests, data.commands, data.hotspots);
+  return finalizeContextPack(data);
+}
+
+/**
+ * @param {Record<string, any> & { tokenEstimate?: any }} data
+ */
+function finalizeContextPack(data) {
   data.tokenEstimate = {
     ...estimateTokenSections([
       { name: "intent", value: data.intent },
@@ -194,6 +215,7 @@ export function formatContextPackMarkdown(data) {
     `Estimated JSON tokens: ${data.tokenEstimate.fullJson}`,
     `Estimated Markdown tokens: ${data.tokenEstimate.markdown ?? "pending"}`,
     "",
+    ...formatModelRead(data.modelRead),
     "## Repositories",
     "",
     ...data.repos.map(
@@ -241,6 +263,38 @@ export function formatContextPackMarkdown(data) {
 }
 
 /**
+ * The model-read section, present only when a caller asked for one. A pack
+ * that never asked renders exactly as before.
+ * @param {any} read
+ * @returns {string[]}
+ */
+function formatModelRead(read) {
+  if (!read) return [];
+  if (read.source !== "jev") {
+    return ["## Model Read", "", `- Not applied: ${read.fallbackReason ?? "no model call was made"}. The ranking below is otito's alone.`, ""];
+  }
+  const cost = typeof read.costUsd === "number" ? `, $${read.costUsd.toFixed(6)}` : "";
+  const lines = ["## Model Read", "", `- Source: ${read.model} (TypeSafe System One), ${read.latencyMs} ms${cost}. Advisory; never read by a gate.`];
+  if (read.intent) {
+    lines.push(
+      read.intent.accepted
+        ? `- Intent: ${read.intent.choice} (confidence ${read.intent.confidence}; otito's own reading was ${read.intent.heuristic})`
+        : `- Intent: ${read.intent.choice} at confidence ${read.intent.confidence}, under the floor; kept otito's reading (${read.intent.heuristic})`,
+    );
+  }
+  if (read.demoted?.length) {
+    lines.push(
+      `- Demoted ${read.demoted.length} file(s) the model judged irrelevant: ${read.demoted
+        .map((/** @type {{ path: string, relevance: number }} */ file) => `\`${file.path}\` (${file.relevance})`)
+        .join(", ")}`,
+    );
+  }
+  if (read.notApplied) lines.push(`- ${read.notApplied}`);
+  lines.push("");
+  return lines;
+}
+
+/**
  * Render the full context pack for an interactive terminal. Markdown remains
  * the durable artifact format; this presentation uses the shared renderer so
  * a long report stays easy to scan in a real terminal.
@@ -264,6 +318,17 @@ export function formatContextPackTerminal(data, rendererFactory) {
     ]),
   );
   lines.push("");
+
+  const modelRead = formatModelRead(data.modelRead).filter((line) => line.startsWith("- "));
+  if (modelRead.length) {
+    lines.push(
+      renderer.section(
+        `${renderer.emoji ? "🤖" : ">"} Model read`,
+        modelRead.map((line) => renderer.bullet(line.slice(2))),
+      ),
+    );
+    lines.push("");
+  }
 
   if (data.hotspots.length) {
     lines.push(
@@ -1321,7 +1386,7 @@ function inferOpenQuestions(primaryFiles, commands, intent, usedFallback, hotspo
     questions.push("No validation script was detected; decide how the change should be verified.");
   }
   if (intent.action === "unknown") {
-    questions.push("The requested action is ambiguous; clarify whether this is implementation, review, debugging, or exploration.");
+    questions.push(AMBIGUOUS_ACTION_QUESTION);
   }
   if (!hotspots.length && primaryFiles.length && !usedFallback) {
     questions.push("No multi-token symbol hotspots matched; confirm the exact methods or types to change.");

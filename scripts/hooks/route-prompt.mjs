@@ -87,7 +87,7 @@ export function shouldRoute(input) {
  * subagent only when delegating is already on the table, so a routed tier
  * cannot turn a one-line answer into a spawned agent.
  *
- * @param {{tier: string, hostModel?: string, scoring?: {route?: number}, signals?: {ax?: number}}} route
+ * @param {{tier: string, hostModel?: string, scoring?: {route?: number}, signals?: {ax?: number}, model?: {read?: any}}} route
  * @returns {string}
  */
 export function formatContext(route) {
@@ -100,6 +100,16 @@ export function formatContext(route) {
     "",
     "This is a recommendation, not a switch: a hook cannot change the model this session runs on, and this session cannot re-price its own turns. Do not say the model was changed.",
   ];
+
+  // The request read rides the same route call. Only answers that cleared
+  // their confidence floor are worth a line; an unsure one would be noise.
+  const read = route?.model?.read;
+  const readParts = [];
+  if (read?.intent?.accepted) readParts.push(`intent **${read.intent.choice}** (${read.intent.confidence})`);
+  if (read?.capability?.accepted && read.capability.choice !== "none") {
+    readParts.push(`otito tool **${read.capability.choice}** (${read.capability.confidence})`);
+  }
+  if (readParts.length) lines.push("", `Request read (TypeSafe Jev, advisory): ${readParts.join(", ")}.`);
 
   if (route.hostModel) {
     lines.push(

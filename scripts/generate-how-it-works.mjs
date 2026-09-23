@@ -138,6 +138,17 @@ const LAYOUT = [
     r: 34,
     blurb: "Agent Experience: how cheap and safe it is for an agent to make this change here — changeability, containment, guardrails, clarity.",
   },
+  {
+    id: "route",
+    tool: "model_route",
+    layer: "change",
+    label: "route",
+    sub: "model tier",
+    cx: 935,
+    r: 34,
+    blurb:
+      "Advisory model tier (cheap, mid, premium) before work starts: AX and risk paths from otito, plus a System One read of the request when a TypeSafe key is set. Never feeds the gate.",
+  },
 
   {
     id: "reviewctx",
@@ -243,7 +254,12 @@ const STEPS = [
   { node: "mcp", layer: "entry", title: "Connect", text: "Install the CLI or wire an MCP host · optional init scaffold for CI and hooks" },
   { node: "inspect", layer: "discover", title: "Discover", text: "Inspect repo shape · index a catalog · search paths and symbols" },
   { node: "context", layer: "map", title: "Context", text: "Generate maps, task packs, and harness commands before the agent edits" },
-  { node: "impact", layer: "change", title: "Impact", text: "Rank the files a change should touch · score how agent-friendly the repo is" },
+  {
+    node: "impact",
+    layer: "change",
+    title: "Impact",
+    text: "Rank the files a change should touch · score how agent-friendly the repo is · recommend a model tier",
+  },
   { node: "gate", layer: "review", title: "Review & gate", text: "Build PR context · score intent against the diff · run the merge gate" },
   { node: "receipt", layer: "output", title: "Evidence", text: "Artifacts, recomputable receipts, PR comments, and a CI verdict" },
 ];

@@ -185,6 +185,63 @@ sees it; `--no-route` turns it off.
 
 Reach for `otito route` when you want the model's read and the full arithmetic.
 
+### Over MCP
+
+The `model_route` tool is the same contract for any MCP host (Cursor, VS Code,
+Claude Desktop, Codex, Gemini): `{ query, path?, host?, offline? }` in, the
+`otito route --json` payload out. It calls Jev only when `TYPESAFE_API_KEY` is
+in the server's environment and `offline` is not true, and it declares
+`openWorldHint: true` because it may. Host configs are in
+[MCP and Agent Workflows](../02-mcp-agent-workflows/README.md#realtime-canvas-and-model-routing-opt-in).
+
+## The request read: the same call, three more questions
+
+The route questions ask how hard a request is. Three more questions ask what it
+_is_, and they ride the same call, because System One evaluates each question
+independently against one state (TypeSafe's
+[speculative fan-out](https://docs.typesafe.ai/patterns/fan-out)): more
+questions cost input tokens, not round trips or context.
+
+| Question | Type | Gate before anything acts on it |
+| --- | --- | --- |
+| `read_intent` | Choice over `add`, `fix`, `change`, `refactor`, `test`, `debug`, `review`, `explain` | confidence ≥ 0.5 |
+| `read_capability` | Choice over the MCP tool catalog, plus `none` | confidence ≥ 0.5 |
+| `read_file_<n>` | Noul per ranked file: would the work need this file? | demote only under 0.2 |
+
+The floors follow TypeSafe's [confidence guidance](https://docs.typesafe.ai/confidence):
+do not act under 0.5, and scale the bar with the consequence. Relabelling an
+intent is cheap to get wrong; dropping a file from an agent's context is not,
+so a file leaves only on a strong no.
+
+**In `otito route`** the read is reported under `model.read` and in its own
+section of the output, and `scoreDecision` never sees it: a test holds that the
+same route answers score identically with and without it. The Claude Code prompt
+hook adds a line for any answer that cleared its floor.
+
+**In `otito context --online`** (MCP: `context_pack { online: true }`) the read
+is applied, and nowhere else. The same questions run over the pack's primary and
+related files:
+
+- an accepted intent replaces otito's action word and withdraws the
+  "requested action is ambiguous" open question;
+- a file under 0.2 leaves the ranked lists, and its hotspots with it, and is
+  kept under `modelRead.demoted` with its score and original rank;
+- the remaining files are re-ranked by relevance, each carrying its original
+  `rank`;
+- a read that rejects every primary file is not applied to them. It says the
+  candidates are wrong, not that the agent should read nothing, which is the
+  same reasoning as the router's `no evidence` floor.
+
+A pack is still a pure function of repository state unless `online` is asked
+for, and a failed or unkeyed call returns otito's pack unchanged with the
+reason under `modelRead`. Measured on this repository against a question whose
+offline pack ranked an RSVP eval fixture as related to MCP integration: intent
+`unknown` → `add` at 0.60, the fixture demoted at 0.17, `src/lib/mcp.js`
+re-ranked first; 2,827 input tokens, $0.000119, 361 ms.
+
+None of this is graded yet. Like the tier, the read is a number that has to be
+compared to outcomes before anything is promoted past advisory.
+
 ### Routing every request, without pretending to switch the model
 
 A skill only routes when the model remembers to invoke it, which means the

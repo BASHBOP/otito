@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { PassThrough } from "node:stream";
 import { startMcpServer, tools } from "../src/lib/mcp.js";
 import { getAgentTools } from "../src/lib/agent-tools.js";
+import { BUILTIN_HOSTS } from "../src/lib/model-route.js";
 
 function git(cwd, ...args) {
   const result = spawnSync("git", args, {
@@ -140,6 +141,7 @@ test("startMcpServer handles initialize, ping, tools/list, and skips notificatio
     "context_pack",
     "change_impact",
     "agent_experience",
+    "model_route",
     "convergence_score",
     "review_gate",
     "review_verdict",
@@ -151,10 +153,10 @@ test("startMcpServer handles initialize, ping, tools/list, and skips notificatio
   for (const name of expectedTools) {
     assert.ok(names.includes(name), `missing tool: ${name}`);
   }
-  // The v2 surface is exactly 13 tools — no more, no fewer. Retired names
+  // The v2 surface is exactly 14 tools — no more, no fewer. Retired names
   // (repo_discover, repo_catalog, find_*, pr_review, review_pr, merge_readiness,
   // pr_merge_readiness) must NOT appear in tools/list.
-  assert.equal(names.length, 13, `tools/list must expose exactly 13 tools, got ${names.length}: ${names.join(", ")}`);
+  assert.equal(names.length, 14, `tools/list must expose exactly 14 tools, got ${names.length}: ${names.join(", ")}`);
   assert.deepEqual([...names].sort(), [...expectedTools].sort());
   for (const retired of [
     "repo_discover",
@@ -426,6 +428,138 @@ test("agent_experience scores a change, requires a query, and respects includeMa
   assert.throws(() => JSON.parse(axMarkdown), "AX markdown payload must not be JSON");
 
   assert.equal(byId(messages, 3).error?.code, -32602);
+});
+
+// model_route may call a vendor, so each test pins the key it sees. A test
+// must never reach the network because of what the developer's shell exports.
+function withRouteKey(t, key) {
+  const saved = process.env.TYPESAFE_API_KEY;
+  if (key === undefined) delete process.env.TYPESAFE_API_KEY;
+  else process.env.TYPESAFE_API_KEY = key;
+  t.after(() => {
+    if (saved === undefined) delete process.env.TYPESAFE_API_KEY;
+    else process.env.TYPESAFE_API_KEY = saved;
+  });
+}
+
+function stubFetch(t, respond) {
+  const saved = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), body: JSON.parse(init.body) });
+    return respond();
+  };
+  t.after(() => {
+    globalThis.fetch = saved;
+  });
+  return calls;
+}
+
+const jevRouteAnswers = {
+  specificity: { type: "score", score: 0.1, confidence: 0.9, probabilities: [0.9, 0.08, 0.02] },
+  blast_radius: { type: "score", score: 0.2, confidence: 0.8, probabilities: [0.8, 0.15, 0.05] },
+  novelty: { type: "noul", noul: 0.05 },
+};
+
+test("model_route recommends an advisory tier offline, maps a host, and respects includeMarkdown", async (t) => {
+  withRouteKey(t, undefined);
+  const calls = stubFetch(t, () => {
+    throw new Error("no network in this test");
+  });
+  const fixture = makeRepoFixture();
+  const route = (id, args) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "model_route", arguments: { path: fixture, ...args } } });
+  const messages = await runRequests([
+    route(1, { query: "rename the events controller", top: 5 }),
+    route(2, { query: "rename the events controller", host: "claude-code" }),
+    route(3, { query: "rename the events controller", includeMarkdown: true }),
+    route(4, { query: "rename the events controller", host: "no-such-host" }),
+    route(5, {}),
+  ]);
+
+  const data = structured(messages, 1);
+  assert.equal(data.advisory, true, "the route is a recommendation, never a selection");
+  assert.ok(["cheap", "mid", "premium"].includes(data.tier));
+  assert.equal(data.model.source, "offline", "with no key the read is the labelled offline estimate");
+  assert.equal(data.hostModel, undefined, "no host, no model id");
+  assert.equal(calls.length, 0, "an unkeyed route makes no network call");
+
+  const mapped = structured(messages, 2);
+  assert.equal(mapped.hostModel, BUILTIN_HOSTS["claude-code"][mapped.tier]);
+
+  const markdown = rawText(messages, 3);
+  assert.match(markdown, /^# Model route: (cheap|mid|premium)/);
+  assert.match(markdown, /offline estimate, not calibrated/);
+
+  const unknown = byId(messages, 4).result;
+  assert.equal(unknown.isError, true);
+  assert.match(unknown.content[0].text, /no model map for host "no-such-host"/);
+
+  assert.equal(byId(messages, 5).error?.code, -32602, "query is required");
+});
+
+test("model_route asks the model when a key is set, and never when offline is true", async (t) => {
+  withRouteKey(t, "test-key");
+  const calls = stubFetch(t, () => ({ ok: true, json: async () => ({ model: "jev-test", usage: { input_tokens: 500 }, answers: jevRouteAnswers }) }));
+  const fixture = makeRepoFixture();
+  const messages = await runRequests([
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "model_route", arguments: { query: "rename the events controller", path: fixture } } },
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: { name: "model_route", arguments: { query: "rename the events controller", path: fixture, offline: true } },
+    },
+  ]);
+
+  const online = structured(messages, 1);
+  assert.equal(online.model.source, "jev");
+  assert.equal(online.model.model, "jev-test");
+  assert.equal(online.costUsd, 0.000021, "500 input tokens at the documented rate");
+  assert.equal(calls.length, 1, "exactly one call, for the keyed request only");
+  assert.equal(calls[0].url, "https://api.typesafe.ai/v1/systemone");
+  assert.equal(calls[0].body.state.request, "rename the events controller");
+
+  assert.equal(structured(messages, 2).model.source, "offline", "offline:true wins over a key");
+});
+
+test("model_route rejects an unknown host before spending the impact pass and a Jev call", async (t) => {
+  withRouteKey(t, "test-key");
+  const calls = stubFetch(t, () => {
+    throw new Error("an unknown host must fail before any network call");
+  });
+  const fixture = makeRepoFixture();
+  const messages = await runRequests([
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "model_route", arguments: { query: "rename the events controller", path: fixture, host: "no-such-host" } },
+    },
+  ]);
+  const unknown = byId(messages, 1).result;
+  assert.equal(unknown.isError, true);
+  assert.match(unknown.content[0].text, /no model map for host "no-such-host"/);
+  assert.equal(calls.length, 0, "the paid call never went out for a config miss");
+});
+
+test("a slow tool call does not block a later one behind it on the stdio loop", async (t) => {
+  withRouteKey(t, "test-key");
+  // model_route (id 1) awaits a 250ms Jev round trip; a ping (id 2) arrives
+  // right after it. On a serial loop the ping waits behind the model call, so
+  // its response lands second; dispatched concurrently, the ping answers first.
+  stubFetch(t, async () => {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    return { ok: true, json: async () => ({ model: "jev-test", usage: { input_tokens: 100 }, answers: jevRouteAnswers }) };
+  });
+  const fixture = makeRepoFixture();
+  const messages = await runRequests([
+    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "model_route", arguments: { query: "rename the events controller", path: fixture } } },
+    { jsonrpc: "2.0", id: 2, method: "ping" },
+  ]);
+  assert.equal(byId(messages, 1).result.isError, false, "the slow call still answers");
+  assert.deepEqual(byId(messages, 2).result, {}, "and so does the ping");
+  const order = messages.map((message) => message.id);
+  assert.ok(order.indexOf(2) < order.indexOf(1), "the ping was not stuck behind the Jev round trip");
 });
 
 test("context_pack default response is compact: no structuredContent, no pretty-print, evidence gated", async () => {
@@ -831,6 +965,10 @@ test("every MCP tool declares an explicit readOnlyHint annotation", () => {
   // vary by input, so these tools are conservatively non-read-only.
   assert.equal(byName.get("convergence_score").annotations.readOnlyHint, false);
   assert.equal(byName.get("review_gate").annotations.readOnlyHint, false);
+  // model_route writes nothing, but may call TypeSafe, so it says it reaches
+  // outside this machine.
+  assert.equal(byName.get("model_route").annotations.readOnlyHint, true);
+  assert.equal(byName.get("model_route").annotations.openWorldHint, true);
 });
 
 test("the review_* tool descriptions are verb-first and state when to use each vs its siblings", () => {

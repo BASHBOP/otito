@@ -264,6 +264,43 @@ test("context command emits json, text, and writes an artifact", async () => {
   fs.unlinkSync(out);
 });
 
+test("context --online adds a model read, and falls back to otito's pack without a key", async (t) => {
+  const fixture = makeRepoFixture();
+  const savedKey = process.env.TYPESAFE_API_KEY;
+  const savedFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = savedFetch;
+    if (savedKey === undefined) delete process.env.TYPESAFE_API_KEY;
+    else process.env.TYPESAFE_API_KEY = savedKey;
+  });
+
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return /** @type {any} */ ({
+      ok: true,
+      json: async () => ({ model: "jev-test", answers: { read_intent: { type: "choice", choice: "add", confidence: 0.95, probabilities: { add: 0.96 } } } }),
+    });
+  };
+  process.env.TYPESAFE_API_KEY = "test-key";
+
+  const plain = parseJsonOutput((await runCli(["context", "add events tool", "--path", fixture, "--json"])).stdout);
+  assert.equal(plain.modelRead, undefined, "without --online the command makes no call");
+  assert.equal(calls, 0);
+
+  const online = parseJsonOutput((await runCli(["context", "add events tool", "--path", fixture, "--json", "--online"])).stdout);
+  assert.equal(online.modelRead.source, "jev");
+  assert.equal(online.intent.action, "add");
+  assert.equal(calls, 1);
+
+  delete process.env.TYPESAFE_API_KEY;
+  const unkeyed = await runCli(["context", "add events tool", "--path", fixture, "--online"]);
+  assert.equal(unkeyed.exitCode, 0, "a missing key is not a failed command");
+  assert.match(unkeyed.stdout, /Model read/);
+  assert.match(unkeyed.stdout, /TYPESAFE_API_KEY is not set/);
+  assert.equal(calls, 1);
+});
+
 test("impact accepts both positional and --path forms and writes artifacts", async () => {
   const fixture = makeRepoFixture();
   const positional = await runCli(["impact", fixture, "rename events controller", "--json"]);

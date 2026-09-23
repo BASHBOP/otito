@@ -391,7 +391,7 @@
           data-id="mcp"
           data-group="entry"
           data-title="MCP server"
-          data-desc="stdio MCP server exposing 13 tools: repo_inspect, repo_map, repo_index, repo_search, context_pack, change_impact, agent_experience, convergence_score, review_gate, review_verdict, workspace_report, review_context, repo_harness. Published in the MCP Registry as io.github.BASHBOP/otito."
+          data-desc="stdio MCP server exposing 14 tools: repo_inspect, repo_map, repo_index, repo_search, context_pack, change_impact, agent_experience, model_route, convergence_score, review_gate, review_verdict, workspace_report, review_context, repo_harness. Published in the MCP Registry as io.github.BASHBOP/otito."
         >
           <rect x="485" y="49" width="130" height="52" rx="10" fill="#161b22" stroke="#58a6ff" color="#58a6ff" />
           <text x="550" y="73" class="label">MCP</text>
@@ -513,6 +513,17 @@
           <text x="685" y="430" class="label">AX</text>
           <text x="685" y="446" class="sub">0–100</text>
         </g>
+        <g
+          class="node"
+          data-id="route"
+          data-group="change"
+          data-title="model_route"
+          data-desc="Advisory model tier (cheap, mid, premium) before work starts: AX and risk paths from otito, plus a System One read of the request when a TypeSafe key is set. Never feeds the gate. CLI: otito route."
+        >
+          <circle cx="935" cy="434" r="34" fill="#161b22" stroke="#ffd866" color="#ffd866" />
+          <text x="935" y="430" class="label">route</text>
+          <text x="935" y="446" class="sub">model tier</text>
+        </g>
 
         <!-- REVIEW -->
         <g
@@ -615,7 +626,7 @@
           </div>
           <div class="step" data-step="3" data-node="impact" data-group="change">
             <div class="step-num" style="background: #ffd866">4</div>
-            <div><strong>Impact</strong><span>Rank the files a change should touch · score how agent-friendly the repo is</span></div>
+            <div><strong>Impact</strong><span>Rank the files a change should touch · score how agent-friendly the repo is · recommend a model tier</span></div>
           </div>
           <div class="step" data-step="4" data-node="gate" data-group="review">
             <div class="step-num" style="background: #7ee787">5</div>
@@ -631,8 +642,9 @@
       <section class="card detail" id="detail">
         <h3 id="detail-title">MCP server</h3>
         <p id="detail-body">
-          stdio MCP server exposing 13 tools: repo_inspect, repo_map, repo_index, repo_search, context_pack, change_impact, agent_experience, convergence_score,
-          review_gate, review_verdict, workspace_report, review_context, repo_harness. Published in the MCP Registry as io.github.BASHBOP/otito.
+          stdio MCP server exposing 14 tools: repo_inspect, repo_map, repo_index, repo_search, context_pack, change_impact, agent_experience, model_route,
+          convergence_score, review_gate, review_verdict, workspace_report, review_context, repo_harness. Published in the MCP Registry as
+          io.github.BASHBOP/otito.
         </p>
         <div class="chips" id="detail-chips">
           <span class="chip">otito mcp</span>
@@ -671,6 +683,7 @@
         workspace: ["workspace_report", "otito workspace"],
         impact: ["change_impact", "otito impact"],
         ax: ["agent_experience", "otito ax"],
+        route: ["model_route", "otito route"],
         reviewctx: ["review_context", "otito pr"],
         converge: ["convergence_score", "otito converge"],
         gate: ["review_gate", "otito gate"],

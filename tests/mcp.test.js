@@ -55,7 +55,7 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
   assert.equal(exitCode, 0);
   assert.equal(messages[0].result.serverInfo.name, "@bashbop/otito");
   const listedNames = messages[1].result.tools.map((tool) => tool.name);
-  assert.equal(listedNames.length, 13, `tools/list must expose exactly 13 tools, got ${listedNames.length}: ${listedNames.join(", ")}`);
+  assert.equal(listedNames.length, 14, `tools/list must expose exactly 14 tools, got ${listedNames.length}: ${listedNames.join(", ")}`);
   for (const expected of ["repo_map", "repo_index", "repo_search", "context_pack", "agent_experience", "convergence_score", "review_context", "repo_harness"]) {
     assert.ok(listedNames.includes(expected), `missing tool: ${expected}`);
   }

@@ -12,6 +12,7 @@ const cliCommandByTool = {
   context_pack: "otito context <query> --path <repo> --json",
   change_impact: "otito impact <query> --path <repo> --json",
   agent_experience: "otito ax <query> --path <repo> --json",
+  model_route: "otito route <repo> <query> --json",
   convergence_score: "otito converge <query> --base <ref> --path <repo> --json",
   review_gate: "otito gate [--pr <selector>] --path <repo> --json",
   review_verdict: "otito review --path <repo> --json",

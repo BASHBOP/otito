@@ -16,7 +16,10 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  */
 function runHook(input, { timeout = 30000 } = {}) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [HOOK], { stdio: ["pipe", "pipe", "pipe"] });
+    // No vendor key reaches the hook: a test must not make a billed call
+    // because of what the developer's shell exports.
+    const { TYPESAFE_API_KEY: _key, ...env } = process.env;
+    const child = spawn(process.execPath, [HOOK], { stdio: ["pipe", "pipe", "pipe"], env });
     let out = "";
     let err = "";
     const timer = setTimeout(() => child.kill("SIGKILL"), timeout);
@@ -85,6 +88,23 @@ test("the context names the subagent model but never claims a switch", () => {
   assert.match(context, /Do not say the model was changed/);
   // And it must not manufacture delegation that was not already happening.
   assert.match(context, /Do not spawn a subagent you would not otherwise have used/);
+});
+
+test("an accepted request read rides along; an unsure one stays out", () => {
+  const read = {
+    intent: { choice: "fix", confidence: 0.93, accepted: true },
+    capability: { choice: "change_impact", confidence: 0.61, accepted: true },
+    relevance: [],
+  };
+  const context = formatContext({ tier: "mid", scoring: { route: 60 }, model: { read } });
+  assert.match(context, /Request read \(TypeSafe Jev, advisory\): intent \*\*fix\*\* \(0\.93\), otito tool \*\*change_impact\*\* \(0\.61\)\./);
+
+  const unsure = formatContext({
+    tier: "mid",
+    model: { read: { ...read, intent: { ...read.intent, accepted: false }, capability: { choice: "none", confidence: 0.9, accepted: true } } },
+  });
+  assert.doesNotMatch(unsure, /Request read/, "under the floor, or no tool, says nothing");
+  assert.doesNotMatch(formatContext({ tier: "mid", model: { read: null } }), /Request read/);
 });
 
 test("a route with no host model still renders, without inventing a model id", () => {

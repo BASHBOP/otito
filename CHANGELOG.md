@@ -6,6 +6,18 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **`model_route`, the router as an MCP tool.** `otito route` was CLI-only, so every MCP host (Cursor, VS Code, Claude Desktop, Codex, Gemini) could score AX but not ask for a tier. The tool takes `{ query, path?, host?, offline?, includeMarkdown? }` and returns the `otito route --json` payload. It calls TypeSafe only when `TYPESAFE_API_KEY` is in the server's environment and `offline` is not true, and declares `openWorldHint: true` because it may. The MCP surface goes from 13 to 14 tools. Host resolution is shared with the CLI through `hostModelFor`, so an unknown host fails with the same remedy on both.
+- **A request read, folded into the route call.** Three more questions ride the same System One call as the route questions: what kind of work the request is (`read_intent`), which otito tool answers it (`read_capability`), and, per ranked file, whether the work needs it (`read_file_<n>`). They cost input tokens, not a round trip. In `route` the read is reported under `model.read` and in its own output section, and is never scored: a test holds that the tier is identical with and without it. The Claude Code prompt hook adds a line for any answer that cleared its floor. Measured: 2,056 input tokens, $0.000086, 345 ms for route and read together.
+- **`otito context --online` / `context_pack { online: true }`.** Applies the read to a context pack in one call: an intent at confidence ≥ 0.5 replaces otito's action word and withdraws the ambiguity question; a file the model scores under 0.2 is demoted out of the ranked lists, with its hotspots, and kept under `modelRead.demoted`; the rest are re-ranked by relevance with their original rank kept. A read that rejects every primary file is not applied to them. Off unless asked, so a pack stays a pure function of repository state by default; a failed or unkeyed call returns the pack unchanged with the reason. On a question whose offline pack listed an RSVP eval fixture as related to MCP integration, the fixture was demoted at 0.17 and `src/lib/mcp.js` moved to first.
+- **Every MCP host can appear on a local Realtime Canvas.** Set `OTITO_CANVAS_URL` (loopback `http` only) and `OTITO_HOST` in a host's MCP config and each request-bearing tool call is forwarded to the canvas's `/ingest`: the request text, the tool name and the host label, never a result, a path argument or file contents. Fire and forget, with a one-second cap, so a canvas that is down or slow cannot delay an answer; a test with a canvas that never replies holds the response under 900 ms. Off unless set. See [MCP and Agent Workflows](docs/02-mcp-agent-workflows/README.md#realtime-canvas-and-model-routing-opt-in), which also adds Codex CLI and ChatGPT guidance.
+
+### Fixed
+
+- **The config tests read the developer's own config.** `loadConfig({ env: {} })` still falls back to `~/.config/otito/config.json`, so anyone who had run `otito config set telemetry true` failed `telemetry defaults to off` locally while CI, which has no such file, stayed green. Every config test now pins `XDG_CONFIG_HOME` to its temp directory.
+- **The route hook's end-to-end test made a billed call on a keyed machine.** It spawned the hook with the developer's environment, `TYPESAFE_API_KEY` included. The key is now removed from the child's environment.
+
 ## [1.14.0] - 2026-09-20
 
 ### Added

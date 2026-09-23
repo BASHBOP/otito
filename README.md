@@ -83,12 +83,14 @@ The convergence score is the part a model cannot grade for itself: it compares t
 | Generate an agent harness          | `otito harness . --out .otito/harness.md`                                   |
 | Run the MCP server                 | `otito mcp`                                                                 |
 | Score Agent Experience             | `otito ax . "add a new MCP tool"`                                           |
+| Recommend a model tier             | `otito route . "add a new MCP tool"`                                        |
+| Sharpen context with a model read  | `otito context "add a new MCP tool" --path . --online`                      |
 
 Every command takes `--json`, and `otito help` lists the full set with flags.
 
 ## MCP
 
-Otito ships a stdio MCP server exposing **13 tools**: `repo_inspect`, `repo_map`, `repo_index`, `repo_search`, `context_pack`, `change_impact`, `agent_experience`, `convergence_score`, `review_context`, `review_gate`, `review_verdict`, `workspace_report`, and `repo_harness`.
+Otito ships a stdio MCP server exposing **14 tools**: `repo_inspect`, `repo_map`, `repo_index`, `repo_search`, `context_pack`, `change_impact`, `agent_experience`, `model_route`, `convergence_score`, `review_context`, `review_gate`, `review_verdict`, `workspace_report`, and `repo_harness`.
 
 ```json
 {

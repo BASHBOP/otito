@@ -117,6 +117,7 @@ MCP tools exposed by the server:
 - `context_pack`: task-aware local context packet with primary files, related files, tests, patterns, validation commands, and source evidence
 - `change_impact`: rank files most likely to own a plain-English change request
 - `agent_experience`: Agent Experience (AX 0–100) score for a change
+- `model_route`: advisory model tier (cheap / mid / premium) for a request before work starts
 - `convergence_score`: intent vs. execution score (0–100) with a recomputable receipt
 - `review_context`: diff-aware PR review context (no verdict)
 - `review_gate`: PASS/WARN/FAIL merge gate — local without `pr`, GitHub PR gate with `pr`

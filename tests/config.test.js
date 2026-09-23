@@ -5,6 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig } from "../src/lib/config.js";
 
+// Every loadConfig call pins XDG_CONFIG_HOME to its temp dir. An empty env
+// still falls back to ~/.config/otito/config.json, so a developer who has run
+// `otito config set telemetry true` would otherwise fail the defaults tests.
 function makeTmpDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "otito-config-test-"));
 }
@@ -22,26 +25,26 @@ test("CONFIG_KEYS lists all expected keys", () => {
 
 test("anonymous telemetry sharing is a separate opt-in", () => {
   const tmp = makeTmpDir();
-  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetryShare, false);
+  assert.equal(loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp } }).telemetryShare, false);
   fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ telemetry: true, telemetryShare: false }));
-  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetry, true);
-  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetryShare, false, "local consent does not imply sharing");
-  assert.equal(loadConfig({ cwd: tmp, env: { OTITO_TELEMETRY_SHARE: "1" } }).telemetryShare, true);
+  assert.equal(loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp } }).telemetry, true);
+  assert.equal(loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp } }).telemetryShare, false, "local consent does not imply sharing");
+  assert.equal(loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp, OTITO_TELEMETRY_SHARE: "1" } }).telemetryShare, true);
   fs.rmSync(tmp, { recursive: true });
 });
 
 test("telemetry defaults to off and OTITO_TELEMETRY overrides it", () => {
   const tmp = makeTmpDir();
-  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetry, false, "opt-in: off by default");
+  assert.equal(loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp } }).telemetry, false, "opt-in: off by default");
   fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ telemetry: true }));
-  assert.equal(loadConfig({ cwd: tmp, env: {} }).telemetry, true, "config can enable it");
-  assert.equal(loadConfig({ cwd: tmp, env: { OTITO_TELEMETRY: "0" } }).telemetry, false, "env overrides config");
+  assert.equal(loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp } }).telemetry, true, "config can enable it");
+  assert.equal(loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp, OTITO_TELEMETRY: "0" } }).telemetry, false, "env overrides config");
   fs.rmSync(tmp, { recursive: true });
 });
 
 test("loadConfig returns built-in defaults when no files or env present", () => {
   const tmp = makeTmpDir();
-  const cfg = loadConfig({ cwd: tmp, env: {} });
+  const cfg = loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp } });
   assert.equal(cfg.theme, "default");
   assert.equal(cfg.policy, "standard");
   assert.equal(cfg.governance, "team");
@@ -53,7 +56,7 @@ test("loadConfig returns built-in defaults when no files or env present", () => 
 test("loadConfig reads .otitorc.json from cwd", () => {
   const tmp = makeTmpDir();
   fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ color: true, theme: "color" }));
-  const cfg = loadConfig({ cwd: tmp, env: {} });
+  const cfg = loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp } });
   assert.equal(cfg.color, true);
   assert.equal(cfg.theme, "color");
   fs.rmSync(tmp, { recursive: true });
@@ -62,7 +65,7 @@ test("loadConfig reads .otitorc.json from cwd", () => {
 test("loadConfig env vars override local config", () => {
   const tmp = makeTmpDir();
   fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ color: true }));
-  const cfg = loadConfig({ cwd: tmp, env: { OTITO_COLOR: "false" } });
+  const cfg = loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp, OTITO_COLOR: "false" } });
   assert.equal(cfg.color, false);
   fs.rmSync(tmp, { recursive: true });
 });
@@ -70,21 +73,21 @@ test("loadConfig env vars override local config", () => {
 test("NO_COLOR env var disables color regardless of config", () => {
   const tmp = makeTmpDir();
   fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ color: true }));
-  const cfg = loadConfig({ cwd: tmp, env: { NO_COLOR: "" } });
+  const cfg = loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp, NO_COLOR: "" } });
   assert.equal(cfg.color, false);
   fs.rmSync(tmp, { recursive: true });
 });
 
 test("OTITO_EMOJI=1 sets emoji to true", () => {
   const tmp = makeTmpDir();
-  const cfg = loadConfig({ cwd: tmp, env: { OTITO_EMOJI: "1" } });
+  const cfg = loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp, OTITO_EMOJI: "1" } });
   assert.equal(cfg.emoji, true);
   fs.rmSync(tmp, { recursive: true });
 });
 
 test("OTITO_WIDTH sets numeric width", () => {
   const tmp = makeTmpDir();
-  const cfg = loadConfig({ cwd: tmp, env: { OTITO_WIDTH: "100" } });
+  const cfg = loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp, OTITO_WIDTH: "100" } });
   assert.equal(cfg.width, 100);
   fs.rmSync(tmp, { recursive: true });
 });
@@ -114,7 +117,7 @@ test("getConfigPath returns local path inside cwd", () => {
 
 test("listConfigSources annotates env override", () => {
   const tmp = makeTmpDir();
-  const sources = listConfigSources({ cwd: tmp, env: { OTITO_COLOR: "false" } });
+  const sources = listConfigSources({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp, OTITO_COLOR: "false" } });
   const colorEntry = sources.find((s) => s.key === "color");
   assert.ok(colorEntry);
   assert.equal(colorEntry.source, "env");
@@ -125,7 +128,7 @@ test("listConfigSources annotates env override", () => {
 test("listConfigSources annotates local vs default", () => {
   const tmp = makeTmpDir();
   fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ theme: "minimal" }));
-  const sources = listConfigSources({ cwd: tmp, env: {} });
+  const sources = listConfigSources({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp } });
   const themeEntry = sources.find((s) => s.key === "theme");
   assert.ok(themeEntry);
   assert.equal(themeEntry.source, "local");
@@ -141,7 +144,7 @@ test("loadConfig walks up to find .otitorc.json in parent", () => {
   fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ emoji: false }));
   const nested = path.join(tmp, "packages", "web");
   fs.mkdirSync(nested, { recursive: true });
-  const cfg = loadConfig({ cwd: nested, env: {} });
+  const cfg = loadConfig({ cwd: nested, env: { XDG_CONFIG_HOME: tmp } });
   assert.equal(cfg.emoji, false);
   fs.rmSync(tmp, { recursive: true });
 });

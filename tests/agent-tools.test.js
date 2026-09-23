@@ -14,10 +14,10 @@ test("getAgentTools derives its catalog from the MCP tools array", () => {
   assert.deepEqual(names, mcpNames);
 });
 
-test("the v2 surface is exactly 13 tools and drops the retired names", () => {
+test("the v2 surface is exactly 14 tools and drops the retired names", () => {
   const catalog = getAgentTools();
   const names = catalog.tools.map((tool) => tool.name);
-  assert.equal(names.length, 13, `agent-tools must expose exactly 13 tools, got ${names.length}: ${names.join(", ")}`);
+  assert.equal(names.length, 14, `agent-tools must expose exactly 14 tools, got ${names.length}: ${names.join(", ")}`);
   for (const retired of [
     "repo_discover",
     "repo_catalog",
@@ -32,7 +32,7 @@ test("the v2 surface is exactly 13 tools and drops the retired names", () => {
   ]) {
     assert.ok(!names.includes(retired), `retired tool must not appear: ${retired}`);
   }
-  for (const canonical of ["review_context", "review_gate", "review_verdict", "agent_experience", "convergence_score"]) {
+  for (const canonical of ["review_context", "review_gate", "review_verdict", "agent_experience", "model_route", "convergence_score"]) {
     assert.ok(names.includes(canonical), `missing canonical tool: ${canonical}`);
   }
 });

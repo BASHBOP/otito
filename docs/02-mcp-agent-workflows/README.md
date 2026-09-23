@@ -214,11 +214,92 @@ review before it can be presented as direct support.
 
 Reference: [Grok custom MCP connectors](https://docs.x.ai/grok/connectors).
 
+### Codex CLI
+
+Codex CLI starts stdio MCP servers from `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.otito]
+command = "otito"
+args = ["mcp"]
+```
+
+### ChatGPT
+
+ChatGPT reaches MCP servers through connectors that call a remote endpoint; it
+does not start a local stdio process. The Grok guidance above applies
+unchanged: do not tunnel `otito mcp` to the internet. Use Codex CLI for direct
+tool access, or hand ChatGPT a reviewed artifact from the structured-handoff
+commands.
+
+---
+
+## Realtime Canvas and model routing (opt-in)
+
+Two environment variables in a host's MCP config let that host appear on a
+local Otito Realtime Canvas, an observer that listens on `127.0.0.1` and shows
+each request becoming an intent, a context, a tier and a result. A third lets
+`model_route` ask a calibrated model. All three are off unless set.
+
+| Variable | Effect |
+| --- | --- |
+| `OTITO_CANVAS_URL` | Forward each request-bearing tool call (`context_pack`, `change_impact`, `agent_experience`, `model_route`, `convergence_score`, `review_gate`, `review_verdict`) to the canvas at this address. Loopback `http` only; any other address is ignored. |
+| `OTITO_HOST` | The label the canvas shows for this host, e.g. `cursor`. Defaults to `mcp`. |
+| `TYPESAFE_API_KEY` | Lets `model_route` ask TypeSafe's Jev for its read of the request. Without it the read is a labelled offline estimate. Billed by TypeSafe. |
+
+The tap sends the request text, the tool name and the host label. It never
+sends a tool result, a path argument or file contents, and it never waits for
+the canvas, so a canvas that is down or slow cannot delay an answer.
+
+Cursor (`~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "otito": {
+      "command": "otito",
+      "args": ["mcp"],
+      "env": { "OTITO_CANVAS_URL": "http://127.0.0.1:7801", "OTITO_HOST": "cursor" }
+    }
+  }
+}
+```
+
+VS Code (`.vscode/mcp.json`):
+
+```json
+{
+  "servers": {
+    "otito": {
+      "type": "stdio",
+      "command": "otito",
+      "args": ["mcp"],
+      "env": { "OTITO_CANVAS_URL": "http://127.0.0.1:7801", "OTITO_HOST": "vscode" }
+    }
+  }
+}
+```
+
+Codex CLI (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.otito]
+command = "otito"
+args = ["mcp"]
+env = { OTITO_CANVAS_URL = "http://127.0.0.1:7801", OTITO_HOST = "codex" }
+```
+
+Claude Desktop takes the same `env` object as Cursor. Claude Code already
+reaches the canvas through its `UserPromptSubmit` hook, so leave the tap off
+there, or each prompt is shown twice. Keep `TYPESAFE_API_KEY` in your shell
+environment or the host's secret store rather than in a config file you might
+commit.
+
 ---
 
 ## MCP Tool Surface
 
-Òtítọ́ exposes **13** MCP tools for deterministic repository context and merge evidence.
+Òtítọ́ exposes **14** MCP tools for deterministic repository context and merge evidence.
 
 | Tool               | Purpose                                                                               |
 | ------------------ | ------------------------------------------------------------------------------------- |
@@ -229,6 +310,7 @@ Reference: [Grok custom MCP connectors](https://docs.x.ai/grok/connectors).
 | `context_pack`     | Build a task-aware context packet                                                     |
 | `change_impact`    | Rank files most likely to own a plain-English change request                          |
 | `agent_experience` | Score Agent Experience (AX 0–100): changeability, containment, guardrails, clarity    |
+| `model_route`      | Advisory model tier before work starts; asks TypeSafe's Jev only when `TYPESAFE_API_KEY` is set |
 | `convergence_score`| Score intent vs. execution (0–100) with a recomputable receipt                        |
 | `review_context`   | Diff/comment review context (no verdict)                                              |
 | `review_gate`      | PASS/WARN/FAIL merge gate: local without `pr`, GitHub PR gate with `pr`; optionally enforces a convergence floor/receipt |
