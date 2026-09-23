@@ -285,10 +285,16 @@ async function handleSearch(parsed) {
 async function handleContext(parsed) {
   const { formatContextPackTerminal, generateContextPack } = await import("./lib/context-engine.js");
   const query = parsed.positionals.join(" ").trim();
-  const result = generateContextPack(query, {
+  let result = generateContextPack(query, {
     path: parsed.flags.path,
     limit: parsed.flags.limit,
   });
+  // Opt-in: ask a System One model to read the request. Never on by default,
+  // because an ordinary otito command makes no network call.
+  if (parsed.flags.online === true) {
+    const { readContextPack } = await import("./lib/context-read.js");
+    result = await readContextPack(result);
+  }
 
   if (parsed.flags.json) {
     printJson(result.data);
@@ -460,7 +466,7 @@ async function handleAx(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleRoute(parsed) {
-  const { generateRoute, loadHosts } = await import("./lib/model-route.js");
+  const { generateRoute, hostModelFor } = await import("./lib/model-route.js");
   const { formatRouteMarkdown, formatRouteTerminal } = await import("./lib/render/route.js");
 
   // Mirror `ax` and `impact` arg parsing.
@@ -486,14 +492,7 @@ async function handleRoute(parsed) {
   // The router decides a TIER. Each host turns that tier into whatever it calls
   // a model, so nothing about the scoring is specific to one editor.
   if (typeof parsed.flags.host === "string") {
-    const hosts = loadHosts(repoPath);
-    const map = hosts[parsed.flags.host];
-    if (!map) {
-      throw new Error(
-        `no model map for host "${parsed.flags.host}". Known: ${Object.keys(hosts).join(", ")}. ` + "Add one in .otito/model-route.json, or use --tier-only.",
-      );
-    }
-    data.hostModel = map[data.tier];
+    data.hostModel = hostModelFor(repoPath, parsed.flags.host, data.tier);
   }
 
   noteResult(data);

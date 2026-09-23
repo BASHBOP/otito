@@ -5,10 +5,14 @@ import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "./catalog.js";
 import { generateContextPack } from "./context-engine.js";
+import { readContextPack } from "./context-read.js";
 import { generateImpact } from "./impact.js";
 import { generateAxScore, formatAxMarkdown } from "./ax.js";
 import { generateConvergence, formatConvergenceMarkdown } from "./converge.js";
+import { generateRoute, hostModelFor, TIERS } from "./model-route.js";
+import { formatRouteMarkdown } from "./render/route.js";
 import { appendEvent, extractSignals, redactError, shareEvent } from "./telemetry.js";
+import { forwardToCanvas } from "./canvas-tap.js";
 import { evaluateLocal } from "./pass-local.js";
 import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
@@ -33,7 +37,7 @@ import { generateWorkspaceReport } from "./workspace.js";
  * @property {string} name
  * @property {string} title
  * @property {string} description
- * @property {{ readOnlyHint?: boolean }} annotations
+ * @property {{ readOnlyHint?: boolean, openWorldHint?: boolean }} annotations
  * @property {McpInputSchema} inputSchema
  */
 
@@ -144,8 +148,8 @@ export const tools = [
     name: "context_pack",
     title: "Context Pack",
     description:
-      "Generate a task-aware local context packet with primary files, related files, tests, patterns, and validation commands. Uses a per-user external cache and leaves the target repository unchanged.",
-    annotations: { readOnlyHint: true },
+      "Generate a task-aware local context packet with primary files, related files, tests, patterns, and validation commands. Uses a per-user external cache and leaves the target repository unchanged. Deterministic by default; pass online:true to also ask a System One model (needs TYPESAFE_API_KEY) what kind of work the request is and which candidate files it needs, which relabels a confidently read intent and demotes files it judges irrelevant, reported under modelRead.",
+    annotations: { readOnlyHint: true, openWorldHint: true },
     inputSchema: {
       type: "object",
       properties: {
@@ -160,6 +164,11 @@ export const tools = [
         includeMarkdown: {
           type: "boolean",
           description: "Return a compact human-readable markdown report instead of the full JSON packet. Defaults to false.",
+        },
+        online: {
+          type: "boolean",
+          description:
+            "Ask TypeSafe's Jev to read the request (intent, and relevance of each candidate file) in one call, and apply answers that clear their confidence gate. Needs TYPESAFE_API_KEY; without one the pack is returned unchanged with modelRead.source offline. Defaults to false.",
         },
       },
       required: ["query"],
@@ -195,6 +204,28 @@ export const tools = [
         query: { type: "string", description: 'Plain-English change request to score, e.g. "add a new MCP tool".' },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         top: { type: "number", description: "Number of impact files to consider when scoring blast radius. Defaults to 8." },
+        includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
+      },
+      required: ["query"],
+    },
+  },
+  {
+    name: "model_route",
+    title: "Model Route",
+    description:
+      "Recommend a model tier (cheap, mid or premium) for a coding request before any work starts. Combines otito's deterministic repository half (AX, containment, top-severity risk paths) with a System One model's calibrated read of the request (specificity, blast radius, novelty). The model is called only when TYPESAFE_API_KEY is set in this server's environment and offline is not true; otherwise the read is a labelled offline estimate, and model.source says which. Advisory: it recommends a tier and never feeds review_gate or review_verdict. Pass host to map the tier to that host's model id.",
+    annotations: { readOnlyHint: true, openWorldHint: true },
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: 'Plain-English change request to route, e.g. "fix the typo in the README".' },
+        path: { type: "string", description: "Repository path. Defaults to current working directory." },
+        top: { type: "number", description: "Number of impact files to consider. Defaults to 8." },
+        host: {
+          type: "string",
+          description: "Optional host whose model map resolves the tier to a model id (built in: claude-code; add others in .otito/model-route.json).",
+        },
+        offline: { type: "boolean", description: "Never call the model, even when a key is set. Defaults to false." },
         includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
       },
       required: ["query"],
@@ -388,6 +419,20 @@ export const LEGACY_TOOL_ALIASES = {
 export async function startMcpServer({ input = process.stdin, output = process.stdout } = {}) {
   const rl = readline.createInterface({ input, crlfDelay: Infinity });
 
+  // Each message is handled without blocking the read of the next one, so an
+  // I/O-bound tool (model_route, or context_pack with online:true, both of
+  // which await a Jev round trip of up to JEV_TIMEOUT_MS) does not stall every
+  // other request behind it. JSON-RPC matches responses to requests by id, so
+  // writing them as they resolve — not necessarily in receipt order — is
+  // within spec. writeMessage emits one whole line, and Node orders writes, so
+  // responses never interleave on the wire.
+  /** @type {Set<Promise<void>>} */
+  const inFlight = new Set();
+  const track = (/** @type {Promise<void>} */ promise) => {
+    inFlight.add(promise);
+    void promise.finally(() => inFlight.delete(promise));
+  };
+
   for await (const line of rl) {
     const trimmed = line.trim();
     if (!trimmed) {
@@ -403,11 +448,16 @@ export async function startMcpServer({ input = process.stdin, output = process.s
       continue;
     }
 
-    const response = await handleMessage(message);
-    if (response) {
-      writeMessage(output, response);
-    }
+    track(
+      handleMessage(message).then((response) => {
+        if (response) writeMessage(output, response);
+      }),
+    );
   }
+
+  // The stream ended; let every in-flight handler finish so a caller that
+  // awaits startMcpServer (the tests do) sees all responses written.
+  await Promise.allSettled(inFlight);
 }
 
 /**
@@ -479,6 +529,14 @@ async function callTool(params = {}) {
   }
 
   const startedAt = performance.now();
+  // Opt-in and fire-and-forget: off unless OTITO_CANVAS_URL is set. When it is
+  // on, yield once so the loopback POST is flushed before a synchronous,
+  // CPU-bound dispatch (context_pack, change_impact) blocks the event loop —
+  // otherwise the request sits unsent until the tool finishes, and a dispatch
+  // longer than the tap's own timeout would abort it unsent. We never wait for
+  // the canvas's reply, only for the send to leave.
+  const tap = forwardToCanvas(LEGACY_TOOL_ALIASES[name]?.tool ?? name, args);
+  if (tap) await Promise.race([tap, new Promise((resolve) => globalThis.setImmediate(resolve))]);
   let result;
   try {
     result = await dispatchTool(name, args);
@@ -598,7 +656,8 @@ async function dispatchTool(name, args) {
       }
       return withSearchRemediation(searchCatalog(args.query, args));
     case "context_pack": {
-      const result = generateContextPack(requiredString(args.query, "query"), args);
+      let result = generateContextPack(requiredString(args.query, "query"), args);
+      if (args.online === true) result = await readContextPack(result);
       return args.includeMarkdown ? result : result.data;
     }
     case "change_impact": {
@@ -615,6 +674,23 @@ async function dispatchTool(name, args) {
         top: args.top,
       });
       return args.includeMarkdown ? { data, markdown: formatAxMarkdown(data) } : data;
+    }
+    case "model_route": {
+      const repoPath = args.path ?? ".";
+      const query = requiredString(args.query, "query");
+      // An unknown host is a deterministic config miss. Reject it before the
+      // impact pass, the AX score and a billed Jev round trip, not after. The
+      // tier is not known yet, so validate the host map's existence with any
+      // tier; the resolved value is discarded here and recomputed below.
+      const host = typeof args.host === "string" && args.host.trim() ? args.host : null;
+      if (host) hostModelFor(repoPath, host, TIERS[0]);
+      const data = await generateRoute(query, {
+        path: repoPath,
+        top: args.top,
+        offline: args.offline === true,
+      });
+      if (host) data.hostModel = hostModelFor(repoPath, host, data.tier);
+      return args.includeMarkdown ? { data, markdown: formatRouteMarkdown(data) } : data;
     }
     case "convergence_score": {
       const data = generateConvergence(requiredString(args.query, "query"), {

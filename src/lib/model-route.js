@@ -20,30 +20,9 @@ import path from "node:path";
 import { generateAxScore } from "./ax.js";
 import { generateImpact } from "./impact.js";
 import { classifyPath, isProseFile, isTestDataPath, RISK_SCORE_WEIGHTS } from "./risk-paths.js";
+import { askSystemOne, interpretRead, pickAnswers, priceJevCall, readQuestions } from "./jev.js";
 
 export const modelRouteEngineVersion = "0.1.0";
-
-const API_URL = "https://api.typesafe.ai/v1/systemone";
-const JEV_MODEL = "jev-latest";
-
-/** Jev bills input tokens only, at $0.042 per million. */
-export const JEV_PER_MTOK = 0.042;
-
-/**
- * Cost of one route call, in USD, from the tokens the rate actually covers.
- *
- * Null means "not measured", which is not the same as zero: a call that billed
- * no input tokens cost nothing and is entitled to say so. Anything that is not
- * a finite, non-negative count is not a measurement and prices to null rather
- * than to a number nobody can trace.
- *
- * @param {number|null|undefined} inputTokens tokens JEV_PER_MTOK covers
- * @returns {number|null}
- */
-export function priceRouteCall(inputTokens) {
-  if (typeof inputTokens !== "number" || !Number.isFinite(inputTokens) || inputTokens < 0) return null;
-  return Number(((inputTokens * JEV_PER_MTOK) / 1e6).toFixed(6));
-}
 
 export const TIERS = /** @type {const} */ (["cheap", "mid", "premium"]);
 export const BAND_CHEAP = 75;
@@ -144,6 +123,23 @@ export function loadHosts(repo = ".") {
     }
   }
   return hosts;
+}
+
+/**
+ * The model id a host calls a tier. The CLI and the MCP tool both resolve a
+ * host this way, so an unknown host fails with the same remedy on each.
+ * @param {string} repo
+ * @param {string} host
+ * @param {string} tier
+ * @returns {string}
+ */
+export function hostModelFor(repo, host, tier) {
+  const hosts = loadHosts(repo);
+  const map = hosts[host];
+  if (!map) {
+    throw new Error(`no model map for host "${host}". Known: ${Object.keys(hosts).join(", ")}. ` + "Add one in .otito/model-route.json, or use --tier-only.");
+  }
+  return map[tier];
 }
 
 /**
@@ -260,16 +256,20 @@ function nameProbabilities(answer, levels) {
 }
 
 /**
- * Ask the System One model all three questions in one call.
+ * Ask the System One model the route questions, and the request-read questions
+ * alongside them, in one call.
+ *
+ * Folding the read into the route call is TypeSafe's speculative fan-out: the
+ * questions are evaluated independently against one state, so asking what kind
+ * of work this is, which otito tool answers it, and whether each ranked file
+ * matters costs input tokens and no extra round trip. The read is REPORTED in
+ * `read`; `scoreDecision` never sees it, so it cannot move a tier.
+ *
  * @param {string} request
  * @param {ReturnType<typeof signalsFrom>} signals
- * @param {{ apiKey?: string, fetchImpl?: typeof fetch }} [options]
+ * @param {{ apiKey?: string, fetchImpl?: typeof fetch, timeoutMs?: number }} [options]
  */
 export async function askJev(request, signals, options = {}) {
-  const apiKey = options.apiKey ?? process.env.TYPESAFE_API_KEY;
-  if (!apiKey) throw new Error("TYPESAFE_API_KEY is not set");
-  const doFetch = options.fetchImpl ?? globalThis.fetch;
-
   const state = {
     request,
     repository: {
@@ -280,45 +280,17 @@ export async function askJev(request, signals, options = {}) {
     likely_files: signals.evidence,
     risk_flags: signals.riskPaths,
   };
+  const read = readQuestions({ files: signals.evidence ?? [] });
 
-  const started = Date.now();
-  const response = await doFetch(API_URL, {
-    method: "POST",
-    headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
-    body: JSON.stringify({ state, model: JEV_MODEL, questions: QUESTIONS }),
-  });
-  const latencyMs = Date.now() - started;
-
-  if (!response.ok) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`TypeSafe API ${response.status}: ${body.slice(0, 200)}`);
-  }
-
-  const payload = /** @type {any} */ (await response.json());
-  const answers = payload.answers ?? {};
+  const reply = await askSystemOne(state, { ...QUESTIONS, ...read }, options);
+  const answers = pickAnswers(reply.answers, QUESTIONS);
   nameProbabilities(answers.blast_radius, BLAST_LEVELS);
   nameProbabilities(answers.specificity, SPECIFICITY_LEVELS);
 
-  // Report the count the response gave, and remember which quantity it is.
-  // JEV_PER_MTOK covers input tokens; a `total_tokens` figure also contains
-  // output, which this rate does not price. Collapsing the two into one number
-  // used to bill output at the input rate silently, so the two stay apart: the
-  // count is still shown, and only an input count is priced.
-  const usage = payload.usage ?? {};
-  const count = (/** @type {any} */ value) => (typeof value === "number" && Number.isFinite(value) ? value : null);
-  const inputTokens = count(usage.input_tokens);
-  const totalTokens = count(usage.total_tokens) ?? count(usage.tokens);
-
   return {
-    source: "jev",
-    model: payload.model ?? JEV_MODEL,
-    tokens: inputTokens ?? totalTokens,
-    /** Tokens JEV_PER_MTOK covers. Null when the response reported no input count. */
-    billableTokens: inputTokens,
-    /** Which quantity `tokens` holds, so no surface has to guess. */
-    tokenKind: inputTokens !== null ? "input" : totalTokens !== null ? "total" : null,
-    latencyMs,
+    ...reply,
     answers,
+    read: interpretRead(reply.answers, signals.evidence ?? []),
   };
 }
 
@@ -361,13 +333,15 @@ export function offlineAnswers(request, signals) {
   // request one tier. An estimate with no confidence says so with null and
   // leaves the low-confidence bump to answers that measured one.
 
-  return /** @type {{ source: string, model: string, tokens: number|null, billableTokens: number|null, tokenKind: string|null, latencyMs: number, answers: any, fallbackReason?: string }} */ ({
+  return /** @type {{ source: string, model: string, tokens: number|null, billableTokens: number|null, tokenKind: string|null, latencyMs: number, answers: any, read: import("./jev.js").RequestRead|null, fallbackReason?: string }} */ ({
     source: "offline",
     model: "offline-heuristic",
     tokens: null,
     billableTokens: null,
     tokenKind: null,
     latencyMs: 0,
+    // A keyword heuristic has no read of the request to offer, and says so.
+    read: null,
     answers: {
       specificity: {
         type: "score",
@@ -575,7 +549,7 @@ export async function generateRoute(request, options = {}) {
     scoring,
     model: jev,
     signals,
-    costUsd: priceRouteCall(jev.billableTokens),
+    costUsd: priceJevCall(jev.billableTokens),
   };
 }
 

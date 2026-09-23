@@ -5,6 +5,7 @@
 // it. Takes otito's renderer, so `--color`, `--no-color`, `--theme`, NO_COLOR
 // and a piped stdout behave exactly as they do in every other command.
 
+import { DEMOTE_BELOW } from "../jev.js";
 import { CONFIDENCE_FLOOR } from "../model-route.js";
 
 const ESC = String.fromCharCode(27);
@@ -88,6 +89,30 @@ export function formatRouteTerminal(data, renderer) {
   }
   out.push("");
 
+  // The request read rides the same call and is reported, never scored: the
+  // tier above was computed without it.
+  const read = data.model.read;
+  if (read) {
+    out.push(renderer.section(`request read  ${dim("(reported, never scored)")}`, ""));
+    for (const [label, answer] of /** @type {[string, any][]} */ ([
+      ["intent", read.intent],
+      ["otito tool", read.capability],
+    ])) {
+      if (!answer) {
+        out.push(`    ${dim(label.padEnd(16))}${dim("no answer")}`);
+        continue;
+      }
+      const confidence = answer.confidence === null ? dim("not measured") : paint(answer.confidence.toFixed(2), answer.accepted ? "32" : "33");
+      out.push(`    ${dim(label.padEnd(16))}${bold(answer.choice)}  ${confidence}${answer.accepted ? "" : dim("  under the floor")}`);
+    }
+    for (const file of read.relevance) {
+      const weak = file.relevance !== null && file.relevance < DEMOTE_BELOW;
+      const value = file.relevance === null ? dim("  -  ") : paint(file.relevance.toFixed(2), weak ? "31" : "0");
+      out.push(`    ${dim("needs".padEnd(16))}${mini(file.relevance ?? 0)}  ${value}  ${weak ? dim(file.path) : file.path}`);
+    }
+    out.push("");
+  }
+
   out.push(renderer.section("repository signals  (deterministic, local)", ""));
   const risk = signals.riskPaths.length ? paint(signals.riskPaths.join(", "), "31") : dim("none");
   out.push(
@@ -146,5 +171,28 @@ export function formatRouteMarkdown(data) {
     `| containment | ${data.signals.containment} |`,
     `| risk paths | ${data.signals.riskPaths.join(", ") || "none"} |`,
     "",
+    ...formatReadMarkdown(data.model.read),
   ].join("\n");
+}
+
+/**
+ * @param {any} read
+ * @returns {string[]}
+ */
+function formatReadMarkdown(read) {
+  if (!read) return [];
+  const choice = (/** @type {any} */ answer) =>
+    answer ? `${answer.choice} (confidence ${answer.confidence ?? "not measured"}${answer.accepted ? "" : ", under the floor"})` : "no answer";
+  const files = read.relevance
+    .filter((/** @type {any} */ file) => file.relevance !== null)
+    .map((/** @type {any} */ file) => `\`${file.path}\` ${file.relevance.toFixed(2)}`)
+    .join(", ");
+  return [
+    "Request read, reported and never scored:",
+    "",
+    `- **Intent**: ${choice(read.intent)}`,
+    `- **otito tool**: ${choice(read.capability)}`,
+    `- **Files the request needs**: ${files || "no answer"}`,
+    "",
+  ];
 }

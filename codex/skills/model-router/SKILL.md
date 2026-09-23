@@ -1,7 +1,7 @@
 ---
 name: model-router
 description: >-
-  Score a coding task and route it to a cheap, mid, or premium model tier before spending tokens. Use at the start of any coding, review, debug, or planning request on any agent host (Cursor, Codex, Claude Code, Gemini, Kimi, Herdr, etc.). Prefer Otito agent_experience (AX) when available; otherwise use the heuristic rubric in this skill. Do not use an expensive model for trivial edits.
+  Score a coding task and route it to a cheap, mid, or premium model tier before spending tokens. Use at the start of any coding, review, debug, or planning request on any agent host (Cursor, Codex, Claude Code, Gemini, Kimi, Herdr, etc.). Prefer Otito model_route (or agent_experience AX on older versions) when available; otherwise use the heuristic rubric in this skill. Do not use an expensive model for trivial edits.
 ---
 
 # Model router (host-agnostic)
@@ -18,12 +18,21 @@ Re-score if the task clearly escalates (e.g. "quick typo" becomes a multi-module
 
 ## Step 1 — Score the task
 
-### A. Prefer Otito AX (when MCP/CLI is available)
+### A. Prefer Otito's router (when MCP/CLI is available)
+
+```bash
+otito route <repo> "<task>" --json
+# MCP: model_route { query, path, host? }
+# Herdr: herdr plugin action invoke bashbop.otito.model-route
+```
+
+`model_route` returns the tier directly, with AX, the risk bumps, and — when `TYPESAFE_API_KEY` is set in the server's environment — a System One read of the request. `model.source` says `jev` or `offline`. Use its `tier` as is: the router already applied its own risk and no-evidence bumps, so the AX bump rule below does not apply to it.
+
+Only AX available (an older otito)? Score it and map it yourself:
 
 ```bash
 otito ax "<task>" --path <repo> --json
 # MCP: agent_experience { query, path }
-# Herdr: herdr plugin action invoke bashbop.otito.model-route
 ```
 
 | AX    | Tier        |

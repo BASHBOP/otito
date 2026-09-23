@@ -9,15 +9,14 @@ import {
   BAND_CHEAP,
   BAND_MID,
   CONFIDENCE_FLOOR,
-  JEV_PER_MTOK,
   loadHosts,
   offlineAnswers,
-  priceRouteCall,
   QUESTIONS,
   routeFooter,
   scoreDecision,
   signalsFrom,
 } from "../src/lib/model-route.js";
+import { JEV_PER_MTOK, priceJevCall } from "../src/lib/jev.js";
 import { generateAxScore } from "../src/lib/ax.js";
 import { formatRouteMarkdown, formatRouteTerminal } from "../src/lib/render/route.js";
 import { createRenderer } from "../src/lib/render/fancy.js";
@@ -423,6 +422,85 @@ test("askJev sends the request and repository evidence as state", async () => {
   assert.equal(sent.model, "jev-latest");
 });
 
+test("askJev folds the request read into the same call and keeps it out of the score", async () => {
+  let sent;
+  let calls = 0;
+  const fetchImpl = async (_url, init) => {
+    calls += 1;
+    sent = JSON.parse(init.body);
+    return {
+      ok: true,
+      json: async () => ({
+        answers: {
+          specificity: { type: "score", score: 0.2, confidence: 0.9, probabilities: [0.9, 0.08, 0.02] },
+          blast_radius: { type: "score", score: 0.1, confidence: 0.9, probabilities: [0.9, 0.08, 0.02] },
+          novelty: { type: "noul", noul: 0.1 },
+          read_intent: { type: "choice", choice: "change", confidence: 0.8, probabilities: { change: 0.87 } },
+          read_capability: { type: "choice", choice: "model_route", confidence: 0.2, probabilities: { model_route: 0.4 } },
+          read_file_0: { type: "noul", noul: 0.9 },
+          read_file_1: { type: "noul", noul: 0.05 },
+        },
+      }),
+    };
+  };
+  const result = await askJev("reword the doctor banner", signals({ evidence: [{ path: "src/doctor.js" }, { path: "src/billing.js" }] }), {
+    apiKey: "k",
+    fetchImpl,
+  });
+
+  assert.equal(calls, 1, "one round trip for route and read together");
+  assert.deepEqual(Object.keys(sent.questions), ["specificity", "blast_radius", "novelty", "read_intent", "read_capability", "read_file_0", "read_file_1"]);
+  assert.deepEqual(Object.keys(result.answers), ["specificity", "blast_radius", "novelty"], "the scorer sees route answers only");
+  assert.equal(result.read.intent.choice, "change");
+  assert.equal(result.read.intent.accepted, true);
+  assert.equal(result.read.capability.accepted, false);
+  assert.deepEqual(result.read.relevance, [
+    { path: "src/doctor.js", relevance: 0.9 },
+    { path: "src/billing.js", relevance: 0.05 },
+  ]);
+
+  // The read never moves the tier: the same route answers with and without it
+  // score identically.
+  const withRead = scoreDecision({ answers: result.answers, signals: signals() });
+  const withoutRead = scoreDecision({ answers: pickRoute(result.answers), signals: signals() });
+  assert.deepEqual(withRead, withoutRead);
+
+  const markdown = formatRouteMarkdown({
+    request: "reword the doctor banner",
+    repo: { name: "fixture" },
+    scoring: withRead,
+    model: { source: "jev", model: "jev-test", answers: result.answers, read: result.read },
+    signals: signals(),
+  });
+  assert.match(markdown, /Request read, reported and never scored/);
+  assert.match(markdown, /\*\*Intent\*\*: change \(confidence 0\.8\)/);
+  assert.match(markdown, /\*\*otito tool\*\*: model_route \(confidence 0\.2, under the floor\)/);
+  assert.match(markdown, /`src\/billing\.js` 0\.05/);
+
+  const terminal = formatRouteTerminal(
+    {
+      request: "reword the doctor banner",
+      repo: { name: "fixture" },
+      scoring: withRead,
+      model: { source: "jev", model: "jev-test", answers: result.answers, read: result.read, tokens: null },
+      signals: signals(),
+      costUsd: null,
+    },
+    createRenderer({ color: false, emoji: false }),
+  );
+  assert.match(terminal, /request read {2}\(reported, never scored\)/);
+  assert.match(terminal, /otito tool {6}model_route {2}0\.20 {2}under the floor/);
+});
+
+/** @param {Record<string, any>} answers */
+function pickRoute(answers) {
+  return { specificity: answers.specificity, blast_radius: answers.blast_radius, novelty: answers.novelty };
+}
+
+test("an offline route has no request read to report", () => {
+  assert.equal(offlineAnswers("a request", signals()).read, null);
+});
+
 test("askJev surfaces an API failure rather than inventing an answer", async (t) => {
   const fetchImpl = async () => ({ ok: false, status: 401, text: async () => "unauthorized" });
   await assert.rejects(() => askJev("q", signals(), { apiKey: "k", fetchImpl }), /401/);
@@ -575,7 +653,7 @@ test("askJev prices input tokens and refuses to price a total", async () => {
   assert.equal(total.tokens, 900);
   assert.equal(total.billableTokens, null);
   assert.equal(total.tokenKind, "total");
-  assert.equal(priceRouteCall(total.billableTokens), null);
+  assert.equal(priceJevCall(total.billableTokens), null);
 
   // A bare `tokens` field is no more specific than a total, and is read as one.
   const bare = await askJev("a request", signals(), { apiKey: "k", fetchImpl: usageFetch({ tokens: 120 }) });
@@ -586,22 +664,11 @@ test("askJev prices input tokens and refuses to price a total", async () => {
   const both = await askJev("a request", signals(), { apiKey: "k", fetchImpl: usageFetch({ input_tokens: 700, total_tokens: 900 }) });
   assert.equal(both.tokens, 700);
   assert.equal(both.billableTokens, 700);
-  assert.equal(priceRouteCall(both.billableTokens), Number(((700 * JEV_PER_MTOK) / 1e6).toFixed(6)));
+  assert.equal(priceJevCall(both.billableTokens), Number(((700 * JEV_PER_MTOK) / 1e6).toFixed(6)));
 
   const none = await askJev("a request", signals(), { apiKey: "k", fetchImpl: usageFetch(undefined) });
   assert.equal(none.tokens, null);
   assert.equal(none.tokenKind, null);
-});
-
-test("priceRouteCall separates a free call from an unmeasured one", () => {
-  // Zero is a measurement: the call billed nothing and costs nothing.
-  assert.equal(priceRouteCall(0), 0);
-  assert.equal(priceRouteCall(1_000_000), JEV_PER_MTOK);
-
-  // These are absences, not amounts, and must not read as free.
-  for (const missing of [null, undefined, Number.NaN, Number.POSITIVE_INFINITY, -1, "700"]) {
-    assert.equal(priceRouteCall(/** @type {any} */ (missing)), null, `${String(missing)} should not price`);
-  }
 });
 
 test("offlineAnswers reports no tokens of any kind", () => {
@@ -609,7 +676,7 @@ test("offlineAnswers reports no tokens of any kind", () => {
   assert.equal(offline.tokens, null);
   assert.equal(offline.billableTokens, null);
   assert.equal(offline.tokenKind, null);
-  assert.equal(priceRouteCall(offline.billableTokens), null);
+  assert.equal(priceJevCall(offline.billableTokens), null);
 });
 
 test("the route call line reports a total it cannot price, and omits itself with no tokens", () => {
