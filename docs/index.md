@@ -92,6 +92,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 | --- | --- |
 | [Calibration](./17-calibration-thesis/README.md) | Grading risk flags against a repository's own history |
 | [Model Routing](./18-model-routing/README.md) | Spending a calibrated model on the request side without touching the gate |
+| [Dogfooding](./19-dogfooding/README.md) | Running otito on real work, and writing down what it got wrong |
 
 ### Reference
 

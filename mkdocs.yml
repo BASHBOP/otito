@@ -98,6 +98,7 @@ nav:
   - Measurement:
       - Calibration: 17-calibration-thesis/README.md
       - Model Routing: 18-model-routing/README.md
+      - Dogfooding: 19-dogfooding/README.md
   - Reference:
       - Evaluation Guide: EVALS.md
       - Glossary: GLOSSARY.md
