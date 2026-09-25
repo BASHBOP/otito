@@ -93,10 +93,12 @@ pattern, and it is the same division of labour otito already draws between
 evidence and verdict.
 
 Score `criteria` is an **ordered list**, not an object, index 0 is level 0.
-Noul answers carry no `confidence`, only Score and Choice do, so the router's
-confidence floor reads the weaker of the two Score answers. The offline
-estimator reports `null` for both: it has a shape, not a measurement, and the
-floor is a fail-safe on a measured number rather than a default.
+Noul answers carry no `confidence`, only Score and Choice do, so the router
+reports the weaker of the two Score confidences, for a reader. It is a display
+threshold only, and not a routing input: a spread answer already pays through
+its own score term, and reading confidence as a second input escalated 67% of
+requests on this repository (see the otito dogfood below). The offline estimator
+reports `null`: it has a shape, not a measurement.
 
 ### The arithmetic
 
@@ -132,9 +134,13 @@ described above and the questions; file contents never leave the machine.
 
 ### Cost and latency
 
-Jev bills input only, at $0.042/Mtok. Measured on this corpus: **728 to 845 input
-tokens, $0.000019 to $0.000034 per decision, 534 to 764 ms.** The money is a rounding
-error against one premium turn. Latency is the budget that binds, and otito's
+Jev bills input only, at $0.042/Mtok. Measured on this repository on 2026-09-26
+against `jev-1.13.0`, with the request read folded into the same call: **2,059 to
+2,165 input tokens, $0.000086 to $0.000091 per decision, 291 to 323 ms.** A
+`context --online` read at the 24-file cap is 2,827 tokens, $0.000119 (below).
+The pre-read figure this section used to print, 728 to 845 tokens, is 2.6× lower
+than the call that ships today. The money is a rounding error against one
+premium turn. Latency is the budget that binds, and otito's
 own half costs more than Jev's, about 5s, because `generateAxScore` recomputes
 the impact pass the router already ran. A real `otito route` should compute
 impact once.

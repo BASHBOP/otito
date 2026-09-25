@@ -13,6 +13,10 @@ This project follows SemVer.
 - **Jev calls identify Otito.** Every call to TypeSafe goes out under `user-agent: otito/<version>`, with the client name and version only.
 - **A reusable post-merge attestation workflow.** `.github/workflows/attest.yml` takes `workflow_call` with `target_sha`, `ledger_path`, `ledger_branch`, `otito_ref` and `reset_ledger`, checks the tool out beside the repository under attestation, attests every missing first-parent commit and persists the ledger to the ledger branch. otito's own post-merge workflow now calls it with the merged commit as the tool ref. `scripts/post-merge-attest.sh` and `scripts/reconcile-attestations.sh` take `OTITO_REPO`, `OTITO_BIN` and `OTITO_LEDGER` so they can attest a repository other than the one they ship in; the verdict is written beside the ledger.
 
+### Fixed
+
+- **docs/18 printed a Jev cost that did not follow from its own token count, and a token count 2.6× lower than the call that ships.** The "Cost and latency" section carried the pre-read measurement (728 to 845 input tokens) with a dollar range ($0.000019) that is not that count at $0.042/Mtok. Re-measured on 2026-09-26 against `jev-1.13.0` with the request read folded in: 2,059 to 2,165 input tokens, $0.000086 to $0.000091, 291 to 323 ms. The same page still described the confidence floor as a routing fail-safe; it is a display threshold only since the double-count fix, and the paragraph now says so. docs/19 rounds the per-call cost to "about a hundredth of a cent" instead of "under", which was wrong for a 24-file context read.
+
 ## [3.0.0] - 2026-09-25
 
 The first major release since the Òtítọ́ cutover. It follows 1.15.0 directly: the `v2.x` tags belong to the Repoctx releases, so the version skips them.
