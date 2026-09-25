@@ -52,7 +52,7 @@ This is being piloted with teams that have SOC 2, ISO 27001 or regulated audits 
 
 Some properties of a request live in the sentence, not the code: how precisely it names what has to change, and how far the edits will reach. `otito route` asks TypeSafe's Jev those questions once, before work starts, and combines the answers with the repository's own deterministic half to recommend a cheap, mid or premium tier. `otito context --online` uses the same call to relabel a confident intent and demote files the model judges irrelevant.
 
-It runs on your own TypeSafe key, billed by TypeSafe: about 2,000 input tokens and under a hundredth of a cent per call. Without a key, `route` still answers with a labelled offline estimate and `context` is unchanged.
+It runs on your own TypeSafe key, billed by TypeSafe: about 2,000 to 2,800 input tokens and about a hundredth of a cent per call. Without a key, `route` still answers with a labelled offline estimate and `context` is unchanged.
 
 Two limits hold by design. Otito recommends a tier; only the host can switch models, and Otito never claims one was switched. And nothing the model says reaches the gate: an unreachable or unkeyed model costs a tier, never a verdict. [Model Routing](../18-model-routing/README.md) has the measurements.
 
