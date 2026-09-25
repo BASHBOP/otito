@@ -40,7 +40,7 @@ The supporting commands run the same way: `impact` and `converge` (the pieces `g
 
 Every merge to `main` can leave a record of what shipped and under which review verdict. Each record hashes the one before it, so editing any stored field breaks every hash after it, and each is keyed to the exact merge commit, so a missing commit is visible.
 
-**Locally, this is complete.** The [post-merge workflow](https://github.com/BASHBOP/otito/blob/main/.github/workflows/post-merge-attest.yml) runs `otito attest` to append a record to a ledger branch in your own repository, and `otito attest --verify` walks the chain and exits non-zero if any record was altered. The evidence format is open JSON Lines with a `schemaVersion` on every record and on the verdict it came from, so an export is the file itself.
+**Locally, this is complete.** The [reusable post-merge workflow](https://github.com/BASHBOP/otito/blob/main/.github/workflows/attest.yml), which any repository can call with one `uses:` line, runs `otito attest` to append a record to a ledger branch in your own repository, and `otito attest --verify` walks the chain and exits non-zero if any record was altered. The evidence format is open JSON Lines with a `schemaVersion` on every record and on the verdict it came from, so an export is the file itself.
 
 **Hosted adds what one repository cannot hold:** a ledger per organisation across every repository, chain verification and a list of missing commits on demand, an auditor-ready export, and retention you set once. It is opt-in per repository: nothing changes for a repository that never pushes, and a pushed record is a copy, never a move.
 

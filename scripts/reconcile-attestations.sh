@@ -2,9 +2,16 @@
 # Reconcile the durable audit ledger through a target commit on main.
 # Missing first-parent commits are attested oldest-first so the hash chain
 # remains deterministic and complete even when a bot merge suppresses push CI.
+#
+# Runs against this checkout by default. OTITO_REPO, OTITO_BIN and
+# OTITO_LEDGER select another repository, otito command and ledger file; see
+# post-merge-attest.sh, which this script drives.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TOOL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="${OTITO_REPO:-$TOOL_ROOT}"
+ROOT="$(cd "$ROOT" && pwd)"
+OTITO_BIN="${OTITO_BIN:-node $TOOL_ROOT/src/cli.js}"
 cd "$ROOT"
 
 # OTITO_TARGET_SHA first: in Actions, GITHUB_SHA is the runner's own value and
@@ -110,7 +117,7 @@ else
 fi
 if [ -z "$COMMITS" ]; then
   echo "reconcile-attestations: ledger already covers $TARGET_SHA"
-  node src/cli.js attest . --verify --ledger "$LEDGER"
+  $OTITO_BIN attest . --verify --ledger "$LEDGER"
   exit 0
 fi
 
@@ -132,13 +139,15 @@ for MERGE_SHA in $COMMITS; do
   fi
 
   OTITO_ATTEST_MODE="$ATTEST_MODE" \
+    OTITO_REPO="$ROOT" \
+    OTITO_BIN="$OTITO_BIN" \
     OTITO_LEDGER="$LEDGER" \
     OTITO_TARGET_SHA="$MERGE_SHA" \
     GITHUB_SHA="$MERGE_SHA" \
     GITHUB_EVENT_BEFORE="$BASE_SHA" \
-    bash scripts/post-merge-attest.sh
+    bash "$TOOL_ROOT/scripts/post-merge-attest.sh"
 done
 
 if [ "${OTITO_ATTEST_DRY_RUN:-0}" != "1" ]; then
-  node src/cli.js attest . --verify --ledger "$LEDGER"
+  $OTITO_BIN attest . --verify --ledger "$LEDGER"
 fi

@@ -31,13 +31,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  reconcile:
+  resolve:
     if: >-
       github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' &&
         (github.event.workflow_run.event == 'pull_request' ||
           (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')))
 
     runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.resolve.outputs.should_run }}
+      target_sha: ${{ steps.resolve.outputs.target_sha }}
     steps:
       - name: Resolve merged main commit
         id: resolve
@@ -87,101 +90,21 @@ jobs:
           echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
           echo "should_run=true" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout merged main commit
-        if: steps.resolve.outputs.should_run == 'true'
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ steps.resolve.outputs.target_sha }}
-          fetch-depth: 0
-
-      - name: Restore durable audit ledger
-        if: steps.resolve.outputs.should_run == 'true'
-        run: |
-          set -euo pipefail
-          if git fetch origin audit-ledger:refs/remotes/origin/audit-ledger; then
-            git show origin/audit-ledger:audit-pilot/ledger.jsonl > audit-pilot/ledger.jsonl
-            git show origin/audit-ledger:audit-pilot/verdict-latest.json > audit-pilot/verdict-latest.json || true
-          else
-            echo "No audit-ledger branch exists yet; starting from the committed pilot ledger."
-          fi
-
-      - name: Set up Node.js
-        if: steps.resolve.outputs.should_run == 'true'
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        if: steps.resolve.outputs.should_run == 'true'
-        run: npm ci
-
-      - name: Reconcile missing main attestations
-        if: steps.resolve.outputs.should_run == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          # Not GITHUB_SHA: the runner keeps its own value for GITHUB_* variables
-          # (the default branch head when the run starts), so a step cannot
-          # override it and the script would attest whatever main was by then.
-          OTITO_TARGET_SHA: ${{ steps.resolve.outputs.target_sha }}
-          # Resetting the audit chain is a decision, so only a person starting
-          # the workflow by hand can ask for it; a CI-triggered run never can.
-          OTITO_ATTEST_RESET_LEDGER: ${{ github.event_name == 'workflow_dispatch' && inputs.reset_ledger && '1' || '0' }}
-        run: bash scripts/reconcile-attestations.sh
-
-      - name: Persist ledger on audit-ledger branch
-        if: steps.resolve.outputs.should_run == 'true'
-        env:
-          TARGET_SHA: ${{ steps.resolve.outputs.target_sha }}
-          SHORT_SHA: ${{ steps.resolve.outputs.short_sha }}
-        run: |
-          set -euo pipefail
-          LEDGER_DIR="$RUNNER_TEMP/otito-audit-ledger"
-          rm -rf "$LEDGER_DIR"
-
-          if git show-ref --verify --quiet refs/remotes/origin/audit-ledger; then
-            git worktree add --detach "$LEDGER_DIR" origin/audit-ledger
-          else
-            git worktree add --detach "$LEDGER_DIR" "$TARGET_SHA"
-            git -C "$LEDGER_DIR" switch --orphan audit-ledger
-            git -C "$LEDGER_DIR" rm -rf . || true
-          fi
-
-          mkdir -p "$LEDGER_DIR/audit-pilot"
-          cp audit-pilot/ledger.jsonl "$LEDGER_DIR/audit-pilot/ledger.jsonl"
-          cp audit-pilot/verdict-latest.json "$LEDGER_DIR/audit-pilot/verdict-latest.json"
-
-          git -C "$LEDGER_DIR" config user.name "github-actions[bot]"
-          git -C "$LEDGER_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C "$LEDGER_DIR" add audit-pilot/ledger.jsonl audit-pilot/verdict-latest.json
-
-          # A reset leaves the superseded chain in audit-pilot/ledger-orphaned-*.jsonl.
-          # Keep it beside the new chain so an auditor can still verify it.
-          shopt -s nullglob
-          for archive in audit-pilot/ledger-orphaned-*.jsonl; do
-            cp "$archive" "$LEDGER_DIR/$archive"
-            git -C "$LEDGER_DIR" add "$archive"
-          done
-
-          if git -C "$LEDGER_DIR" diff --cached --quiet; then
-            echo "Audit ledger already contains $TARGET_SHA."
-            exit 0
-          fi
-
-          MESSAGE="audit: attest main through $SHORT_SHA"
-          if [ -n "$(git -C "$LEDGER_DIR" diff --cached --name-only --diff-filter=A -- 'audit-pilot/ledger-orphaned-*.jsonl')" ]; then
-            MESSAGE="audit: archive the orphaned chain and restart at $SHORT_SHA"
-          fi
-          git -C "$LEDGER_DIR" commit -m "$MESSAGE"
-          git -C "$LEDGER_DIR" push origin HEAD:refs/heads/audit-ledger
-
-      - name: Upload attestation evidence
-        if: always() && steps.resolve.outputs.should_run == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: otito-audit-attestation-${{ steps.resolve.outputs.short_sha }}
-          path: |
-            audit-pilot/ledger.jsonl
-            audit-pilot/verdict-latest.json
-            audit-pilot/ledger-orphaned-*.jsonl
-          retention-days: 90
+  # The attestation itself is the reusable workflow any repository can call.
+  # otito runs it on its own merged commit, so the engine that attests a
+  # commit is the one that commit ships.
+  attest:
+    needs: resolve
+    if: needs.resolve.outputs.should_run == 'true'
+    uses: ./.github/workflows/attest.yml
+    with:
+      target_sha: ${{ needs.resolve.outputs.target_sha }}
+      otito_repository: ${{ github.repository }}
+      otito_ref: ${{ needs.resolve.outputs.target_sha }}
+      # Resetting the audit chain is a decision, so only a person starting
+      # the workflow by hand can ask for it; a CI-triggered run never can.
+      reset_ledger: ${{ github.event_name == 'workflow_dispatch' && inputs.reset_ledger || false }}
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: read

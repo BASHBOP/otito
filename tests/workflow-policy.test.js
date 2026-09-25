@@ -47,19 +47,37 @@ test("CI validates PRs once and reserves push validation for main", () => {
 });
 
 test("post-merge workflow reconciles successful CI into a durable audit branch", () => {
-  const workflow = read(".github/workflows/post-merge-attest.yml");
-  assert.match(workflow, /workflow_run:/);
-  assert.match(workflow, /workflows: \["otito CI"\]/);
-  assert.match(workflow, /bash scripts\/reconcile-attestations\.sh/);
-  assert.match(workflow, /HEAD:refs\/heads\/audit-ledger/);
-  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
+  // The repo's own workflow only resolves which commit merged; the attestation
+  // is the reusable workflow, which any repository can call the same way.
+  const caller = read(".github/workflows/post-merge-attest.yml");
+  assert.match(caller, /workflow_run:/);
+  assert.match(caller, /workflows: \["otito CI"\]/);
+  assert.match(caller, /github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(caller, /uses: \.\/\.github\/workflows\/attest\.yml/);
+  // otito attests its own commit with the engine that commit ships.
+  assert.match(caller, /otito_ref: \$\{\{ needs\.resolve\.outputs\.target_sha \}\}/);
+
+  const reusable = read(".github/workflows/attest.yml");
+  assert.match(reusable, /^on:\s+workflow_call:/m);
+  assert.match(reusable, /target_sha:[\s\S]*?required: true/);
+  assert.match(reusable, /scripts\/reconcile-attestations\.sh/);
+  assert.match(reusable, /ledger_branch:[\s\S]*?default: audit-ledger/);
+  assert.match(reusable, /HEAD:refs\/heads\/\$LEDGER_BRANCH/);
+  // The tool is checked out beside the repository under attestation and kept
+  // out of its tree, so the review never sees otito's own files as a change.
+  assert.match(reusable, /OTITO_REPO: \$\{\{ github\.workspace \}\}/);
+  assert.match(reusable, /OTITO_BIN: node \$\{\{ github\.workspace \}\}\/\$\{\{ env\.OTITO_TOOL_DIR \}\}\/src\/cli\.js/);
+  assert.match(reusable, /echo "\$OTITO_TOOL_DIR\/" >> \.git\/info\/exclude/);
 });
 
 test("the attestation target is passed in a variable the workflow can actually set", () => {
-  const workflow = read(".github/workflows/post-merge-attest.yml");
+  const caller = read(".github/workflows/post-merge-attest.yml");
+  const reusable = read(".github/workflows/attest.yml");
   // GitHub ignores a step's attempt to set a GITHUB_* variable.
-  assert.doesNotMatch(workflow, /^\s+GITHUB_SHA:/m);
-  assert.match(workflow, /OTITO_TARGET_SHA: \$\{\{ steps\.resolve\.outputs\.target_sha \}\}/);
+  assert.doesNotMatch(caller, /^\s+GITHUB_SHA:/m);
+  assert.doesNotMatch(reusable, /^\s+GITHUB_SHA:/m);
+  assert.match(caller, /target_sha: \$\{\{ needs\.resolve\.outputs\.target_sha \}\}/);
+  assert.match(reusable, /OTITO_TARGET_SHA: \$\{\{ inputs\.target_sha \}\}/);
 });
 
 test("the repository is solo-maintained, so its gate and attestation default to solo governance", () => {
@@ -70,14 +88,20 @@ test("the repository is solo-maintained, so its gate and attestation default to 
 });
 
 test("only a manual run can reset the audit ledger, and the archived chain is kept", () => {
-  const workflow = read(".github/workflows/post-merge-attest.yml");
-  assert.match(workflow, /reset_ledger:[\s\S]*?type: boolean\s+default: false/);
-  // One place sets the reset, and it is gated on a person dispatching the run.
-  assert.equal((workflow.match(/OTITO_ATTEST_RESET_LEDGER/g) ?? []).length, 1);
-  assert.match(workflow, /OTITO_ATTEST_RESET_LEDGER: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.reset_ledger && '1' \|\| '0' \}\}/);
-  // The superseded chain reaches the audit-ledger branch and the uploaded evidence.
-  assert.match(workflow, /for archive in audit-pilot\/ledger-orphaned-\*\.jsonl; do/);
-  assert.match(workflow, /path: \|[\s\S]*audit-pilot\/ledger-orphaned-\*\.jsonl/);
+  const caller = read(".github/workflows/post-merge-attest.yml");
+  const reusable = read(".github/workflows/attest.yml");
+  assert.match(caller, /reset_ledger:[\s\S]*?type: boolean\s+default: false/);
+  assert.match(reusable, /reset_ledger:[\s\S]*?type: boolean\s+default: false/);
+  // The caller decides, once, and only a person dispatching the run can say yes.
+  assert.equal((caller.match(/reset_ledger: \$\{\{/g) ?? []).length, 1);
+  assert.match(caller, /reset_ledger: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.reset_ledger \|\| false \}\}/);
+  // The reusable workflow sets the script variable in one place, from that input.
+  assert.equal((reusable.match(/OTITO_ATTEST_RESET_LEDGER/g) ?? []).length, 1);
+  assert.match(reusable, /OTITO_ATTEST_RESET_LEDGER: \$\{\{ inputs\.reset_ledger && '1' \|\| '0' \}\}/);
+  assert.doesNotMatch(caller, /OTITO_ATTEST_RESET_LEDGER/);
+  // The superseded chain reaches the ledger branch and the uploaded evidence.
+  assert.match(reusable, /for archive in "\$LEDGER_DIR"\/ledger-orphaned-\*\.jsonl; do/);
+  assert.match(reusable, /path: \|[\s\S]*ledger-orphaned-\*\.jsonl/);
 });
 
 test("workflow dependencies use setup-node v7 and TypeScript majors require migration", () => {

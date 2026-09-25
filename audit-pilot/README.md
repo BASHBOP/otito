@@ -59,6 +59,29 @@ Review exit codes are not verdict validity: a blocking `FAIL` intentionally exit
 
 `ledger-v1.jsonl` preserves the original pilot chain before first-parent completeness was enforced. The canonical `ledger.jsonl` was rebuilt from its unchanged genesis record so the previously skipped `bebc24d` commit and every later main commit are represented in order.
 
+## Use it in your own repository
+
+The attestation job is a reusable workflow. Call it after your own CI passes on the default branch:
+
+```yaml
+jobs:
+  attest:
+    uses: BASHBOP/otito/.github/workflows/attest.yml@main
+    with:
+      target_sha: ${{ github.sha }}
+      # ledger_path: audit-pilot/ledger.jsonl   # where records go
+      # ledger_branch: audit-ledger             # the branch that carries them
+      # otito_ref: v3.0.0                       # pin the engine
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: read
+```
+
+It checks otito out beside your repository, attests every first-parent commit between the ledger tip and `target_sha`, and commits the ledger to `ledger_branch`. Nothing leaves your repository. Verify at any time with `npx @bashbop/otito attest . --verify --ledger <file>`.
+
+The scripts behind it take three variables when run by hand: `OTITO_REPO` (the repository to attest), `OTITO_BIN` (the otito command) and `OTITO_LEDGER` (the ledger file). Unset, they attest the checkout they ship in.
+
 ## Notes / next steps
 
 - This run used **local mode** (`policy: standard`). Production wants **PR mode** (`--pr`) so the gate can verify approvals, CODEOWNERS, and status checks — the "Review state" WARN above is local mode telling you exactly that.

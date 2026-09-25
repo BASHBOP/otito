@@ -172,6 +172,60 @@ test("post-merge attestation records a valid FAIL verdict even when review exits
   assert.equal(row.mergeSha, merge);
 });
 
+test("the scripts attest another repository when OTITO_REPO, OTITO_BIN and OTITO_LEDGER are set", () => {
+  // This is the reusable-workflow mode: the tool is this checkout, the
+  // repository under attestation is somewhere else, and the ledger lives
+  // where the caller says. Nothing may be written under this checkout.
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), "attest-consumer-"));
+  git(target, ["init", "-q"]);
+  git(target, ["config", "user.name", "Òtítọ́ Test"]);
+  git(target, ["config", "user.email", "otito@example.test"]);
+  fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({ name: "consumer", version: "1.0.0", scripts: { test: "true" } }));
+  fs.writeFileSync(path.join(target, "index.js"), "module.exports = 1;\n");
+  git(target, ["add", "."]);
+  git(target, ["commit", "-qm", "base"]);
+  const base = git(target, ["rev-parse", "HEAD"]);
+  fs.writeFileSync(path.join(target, "index.js"), "module.exports = 2;\n");
+  git(target, ["add", "."]);
+  git(target, ["commit", "-qm", "feat: bump (#7)"]);
+  const merge = git(target, ["rev-parse", "HEAD"]);
+
+  const ledger = path.join(target, ".otito", "audit", "ledger.jsonl");
+  const ownLedgerBefore = fs.readFileSync(path.join(repoRoot, "audit-pilot", "ledger.jsonl"), "utf8");
+  const result = spawnSync("bash", [path.join(repoRoot, "scripts", "reconcile-attestations.sh")], {
+    cwd: os.tmpdir(),
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      OTITO_REPO: target,
+      OTITO_BIN: `${process.execPath} ${cli}`,
+      OTITO_LEDGER: ledger,
+      OTITO_TARGET_SHA: merge,
+      GITHUB_SHA: "",
+      GITHUB_EVENT_BEFORE: "",
+      OTITO_ATTEST_MODE: "diff",
+      OTITO_ATTEST_RESET_LEDGER: "0",
+      OTITO_ATTEST_DRY_RUN: "0",
+    },
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /Chain intact: 2 record\(s\)/, "both first-parent commits are attested, oldest first");
+
+  const rows = fs
+    .readFileSync(ledger, "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  assert.deepEqual(
+    rows.map((row) => row.mergeSha),
+    [base, merge],
+  );
+  assert.equal(rows[1].pr, 7);
+  assert.equal(rows[1].schemaVersion, 1);
+  assert.ok(fs.existsSync(path.join(target, ".otito", "audit", "verdict-latest.json")), "the verdict is written beside the ledger");
+  assert.equal(fs.readFileSync(path.join(repoRoot, "audit-pilot", "ledger.jsonl"), "utf8"), ownLedgerBefore, "the tool's own ledger is untouched");
+});
+
 /**
  * A repository whose ledger chains against commits that are not in it.
  * That is what a rename or a history rewrite leaves behind, and it is the
