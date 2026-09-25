@@ -650,6 +650,77 @@ test("evaluateLocal enforces a convergence floor and matching receipt", () => {
   assert.equal(mismatch.checks.find((check) => check.name === "Convergence").status, "FAIL");
 });
 
+test("evaluateLocal gates exactly base..head when a head ref is given", () => {
+  const root = initRepo("head");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "package-lock.json": JSON.stringify({ name: "fixture", version: "1.0.0", lockfileVersion: 3 }),
+      "src/index.ts": "export const greet = () => 'hi';\n",
+      "src/other.ts": "export const other = 1;\n",
+    },
+    "init",
+  );
+  writeAndCommit(root, { "src/index.ts": "export const greet = () => 'hello';\n" }, "tweak");
+  const headSha = git(root, "rev-parse", "HEAD").trim();
+  fs.writeFileSync(path.join(root, "src/other.ts"), "export const other = 2;\n");
+  fs.writeFileSync(path.join(root, ".env"), "SECRET=not-committed\n");
+
+  const result = evaluateLocal(root, { base: "HEAD~1", head: "HEAD", request: "update the greeting", minConvergence: 0 });
+  assert.equal(result.scope, "commit");
+  assert.equal(result.head, "HEAD");
+  assert.deepEqual(result.changedFiles, ["src/index.ts"]);
+  assert.equal(result.subject.kind, "git-commit");
+  assert.equal(result.subject.headSha, headSha);
+  assert.equal(result.subject.treeSha, git(root, "rev-parse", "HEAD^{tree}").trim());
+  assert.equal(result.checks.find((check) => check.name === "Secret safety").status, "PASS", "an untracked .env is not part of base..head");
+  const snapshot = result.checks.find((check) => check.name === "Commit snapshot");
+  assert.equal(snapshot.status, "PASS");
+  assert.match(snapshot.details.join(" "), new RegExp(`Head: ${headSha}`));
+  assert.deepEqual(result.receipt.subject, result.subject);
+  assert.match(formatPassMarkdown(result), new RegExp(`Head commit: \`${headSha}\``));
+
+  assert.throws(() => evaluateLocal(root, { base: "HEAD~1", head: "HEAD", staged: true }), /either --head <ref> or --staged/);
+  const missing = evaluateLocal(root, { base: "HEAD~1", head: "no-such-ref" });
+  assert.equal(missing.checks.find((check) => check.name === "Commit snapshot").status, "FAIL");
+  assert.deepEqual(missing.changedFiles, []);
+});
+
+test("a head-bound receipt verifies only when the gate measures the same head", () => {
+  const root = initRepo("head-receipt");
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+      "src/index.ts": "export const greet = () => 'hi';\n",
+    },
+    "init",
+  );
+  writeAndCommit(root, { "src/index.ts": "export const greet = () => 'hello';\n" }, "tweak");
+  const score = generateConvergence("update the greeting", { path: root, base: "HEAD~1", head: "HEAD" });
+  const receiptFile = path.join(root, "convergence.json");
+  fs.writeFileSync(receiptFile, JSON.stringify(score));
+
+  const verified = evaluateLocal(root, { base: "HEAD~1", head: "HEAD", request: "update the greeting", receipt: score.receipt.inputsHash });
+  assert.equal(verified.checks.find((check) => check.name === "Convergence").status, "PASS");
+
+  const fromFile = evaluateLocal(root, { base: "HEAD~1", head: "HEAD", request: "update the greeting", receipt: receiptFile });
+  assert.equal(fromFile.checks.find((check) => check.name === "Convergence").status, "PASS");
+
+  const workingTree = evaluateLocal(root, { base: "HEAD~1", request: "update the greeting", receipt: receiptFile });
+  const mismatch = workingTree.checks.find((check) => check.name === "Convergence");
+  assert.equal(mismatch.status, "FAIL");
+  assert.match(mismatch.summary, new RegExp(`bound to head commit ${score.subject.headSha} but the gate measured the working tree`));
+  assert.match(mismatch.summary, new RegExp(`--head ${score.subject.headSha}`));
+
+  const staged = evaluateLocal(root, { base: "HEAD~1", staged: true, request: "update the greeting", receipt: receiptFile });
+  assert.match(staged.checks.find((check) => check.name === "Convergence").summary, /measured a staged Git index tree/);
+
+  const bareHash = evaluateLocal(root, { base: "HEAD~1", request: "update the greeting", receipt: score.receipt.inputsHash });
+  assert.match(bareHash.checks.find((check) => check.name === "Convergence").summary, /does not match the recomputed receipt/);
+});
+
 test("evaluateLocal fails convergence enforcement when no task request is supplied", () => {
   const root = initRepo("convergence-no-task");
   writeAndCommit(root, { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }), "src/index.ts": "export const hi = 1;\n" }, "init");

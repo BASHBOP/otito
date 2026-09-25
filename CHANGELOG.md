@@ -6,6 +6,17 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **`otito converge --head <ref>` / `convergence_score { head }`: score exactly `base..head`.** Convergence could only diff `base` against the working tree, so any dirty or untracked file was scope drift. Scoring a one-commit feature (`--base HEAD~1`) in a checkout with three edited `.claude/*` files and an untracked `dump.rdb` reported 29 changed files for a 25-file commit and listed all four extras as drift. `head` diffs the two trees directly (no merge base), builds the scoring map from the head commit's raw blobs, and binds a v2 receipt to a new `git-commit` subject (`baseSha`, `headSha`, `treeSha`) the way `--staged` binds to the index tree. `--head` and `--staged` cannot be combined.
+- **`otito gate --head <ref>` / `review_gate { head }`.** The local gate's changed-path, risk, secret, and convergence checks read the head commit's tree, reported as a `Commit snapshot` check with `scope: "commit"`. A JSON receipt whose subject names a different mode or head than the gate measured now fails with the mode to rerun in (`--head <sha>`, `--staged`, `--pr <n>`) instead of a bare hash mismatch.
+
+### Changed
+
+- **Convergence counts a confirmed owner's own fan-out as in scope** (engine `0.2.0`). A file added beside a confirmed required owner (`owner-sibling`) and a test named after a confirmed file or inferred sibling (`owner-test`) move out of drift into `drivers.inferredRelated`, each with its rule and anchor. Siblings must be mapped, non-secret, and carry no risk flag the owner lacks; generic test stems such as `index` must sit beside their file. On the commit above, the new `PersonDialog.tsx`, `SendMessageCard.tsx` and three other components beside the `PeopleTable.tsx` owner, and five tests of confirmed files, stopped counting as drift: 55/100 (Scope 21, Risk alignment 15) became 84/100 (Scope 64, Risk alignment 85) with `--head HEAD`.
+- **Working-tree convergence no longer scores untracked files by default.** They are listed under `untracked` with a recommendation; `--include-untracked` / `includeUntracked: true` restores the old behaviour. `change_impact` still counts untracked files.
+- Receipts issued by convergence engine `0.1.0` do not recompute under `0.2.0`; re-issue them.
+
 ## [1.15.0] - 2026-09-23
 
 ### Added

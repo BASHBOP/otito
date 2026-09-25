@@ -27,6 +27,7 @@ export const DIFF_RENAME_LIMIT = 1000;
  * @property {string} [diffBase]
  * @property {string[]} [diffFiles]
  * @property {any} [codeMap]
+ * @property {boolean} [includeUntracked] count untracked files as changed against diffBase (default true)
  */
 
 /**
@@ -228,7 +229,7 @@ export function generateImpact(query, options = {}) {
   const withBoosts = applyDependencyBoosts(map.files, scored);
   const heuristicRanked = [...withBoosts.values()].sort((a, b) => b.score - a.score).slice(0, top);
   const roles = classifyImpactRoles(heuristicRanked, map.files, normalized);
-  const diffSnapshot = captureDiffSnapshot(map.repo.root, options.diffBase, options.diffFiles);
+  const diffSnapshot = captureDiffSnapshot(map.repo.root, options.diffBase, options.diffFiles, options.includeUntracked ?? true);
   const exactDiffFiles = diffSnapshot?.ok ? (diffSnapshot.files ?? []) : [];
   const diffEvidence = diffSnapshot?.ok ? buildDiffEvidence(exactDiffFiles, map.files, withBoosts, diffSnapshot.base) : null;
   // A requested Git diff is evidence, not another fuzzy ranking signal. Put every
@@ -704,12 +705,13 @@ function riskSentence(flag) {
  * Capture the changed-file subject once before it is used for both evidence and
  * validation. Supplied diff files come from an immutable Git subject in the
  * convergence path; direct CLI use captures the current diff plus untracked
- * user files.
+ * user files unless `includeUntracked` is false.
  * @param {string} root
  * @param {string | undefined} base
  * @param {string[] | undefined} suppliedFiles
+ * @param {boolean} includeUntracked
  */
-function captureDiffSnapshot(root, base, suppliedFiles) {
+function captureDiffSnapshot(root, base, suppliedFiles, includeUntracked) {
   if (Array.isArray(suppliedFiles)) {
     return { base: base ?? "", ok: true, files: normalizeChangedFiles(suppliedFiles) };
   }
@@ -753,6 +755,9 @@ function captureDiffSnapshot(root, base, suppliedFiles) {
       ok: false,
       error: `git diff failed: ${message}`,
     };
+  }
+  if (!includeUntracked) {
+    return { base, ok: true, files: normalizeChangedFiles(result.stdout.split("\0")) };
   }
   const untracked = runCommand("git", ["ls-files", "--others", "--exclude-standard", "-z"], { cwd: root });
   if (!untracked.ok) {

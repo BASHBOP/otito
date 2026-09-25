@@ -75,6 +75,7 @@ The convergence score is the part a model cannot grade for itself: it compares t
 | Prepare task context for an agent  | `otito context "add a new MCP tool" --path .`                               |
 | Rank change blast radius           | `otito impact . "add refund handling" --top 12`                             |
 | Score intent vs. execution         | `otito converge "add refunds" --path . --base HEAD --staged`                |
+| Score a committed change exactly   | `otito converge "add refunds" --path . --base HEAD~1 --head HEAD`           |
 | Grade risk flags against history   | `otito calibrate . --window 30`                                             |
 | Gate an exact staged change        | `otito gate . --staged --run-validation`                                    |
 | Gate a product change across repos | `otito workspace-gate ../web ../api --request "ship change"`                |

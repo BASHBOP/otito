@@ -235,19 +235,29 @@ export const tools = [
     name: "convergence_score",
     title: "Convergence Score",
     description:
-      "Score convergence: a deterministic 0–100 measure of the distance between a stated task (intent) and the actual git diff (execution), with sub-scores for Coverage (did the intent happen?), Scope (did only the intent happen?), and Risk alignment (did unrequested drift land on risk-sensitive paths?). Composed from the change_impact diff comparison and the shared risk vocabulary — no model, no new analysis. Emits a recomputable receipt (a timestamp-free hash anyone can regenerate and verify) as durable evidence. Requires a base git ref to diff against.",
+      "Score convergence: a deterministic 0–100 measure of the distance between a stated task (intent) and the actual git diff (execution), with sub-scores for Coverage (did the intent happen?), Scope (did only the intent happen?), and Risk alignment (did unrequested drift land on risk-sensitive paths?). Composed from the change_impact diff comparison and the shared risk vocabulary — no model, no new analysis. New files beside a confirmed owner and tests of confirmed files count as in scope, listed under drivers.inferredRelated. Emits a recomputable receipt (a timestamp-free hash anyone can regenerate and verify) as durable evidence. Requires a base git ref to diff against; scores the working tree's tracked changes unless head or staged selects an exact subject.",
     annotations: { readOnlyHint: false },
     inputSchema: {
       type: "object",
       properties: {
         query: { type: "string", description: 'The stated task / intent to measure against the diff, e.g. "add Stripe refunds".' },
         base: { type: "string", description: "Git ref to diff against (e.g. origin/main, HEAD~1). Required." },
+        head: {
+          type: "string",
+          description:
+            "Score exactly base..head (a direct tree diff, no merge base) instead of the working tree, and bind the receipt to the head commit and its tree SHA. Uncommitted and untracked files play no part. Cannot be combined with staged.",
+        },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         top: { type: "number", description: "Number of predicted owner files to consider. Defaults to 10." },
         staged: {
           type: "boolean",
           description:
             "Measure only the exact Git index tree and bind the receipt to its tree SHA. May create Git object or index-cache metadata; source files are unchanged.",
+        },
+        includeUntracked: {
+          type: "boolean",
+          description:
+            "Working-tree mode only: also score untracked, non-ignored files. Defaults to false; untracked files are otherwise listed under untracked and not scored.",
         },
         includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
       },
@@ -269,6 +279,11 @@ export const tools = [
           description:
             "Use the exact Git index for changed-path, risk, secret, and convergence evidence. Release, validation-command, and optional analyzer checks still inspect the working tree. May create Git object or index-cache metadata; source files are unchanged. Ignored in GitHub PR mode.",
         },
+        head: {
+          type: "string",
+          description:
+            "Gate exactly base..head: changed-path, risk, secret, and convergence evidence come from the head commit's tree, so uncommitted and untracked files play no part. Release, validation-command, and optional analyzer checks still inspect the working tree. Cannot be combined with staged. Ignored in GitHub PR mode.",
+        },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         base: { type: "string", description: "Base ref for the local gate. Defaults to origin/main, then HEAD. Ignored in PR mode." },
         policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
@@ -281,7 +296,7 @@ export const tools = [
         receipt: {
           type: "string",
           description:
-            "Optional convergence inputs hash, JSON object, or path to a JSON receipt artifact. Exact-subject v2 receipts require the full hash; legacy v1 display IDs remain accepted.",
+            "Optional convergence inputs hash, JSON object, or path to a JSON receipt artifact. Exact-subject v2 receipts require the full hash; legacy v1 display IDs remain accepted. A receipt bound to a head commit or the staged index verifies only in the same mode (head / staged); a JSON receipt names the mode it needs when they differ.",
         },
       },
     },
@@ -696,8 +711,10 @@ async function dispatchTool(name, args) {
       const data = generateConvergence(requiredString(args.query, "query"), {
         path: args.path ?? ".",
         base: requiredString(args.base, "base"),
+        head: args.head,
         top: args.top,
         staged: args.staged,
+        includeUntracked: args.includeUntracked,
       });
       return args.includeMarkdown ? { data, markdown: formatConvergenceMarkdown(data) } : data;
     }
@@ -716,6 +733,7 @@ async function dispatchTool(name, args) {
       }
       return evaluateLocal(args.path ?? ".", {
         base: args.base,
+        head: args.head,
         policy: args.policy,
         governance: args.governance,
         request: args.request,

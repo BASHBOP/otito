@@ -36,6 +36,12 @@ Measure intent vs execution:
 otito converge "<task>" --base origin/main --path .
 ```
 
+Once the work is committed, score the commits themselves so local edits and untracked files cannot count as drift:
+
+```bash
+otito converge "<task>" --base origin/main --head HEAD --path .
+```
+
 ## MCP equivalents
 
 - `change_impact`
