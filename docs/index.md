@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v1.15.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
+**v3.0.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
 
 ---
 
@@ -18,6 +18,16 @@
 ---
 
 ## What's New
+
+!!! tip "v3.0.0 published (2026-09-25)"
+    The first major since the Òtítọ́ cutover. It follows 1.15.0 directly; the `v2.x` tags belong to the earlier Repoctx releases.
+
+    - **Breaking:** otito stops interpreting the request and leaves that to the model. `intent.hints`, `patterns` and `agentPrompt` leave the context pack, `implementationPlan` leaves impact, and `reviewPrompts` and `nextSteps` leave PR review. The ranked files, hotspots, risk flags and review targets they were derived from are unchanged. See [Migrating from 1.x](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md#migrating-from-1x).
+    - `otito converge --head <ref>` and `otito gate --head <ref>` score exactly `base..head`, so a dirty checkout no longer counts as scope drift. A confirmed owner's own siblings and tests are in scope, not drift; on a 25-file commit that moved convergence from 55 to 84.
+    - Working-tree convergence no longer scores untracked files by default (`--include-untracked` restores it).
+    - Fixed: post-merge attestation attested the wrong commit, the context pack reported a working tree that no longer existed, and a manual run can now reset an orphaned audit ledger.
+
+    [npm v3.0.0](https://www.npmjs.com/package/@bashbop/otito/v/3.0.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.0.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v1.15.0 published (2026-09-23)"
     - `model_route` is now an MCP tool, so every MCP host (Cursor, VS Code, Claude Desktop, Codex, Gemini) can ask for a tier, not only the CLI.
