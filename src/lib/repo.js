@@ -410,7 +410,7 @@ function detectImportantDirectories(root) {
 }
 
 /** @param {string} root */
-function getGitInfo(root) {
+export function getGitInfo(root) {
   const result = runCommand("git", ["rev-parse", "--show-toplevel"], { cwd: root, timeout: 5000 });
   if (!result.ok) {
     return { available: false };
