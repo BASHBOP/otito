@@ -2,6 +2,7 @@
 import path from "node:path";
 import { generateHarness } from "./harness.js";
 import { getCachedCodeMap } from "./index-cache.js";
+import { getGitInfo } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
 /**
@@ -121,7 +122,12 @@ export function generateContextPack(query, options = {}) {
   const limit = normalizeLimit(options.limit, defaultLimit, 50);
   const includeEvidence = Boolean(options.includeEvidence);
   const repoPaths = normalizePaths(options.paths ?? [options.path ?? "."]);
-  const maps = repoPaths.map((repoPath) => getCachedCodeMap(repoPath));
+  // The cached map's git state is whatever the tree looked like at index time;
+  // a commit leaves the index fingerprint unchanged, so read the tree live.
+  const maps = repoPaths.map((repoPath) => {
+    const map = getCachedCodeMap(repoPath);
+    return { ...map, repo: { ...map.repo, git: getGitInfo(map.repo.root) } };
+  });
   const graphs = new Map(maps.map((map) => [map.repo.root, buildImportGraph(map.files)]));
   const tokens = tokenize(normalizedQuery);
   const phrases = extractPhrases(normalizedQuery);

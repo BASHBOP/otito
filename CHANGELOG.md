@@ -28,6 +28,7 @@ This project follows SemVer.
 
 ### Fixed
 
+- **The context pack reported a working tree that no longer existed.** Its uncommitted-changes warning, and `repos[].git`, came from the cached code map, which records git state once, when the repository is indexed. The index is only rebuilt when a file's size or mtime changes, and a commit changes neither, so a repository indexed with work in progress kept warning about "4 uncommitted git change(s)" and told agents to inspect a tree that was already clean. The pack now reads git state live on every call, which costs about 50 ms. Other reports already read it live, and the catalog keeps its snapshot from index time on purpose.
 - **Nothing had been attested on `main` since 2026-09-20, and CI had no way to recover.** The durable ledger on `audit-ledger` holds 97 attestations whose commits are no longer in `main`'s history. So every post-merge run stopped in `reconcile-attestations.sh`, correctly, and named a reset that only worked from a local shell. The workflow's manual trigger now takes `reset_ledger`, the only way an Actions run can set `OTITO_ATTEST_RESET_LEDGER=1`; a run started by CI never can. The persist step also keeps the archived chain (`audit-pilot/ledger-orphaned-*.jsonl`) on `audit-ledger` and in the uploaded evidence. Before this, a reset in CI would have written the archive on the runner and discarded it.
 
 ## [1.15.0] - 2026-09-23

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -375,4 +376,29 @@ test("generateContextPack surfaces literal dateOfBirth references over generic d
   assert.ok(hotspotScore("isValidDateOfBirth") >= 0, "isValidDateOfBirth should appear as a hotspot");
   assert.ok(hotspotScore("isValidDateOfBirth") > hotspotScore("formatBookingDate"));
   assert.ok(!result.data.hotspots.some((hotspot) => hotspot.symbol === "SelectedBookingDate"));
+});
+
+test("generateContextPack reports the live working tree, not the one the cached index saw", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-live-git-"));
+  const git = (...args) => execFileSync("git", args, { cwd: root, stdio: "pipe" });
+  git("init", "-q");
+  git("config", "user.email", "t@example.com");
+  git("config", "user.name", "t");
+  fs.mkdirSync(path.join(root, "src"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "live-git-fixture" }));
+  fs.writeFileSync(path.join(root, "src", "billing.js"), "export function chargeCard() { return true; }\n");
+  git("add", ".");
+  git("commit", "-qm", "init");
+
+  // Index while a tracked file is modified, then commit it. Committing changes
+  // no file's size or mtime, so the index fingerprint, and the cached map, stay
+  // the same while the working tree goes from dirty to clean.
+  fs.writeFileSync(path.join(root, "src", "billing.js"), "export function chargeCard() { return false; }\n");
+  const dirty = generateContextPack("charge card billing", { path: root });
+  assert.ok(dirty.data.conflicts.some((c) => c.includes("1 uncommitted git change")));
+
+  git("commit", "-qam", "change");
+  const clean = generateContextPack("charge card billing", { path: root });
+  assert.deepEqual(clean.data.conflicts, []);
+  assert.equal(clean.data.repos[0].git.clean, true);
 });
