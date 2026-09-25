@@ -7,7 +7,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-TARGET_SHA="${GITHUB_SHA:-$(git rev-parse HEAD)}"
+# OTITO_TARGET_SHA first: in Actions, GITHUB_SHA is the runner's own value and
+# cannot be overridden by the workflow. GITHUB_SHA remains for standalone use.
+TARGET_SHA="${OTITO_TARGET_SHA:-${GITHUB_SHA:-$(git rev-parse HEAD)}}"
 LEDGER="$ROOT/audit-pilot/ledger.jsonl"
 
 git rev-parse --verify "${TARGET_SHA}^{commit}" >/dev/null
@@ -130,6 +132,7 @@ for MERGE_SHA in $COMMITS; do
   fi
 
   OTITO_ATTEST_MODE="$ATTEST_MODE" \
+    OTITO_TARGET_SHA="$MERGE_SHA" \
     GITHUB_SHA="$MERGE_SHA" \
     GITHUB_EVENT_BEFORE="$BASE_SHA" \
     bash scripts/post-merge-attest.sh

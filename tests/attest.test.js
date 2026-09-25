@@ -98,6 +98,7 @@ test("post-merge attestation records a valid FAIL verdict even when review exits
       ...process.env,
       PATH: `${binDir}:${process.env.PATH}`,
       GITHUB_SHA: merge,
+      OTITO_TARGET_SHA: "",
       GITHUB_EVENT_BEFORE: base,
     },
   });
@@ -159,6 +160,7 @@ function runReconcile(root, target, env = {}) {
     env: {
       ...process.env,
       GITHUB_SHA: target,
+      OTITO_TARGET_SHA: "",
       GITHUB_EVENT_BEFORE: "",
       OTITO_ATTEST_RESET_LEDGER: "0",
       OTITO_ATTEST_DRY_RUN: "1",
@@ -202,6 +204,22 @@ test("resetting an orphaned ledger archives the old chain and starts at the tip"
 
   // And the new chain starts AT the tip rather than backfilling every
   // ancestor, which would mint verdicts for commits this gate never ran on.
+  const attested = result.stdout
+    .trim()
+    .split("\n")
+    .filter((l) => /^[0-9a-f]{40}$/.test(l));
+  assert.deepEqual(attested, [target]);
+});
+
+test("the target comes from OTITO_TARGET_SHA, because a workflow cannot override the runner's GITHUB_SHA", () => {
+  // Regression: the workflow set GITHUB_SHA on the reconcile step, GitHub kept
+  // its own value (the default branch head at run time), and a run meant to
+  // start the new chain at b3f795d attested the newer fc0a7b9 instead.
+  const { root, target } = orphanedLedgerRepo();
+  const runnerHead = git(root, ["rev-list", "--max-parents=0", "HEAD"]);
+  const result = runReconcile(root, target, { OTITO_ATTEST_RESET_LEDGER: "1", GITHUB_SHA: runnerHead, OTITO_TARGET_SHA: target });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
   const attested = result.stdout
     .trim()
     .split("\n")
