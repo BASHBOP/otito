@@ -170,9 +170,7 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @property {ReviewComments} reviewComments
  * @property {RiskSummary} risk
  * @property {ReviewTargets} reviewTargets
- * @property {string[]} reviewPrompts
  * @property {TestHint[]} testHints
- * @property {string[]} nextSteps
  * @property {ReturnType<typeof estimateTokenSections> & { fullJson?: number, markdown?: number }} [tokenEstimate]
  * @property {CommentResult} [comment]
  */
@@ -216,7 +214,6 @@ export function generatePrReview(repoPath = ".", options = {}) {
   const risk = inferRisk(changedFiles, diff, reviewComments);
   const testHints = inferTestHints(repo, changedFiles, risk);
   const reviewTargets = inferReviewTargets(changedFiles);
-  const reviewPrompts = inferReviewPrompts(changedFiles, risk, reviewTargets);
 
   /** @type {PrReviewData} */
   const data = {
@@ -248,9 +245,7 @@ export function generatePrReview(repoPath = ".", options = {}) {
     reviewComments,
     risk,
     reviewTargets,
-    reviewPrompts,
     testHints,
-    nextSteps: inferNextSteps(changedFiles, risk, reviewComments, testHints),
   };
 
   /** @type {ReturnType<typeof estimateTokenSections> & { fullJson?: number, markdown?: number }} */
@@ -259,7 +254,6 @@ export function generatePrReview(repoPath = ".", options = {}) {
       { name: "comparison", value: data.comparison },
       { name: "changedFiles", value: data.changedFiles },
       { name: "reviewTargets", value: data.reviewTargets },
-      { name: "reviewPrompts", value: data.reviewPrompts },
       { name: "reviewComments", value: data.reviewComments },
     ]),
   };
@@ -326,15 +320,6 @@ export function formatPrReviewMarkdown(data) {
     lines.push("- none detected");
   }
 
-  lines.push("", "## Targeted Review Prompts", "");
-  if (data.reviewPrompts.length) {
-    for (const prompt of data.reviewPrompts) {
-      lines.push(`- ${prompt}`);
-    }
-  } else {
-    lines.push("- no targeted prompts generated");
-  }
-
   lines.push("", "## Review Targets", "");
   if (data.reviewTargets.routes.length) {
     lines.push("Routes:");
@@ -397,11 +382,6 @@ export function formatPrReviewMarkdown(data) {
     lines.push("- no obvious package scripts detected");
   }
 
-  lines.push("", "## Next Steps", "");
-  for (const step of data.nextSteps) {
-    lines.push(`- ${step}`);
-  }
-
   lines.push("");
   return lines.join("\n");
 }
@@ -428,15 +408,6 @@ export function formatPrCommentMarkdown(data) {
     }
   } else {
     lines.push("- none detected");
-  }
-
-  lines.push("", "### Review Prompts", "");
-  if (data.reviewPrompts.length) {
-    for (const prompt of data.reviewPrompts.slice(0, 6)) {
-      lines.push(`- ${prompt}`);
-    }
-  } else {
-    lines.push("- none generated");
   }
 
   lines.push("", "### Changed Domains", "");
@@ -470,11 +441,6 @@ export function formatPrCommentMarkdown(data) {
     }
   } else {
     lines.push("- no obvious package scripts detected");
-  }
-
-  lines.push("", "### Next Steps", "");
-  for (const step of data.nextSteps.slice(0, 6)) {
-    lines.push(`- ${step}`);
   }
 
   lines.push("", "_Full Markdown report is uploaded as the `otito-pr-review` workflow artifact when run in GitHub Actions._", "");
@@ -1283,44 +1249,6 @@ function routeTargetsForFile(file) {
 }
 
 /**
- * @param {EnrichedFile[]} files
- * @param {RiskSummary} risk
- * @param {ReviewTargets} targets
- * @returns {string[]}
- */
-function inferReviewPrompts(files, risk, targets) {
-  /** @type {string[]} */
-  const prompts = [];
-  if (targets.routes.length) {
-    prompts.push(
-      `Review touched request routes: ${targets.routes
-        .slice(0, 5)
-        .map((target) => `${target.method ? `${target.method} ` : ""}${target.route}`)
-        .join(", ")}.`,
-    );
-  }
-  if (risk.flags.includes("frontend/backend contract")) {
-    prompts.push("Check each API client change against the matching backend route, response shape, and error handling.");
-  }
-  if (risk.flags.includes("auth/security")) {
-    prompts.push("Verify auth, session, role, token, and permission assumptions around the changed paths.");
-  }
-  if (risk.flags.includes("money flow")) {
-    prompts.push("Trace payment or billing state transitions, idempotency, and failure behavior.");
-  }
-  if (risk.flags.includes("data model")) {
-    prompts.push("Check migration compatibility, generated types, seed data, and rollback behavior.");
-  }
-  if (targets.configFiles.length) {
-    prompts.push(`Confirm config/runtime impact for: ${targets.configFiles.slice(0, 5).join(", ")}.`);
-  }
-  if (risk.flags.includes("no test files changed") && files.some((file) => file.kind !== "test")) {
-    prompts.push("Decide whether the behavior change needs a focused test or an explicit no-test rationale.");
-  }
-  return prompts;
-}
-
-/**
  * @param {string} name
  * @param {EnrichedFile[]} files
  * @param {RiskSummary} risk
@@ -1408,47 +1336,6 @@ function normalizeRoutePart(value) {
     .trim()
     .replace(/^\/+|\/+$/g, "")
     .replace(/^:$/, "");
-}
-
-/**
- * @param {EnrichedFile[]} files
- * @param {RiskSummary} risk
- * @param {ReviewComments} comments
- * @param {TestHint[]} hints
- * @returns {string[]}
- */
-function inferNextSteps(files, risk, comments, hints) {
-  /** @type {string[]} */
-  const steps = [];
-  if (!files.length) {
-    return ["No changed files detected for this comparison."];
-  }
-
-  if (comments.count > 0) {
-    steps.push("Resolve or explicitly answer each PR comment before merging.");
-  }
-  if (risk.flags.includes("no test files changed") && files.some((file) => file.kind !== "test")) {
-    steps.push("Decide whether the changed behavior needs a focused test or a written no-test rationale.");
-  }
-  if (risk.flags.includes("frontend/backend contract")) {
-    steps.push("Check the matching backend route/controller for each frontend API client change.");
-  }
-  if (risk.flags.includes("request surface")) {
-    steps.push("Confirm route/controller behavior, auth expectations, and error responses.");
-  }
-  if (risk.flags.includes("data model")) {
-    steps.push("Review migration/data compatibility and rollback behavior.");
-  }
-  if (risk.flags.includes("configuration")) {
-    steps.push("Check the affected runtime/tooling configuration in the environment where it is used.");
-  }
-  if (hints.length) {
-    steps.push("Run the suggested verification commands and paste failures back into the PR context.");
-  }
-  if (!steps.length) {
-    steps.push("Review the changed files by domain, then run the closest available test command.");
-  }
-  return steps;
 }
 
 /**

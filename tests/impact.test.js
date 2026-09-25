@@ -156,15 +156,6 @@ test("generateImpact suggests related tests by overlapping path tokens", () => {
   );
 });
 
-test("generateImpact implementation plan loads the highest-ranked owner file first", () => {
-  const root = writeFixture("plan", {
-    "package.json": JSON.stringify({ name: "plan-fixture" }),
-    "src/payment/processors/stripe.processor.ts": "export class StripeProcessor { refund() {} }\n",
-  });
-  const result = generateImpact("add Stripe refunds", { path: root });
-  assert.ok(result.data.implementationPlan[0].includes("src/payment/processors/stripe.processor.ts"));
-});
-
 test("generateImpact returns markdown that mentions the query and top file", () => {
   const root = writeFixture("markdown", {
     "package.json": JSON.stringify({ name: "md-fixture" }),

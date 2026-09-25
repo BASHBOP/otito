@@ -66,7 +66,7 @@
     {
       "id": "task-aware-context-pack",
       "prompt": "Use $otito to generate a task-aware context packet for adding an MCP tool to the current repo. Keep it local and do not edit application files.",
-      "expected_output": "A context-engine workflow using otito context or the context_pack MCP tool that reports primary files, related files, tests, patterns, and validation commands.",
+      "expected_output": "A context-engine workflow using otito context or the context_pack MCP tool that reports primary files, related files, tests, and validation commands.",
       "assertions": [
         "The output uses otito context, otito context, node src/cli.js context, or the context_pack MCP tool.",
         "The output includes primary files or explicitly says no strong primary files matched.",

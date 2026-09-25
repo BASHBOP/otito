@@ -94,7 +94,7 @@ const LAYOUT = [
     sub: "task pack",
     cx: 415,
     r: 34,
-    blurb: "Task-aware context packet: primary files, tests, patterns, validation commands, token estimates. Run before planning or editing.",
+    blurb: "Task-aware context packet: primary files, tests, validation commands, token estimates. Run before planning or editing.",
   },
   {
     id: "harness",

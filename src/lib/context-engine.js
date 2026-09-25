@@ -16,7 +16,6 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @typedef {object} Intent
  * @property {string} action
  * @property {string[]} topics
- * @property {string[]} hints
  */
 
 /**
@@ -126,17 +125,16 @@ export function generateContextPack(query, options = {}) {
   const graphs = new Map(maps.map((map) => [map.repo.root, buildImportGraph(map.files)]));
   const tokens = tokenize(normalizedQuery);
   const phrases = extractPhrases(normalizedQuery);
-  const intent = inferIntent(normalizedQuery, tokens);
+  const intent = inferIntent(tokens);
   const tokenStats = computeTokenDocFrequency(maps, tokens);
   const scoredFiles = scoreMaps(maps, tokens, intent, phrases, tokenStats);
   const matchedPrimaryFiles = selectPrimaryFiles(scoredFiles, limit);
   const usedFallback = matchedPrimaryFiles.length === 0;
   const primaryFiles = stripEvidence(usedFallback ? selectFallbackPrimaryFiles(maps, limit) : matchedPrimaryFiles, includeEvidence);
-  const relatedFiles = stripEvidence(selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, limit), includeEvidence);
+  const relatedFiles = stripEvidence(selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, limit), includeEvidence);
   const tests = stripEvidence(selectTests(maps, graphs, scoredFiles, primaryFiles, limit), includeEvidence);
   const hotspots = buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens, tokenStats);
   const commands = inferCommands(repoPaths, normalizedQuery);
-  const patterns = inferPatterns(primaryFiles, relatedFiles, tests, intent);
   const conflicts = inferConflicts(maps);
   const openQuestions = inferOpenQuestions(primaryFiles, commands, intent, usedFallback, hotspots);
   const sources = inferSources(maps, commands);
@@ -152,25 +150,22 @@ export function generateContextPack(query, options = {}) {
     primaryFiles,
     relatedFiles,
     tests,
-    patterns,
     commands,
     conflicts,
     openQuestions,
     sources,
-    agentPrompt: formatAgentPrompt(normalizedQuery, primaryFiles, relatedFiles, tests, commands, hotspots),
   });
 
   return finalizeContextPack(data);
 }
 
 /**
- * Recompute what a pack derives from its file lists: the agent prompt, the
- * token estimate and the markdown. For a caller that changed those lists after
+ * Recompute what a pack derives from its file lists: the token estimate and
+ * the markdown. For a caller that changed those lists after
  * generation, such as the opt-in model read in context-read.js.
  * @param {Record<string, any>} data
  */
 export function rebuildContextPack(data) {
-  data.agentPrompt = formatAgentPrompt(data.query, data.primaryFiles, data.relatedFiles, data.tests, data.commands, data.hotspots);
   return finalizeContextPack(data);
 }
 
@@ -186,7 +181,6 @@ function finalizeContextPack(data) {
       { name: "primaryFiles", value: data.primaryFiles },
       { name: "relatedFiles", value: data.relatedFiles },
       { name: "tests", value: data.tests },
-      { name: "patterns", value: data.patterns },
       { name: "commands", value: data.commands },
     ]),
   };
@@ -238,10 +232,6 @@ export function formatContextPackMarkdown(data) {
     "",
     ...formatFiles(data.tests, "No matching tests found."),
     "",
-    "## Patterns",
-    "",
-    ...(data.patterns.length ? data.patterns.map((/** @type {string} */ item) => `- ${item}`) : ["- none inferred"]),
-    "",
     "## Commands",
     "",
     ...(data.commands.length ? data.commands.map((/** @type {EngineCommand} */ item) => `- \`${item.command}\`: ${item.reason}`) : ["- none inferred"]),
@@ -253,10 +243,6 @@ export function formatContextPackMarkdown(data) {
     "## Open Questions",
     "",
     ...(data.openQuestions.length ? data.openQuestions.map((/** @type {string} */ item) => `- ${item}`) : ["- none"]),
-    "",
-    "## Agent Prompt",
-    "",
-    data.agentPrompt,
     "",
   ];
   return lines.join("\n");
@@ -344,25 +330,10 @@ export function formatContextPackTerminal(data, rendererFactory) {
     lines.push(renderer.tip("No precise symbol hotspots yet. Start with the primary files, then refine the query with a route or method name."));
   }
 
-  appendFileSection(
-    lines,
-    renderer,
-    `${renderer.emoji ? "🥇" : ">"} Primary files`,
-    data.primaryFiles,
-    "No primary files matched the query.",
-    true,
-    data.intent,
-  );
-  appendFileSection(lines, renderer, `${renderer.emoji ? "🔗" : ">"} Related files`, data.relatedFiles, "No related files selected.", false, data.intent);
-  appendFileSection(lines, renderer, `${renderer.emoji ? "🧪" : ">"} Tests`, data.tests, "No matching tests found.", false, data.intent);
+  appendFileSection(lines, renderer, `${renderer.emoji ? "🥇" : ">"} Primary files`, data.primaryFiles, "No primary files matched the query.", true);
+  appendFileSection(lines, renderer, `${renderer.emoji ? "🔗" : ">"} Related files`, data.relatedFiles, "No related files selected.", false);
+  appendFileSection(lines, renderer, `${renderer.emoji ? "🧪" : ">"} Tests`, data.tests, "No matching tests found.", false);
 
-  lines.push("");
-  lines.push(
-    renderer.section(
-      `${renderer.emoji ? "🧩" : ">"} Patterns`,
-      data.patterns.length ? data.patterns.map((/** @type {string} */ pattern) => renderer.bullet(pattern)) : [renderer.bullet("none inferred")],
-    ),
-  );
   lines.push("");
   lines.push(
     renderer.section(
@@ -388,8 +359,6 @@ export function formatContextPackTerminal(data, rendererFactory) {
   }
 
   lines.push("");
-  lines.push(renderer.section(`${renderer.emoji ? "🤖" : ">"} Agent handoff`, data.agentPrompt.split("\n")));
-  lines.push("");
   lines.push(
     renderer.tip(`Context engine v${data.contextEngineVersion} · ${data.tokenEstimate.fullJson} JSON tokens · ${data.tokenEstimate.markdown} markdown tokens`),
   );
@@ -403,9 +372,8 @@ export function formatContextPackTerminal(data, rendererFactory) {
  * @param {ScoredFile[]} files
  * @param {string} fallback
  * @param {boolean} [ranked]
- * @param {Intent} [intent]
  */
-function appendFileSection(lines, renderer, title, files, fallback, ranked = false, intent) {
+function appendFileSection(lines, renderer, title, files, fallback, ranked = false) {
   lines.push("");
   lines.push(
     renderer.section(
@@ -413,7 +381,7 @@ function appendFileSection(lines, renderer, title, files, fallback, ranked = fal
       files.length
         ? files.map((file, index) => {
             const rank = ranked ? `${rankLabel(index, renderer.emoji)} ` : "";
-            const method = selectDisplayHttpMethod(file.httpMethods, intent);
+            const method = file.httpMethods?.[0];
             const route = method ? ` · ${method.method} ${method.path}` : "";
             const reasons = file.reasons.length ? `\n    ${renderer.emoji ? "└─" : "|-"} ${file.reasons.join(" · ")}` : "";
             return `${rank}${file.path}  ${file.kind}/${file.domain} · score ${file.score}${route}${reasons}`;
@@ -421,28 +389,6 @@ function appendFileSection(lines, renderer, title, files, fallback, ranked = fal
         : [renderer.bullet(fallback)],
     ),
   );
-}
-
-/**
- * Show a route that supports the question where one exists. Controllers often
- * expose several endpoints, and their source-order first route can be wholly
- * unrelated to the selected context.
- *
- * @param {CodeMapHttpMethod[]|undefined} methods
- * @param {Intent|undefined} intent
- * @returns {CodeMapHttpMethod|undefined}
- */
-function selectDisplayHttpMethod(methods, intent) {
-  if (!methods?.length) return undefined;
-  if (intent?.hints.includes("auth-flow")) {
-    return (
-      methods.find((method) => /register|signup/i.test(method.path)) ??
-      methods.find((method) => /validate.*otp|otp/i.test(method.path)) ??
-      methods.find((method) => /verify/i.test(method.path)) ??
-      methods[0]
-    );
-  }
-  return methods[0];
 }
 
 /**
@@ -531,8 +477,7 @@ function scoreFile(map, file, tokens, intent, phrases = [], tokenStats) {
     reasons.push("data access");
   }
 
-  score += scoreIntentHints(file, intent, reasons);
-  score += scoreTemplateIntent(file, tokens, reasons);
+  score += scoreTopicDomain(file, intent, reasons);
   score += scoreConceptCoverage(file, tokens, reasons, tokenStats);
 
   const phraseScore = scorePhraseMatches(file, phrases, reasons);
@@ -555,86 +500,22 @@ function scoreFile(map, file, tokens, intent, phrases = [], tokenStats) {
 }
 
 /**
- * A request that explicitly names Handlebars, a template, a layout, or a
- * partial is asking to inspect the rendered artifact itself. Give that
- * artifact a bounded preference over a generic service that happens to share
- * broad words such as "email" or "campaign"; the service remains in the pack
- * as execution context rather than displacing the template.
- * @param {CodeMapFile} file
- * @param {string[]} tokens
- * @param {string[]} reasons
- */
-function scoreTemplateIntent(file, tokens, reasons) {
-  if (file.kind !== "template") return 0;
-  if (!tokens.some((token) => ["template", "templates", "handlebars", "layout", "partial"].includes(token))) return 0;
-  reasons.push("explicit template intent");
-  return 36;
-}
-
-/**
+ * A file whose domain is itself one of the query topics is a direct owner
+ * candidate; implementation kinds get a little more than its tests or types.
  * @param {CodeMapFile} file
  * @param {Intent} intent
  * @param {string[]} reasons
  * @returns {number}
  */
-function scoreIntentHints(file, intent, reasons) {
-  const ownText = normalizeText(
-    `${file.path} ${file.kind} ${file.domain} ${file.exports?.join(" ")} ${symbolTerms(file.symbols)} ${file.formFields?.join(" ")} ${file.navigationTargets?.join(" ")} ${file.localIdentifiers?.join(" ")}`,
-  );
-  const importText = normalizeText(file.imports?.join(" ") ?? "");
-  let score = 0;
-
-  for (const hint of intent.hints) {
-    if (hint === "mcp" && ownText.includes("mcp")) {
-      score += 16;
-      reasons.push("mcp surface");
-    }
-    if (hint === "cli" && (ownText.includes("cli") || ownText.includes("command"))) {
-      score += 12;
-      reasons.push("cli surface");
-    }
-    if (hint === "tool" && (ownText.includes("agent tools") || file.path.includes("tools") || (!intent.hints.includes("mcp") && ownText.includes("tool")))) {
-      score += 10;
-      reasons.push("tool surface");
-    }
-    if (hint === "api" && (file.kind === "apiClient" || file.kind === "apiRoute" || ownText.includes("api") || importText.includes("api"))) {
-      score += 8;
-      reasons.push("api surface");
-    }
-    if (hint === "test" && file.kind === "test") {
-      score += 10;
-      reasons.push("test surface");
-    }
-    if (hint === "auth-flow") {
-      score += scoreAuthSignupVerificationFlow(file, reasons);
-    }
-  }
-
-  if (intent.hints.includes("configuration") && intent.hints.includes("privacy")) {
-    const fields = new Set(tokenize((file.formFields ?? []).join(" ")));
-    const controlsPrivacy = ["address", "location", "venue", "hide", "hidden", "visibility", "private"].some((term) => fields.has(term));
-    const controlsRsvp = ["rsvp", "invite", "invitation", "guest"].some((term) => fields.has(term));
-    if (controlsPrivacy && controlsRsvp) {
-      score += 120;
-      reasons.push("privacy configuration control");
-      if (file.kind === "component" || file.kind === "route") {
-        score += 36;
-        reasons.push("configuration surface");
-      }
-    }
-  }
-
+function scoreTopicDomain(file, intent, reasons) {
   const domain = normalizeText(file.domain || "");
-  if (domain && intent.topics.includes(domain)) {
-    score += 18;
-    reasons.push("topic domain");
-    if (file.kind === "service" || file.kind === "source" || file.kind === "hook") {
-      score += 12;
-      reasons.push("implementation surface");
-    }
+  if (!domain || !intent.topics.includes(domain)) return 0;
+  reasons.push("topic domain");
+  if (file.kind === "service" || file.kind === "source" || file.kind === "hook") {
+    reasons.push("implementation surface");
+    return 30;
   }
-
-  return score;
+  return 18;
 }
 
 /**
@@ -875,38 +756,6 @@ function isTypeOnlyFile(file) {
 /** @param {CodeMapFile["symbols"]|undefined} symbols */
 function symbolTerms(symbols) {
   return (symbols ?? []).map((symbol) => `${symbol.name} ${symbol.terms?.join(" ") ?? ""}`).join(" ");
-}
-
-/**
- * A query such as "where is email verification implemented during signup?"
- * is asking for an account lifecycle, not a generic email operation. Prefer
- * the auth boundary only when the same file carries both registration and OTP
- * or verification evidence, keeping ordinary email searches unchanged.
- *
- * @param {CodeMapFile} file
- * @param {string[]} reasons
- * @returns {number}
- */
-function scoreAuthSignupVerificationFlow(file, reasons) {
-  const boundaryTokens = new Set(tokenize(`${file.path} ${file.kind} ${file.domain}`));
-  const isAuthBoundary = [...boundaryTokens].some((token) => token === "auth" || token.startsWith("authent"));
-  if (!isAuthBoundary) {
-    return 0;
-  }
-
-  const text = normalizeText(`${file.path} ${file.kind} ${file.domain} ${file.exports?.join(" ")} ${symbolTerms(file.symbols)}`);
-  const tokens = new Set(tokenize(text));
-  const hasRegistration = ["signup", "register", "registration"].some((term) => tokens.has(term));
-  const hasVerification = ["verification", "verify", "verified", "validate", "otp"].some((term) => tokens.has(term));
-  if (hasRegistration && hasVerification) {
-    reasons.push("signup verification flow");
-    return 220;
-  }
-  if (file.kind === "test") {
-    reasons.push("auth flow test");
-    return 80;
-  }
-  return 0;
 }
 
 /**
@@ -1171,11 +1020,10 @@ function selectFallbackPrimaryFiles(maps, limit) {
  * @param {Map<string, ImportGraph>} graphs
  * @param {ScoredFile[]} scoredFiles
  * @param {ScoredFile[]} primaryFiles
- * @param {Intent} intent
  * @param {number} limit
  * @returns {ScoredFile[]}
  */
-function selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, limit) {
+function selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, limit) {
   const primaryKeys = new Set(primaryFiles.map(fileKey));
   /** @type {ScoredFile[]} */
   const related = [];
@@ -1198,15 +1046,6 @@ function selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, intent, lim
       }
       for (const sibling of samePatternFiles(map.files, primary)) {
         addRelated(related, map, sibling, 10, "same kind/domain pattern", primaryKeys);
-      }
-    }
-
-    for (const file of map.files ?? []) {
-      if (intent.hints.includes("cli") && isCliEntrypoint(map, file)) {
-        addRelated(related, map, file, 14, "cli entrypoint", primaryKeys);
-      }
-      if (intent.hints.includes("tool") && normalizeText(file.path).includes("agent tools")) {
-        addRelated(related, map, file, 14, "agent tool metadata", primaryKeys);
       }
     }
   }
@@ -1311,44 +1150,6 @@ function inferCommands(repoPaths, query) {
 }
 
 /**
- * @param {ScoredFile[]} primaryFiles
- * @param {ScoredFile[]} relatedFiles
- * @param {ScoredFile[]} tests
- * @param {Intent} intent
- * @returns {string[]}
- */
-function inferPatterns(primaryFiles, relatedFiles, tests, intent) {
-  const files = [...primaryFiles, ...relatedFiles];
-  /** @type {string[]} */
-  const patterns = [];
-  const byKind = countBy(files, (file) => file.kind);
-
-  for (const [kind, count] of byKind) {
-    if (kind && kind !== "source") {
-      patterns.push(`Selected context includes ${count} ${kind} file(s); follow nearby files of the same kind before inventing a new structure.`);
-    }
-  }
-
-  if (files.some((file) => file.path.endsWith("src/lib/mcp.js") || file.path.endsWith("lib/mcp.js"))) {
-    patterns.push("MCP tool changes should update the tool list, input schema, dispatcher, and MCP tests together.");
-  }
-  if (files.some((file) => file.path.endsWith("src/cli.js") || file.path.endsWith("/cli.js"))) {
-    patterns.push("CLI command changes should register the command, add a handler, and update help output in the same change.");
-  }
-  if (files.some((file) => file.path.includes("agent-tools"))) {
-    patterns.push("Agent-facing tool metadata should stay aligned with the CLI and MCP surfaces.");
-  }
-  if (tests.length) {
-    patterns.push("Matching tests were found; update them with the behavior change and run the listed validation command.");
-  }
-  if (intent.hints.includes("api") && files.some((file) => ["controller", "apiClient", "apiRoute"].includes(file.kind))) {
-    patterns.push("API work should keep route/controller/client contracts in sync across selected files.");
-  }
-
-  return [...new Set(patterns)];
-}
-
-/**
  * @param {CodeMap[]} maps
  * @returns {string[]}
  */
@@ -1428,73 +1229,14 @@ function inferSources(maps, commands) {
 }
 
 /**
- * @param {string} query
  * @param {string[]} tokens
  * @returns {Intent}
  */
-function inferIntent(query, tokens) {
-  const normalized = normalizeText(query);
-  const action = tokens.find((token) => actionWords.has(token)) ?? "unknown";
-  /** @type {string[]} */
-  const hints = [];
-  if (normalized.includes("mcp")) hints.push("mcp", "tool");
-  if (normalized.includes("cli") || normalized.includes("command")) hints.push("cli");
-  if (normalized.includes("tool") || normalized.includes("agent")) hints.push("tool");
-  if (normalized.includes("api") || normalized.includes("route") || normalized.includes("integration") || normalized.includes("client")) hints.push("api");
-  if (normalized.includes("test") || normalized.includes("verify")) hints.push("test");
-  if (/\b(configure|configuration|setting|settings|organiser|organizer)\b/.test(normalized)) hints.push("configuration");
-  if (/\b(private|privacy|hide|hidden|visibility|confidential)\b/.test(normalized)) hints.push("privacy");
-  const hasSignup = tokens.some((token) => ["signup", "register", "registration"].includes(token));
-  const hasVerification = tokens.some((token) => ["verification", "verify", "verified", "validate", "otp"].includes(token));
-  if (hasSignup && hasVerification) hints.push("auth-flow");
-
+function inferIntent(tokens) {
   return {
-    action,
+    action: tokens.find((token) => actionWords.has(token)) ?? "unknown",
     topics: tokens.filter((token) => !actionWords.has(token)).slice(0, 8),
-    hints: [...new Set(hints)],
   };
-}
-
-/**
- * @param {string} query
- * @param {ScoredFile[]} primaryFiles
- * @param {ScoredFile[]} relatedFiles
- * @param {ScoredFile[]} tests
- * @param {EngineCommand[]} commands
- * @param {Array<{ repo: string, path: string, symbol: string, type: string, line?: number }>|undefined} [hotspots]
- * @returns {string}
- */
-function formatAgentPrompt(query, primaryFiles, relatedFiles, tests, commands, hotspots = []) {
-  const hotspotList =
-    hotspots
-      .slice(0, 6)
-      .map((item) => `${item.repo}:${item.path}${item.line ? `:${item.line}` : ""}#${item.symbol}`)
-      .join(", ") || "none";
-  const fileList =
-    [...primaryFiles, ...relatedFiles]
-      .slice(0, 12)
-      .map((file) => `${file.repo.name}:${file.path}`)
-      .join(", ") || "none";
-  const testList =
-    tests
-      .slice(0, 8)
-      .map((file) => `${file.repo.name}:${file.path}`)
-      .join(", ") || "none";
-  const validation =
-    commands
-      .filter((command) => command.script)
-      .slice(0, 5)
-      .map((command) => command.command)
-      .join(", ") || "none detected";
-  return [
-    `Task: ${query}`,
-    `Start at these hotspots: ${hotspotList}.`,
-    `Read these files first: ${fileList}.`,
-    `Check these tests: ${testList}.`,
-    `Use the selected patterns before adding new structure.`,
-    `Keep the change in the smallest owner files.`,
-    `Verify with: ${validation}.`,
-  ].join("\n");
 }
 
 /**
@@ -1722,15 +1464,6 @@ function groupByRepo(files) {
 }
 
 /**
- * @param {CodeMap} map
- * @param {CodeMapFile} file
- * @returns {boolean|undefined}
- */
-function isCliEntrypoint(map, file) {
-  return map.repo.entrypoints?.includes(file.path) || file.path === "src/cli.js" || file.path.endsWith("/cli.js");
-}
-
-/**
  * @param {ScoredFile[]} files
  * @returns {ScoredFile[]}
  */
@@ -1773,22 +1506,6 @@ function uniqueBy(values, keyForValue) {
  */
 function fileKey(file) {
   return `${file.repo.root}:${file.path}`;
-}
-
-/**
- * @template T
- * @param {T[]} values
- * @param {(value: T) => string} keyForValue
- * @returns {Map<string, number>}
- */
-function countBy(values, keyForValue) {
-  /** @type {Map<string, number>} */
-  const counts = new Map();
-  for (const value of values) {
-    const key = keyForValue(value);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return counts;
 }
 
 /**

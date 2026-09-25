@@ -1,6 +1,6 @@
 ---
 name: otito-context
-description: Run otito context before editing — task-aware primary files, tests, patterns, and validation commands. Invoke explicitly before planning or implementing a change.
+description: Run otito context before editing — task-aware primary files, tests, and validation commands. Invoke explicitly before planning or implementing a change.
 ---
 
 # otito context (procedure)

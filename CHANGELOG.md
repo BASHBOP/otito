@@ -17,6 +17,15 @@ This project follows SemVer.
 - **Working-tree convergence no longer scores untracked files by default.** They are listed under `untracked` with a recommendation; `--include-untracked` / `includeUntracked: true` restores the old behaviour. `change_impact` still counts untracked files.
 - Receipts issued by convergence engine `0.1.0` do not recompute under `0.2.0`; re-issue them.
 
+### Removed
+
+- **BREAKING: otito stops interpreting the request; the model it serves does that better.** Several rankers and output fields tried to understand what a request meant using keyword rules. The agent reading the pack does that job better, so otito now returns the evidence and leaves both interpretation and ordering to the model. Removed:
+  - Context pack: `intent.hints`, and the ranking boosts built on them (the MCP/CLI/tool/API/test hints, the signup-verification boost of +220, the RSVP-privacy boost of +120, the Handlebars template boost, and the CLI-entrypoint and agent-tool related-file boosts). Also the `patterns` and `agentPrompt` fields, and their Markdown and terminal sections. `intent` is now `{ action, topics }`.
+  - `impact`: the `implementationPlan` field and its section.
+  - `pr` / `review_context`: the `reviewPrompts` and `nextSteps` fields and their sections. They restated `risk.flags` and `reviewTargets`, which are unchanged.
+  - Kept: `classifyImpactRoles`, because `converge` and `model_route` measure against its `requiredOwners`.
+- **Measured against `main` on the 21 labelled retrieval cases.** p@5 stays at 0.867 and r@5 at 1.0, and 21/21 cases still pass. MRR drops from 1.0 to 0.975. Only the three cases the heuristics were written for changed rank, each by one place, and every expected file is still in the top three. Context packs are 18% smaller as JSON and 31% smaller as Markdown; `impact` output is 31% smaller as JSON. See [docs/EVALS.md](docs/EVALS.md#current-baseline).
+
 ## [1.15.0] - 2026-09-23
 
 ### Added
