@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-MERGE_SHA="${GITHUB_SHA:-$(git rev-parse HEAD)}"
+MERGE_SHA="${OTITO_TARGET_SHA:-${GITHUB_SHA:-$(git rev-parse HEAD)}}"
 BASE_SHA="${GITHUB_EVENT_BEFORE:-}"
 if [ -z "$BASE_SHA" ] || ! git rev-parse --verify "${BASE_SHA}^{commit}" >/dev/null 2>&1; then
   if git rev-parse --verify "HEAD~1^{commit}" >/dev/null 2>&1; then

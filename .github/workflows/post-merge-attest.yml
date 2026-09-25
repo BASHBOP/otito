@@ -120,7 +120,10 @@ jobs:
         if: steps.resolve.outputs.should_run == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          GITHUB_SHA: ${{ steps.resolve.outputs.target_sha }}
+          # Not GITHUB_SHA: the runner keeps its own value for GITHUB_* variables
+          # (the default branch head when the run starts), so a step cannot
+          # override it and the script would attest whatever main was by then.
+          OTITO_TARGET_SHA: ${{ steps.resolve.outputs.target_sha }}
           # Resetting the audit chain is a decision, so only a person starting
           # the workflow by hand can ask for it; a CI-triggered run never can.
           OTITO_ATTEST_RESET_LEDGER: ${{ github.event_name == 'workflow_dispatch' && inputs.reset_ledger && '1' || '0' }}

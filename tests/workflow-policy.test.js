@@ -55,6 +55,13 @@ test("post-merge workflow reconciles successful CI into a durable audit branch",
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
 });
 
+test("the attestation target is passed in a variable the workflow can actually set", () => {
+  const workflow = read(".github/workflows/post-merge-attest.yml");
+  // GitHub ignores a step's attempt to set a GITHUB_* variable.
+  assert.doesNotMatch(workflow, /^\s+GITHUB_SHA:/m);
+  assert.match(workflow, /OTITO_TARGET_SHA: \$\{\{ steps\.resolve\.outputs\.target_sha \}\}/);
+});
+
 test("the repository is solo-maintained, so its gate and attestation default to solo governance", () => {
   // A solo maintainer has no second reviewer: under team governance every merge
   // records a FAIL for a missing approval nobody can give. An explicit
@@ -108,6 +115,7 @@ test("reconciliation dry-run lists missing first-parent commits oldest-first", (
     env: {
       ...process.env,
       GITHUB_SHA: commits[2],
+      OTITO_TARGET_SHA: "",
       OTITO_ATTEST_DRY_RUN: "1",
     },
   });
@@ -129,6 +137,7 @@ test("reconciliation rejects a cryptographically valid ledger with a first-paren
     env: {
       ...process.env,
       GITHUB_SHA: commits[2],
+      OTITO_TARGET_SHA: "",
       OTITO_ATTEST_DRY_RUN: "1",
     },
   });
