@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-25T22:12:47.960Z",
+  "generatedAt": "2026-09-25T22:28:48.654Z",
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
@@ -44,7 +44,7 @@
   },
   "prReviewSummary": {
     "changedFiles": 1,
-    "additions": 3,
+    "additions": 4,
     "deletions": 11,
     "riskLevel": "low",
     "riskFlags": [
@@ -75,17 +75,17 @@
       {
         "name": "Secret safety",
         "status": "PASS",
-        "summary": "No secret file paths and no credential values found in the changed content."
+        "summary": "No secret file paths found. Changed content was not available to scan for credential values."
       },
       {
         "name": "Risk review",
-        "status": "WARN",
-        "summary": "Risk-sensitive files changed; maintainer review should be explicit."
+        "status": "PASS",
+        "summary": "No obvious risk-sensitive file paths changed."
       },
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "No version metadata changes found."
+        "summary": "Version metadata is SemVer and changelog was updated."
       },
       {
         "name": "Review decision",
@@ -120,6 +120,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 573
+    "fullJson": 577
   }
 }
