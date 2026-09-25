@@ -80,6 +80,7 @@ nav:
   - Home: index.md
   - Executive Summary: EXECUTIVE-SUMMARY.md
   - Getting Started:
+      - Local Core, Optional Hosted: 19-local-core-optional-hosted/README.md
       - Context Foundation: 01-context-foundation/README.md
       - MCP and Agents: 02-mcp-agent-workflows/README.md
       - Publishing to npm + MCP Registry: 02-mcp-agent-workflows/publishing.md

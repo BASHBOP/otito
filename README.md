@@ -66,26 +66,35 @@ $ otito gate . --staged --base origin/main --request "add refund handling to che
 
 The convergence score is the part a model cannot grade for itself: it compares the stated intent against the files the diff actually changed, and produces a receipt bound to the exact base, parent, and staged-tree identity.
 
-## Everyday commands
+## The core
+
+Three commands are the product. They call no model, open no socket, and read nothing outside the repository.
+
+| Step             | Command                                                                    |
+| ---------------- | -------------------------------------------------------------------------- |
+| Before the edit  | `otito context "add refund handling" --path .`                             |
+| Before the merge | `otito gate . --staged --base origin/main --request "add refund handling"` |
+| For the reviewer | `otito pr . --base origin/main --out .otito/pr-review.md`                  |
+
+Nothing hosted is required, and nothing hosted can change a verdict. [Local Core, Optional Hosted](https://bashbop.github.io/otito/19-local-core-optional-hosted/) lists exactly what the optional pieces send, and where.
+
+## Supporting commands
 
 | Goal                               | Command                                                                     |
 | ---------------------------------- | --------------------------------------------------------------------------- |
-| Inspect one repo                   | `otito repo . --json`                                                       |
-| Build a code map                   | `otito map . --json`                                                        |
-| Prepare task context for an agent  | `otito context "add a new MCP tool" --path .`                               |
 | Rank change blast radius           | `otito impact . "add refund handling" --top 12`                             |
 | Score intent vs. execution         | `otito converge "add refunds" --path . --base HEAD --staged`                |
 | Score a committed change exactly   | `otito converge "add refunds" --path . --base HEAD~1 --head HEAD`           |
-| Grade risk flags against history   | `otito calibrate . --window 30`                                             |
-| Gate an exact staged change        | `otito gate . --staged --run-validation`                                    |
 | Gate a product change across repos | `otito workspace-gate ../web ../api --request "ship change"`                |
-| Review local changes               | `otito pr . --base origin/main --out .otito/pr-review.md`                   |
-| Index and search local projects    | `otito index ~/projects --discover` then `otito search "events controller"` |
-| Generate an agent harness          | `otito harness . --out .otito/harness.md`                                   |
-| Run the MCP server                 | `otito mcp`                                                                 |
+| Grade risk flags against history   | `otito calibrate . --window 30`                                             |
 | Score Agent Experience             | `otito ax . "add a new MCP tool"`                                           |
 | Recommend a model tier             | `otito route . "add a new MCP tool"`                                        |
 | Sharpen context with a model read  | `otito context "add a new MCP tool" --path . --online`                      |
+| Inspect one repo                   | `otito repo . --json`                                                       |
+| Build a code map                   | `otito map . --json`                                                        |
+| Index and search local projects    | `otito index ~/projects --discover` then `otito search "events controller"` |
+| Generate an agent harness          | `otito harness . --out .otito/harness.md`                                   |
+| Run the MCP server                 | `otito mcp`                                                                 |
 
 Every command takes `--json`, and `otito help` lists the full set with flags.
 
