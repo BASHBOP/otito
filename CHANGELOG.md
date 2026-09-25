@@ -26,6 +26,10 @@ This project follows SemVer.
   - Kept: `classifyImpactRoles`, because `converge` and `model_route` measure against its `requiredOwners`.
 - **Measured against `main` on the 21 labelled retrieval cases.** p@5 stays at 0.867 and r@5 at 1.0, and 21/21 cases still pass. MRR drops from 1.0 to 0.975. Only the three cases the heuristics were written for changed rank, each by one place, and every expected file is still in the top three. Context packs are 18% smaller as JSON and 31% smaller as Markdown; `impact` output is 31% smaller as JSON. See [docs/EVALS.md](docs/EVALS.md#current-baseline).
 
+### Fixed
+
+- **Nothing had been attested on `main` since 2026-09-20, and CI had no way to recover.** The durable ledger on `audit-ledger` holds 97 attestations whose commits are no longer in `main`'s history. So every post-merge run stopped in `reconcile-attestations.sh`, correctly, and named a reset that only worked from a local shell. The workflow's manual trigger now takes `reset_ledger`, the only way an Actions run can set `OTITO_ATTEST_RESET_LEDGER=1`; a run started by CI never can. The persist step also keeps the archived chain (`audit-pilot/ledger-orphaned-*.jsonl`) on `audit-ledger` and in the uploaded evidence. Before this, a reset in CI would have written the archive on the runner and discarded it.
+
 ## [1.15.0] - 2026-09-23
 
 ### Added

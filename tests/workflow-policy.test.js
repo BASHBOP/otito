@@ -55,6 +55,17 @@ test("post-merge workflow reconciles successful CI into a durable audit branch",
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
 });
 
+test("only a manual run can reset the audit ledger, and the archived chain is kept", () => {
+  const workflow = read(".github/workflows/post-merge-attest.yml");
+  assert.match(workflow, /reset_ledger:[\s\S]*?type: boolean\s+default: false/);
+  // One place sets the reset, and it is gated on a person dispatching the run.
+  assert.equal((workflow.match(/OTITO_ATTEST_RESET_LEDGER/g) ?? []).length, 1);
+  assert.match(workflow, /OTITO_ATTEST_RESET_LEDGER: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.reset_ledger && '1' \|\| '0' \}\}/);
+  // The superseded chain reaches the audit-ledger branch and the uploaded evidence.
+  assert.match(workflow, /for archive in audit-pilot\/ledger-orphaned-\*\.jsonl; do/);
+  assert.match(workflow, /path: \|[\s\S]*audit-pilot\/ledger-orphaned-\*\.jsonl/);
+});
+
 test("workflow dependencies use setup-node v7 and TypeScript majors require migration", () => {
   const workflowFiles = fs.readdirSync(workflowsDir).filter((name) => name.endsWith(".yml"));
   const workflows = workflowFiles.map((name) => fs.readFileSync(path.join(workflowsDir, name), "utf8")).join("\n");

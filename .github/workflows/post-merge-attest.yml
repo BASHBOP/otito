@@ -14,6 +14,12 @@ on:
         description: Main commit to reconcile through (defaults to origin/main)
         required: false
         type: string
+      reset_ledger:
+        description: >-
+          Archive a ledger whose commits are no longer in this history and start a new chain at the target. Only for the "not in this repository" failure.
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   actions: read
@@ -115,6 +121,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_SHA: ${{ steps.resolve.outputs.target_sha }}
+          # Resetting the audit chain is a decision, so only a person starting
+          # the workflow by hand can ask for it; a CI-triggered run never can.
+          OTITO_ATTEST_RESET_LEDGER: ${{ github.event_name == 'workflow_dispatch' && inputs.reset_ledger && '1' || '0' }}
         run: bash scripts/reconcile-attestations.sh
 
       - name: Persist ledger on audit-ledger branch
@@ -143,12 +152,24 @@ jobs:
           git -C "$LEDGER_DIR" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C "$LEDGER_DIR" add audit-pilot/ledger.jsonl audit-pilot/verdict-latest.json
 
+          # A reset leaves the superseded chain in audit-pilot/ledger-orphaned-*.jsonl.
+          # Keep it beside the new chain so an auditor can still verify it.
+          shopt -s nullglob
+          for archive in audit-pilot/ledger-orphaned-*.jsonl; do
+            cp "$archive" "$LEDGER_DIR/$archive"
+            git -C "$LEDGER_DIR" add "$archive"
+          done
+
           if git -C "$LEDGER_DIR" diff --cached --quiet; then
             echo "Audit ledger already contains $TARGET_SHA."
             exit 0
           fi
 
-          git -C "$LEDGER_DIR" commit -m "audit: attest main through $SHORT_SHA"
+          MESSAGE="audit: attest main through $SHORT_SHA"
+          if [ -n "$(git -C "$LEDGER_DIR" diff --cached --name-only --diff-filter=A -- 'audit-pilot/ledger-orphaned-*.jsonl')" ]; then
+            MESSAGE="audit: archive the orphaned chain and restart at $SHORT_SHA"
+          fi
+          git -C "$LEDGER_DIR" commit -m "$MESSAGE"
           git -C "$LEDGER_DIR" push origin HEAD:refs/heads/audit-ledger
 
       - name: Upload attestation evidence
@@ -159,4 +180,5 @@ jobs:
           path: |
             audit-pilot/ledger.jsonl
             audit-pilot/verdict-latest.json
+            audit-pilot/ledger-orphaned-*.jsonl
           retention-days: 90
