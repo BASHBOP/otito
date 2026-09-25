@@ -10,7 +10,7 @@ cd "$ROOT"
 # OTITO_TARGET_SHA first: in Actions, GITHUB_SHA is the runner's own value and
 # cannot be overridden by the workflow. GITHUB_SHA remains for standalone use.
 TARGET_SHA="${OTITO_TARGET_SHA:-${GITHUB_SHA:-$(git rev-parse HEAD)}}"
-LEDGER="$ROOT/audit-pilot/ledger.jsonl"
+LEDGER="${OTITO_LEDGER:-$ROOT/audit-pilot/ledger.jsonl}"
 
 git rev-parse --verify "${TARGET_SHA}^{commit}" >/dev/null
 
@@ -57,7 +57,7 @@ if [ -n "$ORPHANED" ]; then
     # Deliberate, opt-in restart. The superseded chain is NOT deleted: it stays
     # in the history of whatever branch carries it, and is archived beside the
     # new one so an auditor can still verify it on its own terms.
-    ARCHIVE="$ROOT/audit-pilot/ledger-orphaned-$(date -u +%Y%m%dT%H%M%SZ).jsonl"
+    ARCHIVE="$(dirname "$LEDGER")/ledger-orphaned-$(date -u +%Y%m%dT%H%M%SZ).jsonl"
     if [ -f "$LEDGER" ]; then
       cp "$LEDGER" "$ARCHIVE"
       echo "reconcile-attestations: archived superseded chain to $(basename "$ARCHIVE")"
@@ -110,7 +110,7 @@ else
 fi
 if [ -z "$COMMITS" ]; then
   echo "reconcile-attestations: ledger already covers $TARGET_SHA"
-  node audit-pilot/attest.mjs --verify
+  node src/cli.js attest . --verify --ledger "$LEDGER"
   exit 0
 fi
 
@@ -132,6 +132,7 @@ for MERGE_SHA in $COMMITS; do
   fi
 
   OTITO_ATTEST_MODE="$ATTEST_MODE" \
+    OTITO_LEDGER="$LEDGER" \
     OTITO_TARGET_SHA="$MERGE_SHA" \
     GITHUB_SHA="$MERGE_SHA" \
     GITHUB_EVENT_BEFORE="$BASE_SHA" \
@@ -139,5 +140,5 @@ for MERGE_SHA in $COMMITS; do
 done
 
 if [ "${OTITO_ATTEST_DRY_RUN:-0}" != "1" ]; then
-  node audit-pilot/attest.mjs --verify
+  node src/cli.js attest . --verify --ledger "$LEDGER"
 fi

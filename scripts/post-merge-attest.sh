@@ -16,10 +16,10 @@ if [ -z "$BASE_SHA" ] || ! git rev-parse --verify "${BASE_SHA}^{commit}" >/dev/n
   fi
 fi
 
-LEDGER="$ROOT/audit-pilot/ledger.jsonl"
+LEDGER="${OTITO_LEDGER:-$ROOT/audit-pilot/ledger.jsonl}"
 if [ -f "$LEDGER" ] && grep -q "\"mergeSha\":\"$MERGE_SHA\"" "$LEDGER"; then
   echo "post-merge-attest: merge $MERGE_SHA already attested; verifying chain only"
-  node audit-pilot/attest.mjs --verify
+  node src/cli.js attest . --verify --ledger "$LEDGER"
   exit 0
 fi
 
@@ -71,7 +71,7 @@ else
   fi
 fi
 
-node audit-pilot/attest.mjs \
+node src/cli.js attest . --ledger "$LEDGER" \
   --verdict "$VERDICT" \
   --merge "$MERGE_SHA" \
   --prev "$BASE_SHA" \
@@ -79,4 +79,4 @@ node audit-pilot/attest.mjs \
   --author "$AUTHOR" \
   --committed "$COMMITTED"
 
-node audit-pilot/attest.mjs --verify
+node src/cli.js attest . --verify --ledger "$LEDGER"

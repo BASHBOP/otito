@@ -245,7 +245,7 @@ each request becoming an intent, a context, a tier and a result. A third lets
 | --- | --- |
 | `OTITO_CANVAS_URL` | Forward each request-bearing tool call (`context_pack`, `change_impact`, `agent_experience`, `model_route`, `convergence_score`, `review_gate`, `review_verdict`) to the canvas at this address. Loopback `http` only; any other address is ignored. |
 | `OTITO_HOST` | The label the canvas shows for this host, e.g. `cursor`. Defaults to `mcp`. |
-| `TYPESAFE_API_KEY` | Lets `model_route` ask TypeSafe's Jev for its read of the request. Without it the read is a labelled offline estimate. Billed by TypeSafe. |
+| `TYPESAFE_API_KEY` | Lets `model_route` ask TypeSafe's Jev for its read of the request. Without it the read is a labelled offline estimate. Billed by TypeSafe. Calls identify themselves as `otito/<version>` and nothing else. |
 
 The tap sends the request text, the tool name and the host label. It never
 sends a tool result, a path argument or file contents, and it never waits for

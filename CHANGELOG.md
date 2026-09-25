@@ -6,6 +6,12 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- **`otito attest` / `otito attest --verify`.** The post-merge attestation moves out of `audit-pilot/attest.mjs` and into the CLI. `otito attest <repo> --verdict <file> --merge <sha> [--prev <sha>] [--pr <n>] [--author <name>] [--committed <iso>]` appends a hash-chained record to `audit-pilot/ledger.jsonl` under the repository (or the file `--ledger` names); `--verify` recomputes the chain and exits 1 if any record was altered. Both take `--json`. `scripts/post-merge-attest.sh` and `scripts/reconcile-attestations.sh` call the command and honour `OTITO_LEDGER`.
+- **`schemaVersion` on the verdict JSON and on every ledger record.** `otito review --json` now reports `schemaVersion: 1` beside `reviewEngineVersion`, and each attestation carries `schemaVersion: 1` and the `verdictSchemaVersion` it was built from. Records written before these fields existed verify unchanged.
+- **Jev calls identify Otito.** Every call to TypeSafe goes out under `user-agent: otito/<version>`, with the client name and version only.
+
 ## [3.0.0] - 2026-09-25
 
 The first major release since the Òtítọ́ cutover. It follows 1.15.0 directly: the `v2.x` tags belong to the Repoctx releases, so the version skips them.

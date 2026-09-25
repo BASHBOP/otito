@@ -18,7 +18,7 @@ Three commands are the product. Everything else supports them.
 
 None of the three calls a model, opens a socket, or reads anything outside the repository. Run them twice and you get the same answer.
 
-The supporting commands run the same way: `impact` and `converge` (the pieces `gate` is built from), `ax` and `route` (how well the repository serves an agent, and how much model the request deserves), `map`, `repo`, `index` and `search` (repository shape), `harness`, `calibrate`, `workspace-gate`, `init` and `doctor`. `otito help` lists all of them, and every one takes `--json`.
+The supporting commands run the same way: `impact` and `converge` (the pieces `gate` is built from), `ax` and `route` (how well the repository serves an agent, and how much model the request deserves), `attest` (the post-merge record and its `--verify`), `map`, `repo`, `index` and `search` (repository shape), `harness`, `calibrate`, `workspace-gate`, `init` and `doctor`. `otito help` lists all of them, and every one takes `--json`.
 
 ---
 
@@ -28,7 +28,7 @@ The supporting commands run the same way: `impact` and `converge` (the pieces `g
 | --- | --- | --- | --- |
 | The core commands and the 14 MCP tools | Nothing | — | On |
 | `gate --pr`, `pass-pr`, `review --pr` | GitHub API reads through your own `gh` login: PR state, reviews, checks | GitHub | Only with `--pr` |
-| `route`, `context --online`, `model_route` | The request text, the repository name, its AX and containment scores, the ranked file paths and any risk paths. Never file contents | TypeSafe's Jev, on your own `TYPESAFE_API_KEY` | Off; without a key the read is a labelled offline estimate |
+| `route`, `context --online`, `model_route` | The request text, the repository name, its AX and containment scores, the ranked file paths and any risk paths, under a `user-agent` of `otito/<version>`. Never file contents | TypeSafe's Jev, on your own `TYPESAFE_API_KEY` | Off; without a key the read is a labelled offline estimate |
 | Realtime Canvas | The request text, the tool name and the host label | `127.0.0.1` only; any other address is ignored | Off |
 | Telemetry | One JSONL line per run to `~/.otito/usage.jsonl` | Your disk | Off |
 | Telemetry sharing | A smaller, allowlisted anonymous shape | Otito's public relay | Off, and a separate opt-in from local capture |
@@ -40,7 +40,7 @@ The supporting commands run the same way: `impact` and `converge` (the pieces `g
 
 Every merge to `main` can leave a record of what shipped and under which review verdict. Each record hashes the one before it, so editing any stored field breaks every hash after it, and each is keyed to the exact merge commit, so a missing commit is visible.
 
-**Locally, this is complete.** The [post-merge workflow](https://github.com/BASHBOP/otito/blob/main/.github/workflows/post-merge-attest.yml) appends a record to a ledger branch in your own repository, and `--verify` walks the chain and exits non-zero if any record was altered. The evidence format is open JSON Lines, so an export is the file itself.
+**Locally, this is complete.** The [post-merge workflow](https://github.com/BASHBOP/otito/blob/main/.github/workflows/post-merge-attest.yml) runs `otito attest` to append a record to a ledger branch in your own repository, and `otito attest --verify` walks the chain and exits non-zero if any record was altered. The evidence format is open JSON Lines with a `schemaVersion` on every record and on the verdict it came from, so an export is the file itself.
 
 **Hosted adds what one repository cannot hold:** a ledger per organisation across every repository, chain verification and a list of missing commits on demand, an auditor-ready export, and retention you set once. It is opt-in per repository: nothing changes for a repository that never pushes, and a pushed record is a copy, never a move.
 

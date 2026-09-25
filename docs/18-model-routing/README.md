@@ -123,6 +123,13 @@ the repository has no checkout and no auth controller, so `add refund handling
 to checkout` ranks `evals/fixtures/shop-api/.../checkout.service.ts` first and
 used to escalate to premium on evidence from a corpus that ships nothing.
 
+### What the call carries
+
+Every call goes out under a `user-agent` of `otito/<version>`, so TypeSafe can
+tell Otito's traffic from a hand-written client. The tag holds the client name
+and version only: no user, no repository, no key. The body is the state
+described above and the questions; file contents never leave the machine.
+
 ### Cost and latency
 
 Jev bills input only, at $0.042/Mtok. Measured on this corpus: **728 to 845 input

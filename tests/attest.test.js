@@ -7,10 +7,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const attest = path.join(repoRoot, "audit-pilot", "attest.mjs");
+const cli = path.join(repoRoot, "src", "cli.js");
 
 function runAttest(args, options = {}) {
-  return spawnSync(process.execPath, [attest, ...args], {
+  return spawnSync(process.execPath, [cli, "attest", ...args], {
     cwd: repoRoot,
     encoding: "utf8",
     ...options,
@@ -27,13 +27,66 @@ test("attest --verify passes on the committed pilot ledger", () => {
   const result = runAttest(["--verify"]);
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /Chain intact/);
+
+  const json = runAttest([".", "--verify", "--json"]);
+  assert.equal(json.status, 0, json.stderr || json.stdout);
+  const payload = JSON.parse(json.stdout);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.records, payload.chain.length);
+  assert.ok(payload.chain.every((row) => row.valid));
+});
+
+test("attest appends a versioned record that chains on the previous one, and refuses without a merge SHA", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "attest-append-"));
+  const ledger = path.join(tempDir, "ledger", "chain.jsonl");
+  const verdictPath = path.join(tempDir, "verdict.json");
+  fs.writeFileSync(
+    verdictPath,
+    JSON.stringify({
+      ok: true,
+      generatedAt: "2026-09-25T00:00:00.000Z",
+      schemaVersion: 1,
+      reviewEngineVersion: 1,
+      verdict: "PASS",
+      confidence: 88,
+      pass: { policy: "standard", governance: "solo", checks: [{ name: "Secret safety", status: "PASS", detail: "dropped" }] },
+      prReviewSummary: { changedFiles: 2, riskLevel: "low", riskFlags: [] },
+      impactSummary: { topFiles: [{ path: "src/a.js", score: 9 }] },
+    }),
+  );
+
+  const missing = runAttest(["--verdict", verdictPath, "--ledger", ledger]);
+  assert.equal(missing.status, 1);
+  assert.match(missing.stderr, /--merge/);
+  assert.equal(fs.existsSync(ledger), false, "nothing is written until the record is complete");
+
+  const first = runAttest(["--verdict", verdictPath, "--merge", "a".repeat(40), "--prev", "b".repeat(40), "--pr", "12", "--ledger", ledger, "--json"]);
+  assert.equal(first.status, 0, first.stderr || first.stdout);
+  const { record } = JSON.parse(first.stdout);
+  assert.equal(record.schemaVersion, 1);
+  assert.equal(record.verdictSchemaVersion, 1);
+  assert.equal(record.seq, 1);
+  assert.equal(record.pr, 12);
+  assert.equal(record.prevHash, "0".repeat(64));
+  assert.deepEqual(record.checks, [{ name: "Secret safety", status: "PASS" }], "checks keep name and status only");
+  assert.deepEqual(record.impactedFiles, ["src/a.js"]);
+
+  const second = runAttest(["--verdict", verdictPath, "--merge", "c".repeat(40), "--ledger", ledger, "--json"]);
+  assert.equal(second.status, 0, second.stderr || second.stdout);
+  const next = JSON.parse(second.stdout).record;
+  assert.equal(next.seq, 2);
+  assert.equal(next.prevHash, record.recordHash, "each record hashes the one before it");
+  assert.equal(next.pr, null);
+
+  const verify = runAttest(["--verify", "--ledger", ledger]);
+  assert.equal(verify.status, 0, verify.stderr || verify.stdout);
+  assert.match(verify.stdout, /Chain intact: 2 record\(s\)/);
 });
 
 test("attest --verify fails when a ledger record is tampered", () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "attest-tamper-"));
   const pilotDir = path.join(tempDir, "audit-pilot");
   fs.mkdirSync(pilotDir, { recursive: true });
-  fs.copyFileSync(attest, path.join(pilotDir, "attest.mjs"));
 
   const ledger = path.join(pilotDir, "ledger.jsonl");
   const sourceLedger = path.join(repoRoot, "audit-pilot", "ledger.jsonl");
@@ -45,11 +98,13 @@ test("attest --verify fails when a ledger record is tampered", () => {
   lines[0] = JSON.stringify(row);
   fs.writeFileSync(ledger, `${lines.join("\n")}\n`);
 
-  const result = spawnSync(process.execPath, [path.join(pilotDir, "attest.mjs"), "--verify"], {
-    encoding: "utf8",
-  });
+  // The default ledger is <repo>/audit-pilot/ledger.jsonl; --ledger names it outright.
+  const result = runAttest([tempDir, "--verify"]);
   assert.equal(result.status, 1);
   assert.match(result.stdout, /TAMPERED|CHAIN BROKEN/);
+  const named = runAttest(["--verify", "--ledger", ledger, "--json"]);
+  assert.equal(named.status, 1);
+  assert.equal(JSON.parse(named.stdout).ok, false);
 });
 
 test("post-merge attestation records a valid FAIL verdict even when review exits nonzero", () => {
@@ -61,10 +116,17 @@ test("post-merge attestation records a valid FAIL verdict even when review exits
   for (const dir of [scriptsDir, pilotDir, srcDir, binDir]) fs.mkdirSync(dir, { recursive: true });
 
   fs.copyFileSync(path.join(repoRoot, "scripts", "post-merge-attest.sh"), path.join(scriptsDir, "post-merge-attest.sh"));
-  fs.copyFileSync(attest, path.join(pilotDir, "attest.mjs"));
+  // The script calls `src/cli.js` for both the review and the attestation.
+  // This stand-in fakes the review (a FAIL that exits nonzero) and hands
+  // `attest` to the real CLI so the ledger it writes is the real format.
   fs.writeFileSync(
     path.join(srcDir, "cli.js"),
     [
+      "if (process.argv[2] === 'attest') {",
+      "  const { spawnSync } = require('node:child_process');",
+      `  const run = spawnSync(process.execPath, [${JSON.stringify(cli)}, ...process.argv.slice(2)], { stdio: 'inherit' });`,
+      "  process.exit(run.status ?? 1);",
+      "}",
       "console.log(JSON.stringify({",
       "  ok: true, generatedAt: '2026-07-15T00:00:00.000Z', reviewEngineVersion: 1,",
       "  verdict: 'FAIL', confidence: 42,",
