@@ -332,7 +332,7 @@ sequenceDiagram
     User->>Agent: Make a change safely
     Agent->>otito: context_pack(task, repo)
     otito->>Repo: Inspect files and git state
-    otito-->>Agent: Primary files, related files, tests, patterns
+    otito-->>Agent: Primary files, related files, tests, commands
     Agent->>Repo: Edit scoped files
     Agent->>otito: review_context(base, head)
     otito-->>Agent: Review prompts and risk flags

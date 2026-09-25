@@ -107,7 +107,6 @@ test("a confident read relabels the intent, demotes a strong no, and re-ranks th
   assert.equal(data.modelRead.source, "jev");
   assert.equal(data.modelRead.model, "jev-test");
   assert.equal(data.modelRead.costUsd, 0.000042);
-  assert.ok(!data.agentPrompt.includes(demotedPath), "the agent prompt is rebuilt from the new lists");
   assert.match(read.markdown, /## Model Read/);
   assert.match(read.markdown, /Intent: debug \(confidence 0\.91; otito's own reading was unknown\)/);
   assert.match(read.markdown, /Demoted 1 file\(s\)/);

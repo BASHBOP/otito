@@ -148,7 +148,7 @@ export const tools = [
     name: "context_pack",
     title: "Context Pack",
     description:
-      "Generate a task-aware local context packet with primary files, related files, tests, patterns, and validation commands. Uses a per-user external cache and leaves the target repository unchanged. Deterministic by default; pass online:true to also ask a System One model (needs TYPESAFE_API_KEY) what kind of work the request is and which candidate files it needs, which relabels a confidently read intent and demotes files it judges irrelevant, reported under modelRead.",
+      "Generate a task-aware local context packet with primary files, related files, tests, and validation commands. Uses a per-user external cache and leaves the target repository unchanged. Deterministic by default; pass online:true to also ask a System One model (needs TYPESAFE_API_KEY) what kind of work the request is and which candidate files it needs, which relabels a confidently read intent and demotes files it judges irrelevant, reported under modelRead.",
     annotations: { readOnlyHint: true, openWorldHint: true },
     inputSchema: {
       type: "object",

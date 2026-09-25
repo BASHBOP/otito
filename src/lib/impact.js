@@ -238,7 +238,6 @@ export function generateImpact(query, options = {}) {
   const ranked = addPredictableSupportFiles(diffEvidence ? mergeDiffEvidence(diffEvidence.entries, heuristicRanked) : heuristicRanked, map.files, roles);
 
   const testSuggestions = suggestTests(map.files, ranked, map.repo);
-  const implementationPlan = buildPlan(normalized, ranked);
   const risks = identifyRisks(normalized, ranked, concepts);
   const validation = diffSnapshot ? (diffSnapshot.ok ? validateChangedFiles(diffSnapshot.base, exactDiffFiles, roles) : diffSnapshot) : null;
 
@@ -272,7 +271,6 @@ export function generateImpact(query, options = {}) {
       riskFlags: classifyPath(entry.file.path, { kind: entry.file.kind }),
     })),
     testSuggestions,
-    implementationPlan,
     risks,
     classifications: {
       requiredOwners: roles.requiredOwners,
@@ -288,7 +286,6 @@ export function generateImpact(query, options = {}) {
       { name: "diffEvidence", value: data.diffEvidence },
       { name: "topFiles", value: data.topFiles },
       { name: "testSuggestions", value: data.testSuggestions },
-      { name: "implementationPlan", value: data.implementationPlan },
       { name: "risks", value: data.risks },
     ]),
     fullJson: estimateTokens(data),
@@ -614,43 +611,6 @@ function suggestTests(files, ranked, repo) {
     suggestions.push("No matching test file found. Add focused coverage around the highest-ranked impacted file.");
   }
   return dedupe(suggestions);
-}
-
-/**
- * @param {string} query
- * @param {ScoredEntry[]} ranked
- * @returns {string[]}
- */
-function buildPlan(query, ranked) {
-  if (ranked.length === 0) {
-    return [
-      "Clarify the change request with the exact feature area, expected behavior, and examples.",
-      "Search the repo manually for the domain terms in the request.",
-      "Add or update a focused test before changing behavior.",
-    ];
-  }
-
-  const implementation = ranked.filter((entry) => entry.file.kind !== "test");
-  const primary = (implementation[0] ?? ranked[0]).file.path;
-  const supporting = implementation.slice(1, 4).map((entry) => entry.file.path);
-
-  const plan = [
-    `Open \`${primary}\` first and decide whether it owns the requested behavior or only calls into another file.`,
-    "Follow its imports/callers into related files before editing so the change lands at the owner, not just the highest-ranked match.",
-    "Make the smallest implementation change in the owner file, then adjust supporting files only if required.",
-    "Use the ranked list as a checklist: edit primary owner, inspect supporting files for side effects.",
-    "Run or add the closest focused test, then run the repo's broader test/lint command.",
-  ];
-  if (supporting.length) {
-    plan.splice(1, 0, `Keep these supporting files open while tracing side effects: ${supporting.map((p) => `\`${p}\``).join(", ")}.`);
-  }
-  if (ranked.some((entry) => entry.file.kind === "schema" || entry.file.path.toLowerCase().includes("schema"))) {
-    plan.splice(2, 0, "Review schema or migration impact before changing application code.");
-  }
-  if (ranked.some((entry) => (entry.file.httpMethods ?? []).length || entry.file.kind === "controller" || entry.file.kind === "apiRoute")) {
-    plan.splice(2, 0, "Check the matched routes/controllers for request/response contracts and downstream consumers.");
-  }
-  return plan;
 }
 
 /**
@@ -1067,8 +1027,6 @@ export function formatImpactMarkdown(data) {
   lines.push(`- Worth inspecting: ${formatList(data.classifications.advisoryFiles)}`);
   lines.push("## Tests To Run Or Add", "");
   for (const suggestion of data.testSuggestions) lines.push(`- ${suggestion}`);
-  lines.push("", "## Implementation Plan", "");
-  for (const [index, step] of data.implementationPlan.entries()) lines.push(`${index + 1}. ${step}`);
   lines.push("", "## Risks To Check", "");
   for (const risk of data.risks) lines.push(`- ${risk}`);
   if (data.validation) {
@@ -1294,13 +1252,6 @@ export function formatImpactTerminal(data, rendererFactory) {
     renderer.section(
       `${renderer.emoji ? "🚨" : ">"} Risk hotspots`,
       data.risks.slice(0, 6).map((/** @type {string} */ r) => `${renderer.emoji ? "•" : "-"} ${r}`),
-    ),
-  );
-  lines.push("");
-  lines.push(
-    renderer.section(
-      `${renderer.emoji ? "📋" : ">"} Implementation plan`,
-      data.implementationPlan.map((/** @type {string} */ step, /** @type {number} */ i) => `${i + 1}. ${step}`),
     ),
   );
   if (data.validation) {

@@ -114,7 +114,7 @@ MCP tools exposed by the server:
 - `repo_map`: compact JSON code map with optional `domain`, `kind`, and `route` filters
 - `repo_index`: local `.otito/index.json` generation and catalog registration; `dryRun:true` discovers read-only
 - `repo_search`: local catalog search across paths, domains, routes, imports, exports, and symbols; omit `query` to list the catalog
-- `context_pack`: task-aware local context packet with primary files, related files, tests, patterns, validation commands, and source evidence
+- `context_pack`: task-aware local context packet with primary files, related files, tests, validation commands, and source evidence
 - `change_impact`: rank files most likely to own a plain-English change request
 - `agent_experience`: Agent Experience (AX 0–100) score for a change
 - `model_route`: advisory model tier (cheap / mid / premium) for a request before work starts

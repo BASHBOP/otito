@@ -151,7 +151,7 @@ the older floor.)
 
 ## Current baseline
 
-Recorded **2026-09-19** by running `runRetrievalEval()` against the committed
+Recorded **2026-09-25** by running `runRetrievalEval()` against the committed
 corpus (21 retrieval + 22 risk cases):
 
 ```
@@ -159,10 +159,10 @@ corpus (21 retrieval + 22 risk cases):
 |-----------|--------------|------:|----------:|:----:|
 | retrieval | precisionAtK | 0.867 |      0.85 | yes  |
 | retrieval | recallAtK    | 1.0   |      0.9  | yes  |
-| retrieval | mrr          | 1.0   |      0.9  | yes  |
+| retrieval | mrr          | 0.975 |      0.9  | yes  |
 | risk      | accuracy     | 1.0   |      0.96 | yes  |
 
-Retrieval: p@5=0.867, r@5=1.0, mrr=1.0 (21/21 cases pass)
+Retrieval: p@5=0.867, r@5=1.0, mrr=0.975 (21/21 cases pass)
 Risk:      accuracy=1.0 (22/22 cases pass)
 Overall:   PASS (exit 0)
 ```
@@ -171,6 +171,12 @@ precision@5 is below 1.0 because some pairing queries (e.g. `fix the rsvp
 button`) legitimately return two primary files when only one is labeled
 `expectedPrimary`; the second is a correct related file, so this is expected
 headroom rather than a defect.
+
+mrr dropped from 1.0 to 0.975 when the query-interpretation heuristics (intent
+hints, the signup/verification and RSVP-privacy boosts, the template boost)
+were removed. Those rules existed to put one file at rank 1 for the three
+cases they were written against; without them the expected file sits at rank
+2 or 3, still inside the top five. Ordering within the pack is the model's job.
 
 ## How to add a case
 
