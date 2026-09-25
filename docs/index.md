@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v1.14.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
+**v1.15.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
 
 ---
 
@@ -18,6 +18,14 @@
 ---
 
 ## What's New
+
+!!! tip "v1.15.0 published (2026-09-23)"
+    - `model_route` is now an MCP tool, so every MCP host (Cursor, VS Code, Claude Desktop, Codex, Gemini) can ask for a tier, not only the CLI.
+    - A request read rides the same System One call: what kind of work it is, which otito tool answers it, and which ranked files it needs. It is reported, never scored; the tier is identical with and without it.
+    - `otito context --online` / `context_pack { online: true }` applies that read to a context pack: it relabels a confident intent and demotes files the model judges irrelevant. Off unless asked.
+    - Any MCP host can appear on a local Realtime Canvas via `OTITO_CANVAS_URL` and `OTITO_HOST`, sending the request text only.
+
+    [npm v1.15.0](https://www.npmjs.com/package/@bashbop/otito/v/1.15.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.15.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v1.14.0 published (2026-09-20)"
     - A `UserPromptSubmit` hook routes **every** request before any work starts, not only the ones a skill remembers to route. It advises the session and binds the model on delegated subagents; it cannot switch the session's own model, and says so.
