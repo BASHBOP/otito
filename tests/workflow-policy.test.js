@@ -55,6 +55,13 @@ test("post-merge workflow reconciles successful CI into a durable audit branch",
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
 });
 
+test("the repository is solo-maintained, so its gate and attestation default to solo governance", () => {
+  // A solo maintainer has no second reviewer: under team governance every merge
+  // records a FAIL for a missing approval nobody can give. An explicit
+  // --governance flag still overrides this default.
+  assert.equal(JSON.parse(read(".otitorc.json")).governance, "solo");
+});
+
 test("only a manual run can reset the audit ledger, and the archived chain is kept", () => {
   const workflow = read(".github/workflows/post-merge-attest.yml");
   assert.match(workflow, /reset_ledger:[\s\S]*?type: boolean\s+default: false/);
