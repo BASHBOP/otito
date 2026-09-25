@@ -6,6 +6,17 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-09-25
+
+The first major release since the Òtítọ́ cutover. It follows 1.15.0 directly: the `v2.x` tags belong to the Repoctx releases, so the version skips them.
+
+### Migrating from 1.x
+
+- **Context pack** (`otito context --json`, `context_pack`): `intent` is now `{ action, topics }`, and `intent.hints`, `patterns` and `agentPrompt` are gone. Read the ranked files and hotspots directly and let the model decide what the request means.
+- **Impact** (`otito impact --json`, `change_impact`): `implementationPlan` is gone. Rank, risk flags and suggested tests are unchanged.
+- **PR review** (`otito pr --json`, `review_context`): `reviewPrompts` and `nextSteps` are gone. Use `risk.flags` and `reviewTargets`, which carried the same information.
+- **Convergence**: untracked files are no longer scored by default. Pass `--include-untracked` / `includeUntracked: true` for the 1.x behaviour. Receipts issued by engine `0.1.0` do not recompute under `0.2.0`; re-issue them.
+
 ### Added
 
 - **`otito converge --head <ref>` / `convergence_score { head }`: score exactly `base..head`.** Convergence could only diff `base` against the working tree, so any dirty or untracked file was scope drift. Scoring a one-commit feature (`--base HEAD~1`) in a checkout with three edited `.claude/*` files and an untracked `dump.rdb` reported 29 changed files for a 25-file commit and listed all four extras as drift. `head` diffs the two trees directly (no merge base), builds the scoring map from the head commit's raw blobs, and binds a v2 receipt to a new `git-commit` subject (`baseSha`, `headSha`, `treeSha`) the way `--staged` binds to the index tree. `--head` and `--staged` cannot be combined.

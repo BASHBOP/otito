@@ -6,7 +6,7 @@ otito follows Semantic Versioning.
 - Minor: new commands, new MCP tools, new report fields, or backward-compatible behavior.
 - Major: removed commands, renamed fields, incompatible output changes, or changed runtime requirements.
 
-Preserve this discipline across the stable 1.x line. Reserve the next major version for intentional CLI, MCP, cache, or runtime incompatibilities with an explicit migration guide.
+Preserve this discipline across the stable 3.x line. There is no Òtítọ́ 2.x: the `v2.x` tags belong to the earlier Repoctx releases, so 1.15.0 was followed by 3.0.0. Reserve the next major version for intentional CLI, MCP, cache, or runtime incompatibilities with an explicit migration guide.
 
 ## Checklist
 
@@ -25,7 +25,7 @@ Preserve this discipline across the stable 1.x line. Reserve the next major vers
 13. Verify the published binary:
 
 ```bash
-npm install -g @bashbop/otito@1.15.0
+npm install -g @bashbop/otito@3.0.0
 otito doctor
 ```
 
