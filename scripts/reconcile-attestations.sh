@@ -77,6 +77,7 @@ if [ -n "$ORPHANED" ]; then
     echo "  by retrying: the commits it attests are gone." >&2
     echo "  To archive the superseded chain and start a new one at the current tip:" >&2
     echo "    OTITO_ATTEST_RESET_LEDGER=1 bash scripts/reconcile-attestations.sh" >&2
+    echo "  or run the Post-merge audit attestation workflow by hand with reset_ledger=true." >&2
     exit 1
   fi
 fi
