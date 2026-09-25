@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 # Post-merge audit attestation for pushes to main.
 # Generates a review verdict, appends a hash-chained ledger record, and verifies the chain.
+#
+# Runs against this checkout by default. To attest another repository:
+#   OTITO_REPO    the repository to attest (default: the checkout this script is in)
+#   OTITO_BIN     the otito command (default: node <this checkout>/src/cli.js)
+#   OTITO_LEDGER  the ledger file (default: <repo>/audit-pilot/ledger.jsonl);
+#                 the latest verdict is written beside it as verdict-latest.json
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TOOL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="${OTITO_REPO:-$TOOL_ROOT}"
+ROOT="$(cd "$ROOT" && pwd)"
+OTITO_BIN="${OTITO_BIN:-node $TOOL_ROOT/src/cli.js}"
 cd "$ROOT"
 
 MERGE_SHA="${OTITO_TARGET_SHA:-${GITHUB_SHA:-$(git rev-parse HEAD)}}"
@@ -17,16 +26,17 @@ if [ -z "$BASE_SHA" ] || ! git rev-parse --verify "${BASE_SHA}^{commit}" >/dev/n
 fi
 
 LEDGER="${OTITO_LEDGER:-$ROOT/audit-pilot/ledger.jsonl}"
+mkdir -p "$(dirname "$LEDGER")"
 if [ -f "$LEDGER" ] && grep -q "\"mergeSha\":\"$MERGE_SHA\"" "$LEDGER"; then
   echo "post-merge-attest: merge $MERGE_SHA already attested; verifying chain only"
-  node src/cli.js attest . --verify --ledger "$LEDGER"
+  $OTITO_BIN attest . --verify --ledger "$LEDGER"
   exit 0
 fi
 
 PR="$(git log -1 --format=%s "$MERGE_SHA" | sed -n 's/.*(#\([0-9][0-9]*\)).*/\1/p' || true)"
 AUTHOR="$(git log -1 --format=%an "$MERGE_SHA")"
 COMMITTED="$(git log -1 --format=%aI "$MERGE_SHA")"
-VERDICT="$ROOT/audit-pilot/verdict-latest.json"
+VERDICT="$(dirname "$LEDGER")/verdict-latest.json"
 
 is_valid_verdict() {
   node -e '
@@ -56,22 +66,22 @@ capture_review() {
 
 if [ "${OTITO_ATTEST_MODE:-auto}" != "diff" ] && [ -n "$PR" ] && command -v gh >/dev/null 2>&1; then
   echo "post-merge-attest: review via PR #$PR"
-  if ! capture_review node src/cli.js review . --pr "$PR" --json; then
+  if ! capture_review $OTITO_BIN review . --pr "$PR" --json; then
     echo "post-merge-attest: PR review unavailable; falling back to diff $BASE_SHA..$MERGE_SHA"
-    if ! capture_review node src/cli.js review . --base "$BASE_SHA" --head "$MERGE_SHA" --json; then
+    if ! capture_review $OTITO_BIN review . --base "$BASE_SHA" --head "$MERGE_SHA" --json; then
       echo "post-merge-attest: no valid review verdict was produced" >&2
       exit 1
     fi
   fi
 else
   echo "post-merge-attest: review via diff $BASE_SHA..$MERGE_SHA"
-  if ! capture_review node src/cli.js review . --base "$BASE_SHA" --head "$MERGE_SHA" --json; then
+  if ! capture_review $OTITO_BIN review . --base "$BASE_SHA" --head "$MERGE_SHA" --json; then
     echo "post-merge-attest: no valid review verdict was produced" >&2
     exit 1
   fi
 fi
 
-node src/cli.js attest . --ledger "$LEDGER" \
+$OTITO_BIN attest . --ledger "$LEDGER" \
   --verdict "$VERDICT" \
   --merge "$MERGE_SHA" \
   --prev "$BASE_SHA" \
@@ -79,4 +89,4 @@ node src/cli.js attest . --ledger "$LEDGER" \
   --author "$AUTHOR" \
   --committed "$COMMITTED"
 
-node src/cli.js attest . --verify --ledger "$LEDGER"
+$OTITO_BIN attest . --verify --ledger "$LEDGER"

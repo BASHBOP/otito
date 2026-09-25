@@ -1,0 +1,183 @@
+name: Otito post-merge attestation
+
+# Reusable: call this from your own repository to keep a hash-chained,
+# per-merge-commit record of what shipped and under which review verdict.
+# The ledger lives on a branch of your repository; nothing leaves it.
+#
+#   jobs:
+#     attest:
+#       uses: BASHBOP/otito/.github/workflows/attest.yml@main
+#       with:
+#         target_sha: ${{ github.sha }}
+#       permissions:
+#         actions: read
+#         contents: write
+#         pull-requests: read
+#
+# Records go to `ledger_path` (default audit-pilot/ledger.jsonl) on
+# `ledger_branch` (default audit-ledger). Every first-parent commit between
+# the ledger tip and `target_sha` is attested oldest-first, so a merge that
+# skipped CI is still recorded. Verify at any time with
+# `npx @bashbop/otito attest . --verify --ledger <file>`.
+on:
+  workflow_call:
+    inputs:
+      target_sha:
+        description: The commit on the default branch to attest through.
+        required: true
+        type: string
+      ledger_path:
+        description: Ledger file, relative to the repository root.
+        required: false
+        type: string
+        default: audit-pilot/ledger.jsonl
+      ledger_branch:
+        description: Branch that carries the ledger. Created on first run.
+        required: false
+        type: string
+        default: audit-ledger
+      otito_repository:
+        description: Where to fetch the otito tool from.
+        required: false
+        type: string
+        default: BASHBOP/otito
+      otito_ref:
+        description: The otito ref to run. Pin a tag for a stable engine version.
+        required: false
+        type: string
+        default: main
+      reset_ledger:
+        description: >-
+          Archive a ledger whose commits are no longer in this history and start a new chain at the target. Only for the "not in this repository" failure.
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: otito-attest-${{ inputs.ledger_branch }}
+  cancel-in-progress: false
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: read
+    env:
+      OTITO_TOOL_DIR: .otito-tool
+    steps:
+      - name: Checkout the commit to attest
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.target_sha }}
+          fetch-depth: 0
+
+      - name: Checkout otito
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ inputs.otito_repository }}
+          ref: ${{ inputs.otito_ref }}
+          path: ${{ env.OTITO_TOOL_DIR }}
+
+      - name: Keep the tool out of the attested tree
+        env:
+          LEDGER_PATH: ${{ inputs.ledger_path }}
+        id: ledger
+        run: |
+          set -euo pipefail
+          echo "$OTITO_TOOL_DIR/" >> .git/info/exclude
+          echo "dir=$(dirname "$LEDGER_PATH")" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install otito
+        working-directory: ${{ env.OTITO_TOOL_DIR }}
+        run: npm ci --omit=dev
+
+      - name: Restore the ledger
+        env:
+          LEDGER_BRANCH: ${{ inputs.ledger_branch }}
+          LEDGER_PATH: ${{ inputs.ledger_path }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$(dirname "$LEDGER_PATH")"
+          if git fetch origin "$LEDGER_BRANCH:refs/remotes/origin/$LEDGER_BRANCH"; then
+            git show "origin/$LEDGER_BRANCH:$LEDGER_PATH" > "$LEDGER_PATH"
+            git show "origin/$LEDGER_BRANCH:$(dirname "$LEDGER_PATH")/verdict-latest.json" > "$(dirname "$LEDGER_PATH")/verdict-latest.json" || true
+          else
+            echo "No $LEDGER_BRANCH branch exists yet; starting from whatever ledger the checkout holds."
+          fi
+
+      - name: Attest every missing first-parent commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OTITO_REPO: ${{ github.workspace }}
+          OTITO_BIN: node ${{ github.workspace }}/${{ env.OTITO_TOOL_DIR }}/src/cli.js
+          OTITO_LEDGER: ${{ github.workspace }}/${{ inputs.ledger_path }}
+          # Not GITHUB_SHA: the runner keeps its own value for GITHUB_* variables.
+          OTITO_TARGET_SHA: ${{ inputs.target_sha }}
+          OTITO_ATTEST_RESET_LEDGER: ${{ inputs.reset_ledger && '1' || '0' }}
+        run: bash "$OTITO_TOOL_DIR/scripts/reconcile-attestations.sh"
+
+      - name: Persist the ledger
+        env:
+          TARGET_SHA: ${{ inputs.target_sha }}
+          LEDGER_BRANCH: ${{ inputs.ledger_branch }}
+          LEDGER_PATH: ${{ inputs.ledger_path }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="$(printf '%s' "$TARGET_SHA" | cut -c1-12)"
+          LEDGER_DIR="$(dirname "$LEDGER_PATH")"
+          WORK="$RUNNER_TEMP/otito-audit-ledger"
+          rm -rf "$WORK"
+
+          if git show-ref --verify --quiet "refs/remotes/origin/$LEDGER_BRANCH"; then
+            git worktree add --detach "$WORK" "origin/$LEDGER_BRANCH"
+          else
+            git worktree add --detach "$WORK" "$TARGET_SHA"
+            git -C "$WORK" switch --orphan "$LEDGER_BRANCH"
+            git -C "$WORK" rm -rf . || true
+          fi
+
+          mkdir -p "$WORK/$LEDGER_DIR"
+          cp "$LEDGER_PATH" "$WORK/$LEDGER_PATH"
+          cp "$LEDGER_DIR/verdict-latest.json" "$WORK/$LEDGER_DIR/verdict-latest.json"
+
+          git -C "$WORK" config user.name "github-actions[bot]"
+          git -C "$WORK" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$WORK" add "$LEDGER_PATH" "$LEDGER_DIR/verdict-latest.json"
+
+          # A reset leaves the superseded chain beside the new one so an
+          # auditor can still verify it.
+          shopt -s nullglob
+          for archive in "$LEDGER_DIR"/ledger-orphaned-*.jsonl; do
+            cp "$archive" "$WORK/$archive"
+            git -C "$WORK" add "$archive"
+          done
+
+          if git -C "$WORK" diff --cached --quiet; then
+            echo "Ledger already contains $TARGET_SHA."
+            exit 0
+          fi
+
+          MESSAGE="audit: attest through $SHORT_SHA"
+          if [ -n "$(git -C "$WORK" diff --cached --name-only --diff-filter=A -- "$LEDGER_DIR/ledger-orphaned-*.jsonl")" ]; then
+            MESSAGE="audit: archive the orphaned chain and restart at $SHORT_SHA"
+          fi
+          git -C "$WORK" commit -m "$MESSAGE"
+          git -C "$WORK" push origin "HEAD:refs/heads/$LEDGER_BRANCH"
+
+      - name: Upload attestation evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: otito-audit-attestation-${{ inputs.target_sha }}
+          path: |
+            ${{ inputs.ledger_path }}
+            ${{ steps.ledger.outputs.dir }}/verdict-latest.json
+            ${{ steps.ledger.outputs.dir }}/ledger-orphaned-*.jsonl
+          retention-days: 90
