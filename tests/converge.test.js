@@ -4,12 +4,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { bandFor, generateConvergence, makeReceipt } from "../src/lib/converge.js";
+import { bandFor, generateConvergence, inferInScopeFiles, makeReceipt } from "../src/lib/converge.js";
 
 // The engine's git/diff scoring path is integration-tested end-to-end in
 // tests/mcp-dispatch.test.js ("convergence_score scores intent vs diff against a
 // real git fixture"); here we lock the pure, deterministic pieces: the receipt's
-// recomputability (the "tamper-evident attestation" claim) and the band thresholds.
+// recomputability (the "tamper-evident attestation" claim), owner-adjacent
+// inference, and the band thresholds, plus the base..head and untracked modes
+// against small Git fixtures.
 
 const baseReceiptInput = {
   engine: "0.1.0",
@@ -132,6 +134,113 @@ test("v2 receipt refuses incomplete or invented subjects", () => {
   );
 });
 
+test("v2 receipt binds a git-commit subject to its head commit and tree", () => {
+  const subject = { kind: "git-commit", baseSha: "a".repeat(40), headSha: "b".repeat(40), treeSha: "c".repeat(40) };
+  const receipt = makeReceipt({ ...baseReceiptInput, commit: subject.headSha, subject: { ...subject, headSha: subject.headSha.toUpperCase() } });
+  assert.equal(receipt.receiptVersion, 2);
+  assert.deepEqual(receipt.subject, subject);
+  assert.equal(receipt.commit, subject.headSha);
+
+  const otherTree = makeReceipt({ ...baseReceiptInput, commit: subject.headSha, subject: { ...subject, treeSha: "d".repeat(40) } });
+  assert.notEqual(receipt.inputsHash, otherTree.inputsHash);
+
+  assert.throws(
+    () => makeReceipt({ ...baseReceiptInput, commit: subject.headSha, subject: { ...subject, treeSha: undefined } }),
+    /invalid exact change subject/,
+  );
+  assert.throws(() => makeReceipt({ ...baseReceiptInput, commit: "e".repeat(40), subject }), /commit does not match/);
+});
+
+test("receipt carries inferred files only when there are some, keeping older payloads byte-stable", () => {
+  const plain = makeReceipt(baseReceiptInput);
+  assert.equal(makeReceipt({ ...baseReceiptInput, inferredRelated: [] }).inputsHash, plain.inputsHash);
+  const inferred = makeReceipt({ ...baseReceiptInput, inferredRelated: ["src/payment/refund-reason.js"] });
+  assert.notEqual(inferred.inputsHash, plain.inputsHash);
+});
+
+// --- owner-adjacent inference: a feature's own fan-out is not drift ---
+
+const inferenceInput = {
+  confirmedDirect: ["components/people/PeopleTable.tsx"],
+  confirmedRelated: ["components/ui/SmartTable.tsx", "lib/organisation-people.ts"],
+  candidates: [],
+  addedFiles: [],
+  mappedFiles: [],
+};
+
+/** @param {Partial<typeof inferenceInput>} overrides */
+function inferred(overrides) {
+  return inferInScopeFiles({ ...inferenceInput, ...overrides }).map((entry) => `${entry.rule}:${entry.file}<-${entry.anchor}`);
+}
+
+test("a new mapped file beside a confirmed owner is inferred in scope", () => {
+  const file = "components/people/PersonDialog.tsx";
+  assert.deepEqual(inferred({ candidates: [file], addedFiles: [file], mappedFiles: [file] }), [`owner-sibling:${file}<-components/people/PeopleTable.tsx`]);
+});
+
+test("owner-sibling inference needs a new, mapped, non-secret file in the owner's own directory", () => {
+  const modified = "components/people/PeopleFilters.tsx";
+  assert.deepEqual(inferred({ candidates: [modified], mappedFiles: [modified] }), [], "a modified sibling is still drift");
+
+  const unmapped = "components/people/dump.rdb";
+  assert.deepEqual(inferred({ candidates: [unmapped], addedFiles: [unmapped] }), [], "an unmapped by-product is still drift");
+
+  const nested = "components/people/dialogs/PersonDialog.tsx";
+  assert.deepEqual(inferred({ candidates: [nested], addedFiles: [nested], mappedFiles: [nested] }), [], "a subdirectory is not beside the owner");
+
+  const secret = "components/people/.env";
+  assert.deepEqual(inferred({ candidates: [secret], addedFiles: [secret], mappedFiles: [secret] }), []);
+
+  const beside = "components/people/PersonDialog.tsx";
+  assert.deepEqual(
+    inferred({
+      confirmedDirect: [],
+      confirmedRelated: ["components/people/PeopleTable.tsx"],
+      candidates: [beside],
+      addedFiles: [beside],
+      mappedFiles: [beside],
+    }),
+    [],
+    "only a confirmed required owner anchors siblings",
+  );
+
+  const rootFile = "helpers.ts";
+  assert.deepEqual(
+    inferred({ confirmedDirect: ["index.ts"], candidates: [rootFile], addedFiles: [rootFile], mappedFiles: [rootFile] }),
+    [],
+    "an owner at the repository root anchors nothing",
+  );
+});
+
+test("a new sibling carrying a risk flag its owner lacks stays drift", () => {
+  const risky = "components/people/auth-token.ts";
+  assert.deepEqual(inferred({ candidates: [risky], addedFiles: [risky], mappedFiles: [risky] }), []);
+});
+
+test("tests of confirmed files and of inferred siblings are inferred in scope", () => {
+  const sibling = "components/people/PersonDialog.tsx";
+  const tests = [
+    "__tests__/components/people/PersonDialog.test.tsx",
+    "__tests__/components/ui/SmartTable.selection.test.tsx",
+    "__tests__/lib/organisation-people.test.ts",
+    "e2e/people-table.spec.ts",
+  ];
+  assert.deepEqual(inferred({ candidates: [sibling, ...tests], addedFiles: [sibling], mappedFiles: [sibling] }), [
+    "owner-test:__tests__/components/people/PersonDialog.test.tsx<-components/people/PersonDialog.tsx",
+    "owner-test:__tests__/components/ui/SmartTable.selection.test.tsx<-components/ui/SmartTable.tsx",
+    "owner-test:__tests__/lib/organisation-people.test.ts<-lib/organisation-people.ts",
+    `owner-sibling:${sibling}<-components/people/PeopleTable.tsx`,
+  ]);
+});
+
+test("a test named after a generic stem must sit beside its file", () => {
+  const input = { confirmedDirect: ["src/billing/index.ts"], confirmedRelated: [] };
+  assert.deepEqual(inferred({ ...input, candidates: ["tests/index.test.ts"] }), [], "a distant index test identifies nothing");
+  assert.deepEqual(inferred({ ...input, candidates: ["src/billing/__tests__/index.test.ts"] }), [
+    "owner-test:src/billing/__tests__/index.test.ts<-src/billing/index.ts",
+  ]);
+});
+
 test("band thresholds: aligned >= 80, partial >= 50, else drift", () => {
   assert.equal(bandFor(100), "aligned");
   assert.equal(bandFor(80), "aligned");
@@ -203,4 +312,103 @@ test("a genuinely risky drifted path is still penalised more than a doc", () => 
   const service = riskAlignmentAfterDrifting(root, "src/payment/checkout.service.ts");
   const doc = riskAlignmentAfterDrifting(root, "docs/auth-guide.md");
   assert.ok(service < doc, `payment service drift should cost more than doc drift, got service=${service} doc=${doc}`);
+});
+
+// --- exact commit subject: score base..head without the working tree ---
+
+function featureCommitFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-converge-head-"));
+  const write = (files) => {
+    for (const [file, body] of Object.entries(files)) {
+      fs.mkdirSync(path.join(root, path.dirname(file)), { recursive: true });
+      fs.writeFileSync(path.join(root, file), body);
+    }
+  };
+  convergeGit(root, "init", "-q", "-b", "main");
+  convergeGit(root, "config", "commit.gpgsign", "false");
+  write({
+    "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+    "src/greeting/greeting.ts": "export function greetingMessage(name) { return `hi ${name}`; }\n",
+    "src/cache/store.ts": "export const store = new Map();\n",
+    "src/notes.ts": "export const notes = [];\n",
+  });
+  convergeGit(root, "add", ".");
+  convergeGit(root, "commit", "-q", "-m", "base");
+  write({
+    "src/greeting/greeting.ts": "export function greetingMessage(name) { return `hello ${name}`; }\n",
+    "src/greeting/banner.ts": "export const banner = () => '*';\n",
+    "src/cache/store.ts": "export const store = new WeakMap();\n",
+  });
+  convergeGit(root, "add", ".");
+  convergeGit(root, "commit", "-q", "-m", "feature");
+  // Local state that is not part of the commit: a dirty tracked file and an
+  // untracked by-product.
+  write({ "src/notes.ts": "export const notes = ['dirty'];\n", "dump.rdb": "REDIS0011" });
+  return root;
+}
+
+const TASK = "update the greeting message";
+
+test("head scores exactly base..head and binds the receipt to the head commit and tree", () => {
+  const root = featureCommitFixture();
+  const baseSha = convergeGit(root, "rev-parse", "HEAD~1").trim();
+  const headSha = convergeGit(root, "rev-parse", "HEAD").trim();
+  const treeSha = convergeGit(root, "rev-parse", "HEAD^{tree}").trim();
+
+  const data = generateConvergence(TASK, { path: root, base: baseSha, head: headSha });
+  assert.deepEqual(data.subject, { kind: "git-commit", baseSha, headSha, treeSha });
+  assert.deepEqual(data.receipt.subject, data.subject);
+  assert.equal(data.receipt.receiptVersion, 2);
+  assert.equal(data.receipt.commit, headSha);
+  assert.equal(data.head, headSha);
+  assert.equal(data.untracked, undefined, "an exact subject has no untracked files to report");
+  assert.equal(data.drivers.changedFiles, 3, "only the commit's three files are scored");
+  const everyFile = JSON.stringify(data.drivers);
+  assert.ok(!everyFile.includes("src/notes.ts"), "a dirty tracked file is not part of base..head");
+  assert.ok(!everyFile.includes("dump.rdb"), "an untracked file is not part of base..head");
+  assert.deepEqual(data.drivers.confirmedDirect, ["src/greeting/greeting.ts"]);
+  assert.deepEqual(data.drivers.inferredRelated, [{ file: "src/greeting/banner.ts", rule: "owner-sibling", anchor: "src/greeting/greeting.ts" }]);
+  assert.deepEqual(data.drivers.missedChangedFiles, ["src/cache/store.ts"]);
+  assert.equal(data.subScores.scope, 67);
+
+  // Moving on from the commit — more dirty edits, a new commit on top — cannot
+  // change the receipt for the same base..head.
+  fs.writeFileSync(path.join(root, "src/greeting/greeting.ts"), "export function greetingMessage() { return 'uncommitted'; }\n");
+  convergeGit(root, "add", "src/notes.ts");
+  convergeGit(root, "commit", "-q", "-m", "later");
+  const again = generateConvergence(TASK, { path: root, base: baseSha, head: headSha });
+  assert.equal(again.receipt.inputsHash, data.receipt.inputsHash);
+
+  const later = generateConvergence(TASK, { path: root, base: baseSha, head: "HEAD" });
+  assert.notEqual(later.receipt.inputsHash, data.receipt.inputsHash, "a different head is a different subject");
+});
+
+test("head refuses staged mode and forged commit subjects", () => {
+  const root = featureCommitFixture();
+  assert.throws(() => generateConvergence(TASK, { path: root, base: "HEAD~1", head: "HEAD", staged: true }), /either --head <ref> or --staged/);
+  assert.throws(() => generateConvergence(TASK, { path: root, base: "HEAD~1", head: "no-such-ref" }), /could not resolve head commit/);
+
+  const { subject } = generateConvergence(TASK, { path: root, base: "HEAD~1", head: "HEAD" });
+  const files = ["src/cache/store.ts", "src/greeting/banner.ts", "src/greeting/greeting.ts"];
+  assert.equal(generateConvergence(TASK, { path: root, base: "HEAD~1", subject, diffFiles: files }).subject.treeSha, subject.treeSha);
+  assert.throws(
+    () => generateConvergence(TASK, { path: root, base: "HEAD~1", subject: { ...subject, treeSha: subject.baseSha }, diffFiles: files }),
+    /tree does not match its head commit/,
+  );
+  assert.throws(() => generateConvergence(TASK, { path: root, base: "HEAD~1", subject, diffFiles: ["src/notes.ts"] }), /do not match the Git commit subject/);
+});
+
+test("working-tree mode lists untracked files instead of scoring them, unless asked", () => {
+  const root = featureCommitFixture();
+  const tracked = generateConvergence(TASK, { path: root, base: "HEAD~1" });
+  assert.equal(tracked.subject, undefined);
+  assert.deepEqual(tracked.untracked, { included: false, count: 1, files: ["dump.rdb"] });
+  assert.ok(!tracked.drivers.missedChangedFiles.includes("dump.rdb"));
+  assert.ok(tracked.drivers.missedChangedFiles.includes("src/notes.ts"), "tracked working-tree edits are still scored");
+  assert.match(tracked.recommendations.join("\n"), /Untracked files were not scored: `dump\.rdb`/);
+
+  const withUntracked = generateConvergence(TASK, { path: root, base: "HEAD~1", includeUntracked: true });
+  assert.deepEqual(withUntracked.untracked, { included: true, count: 1, files: ["dump.rdb"] });
+  assert.ok(withUntracked.drivers.missedChangedFiles.includes("dump.rdb"));
+  assert.ok(withUntracked.subScores.scope < tracked.subScores.scope);
 });

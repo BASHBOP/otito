@@ -16,7 +16,7 @@ import { MAX_SCAN_BYTES, scanSecretContent, summarizeSecretFindings } from "./se
 import { checkRelease } from "./release-check.js";
 import { aggregateVerdict, normalizeGovernance, normalizeProfile, policyCheck, STATUS } from "./policy.js";
 import { estimateTokens } from "./tokens.js";
-import { captureStagedSubject, generateConvergence } from "./converge.js";
+import { captureCommitSubject, captureStagedSubject, generateConvergence } from "./converge.js";
 import { executeValidationPlan } from "./validation-attestation.js";
 
 /**
@@ -50,7 +50,7 @@ const MAX_FINDINGS = 40;
 
 /**
  * @param {string} repoPath
- * @param {{ policy?: unknown, governance?: unknown, base?: string, request?: string, minConvergence?: number | string, receipt?: string, staged?: boolean, runValidation?: boolean }} [options]
+ * @param {{ policy?: unknown, governance?: unknown, base?: string, head?: string, request?: string, minConvergence?: number | string, receipt?: string, staged?: boolean, runValidation?: boolean }} [options]
  */
 export function evaluateLocal(repoPath, options = {}) {
   const profile = normalizeProfile(options.policy);
@@ -59,17 +59,23 @@ export function evaluateLocal(repoPath, options = {}) {
   const root = gitRoot(repoPath);
   const base = options.base ?? defaultBase(root);
   const staged = Boolean(options.staged);
+  const head = String(options.head ?? "").trim();
+  if (staged && head) throw new Error("the local gate evaluates either --head <ref> or --staged, not both");
+  /** @type {"staged" | "commit" | "working-tree"} */
+  const scope = staged ? "staged" : head ? "commit" : "working-tree";
   let files;
   let subject = null;
   let subjectError = "";
-  if (staged) {
+  if (scope !== "working-tree") {
     try {
-      const captured = captureStagedSubject(root, base);
+      const captured = head ? captureCommitSubject(root, base, head) : captureStagedSubject(root, base);
       subject = captured.subject;
       files = captured.changedFiles;
     } catch (/** @type {any} */ error) {
       subjectError = error.message ?? String(error);
-      files = changedFiles(root, base, { staged: true });
+      // A head that does not resolve has no change to list; staged mode can
+      // still fall back to the index's path list.
+      files = head ? [] : changedFiles(root, base, { staged: true });
     }
   } else {
     files = changedFiles(root, base);
@@ -77,8 +83,8 @@ export function evaluateLocal(repoPath, options = {}) {
 
   /** @param {string} file */
   const baseContent = (file) => gitShowContent(root, subject?.baseSha ?? base, file);
-  // Secret scanning reads the exact subject: the staged tree when the gate is
-  // running in staged mode, the working tree otherwise. It must never fall back
+  // Secret scanning reads the exact subject: the staged or head commit tree
+  // when the gate has one, the working tree otherwise. It must never fall back
   // to the base commit — the credential being introduced is only in the change.
   const subjectContent = subject?.treeSha
     ? treeContentReader(root, String(subject.treeSha), files)
@@ -86,7 +92,7 @@ export function evaluateLocal(repoPath, options = {}) {
   const validationExecution = options.runValidation ? executeValidationPlan({ root, subject }) : null;
   const checks = [
     changedFilesCheck(files),
-    ...(staged ? [changeSubjectCheck(subject, subjectError)] : []),
+    ...(scope !== "working-tree" ? [changeSubjectCheck(scope, subject, subjectError)] : []),
     secretCheck(files, subjectContent),
     riskCheck(files),
     checkRelease(root, files, { baseContent, governance }),
@@ -105,7 +111,7 @@ export function evaluateLocal(repoPath, options = {}) {
     staged,
     subject,
     subjectError,
-    diffFiles: staged ? files : undefined,
+    diffFiles: scope !== "working-tree" ? files : undefined,
   });
   if (convergence) checks.push(convergence);
   checks.push(localReviewCheck({ staged }));
@@ -121,7 +127,8 @@ export function evaluateLocal(repoPath, options = {}) {
     verdict,
     repo: { root, name: path.basename(root) },
     base,
-    scope: staged ? "staged" : "working-tree",
+    ...(head ? { head } : {}),
+    scope,
     request: options.request ?? "",
     policy: profile,
     governance,
@@ -195,7 +202,7 @@ export function convergenceCheck(root, base, request, minConvergence, receipt, o
     failures.push(`score ${data.convergence}/100 is below the required minimum of ${threshold}`);
   }
   if (receiptValue) {
-    const supplied = readReceiptValue(root, receiptValue);
+    const { value: supplied, subject: suppliedSubject } = readReceiptValue(root, receiptValue);
     const exactSubjectReceipt = data.receipt.receiptVersion === 2;
     const matches =
       supplied && (exactSubjectReceipt ? supplied === data.receipt.inputsHash : supplied === data.receipt.id || supplied === data.receipt.inputsHash);
@@ -203,7 +210,9 @@ export function convergenceCheck(root, base, request, minConvergence, receipt, o
       failures.push(
         exactSubjectReceipt && supplied === data.receipt.id
           ? "exact-subject receipt enforcement requires the full inputs hash, not the abbreviated display ID"
-          : "supplied receipt does not match the recomputed receipt for this task, base, and exact change subject",
+          : suppliedSubject && !sameSubjectMode(suppliedSubject, data.subject)
+            ? `supplied receipt is bound to ${describeSubject(suppliedSubject)} but the gate measured ${data.subject ? describeSubject(data.subject) : "the working tree"}; ${rerunHint(suppliedSubject)}`
+            : "supplied receipt does not match the recomputed receipt for this task, base, and exact change subject",
       );
     }
   }
@@ -224,21 +233,59 @@ export function convergenceCheck(root, base, request, minConvergence, receipt, o
 }
 
 /**
+ * Whether two exact subjects describe the same kind of change and, for a
+ * commit or PR, the same head. A receipt for another mode or head cannot
+ * match, so the gate says which mode to rerun in instead of reporting a
+ * bare hash mismatch.
+ * @param {Record<string, any>} supplied
+ * @param {Record<string, any> | undefined} measured
+ * @returns {boolean}
+ */
+function sameSubjectMode(supplied, measured) {
+  if (!measured || supplied.kind !== measured.kind) return false;
+  if (supplied.kind === "git-index") return true;
+  return String(supplied.headSha ?? "").toLowerCase() === String(measured.headSha ?? "").toLowerCase();
+}
+
+/** @param {Record<string, any>} subject @returns {string} */
+function describeSubject(subject) {
+  if (subject.kind === "git-index") return "a staged Git index tree";
+  if (subject.kind === "git-commit") return `head commit ${subject.headSha}`;
+  if (subject.kind === "github-pr") return `GitHub PR ${subject.repository ?? ""}#${subject.number ?? "?"} at ${subject.headSha}`;
+  return `a ${String(subject.kind ?? "unknown")} subject`;
+}
+
+/** @param {Record<string, any>} subject @returns {string} */
+function rerunHint(subject) {
+  if (subject.kind === "git-index") return "rerun the gate with --staged";
+  if (subject.kind === "git-commit") return `rerun the gate with --head ${subject.headSha} and the receipt's base`;
+  if (subject.kind === "github-pr") return `rerun the gate with --pr ${subject.number ?? "<number>"}`;
+  return "rerun the gate in the mode that produced the receipt";
+}
+
+/**
+ * @param {"staged" | "commit"} scope
  * @param {Record<string, any> | null} subject
  * @param {string} error
  * @returns {Check}
  */
-function changeSubjectCheck(subject, error) {
+function changeSubjectCheck(scope, subject, error) {
+  const commit = scope === "commit";
+  const name = commit ? "Commit snapshot" : "Staged snapshot";
   if (!subject) {
-    return { name: "Staged snapshot", status: STATUS.fail, summary: `Could not identify the exact staged Git tree: ${error || "unknown error"}` };
+    return {
+      name,
+      status: STATUS.fail,
+      summary: `Could not identify the exact ${commit ? "head commit" : "staged Git tree"}: ${error || "unknown error"}`,
+    };
   }
   return {
-    name: "Staged snapshot",
+    name,
     status: STATUS.pass,
-    summary: "Changed-file scope and convergence evidence are captured from the exact staged Git tree.",
+    summary: `Changed-file scope and convergence evidence are captured from the exact ${commit ? "head commit tree" : "staged Git tree"}.`,
     details: [
       `Tree: ${subject.treeSha}`,
-      `Parent: ${subject.parentSha}`,
+      commit ? `Head: ${subject.headSha}` : `Parent: ${subject.parentSha}`,
       `Base: ${subject.baseSha}`,
       "Release, validation-command, and optional analyzer checks still inspect the working tree and are not bound by this convergence receipt.",
     ],
@@ -286,10 +333,11 @@ function exactCheckoutFailure(root, expectedHead, requireClean) {
 
 /**
  * Accept a receipt id/hash directly, a JSON receipt object, or a path to a JSON
- * artifact produced from `otito converge --json`.
+ * artifact produced from `otito converge --json`. A JSON receipt also yields
+ * the exact subject it was bound to, when it has one.
  * @param {string} root
  * @param {string} value
- * @returns {string | null}
+ * @returns {{ value: string | null, subject: Record<string, any> | null }}
  */
 function readReceiptValue(root, value) {
   let raw = value;
@@ -298,15 +346,17 @@ function readReceiptValue(root, value) {
     try {
       raw = fs.readFileSync(candidate, "utf8").trim();
     } catch {
-      return null;
+      return { value: null, subject: null };
     }
   }
   try {
     const parsed = JSON.parse(raw);
     const receipt = parsed?.receipt ?? parsed;
-    return typeof receipt?.inputsHash === "string" ? receipt.inputsHash : typeof receipt?.id === "string" ? receipt.id : null;
+    const hash = typeof receipt?.inputsHash === "string" ? receipt.inputsHash : typeof receipt?.id === "string" ? receipt.id : null;
+    const subject = receipt?.subject && typeof receipt.subject === "object" ? receipt.subject : null;
+    return { value: hash, subject };
   } catch {
-    return raw || null;
+    return { value: raw || null, subject: null };
   }
 }
 
@@ -998,13 +1048,14 @@ const STATUS_TO_RENDER = {
  * @property {Verdict} verdict
  * @property {{ root: string, name: string }} repo
  * @property {string} base
- * @property {"staged" | "working-tree"} scope
+ * @property {"staged" | "commit" | "working-tree"} scope
+ * @property {string} [head]
  * @property {string} policy
  * @property {string} governance
  * @property {string[]} changedFiles
  * @property {string[]} contextEvidence
  * @property {Check[]} checks
- * @property {{ kind?: string, baseSha?: string, parentSha?: string, treeSha?: string }} [subject]
+ * @property {{ kind?: string, baseSha?: string, parentSha?: string, headSha?: string, treeSha?: string }} [subject]
  * @property {Record<string, any>} [receipt]
  */
 
@@ -1023,7 +1074,11 @@ export function formatPassTerminal(data, rendererFactory) {
       glyph: "🔀",
     },
   ];
-  if (data.subject?.treeSha) sub.push({ text: `staged tree: ${data.subject.treeSha.slice(0, 12)}`, glyph: "🧾" });
+  if (data.subject?.kind === "git-commit" && data.subject.headSha) {
+    sub.push({ text: `head commit: ${data.subject.headSha.slice(0, 12)}`, glyph: "🧾" });
+  } else if (data.subject?.treeSha) {
+    sub.push({ text: `staged tree: ${data.subject.treeSha.slice(0, 12)}`, glyph: "🧾" });
+  }
   lines.push(renderer.header({ text: "otito pass · merge readiness", glyph: "📋" }, sub));
   lines.push("");
 
@@ -1099,7 +1154,11 @@ export function formatPassMarkdown(data) {
     `Scope: \`${data.scope}\``,
     `Policy: \`${data.policy}\``,
     `Governance: \`${data.governance}\``,
-    ...(data.subject?.treeSha ? [`Staged tree: \`${data.subject.treeSha}\``, `Parent commit: \`${data.subject.parentSha ?? ""}\``] : []),
+    ...(data.subject?.kind === "git-commit"
+      ? [`Head commit: \`${data.subject.headSha ?? ""}\``, `Head tree: \`${data.subject.treeSha ?? ""}\``]
+      : data.subject?.treeSha
+        ? [`Staged tree: \`${data.subject.treeSha}\``, `Parent commit: \`${data.subject.parentSha ?? ""}\``]
+        : []),
     "",
     "## Context Evidence",
     "",

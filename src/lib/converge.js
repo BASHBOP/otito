@@ -15,13 +15,17 @@ import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { generateCodeMapFromSources } from "./code-map.js";
+import { isTestFilePath } from "./code-map/classify.js";
 import { isSourceFilePath } from "./code-map/generate.js";
 import { DIFF_RENAME_LIMIT, generateImpact } from "./impact.js";
 import { classifyPath, isDocPath, isSecretPath, isTestDataPath, RISK_FLAGS } from "./risk-paths.js";
 import { runCommand } from "./tools.js";
 import { estimateTokens } from "./tokens.js";
 
-export const convergenceEngineVersion = "0.1.0";
+// 0.2.0: owner-adjacent inference (new files beside a confirmed owner, tests
+// of confirmed files) and working-tree scoring that ignores untracked files by
+// default. Both change scores, so receipts from 0.1.0 do not recompute here.
+export const convergenceEngineVersion = "0.2.0";
 
 // Sub-score weights. Coverage (did intent happen?) leads, scope discipline (did
 // only intent happen?) is next, risk alignment (did drift land somewhere
@@ -48,10 +52,16 @@ const MAX_BATCH_BYTES = 8 * 1024 * 1024;
 const MAX_BATCH_FILES = 256;
 const MAX_SUBJECT_SOURCE_BYTES = 64 * 1024 * 1024;
 const MAX_SUBJECT_SOURCE_FILES = 5000;
+const MAX_LISTED_UNTRACKED = 25;
+
+// Test stems too common to identify their subject from anywhere in the repo:
+// `tests/index.test.ts` says nothing about which `index.ts` it covers, so these
+// only match a test beside the file or in a test directory directly under it.
+const GENERIC_STEMS = new Set(["__init__", "app", "config", "constants", "helpers", "index", "lib", "main", "mod", "types", "util", "utils"]);
 
 /**
  * @param {string} query
- * @param {{ path?: string, base?: string, top?: number, staged?: boolean, subject?: Record<string, unknown>, diffFiles?: string[] }} [options]
+ * @param {{ path?: string, base?: string, head?: string, top?: number, staged?: boolean, includeUntracked?: boolean, subject?: Record<string, unknown>, diffFiles?: string[] }} [options]
  * @returns {Record<string, any>}
  */
 export function generateConvergence(query, options = {}) {
@@ -65,6 +75,8 @@ export function generateConvergence(query, options = {}) {
   if (!base) {
     throw new Error('converge requires a --base git ref to diff against, e.g. `otito converge "<task>" --base origin/main`');
   }
+  const head = String(options.head ?? "").trim();
+  if (head && options.staged) throw new Error("converge scores either --head <ref> or --staged, not both");
 
   const suppliedSubject = options.subject !== undefined && options.subject !== null;
   const suppliedDiffFiles = Array.isArray(options.diffFiles);
@@ -78,18 +90,35 @@ export function generateConvergence(query, options = {}) {
     subject = captured.subject;
     diffFiles = captured.changedFiles;
   }
+  if (head && !subject) {
+    const captured = captureCommitSubject(root, base, head);
+    subject = captured.subject;
+    diffFiles = captured.changedFiles;
+  }
   if (subject?.kind === "git-index") {
     const capturedFiles = changedFilesForTree(root, String(subject.baseSha), String(subject.treeSha));
     if (!sameFiles(capturedFiles, diffFiles ?? [])) throw new Error("supplied diff files do not match the staged Git tree subject");
+  }
+  if (subject?.kind === "git-commit") {
+    const treeSha = resolveGitObject(root, `${subject.headSha}^{tree}`, "head commit tree");
+    if (treeSha !== subject.treeSha) throw new Error("the Git commit subject's tree does not match its head commit");
+    const capturedFiles = changedFilesForTree(root, String(subject.baseSha), treeSha);
+    if (!sameFiles(capturedFiles, diffFiles ?? [])) throw new Error("supplied diff files do not match the Git commit subject");
   }
   if (subject?.kind === "github-pr") {
     const capturedFiles = changedFilesForPullRequest(root, String(subject.baseSha), String(subject.headSha));
     if (!sameFiles(capturedFiles, diffFiles ?? [])) throw new Error("supplied diff files do not match the GitHub PR commit subject");
   }
 
+  // Working-tree mode scores tracked changes only, like `git diff <base>`.
+  // Untracked files are usually local by-products (`dump.rdb`, editor state)
+  // rather than part of the change; they are listed, not scored, unless asked.
+  const includeUntracked = Boolean(options.includeUntracked);
+  const untracked = subject ? null : untrackedFiles(root);
+
   const codeMap = subject ? codeMapForSubject(root, subject) : undefined;
   /** @type {any} */
-  const impact = generateImpact(normalizedQuery, { path: repoPath, top, diffBase: base, diffFiles, codeMap }).data;
+  const impact = generateImpact(normalizedQuery, { path: repoPath, top, diffBase: base, diffFiles, codeMap, includeUntracked }).data;
   const validation = impact.validation;
   if (!validation) {
     throw new Error("converge could not produce a diff comparison; ensure the base ref is valid");
@@ -102,8 +131,22 @@ export function generateConvergence(query, options = {}) {
   const confirmedDirect = validation.confirmedDirect ?? [];
   const confirmedRelated = validation.confirmedRelated ?? [];
   const unconfirmedCandidates = validation.unconfirmedCandidates ?? [];
-  const missedChangedFiles = validation.missedChangedFiles ?? [];
-  const advisoryChangedFiles = validation.advisoryChangedFiles ?? [];
+
+  // A confirmed owner rarely changes alone: a feature commit adds components
+  // beside it and tests for what it touched. Those are the task's own fan-out,
+  // not drift, so they are moved out of the drift and advisory buckets under a
+  // named rule before scope and risk alignment are computed.
+  const addedFiles = subject ? addedFilesForSubject(root, subject) : [...addedFilesInWorkingTree(root, base), ...(includeUntracked ? (untracked ?? []) : [])];
+  const inferredRelated = inferInScopeFiles({
+    confirmedDirect,
+    confirmedRelated,
+    candidates: [...(validation.missedChangedFiles ?? []), ...(validation.advisoryChangedFiles ?? [])],
+    addedFiles,
+    mappedFiles: impact.diffEvidence?.mappedFiles ?? [],
+  });
+  const inferredFiles = new Set(inferredRelated.map((entry) => entry.file));
+  const missedChangedFiles = (validation.missedChangedFiles ?? []).filter((/** @type {string} */ file) => !inferredFiles.has(file));
+  const advisoryChangedFiles = (validation.advisoryChangedFiles ?? []).filter((/** @type {string} */ file) => !inferredFiles.has(file));
 
   const predictedDirect = confirmedDirect.length + unconfirmedCandidates.length;
   const grounded = predictedDirect > 0;
@@ -114,9 +157,10 @@ export function generateConvergence(query, options = {}) {
   const coverage = grounded ? (100 * confirmedDirect.length) / predictedDirect : 0;
 
   // Scope discipline — did *only* the intent happen? Share of changed files that
-  // the task anticipated (directly or as a related dependency). Missed changed
-  // files are scope drift. An empty diff converges on nothing, so scope is 0.
-  const onTask = confirmedDirect.length + confirmedRelated.length;
+  // the task anticipated (directly, as a related dependency, or as inferred
+  // owner fan-out). Missed changed files are scope drift. An empty diff
+  // converges on nothing, so scope is 0.
+  const onTask = confirmedDirect.length + confirmedRelated.length + inferredRelated.length;
   const scope = changedFiles.length > 0 ? (100 * onTask) / changedFiles.length : 0;
 
   // Risk alignment — penalise drift by how dangerous the drifted file is.
@@ -136,6 +180,7 @@ export function generateConvergence(query, options = {}) {
     predictedDirect,
     confirmedDirect,
     confirmedRelated,
+    inferredRelated,
     unconfirmedCandidates,
     missedChangedFiles,
     advisoryChangedFiles,
@@ -150,6 +195,7 @@ export function generateConvergence(query, options = {}) {
     convergenceEngineVersion,
     task: normalizedQuery,
     base,
+    ...(head ? { head } : {}),
     repo: { name: impact.repo?.name ?? path.basename(path.resolve(repoPath)), root: impact.repo?.root ?? path.resolve(repoPath) },
     convergence,
     band,
@@ -159,10 +205,20 @@ export function generateConvergence(query, options = {}) {
       riskAlignment: Math.round(riskAlignment),
     },
     drivers,
-    recommendations: buildRecommendations({ grounded, unconfirmedCandidates, missedChangedFiles, advisoryChangedFiles, riskyDrift }),
+    recommendations: buildRecommendations({
+      grounded,
+      unconfirmedCandidates,
+      missedChangedFiles,
+      advisoryChangedFiles,
+      riskyDrift,
+      excludedUntracked: includeUntracked ? [] : (untracked ?? []),
+    }),
     weights: WEIGHTS,
   };
   if (subject) data.subject = subject;
+  if (untracked) {
+    data.untracked = { included: includeUntracked, count: untracked.length, files: untracked.slice(0, MAX_LISTED_UNTRACKED) };
+  }
 
   // Recomputable receipt — the video's "tamper-evident attestation". The hash
   // deliberately excludes generatedAt so anyone with the same repo state, task,
@@ -179,12 +235,100 @@ export function generateConvergence(query, options = {}) {
     changedFiles,
     confirmedDirect,
     confirmedRelated,
+    inferredRelated: inferredRelated.map((entry) => entry.file),
     unconfirmedCandidates,
     missedChangedFiles,
   });
 
   data.tokenEstimate = { fullJson: estimateTokens(data) };
   return data;
+}
+
+/**
+ * @typedef {Object} InferredFile
+ * @property {string} file
+ * @property {"owner-sibling" | "owner-test"} rule
+ * @property {string} anchor the confirmed file that brought `file` into scope
+ */
+
+/**
+ * Bring a confirmed owner's own fan-out into scope. Two rules, both anchored
+ * on files the diff has already confirmed:
+ *
+ * - `owner-sibling`: a file *added* in the same directory as a confirmed
+ *   required owner. It must be a mapped source file, not a secret path, and
+ *   carry no risk flag the owner lacks, so a new `auth-token.ts` beside a
+ *   `people-table.tsx` owner still reads as drift. Owners at the repository
+ *   root anchor nothing: "beside the owner" would mean "anywhere at the top".
+ * - `owner-test`: a test (added or modified) whose name identifies a confirmed
+ *   file or an inferred sibling, e.g. `PersonDialog.test.tsx` or
+ *   `SmartTable.selection.test.tsx` for `SmartTable.tsx`. Generic stems such
+ *   as `index` must sit beside the file or in a test directory directly under
+ *   its directory.
+ *
+ * Pure and order-independent for a given input.
+ * @param {{ confirmedDirect: string[], confirmedRelated: string[], candidates: string[], addedFiles: string[], mappedFiles: string[] }} input
+ * @returns {InferredFile[]}
+ */
+export function inferInScopeFiles({ confirmedDirect, confirmedRelated, candidates, addedFiles, mappedFiles }) {
+  const added = new Set(addedFiles);
+  const mapped = new Set(mappedFiles);
+  const pending = [...new Set(candidates)].filter((file) => !isSecretPath(file)).sort();
+  /** @type {InferredFile[]} */
+  const inferred = [];
+
+  const owners = [...confirmedDirect].filter((file) => path.posix.dirname(file) !== ".").sort();
+  for (const file of pending) {
+    if (!added.has(file) || !mapped.has(file)) continue;
+    const flags = riskFlagsFor(file);
+    const anchor = owners.find((owner) => path.posix.dirname(owner) === path.posix.dirname(file) && flags.every((flag) => riskFlagsFor(owner).includes(flag)));
+    if (anchor) inferred.push({ file, rule: "owner-sibling", anchor });
+  }
+
+  const inScope = new Set(inferred.map((entry) => entry.file));
+  const anchors = [...new Set([...confirmedDirect, ...confirmedRelated, ...inScope])].filter((file) => !isTestFilePath(file)).sort();
+  for (const file of pending) {
+    if (inScope.has(file) || !isTestFilePath(file)) continue;
+    const anchor = anchors.find((source) => testCovers(file, source));
+    if (anchor) inferred.push({ file, rule: "owner-test", anchor });
+  }
+
+  return inferred.sort((left, right) => left.file.localeCompare(right.file));
+}
+
+/**
+ * @param {string} testFile
+ * @param {string} sourceFile
+ * @returns {boolean}
+ */
+function testCovers(testFile, sourceFile) {
+  const subject = testSubjectStem(testFile);
+  const source = path.posix
+    .basename(sourceFile)
+    .replace(/\.[^.]+$/, "")
+    .toLowerCase();
+  if (!subject || !source || (subject !== source && !subject.startsWith(`${source}.`))) return false;
+  if (!GENERIC_STEMS.has(source)) return true;
+  const sourceDir = path.posix.dirname(sourceFile);
+  const testDir = path.posix.dirname(testFile);
+  return testDir === sourceDir || ["__tests__", "test", "tests"].some((dir) => testDir === path.posix.join(sourceDir, dir));
+}
+
+/**
+ * The file a test names as its subject: `PersonDialog.test.tsx` → `persondialog`,
+ * `SmartTable.selection.test.tsx` → `smarttable.selection`, `test_converge.py`
+ * → `converge`, `converge_test.go` → `converge`.
+ * @param {string} file
+ * @returns {string}
+ */
+function testSubjectStem(file) {
+  return path.posix
+    .basename(file)
+    .replace(/\.snap$/i, "")
+    .replace(/\.[^.]+$/, "")
+    .replace(/(?:[._-](?:test|spec|e2e))+$/i, "")
+    .replace(/^test[_-]/i, "")
+    .toLowerCase();
 }
 
 /**
@@ -215,6 +359,9 @@ export function makeReceipt(payload) {
     unconfirmedCandidates: [...(payload.unconfirmedCandidates ?? [])].sort(),
     missedChangedFiles: [...(payload.missedChangedFiles ?? [])].sort(),
   };
+  // Present only when a file was inferred into scope, so a payload without
+  // inference keeps the exact canonical bytes it had before the rule existed.
+  if (payload.inferredRelated?.length) canonical.inferredRelated = [...payload.inferredRelated].sort();
   // Subject-aware receipts are v2. When no subject is supplied, the canonical
   // v1 payload remains byte-for-byte compatible with existing receipt IDs.
   if (subject) {
@@ -248,6 +395,23 @@ export function captureStagedSubject(root, base) {
 }
 
 /**
+ * Identify an exact committed change: `base..head` as a direct tree diff (no
+ * merge base), with the head commit's tree as the immutable subject. The
+ * working tree, the index, and untracked files play no part.
+ * @param {string} root
+ * @param {string} base
+ * @param {string} head
+ * @returns {{ subject: { kind: string, baseSha: string, headSha: string, treeSha: string }, changedFiles: string[] }}
+ */
+export function captureCommitSubject(root, base, head) {
+  const baseSha = resolveGitObject(root, `${base}^{commit}`, "base commit");
+  const headSha = resolveGitObject(root, `${head}^{commit}`, "head commit");
+  const treeSha = resolveGitObject(root, `${headSha}^{tree}`, "head commit tree");
+  const changedFiles = changedFilesForTree(root, baseSha, treeSha);
+  return { subject: { kind: "git-commit", baseSha, headSha, treeSha }, changedFiles };
+}
+
+/**
  * Build the scoring map from the immutable subject tree, never from mutable
  * working-tree content. Raw blobs are read through `git cat-file --batch`, so
  * checkout filters and hooks cannot execute while a receipt is being scored.
@@ -256,7 +420,7 @@ export function captureStagedSubject(root, base) {
  * @returns {any}
  */
 function codeMapForSubject(root, subject) {
-  const treeish = subject.kind === "git-index" ? String(subject.treeSha) : String(subject.headSha);
+  const treeish = subject.kind === "github-pr" ? String(subject.headSha) : String(subject.treeSha);
   const treeSha = resolveGitObject(root, `${treeish}^{tree}`, "change subject tree");
   const entries = gitTreeEntries(root, treeSha).filter(
     (entry) => (entry.mode === "100644" || entry.mode === "100755") && entry.type === "blob" && isSourceFilePath(entry.file) && entry.size <= MAX_SOURCE_BYTES,
@@ -277,25 +441,60 @@ function codeMapForSubject(root, subject) {
  * @returns {string[]}
  */
 function changedFilesForTree(root, baseSha, treeSha) {
-  return gitNullLines(
-    root,
-    [
-      "diff",
-      "--no-ext-diff",
-      "--no-textconv",
-      "--ignore-submodules=none",
-      "--diff-algorithm=myers",
-      "--find-renames=50%",
-      `-l${DIFF_RENAME_LIMIT}`,
-      "--name-only",
-      "--relative",
-      "-z",
-      baseSha,
-      treeSha,
-      "--",
-    ],
-    "files in the staged Git tree",
-  );
+  return gitNullLines(root, [...diffNameArgs(), baseSha, treeSha, "--"], "files in the change subject tree");
+}
+
+/**
+ * Paths the subject adds. A rename is a move, not a new file, and keeps the
+ * rename detection used for the changed-file list.
+ * @param {string} root
+ * @param {Record<string, string | number>} subject
+ * @returns {string[]}
+ */
+function addedFilesForSubject(root, subject) {
+  const baseSha = String(subject.baseSha);
+  const from = subject.kind === "github-pr" ? gitValue(root, ["merge-base", baseSha, String(subject.headSha)], "GitHub PR merge base") : baseSha;
+  const to = subject.kind === "github-pr" ? String(subject.headSha) : String(subject.treeSha);
+  return gitNullLines(root, [...diffNameArgs("--diff-filter=A"), from, to, "--"], "files added by the change subject");
+}
+
+/**
+ * Tracked paths added between `base` and the working tree (staged or not).
+ * @param {string} root
+ * @param {string} base
+ * @returns {string[]}
+ */
+function addedFilesInWorkingTree(root, base) {
+  const baseSha = resolveGitObject(root, `${base}^{commit}`, "base commit");
+  return gitNullLines(root, [...diffNameArgs("--diff-filter=A"), baseSha, "--"], "files added in the working tree");
+}
+
+/**
+ * @param {string} root
+ * @returns {string[]}
+ */
+function untrackedFiles(root) {
+  return gitNullLines(root, ["ls-files", "--others", "--exclude-standard", "-z"], "untracked files");
+}
+
+/**
+ * @param {...string} extra
+ * @returns {string[]}
+ */
+function diffNameArgs(...extra) {
+  return [
+    "diff",
+    "--no-ext-diff",
+    "--no-textconv",
+    "--ignore-submodules=none",
+    "--diff-algorithm=myers",
+    "--find-renames=50%",
+    `-l${DIFF_RENAME_LIMIT}`,
+    ...extra,
+    "--name-only",
+    "--relative",
+    "-z",
+  ];
 }
 
 /**
@@ -466,6 +665,17 @@ function normalizeReceiptSubject(value) {
     return { kind, baseSha, parentSha, treeSha };
   }
 
+  if (kind === "git-commit") {
+    const headSha = String(input.headSha ?? "")
+      .trim()
+      .toLowerCase();
+    const treeSha = String(input.treeSha ?? "")
+      .trim()
+      .toLowerCase();
+    if (!isObjectId(headSha) || !isObjectId(treeSha)) return null;
+    return { kind, baseSha, headSha, treeSha };
+  }
+
   if (kind !== "github-pr") return null;
   const repository = String(input.repository ?? "")
     .trim()
@@ -585,10 +795,10 @@ function riskWeightFor(file) {
 }
 
 /**
- * @param {{ grounded: boolean, unconfirmedCandidates: string[], missedChangedFiles: string[], advisoryChangedFiles?: string[], riskyDrift: {file: string}[] }} input
+ * @param {{ grounded: boolean, unconfirmedCandidates: string[], missedChangedFiles: string[], advisoryChangedFiles?: string[], riskyDrift: {file: string}[], excludedUntracked?: string[] }} input
  * @returns {string[]}
  */
-function buildRecommendations({ grounded, unconfirmedCandidates, missedChangedFiles, advisoryChangedFiles = [], riskyDrift }) {
+function buildRecommendations({ grounded, unconfirmedCandidates, missedChangedFiles, advisoryChangedFiles = [], riskyDrift, excludedUntracked = [] }) {
   /** @type {string[]} */
   const recs = [];
   if (!grounded) {
@@ -610,6 +820,13 @@ function buildRecommendations({ grounded, unconfirmedCandidates, missedChangedFi
   if (unconfirmedCandidates.length) {
     recs.push(`Predicted owner files were not changed: ${formatList(unconfirmedCandidates)} — verify the change landed in the right place.`);
   }
+  if (excludedUntracked.length) {
+    const listed = excludedUntracked.slice(0, MAX_LISTED_UNTRACKED);
+    const more = excludedUntracked.length - listed.length;
+    recs.push(
+      `Untracked files were not scored: ${formatList(listed)}${more > 0 ? ` and ${more} more` : ""} — \`git add\` the ones that belong to this change, pass --include-untracked, or score a commit exactly with --head.`,
+    );
+  }
   if (recs.length === 0) {
     recs.push("Change converges on the stated task with no scope drift. Stamp the receipt on the commit as durable evidence.");
   }
@@ -628,6 +845,7 @@ export function formatConvergenceMarkdown(data) {
     `Repo: ${data.repo.name}`,
     `Task: "${data.task}"`,
     `Base: ${data.base}`,
+    ...(data.head ? [`Head: ${data.head}`] : []),
     `Receipt handle: ${data.receipt.id} (${data.receipt.algorithm})`,
     ...(data.receipt.receiptVersion === 2 ? [`Inputs hash: ${data.receipt.inputsHash}`] : []),
     ...(data.subject ? [`Subject: ${formatReceiptSubject(data.subject)}`] : []),
@@ -644,11 +862,15 @@ export function formatConvergenceMarkdown(data) {
     `- Predicted owners: ${d.predictedDirect}`,
     `- Confirmed direct: ${formatList(d.confirmedDirect)}`,
     `- Confirmed related: ${formatList(d.confirmedRelated)}`,
+    `- Inferred in scope: ${d.inferredRelated?.length ? d.inferredRelated.map(formatInferred).join(", ") : "none"}`,
     `- Unconfirmed candidates: ${formatList(d.unconfirmedCandidates)}`,
     `- Missed (scope drift): ${formatList(d.missedChangedFiles)}`,
   ];
   if (d.riskyDrift.length) {
     lines.push(`- Risky drift: ${d.riskyDrift.map((/** @type {any} */ r) => `${r.file} [${r.flags.join(", ")}]`).join("; ")}`);
+  }
+  if (data.untracked?.count) {
+    lines.push(`- Untracked (${data.untracked.included ? "scored" : "not scored"}): ${data.untracked.count}`);
   }
   if (data.recommendations.length) {
     lines.push("", "## Recommendations", "");
@@ -665,9 +887,15 @@ function formatList(items) {
   return items && items.length ? items.map((item) => `\`${item}\``).join(", ") : "none";
 }
 
+/** @param {InferredFile} entry @returns {string} */
+function formatInferred(entry) {
+  return `\`${entry.file}\` (${entry.rule === "owner-sibling" ? "new file beside" : "test of"} \`${entry.anchor}\`)`;
+}
+
 /** @param {Record<string, any>} subject @returns {string} */
 function formatReceiptSubject(subject) {
   if (subject.kind === "git-index") return `Git index tree ${subject.treeSha} (parent ${subject.parentSha})`;
+  if (subject.kind === "git-commit") return `Git commit ${subject.headSha} (tree ${subject.treeSha}) against ${subject.baseSha}`;
   if (subject.kind === "github-pr") return `${subject.repository ?? "GitHub PR"}#${subject.number ?? "?"} ${subject.baseSha}..${subject.headSha}`;
   return String(subject.kind ?? "unknown");
 }

@@ -732,6 +732,49 @@ test("convergence_score staged mode returns a Git-index-bound receipt", async ()
   assert.deepEqual(convergence.receipt.subject, convergence.subject);
 });
 
+test("convergence_score and review_gate score an exact base..head commit through MCP", async () => {
+  const fixture = makeGitRepoFixture("converge-head");
+  const headSha = git(fixture, "rev-parse", "HEAD").trim();
+  fs.writeFileSync(path.join(fixture, "src", "index.ts"), "export const greet = () => 'uncommitted';\n");
+  fs.writeFileSync(path.join(fixture, "dump.rdb"), "REDIS0011");
+  const scored = await runRequests([
+    {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name: "convergence_score", arguments: { path: fixture, base: "HEAD~1", head: "HEAD", query: "update the greeting" } },
+    },
+    {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: { name: "convergence_score", arguments: { path: fixture, base: "HEAD~1", query: "update the greeting", includeUntracked: true } },
+    },
+  ]);
+  const convergence = structured(scored, 1);
+  assert.equal(convergence.subject.kind, "git-commit");
+  assert.equal(convergence.subject.headSha, headSha);
+  assert.equal(convergence.drivers.changedFiles, 1);
+  assert.deepEqual(convergence.receipt.subject, convergence.subject);
+  assert.deepEqual(structured(scored, 2).untracked, { included: true, count: 1, files: ["dump.rdb"] });
+
+  const gated = await runRequests([
+    {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: {
+        name: "review_gate",
+        arguments: { path: fixture, base: "HEAD~1", head: "HEAD", request: "update the greeting", receipt: convergence.receipt.inputsHash },
+      },
+    },
+  ]);
+  const gate = structured(gated, 3);
+  assert.equal(gate.scope, "commit");
+  assert.deepEqual(gate.changedFiles, ["src/index.ts"]);
+  assert.equal(gate.checks.find((check) => check.name === "Convergence").status, "PASS");
+});
+
 test("review_gate with a pr selector runs the GitHub gate path (vs local without one)", async () => {
   // Without gh / a real PR this surfaces a verdict or an error — what matters is
   // that the pr selector routes through the GitHub gate (evaluatePR), not the

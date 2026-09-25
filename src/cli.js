@@ -577,8 +577,10 @@ async function handleConverge(parsed) {
   const data = generateConvergence(query, {
     path: repoPath,
     base: parsed.flags.base ?? parsed.flags.diff_base,
+    head: parsed.flags.head,
     top: parsed.flags.top,
     staged: parsed.flags.staged,
+    includeUntracked: parsed.flags.include_untracked,
   });
   noteResult(data);
 
@@ -607,6 +609,7 @@ async function handlePass(parsed) {
   const data = /** @type {PassData} */ (
     evaluateLocal(repoPath, {
       base: parsed.flags.base,
+      head: parsed.flags.head,
       policy: parsed.flags.policy,
       governance: parsed.flags.governance,
       request: parsed.flags.request,
@@ -1387,7 +1390,7 @@ function handleHelp(_parsed) {
   printText(
     [
       "Merge gate (v2):",
-      "  otito gate <repo> [--base ref] [--staged] [--run-validation] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
+      "  otito gate <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
       "  otito gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
       "  otito workspace-gate <repo...> [--base ref] [--run-validation] [--policy x] [--governance x] [--request text] [--json]                           # one staged receipt across repositories",
       "",

@@ -336,6 +336,35 @@ test("converge --staged emits an exact Git-index subject", async () => {
   assert.deepEqual(payload.receipt.subject, payload.subject);
 });
 
+test("converge --head and gate --head score the exact committed change", async () => {
+  const fixture = makeGitFixture("converge-head");
+  const headSha = git(fixture, "rev-parse", "HEAD").trim();
+  fs.writeFileSync(path.join(fixture, "dump.rdb"), "REDIS0011");
+
+  const converged = await runCli(["converge", "update the greeting", "--path", fixture, "--base", "HEAD~1", "--head", "HEAD", "--json"]);
+  const payload = parseJsonOutput(converged.stdout);
+  assert.equal(converged.exitCode, 0);
+  assert.equal(payload.subject.kind, "git-commit");
+  assert.equal(payload.subject.headSha, headSha);
+
+  const gated = await runCli([
+    "gate",
+    fixture,
+    "--base",
+    "HEAD~1",
+    "--head",
+    headSha,
+    "--request",
+    "update the greeting",
+    "--receipt",
+    payload.receipt.inputsHash,
+    "--json",
+  ]);
+  const gate = parseJsonOutput(gated.stdout);
+  assert.equal(gate.scope, "commit");
+  assert.equal(gate.checks.find((check) => check.name === "Convergence").status, "PASS");
+});
+
 test("gate --run-validation records an exact staged validation receipt", async () => {
   const fixture = makeGitFixture("gate-validation");
   fs.writeFileSync(
