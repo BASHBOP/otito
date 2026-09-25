@@ -13,6 +13,21 @@
 // Neither kind reaches the merge gate. A failed, unreachable or unkeyed call
 // costs a read, never a verdict. See docs/18-model-routing.
 
+import { readFileSync } from "node:fs";
+
+let otitoVersion = "0.0.0";
+try {
+  otitoVersion = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version ?? "0.0.0";
+} catch {
+  // best-effort; the version only labels the client
+}
+
+/**
+ * Every call identifies its client, and only its client: the tag carries
+ * Otito's name and version, never a user, a repository or a key.
+ */
+export const JEV_USER_AGENT = `otito/${otitoVersion}`;
+
 export const JEV_API_URL = "https://api.typesafe.ai/v1/systemone";
 export const JEV_MODEL = "jev-latest";
 /** A hung vendor call must not hang the tool that made it. */
@@ -63,7 +78,7 @@ export async function askSystemOne(state, questions, options = {}) {
   const started = Date.now();
   const response = await doFetch(JEV_API_URL, {
     method: "POST",
-    headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+    headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json", "user-agent": JEV_USER_AGENT },
     body: JSON.stringify({ state, model: JEV_MODEL, questions }),
     signal: globalThis.AbortSignal.timeout(options.timeoutMs ?? JEV_TIMEOUT_MS),
   });

@@ -80,6 +80,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 
 | Document | What it covers |
 | --- | --- |
+| [Local Core, Optional Hosted](./19-local-core-optional-hosted/README.md) | The three core commands, what the optional hosted pieces send and where, and the rules that do not change with a paid plan |
 | [Context Foundation](./01-context-foundation/README.md) | Repository inspection, maps, search, context packs, and harnesses |
 | [MCP and Agents](./02-mcp-agent-workflows/README.md) | MCP tools and agent-facing workflows |
 | [Publishing to npm and the MCP Registry](./02-mcp-agent-workflows/publishing.md) | How Òtítọ́ itself is released |

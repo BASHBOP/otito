@@ -12,6 +12,13 @@ import { estimateTokens } from "./tokens.js";
 
 const reviewEngineVersion = 1;
 
+/**
+ * Version of the verdict JSON shape. Attestation records and any store that
+ * receives them read this to know which fields to expect. Bump it when a
+ * field is added, removed or changes meaning.
+ */
+export const VERDICT_SCHEMA_VERSION = 1;
+
 /** @typedef {import('./pass-pr.js').Runner} Runner */
 
 /**
@@ -71,6 +78,7 @@ export async function generateReview(repoPath, options = {}) {
   const data = {
     ok: true,
     generatedAt: new Date().toISOString(),
+    schemaVersion: VERDICT_SCHEMA_VERSION,
     reviewEngineVersion,
     request,
     verdict: passReport.verdict,

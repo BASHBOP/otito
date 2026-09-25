@@ -1,6 +1,8 @@
 # Audit-layer pilot
 
-Turns a repoctx `review_verdict` into an **immutable, hash-chained attestation** bound to a merged commit. Models the "after-merge, complete, tamper-evident" audit layer — the ledger here stands in for an append-only row in `bashbop-api`'s `audit` domain.
+Turns an `otito review --json` verdict into an **immutable, hash-chained attestation** bound to a merged commit. Models the "after-merge, complete, tamper-evident" audit layer — the ledger here stands in for an append-only row in a hosted audit store.
+
+The attestation itself is a CLI command, `otito attest` (source: `src/lib/attest.js`). This directory holds the ledger and the verdicts the workflow writes.
 
 ## What it proves
 
@@ -23,13 +25,16 @@ Two properties an auditor actually tests:
 
 ```bash
 # Attest a merged commit (post-merge CI pipes the review verdict in)
-repoctx review . --pr 75 --json > verdict.json   # production: PR mode for full controls
-node attest.mjs --verdict verdict.json --merge <sha> --prev <base> \
+otito review . --pr 75 --json > verdict.json   # production: PR mode for full controls
+otito attest . --verdict verdict.json --merge <sha> --prev <base> \
      --pr 75 --author "Name" --committed <iso>
 
 # Verify the whole chain (CI gate / auditor spot-check)
-node attest.mjs --verify        # exits non-zero if any record was altered
+otito attest . --verify        # exits non-zero if any record was altered
+otito attest . --verify --json # the same, as data
 ```
+
+The ledger defaults to `audit-pilot/ledger.jsonl` under the repository; `--ledger <file>` (or `OTITO_LEDGER` for the scripts) names another. Every record written by `otito attest` carries `schemaVersion: 1` and the `verdictSchemaVersion` of the verdict it was built from. Records written before those fields existed verify unchanged: the hash covers whatever body was stored.
 
 ## CI on main
 
@@ -44,13 +49,13 @@ The workflow:
 2. Restores the latest ledger from the dedicated `audit-ledger` branch.
 3. Runs `scripts/reconcile-attestations.sh` to backfill every missing first-parent commit in chronological order.
 4. Runs exact diff-mode review for historical gaps and PR-mode review for the newly merged target when its subject references `#NNN`.
-5. Appends and verifies the hash chain with `attest.mjs`.
+5. Appends and verifies the hash chain with `otito attest`.
 6. Commits the ledger and latest verdict to `audit-ledger`, keeping bot-generated evidence commits off `main`.
 7. Uploads commit-specific evidence artifacts for convenient review.
 
 The reconciliation job is serialized, idempotent by merge SHA, and fails if the stored ledger tip is not an ancestor of the requested main commit. A maintainer can also run it manually with the workflow's optional `target_sha` input.
 
-Review exit codes are not verdict validity: a blocking `FAIL` intentionally exits nonzero. The attestation script validates the JSON envelope and records PASS, WARN, or FAIL faithfully; it falls back only when PR review produces no valid verdict.
+Review exit codes are not verdict validity: a blocking `FAIL` intentionally exits nonzero. The attestation step validates the JSON envelope and records PASS, WARN, or FAIL faithfully; it falls back only when PR review produces no valid verdict.
 
 `ledger-v1.jsonl` preserves the original pilot chain before first-parent completeness was enforced. The canonical `ledger.jsonl` was rebuilt from its unchanged genesis record so the previously skipped `bebc24d` commit and every later main commit are represented in order.
 

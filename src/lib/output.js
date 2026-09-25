@@ -75,6 +75,8 @@ Usage:
   otito ax <repo> <query> [--top n] [--out file] [--json]
   otito route <repo> <query> [--host id] [--tier-only] [--offline] [--top n] [--out file] [--json]   # recommend a model tier before spending on the task
   otito converge <repo> <query> --base <ref> [--head ref | --staged] [--include-untracked] [--top n] [--out file] [--json]
+  otito attest [repo] --verdict file --merge sha [--prev sha] [--pr n] [--author name] [--committed iso] [--ledger file] [--json]   # append a hash-chained record of a merged commit
+  otito attest [repo] --verify [--ledger file] [--json]                                     # recompute the chain; exits 1 if any record was altered
   otito calibrate <repo> [--window days] [--min-sample n] [--since date] [--max n] [--json]   # grade risk flags against this repo's own history
   otito pass <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
   otito gate <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
@@ -129,6 +131,7 @@ Examples:
   node src/cli.js structure ../web --pattern 'app/**/*.tsx' --out .otito/app.html
   node src/cli.js eval . --out .otito/eval.md
   node src/cli.js eval --gate-effectiveness
+  node src/cli.js attest . --verify
 `);
 }
 

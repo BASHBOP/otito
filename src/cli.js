@@ -45,6 +45,7 @@ const commandHandlers = {
   ax: handleAx,
   route: handleRoute,
   converge: handleConverge,
+  attest: handleAttest,
   calibrate: handleCalibrate,
   dashboard: handleDashboard,
   telemetry: handleTelemetry,
@@ -683,6 +684,48 @@ async function handlePassPr(parsed) {
 // local gate (no --pr) and to `pass-pr` for the GitHub gate (--pr <selector>),
 // mirroring the review_gate MCP tool's local-vs-PR dispatch. `pass` and
 // `pass-pr` remain available as legacy aliases.
+/**
+ * `otito attest [repo] --verdict file --merge sha [...]` appends a hash-chained
+ * record to the repository's audit ledger; `otito attest [repo] --verify`
+ * recomputes the whole chain and exits 1 if any record was altered.
+ * @param {CliArgs} parsed
+ */
+async function handleAttest(parsed) {
+  const { appendAttestation, formatAttested, formatVerify, resolveLedgerPath, verifyLedger } = await import("./lib/attest.js");
+  const repoPath = parsed.flags.path ?? parsed.positionals[0] ?? ".";
+  const ledgerPath = resolveLedgerPath({ ledger: parsed.flags.ledger, path: repoPath });
+
+  if (parsed.flags.verify) {
+    const result = verifyLedger(ledgerPath);
+    if (!result.ok) process.exitCode = 1;
+    if (parsed.flags.json) {
+      printJson(result);
+      return;
+    }
+    printText(formatVerify(result));
+    return;
+  }
+
+  if (!parsed.flags.verdict || parsed.flags.verdict === true) {
+    throw new Error("attest requires --verdict <file> (from `otito review --json`) and --merge <sha>, or --verify");
+  }
+  const verdict = JSON.parse(readFileSync(String(parsed.flags.verdict), "utf8"));
+  const record = appendAttestation({
+    ledgerPath,
+    verdict,
+    merge: String(parsed.flags.merge ?? ""),
+    prev: parsed.flags.prev === undefined ? undefined : String(parsed.flags.prev),
+    pr: parsed.flags.pr === undefined ? null : String(parsed.flags.pr),
+    author: parsed.flags.author === undefined ? undefined : String(parsed.flags.author),
+    committed: parsed.flags.committed === undefined ? null : String(parsed.flags.committed),
+  });
+  if (parsed.flags.json) {
+    printJson({ ok: true, ledger: ledgerPath, record });
+    return;
+  }
+  printText(formatAttested(record));
+}
+
 /** @param {CliArgs} parsed */
 async function handleGate(parsed) {
   const selector = parsed.flags.pr;

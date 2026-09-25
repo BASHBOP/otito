@@ -102,10 +102,12 @@ After merge, bind the review verdict to the merge commit as tamper-evident evide
 
 ```bash
 otito review . --pr 123 --json > verdict.json
-node audit-pilot/attest.mjs --verdict verdict.json --merge <sha> --prev <base> \
+otito attest . --verdict verdict.json --merge <sha> --prev <base> \
      --pr 123 --author "Name" --committed <iso>
-node audit-pilot/attest.mjs --verify
+otito attest . --verify        # exits non-zero if any record was altered
 ```
+
+Records go to `audit-pilot/ledger.jsonl` under the repository unless `--ledger` names another file. Each carries a `schemaVersion`, and the verdict it was built from carries its own.
 
 See [audit-pilot/README.md](https://github.com/BASHBOP/otito/blob/main/audit-pilot/README.md) for the hash-chained ledger pilot and production notes.
 
