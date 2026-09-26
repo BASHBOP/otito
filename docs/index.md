@@ -13,7 +13,7 @@
 
     Its command-line and package identity is `otito`.
 
-    :material-animation-play: See the [**How It Works** visual walkthrough](assets/otito-how-it-works.html), a layered diagram of the discover → index → context → gate flow.
+    :material-animation-play: See the [**How It Works** visual walkthrough](assets/otito-how-it-works.html): the loop from context before the edit, to a verdict before the merge, to an attestation after it, with every shipped MCP tool in its place.
 
 ---
 

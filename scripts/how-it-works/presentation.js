@@ -1,15 +1,819 @@
-// Verbatim presentation blocks for the How It Works diagram.
+// Verbatim presentation blocks for the How It Works page.
 //
 // Generated-file authoring split: this module holds the styling and behaviour
 // that do not depend on the tool catalog, while generate-how-it-works.mjs owns
 // everything derived from it. Edit the CSS or the interaction code here; edit
-// the diagram's content in the generator's LAYOUT table.
+// the page's content in the generator's PHASES, LAYOUT, SURFACES and STEPS
+// tables.
+//
+// The palette is the docs site's (mkdocs Material, teal primary, cyan accent,
+// docs/stylesheets/extra.css) so the page reads as part of the site it is
+// linked from, in both colour schemes.
 
-export const STYLE =
-  "\n      :root {\n        --bg: #0d1117;\n        --panel: #161b22;\n        --stroke: #30363d;\n        --text: #c9d1d9;\n        --muted: #8b949e;\n        --blue: #58a6ff;\n        --green: #7ee787;\n        --purple: #d2a8ff;\n        --orange: #ffa657;\n        --yellow: #ffd866;\n        --red: #ff7b72;\n        --cyan: #79c0ff;\n      }\n\n      * {\n        box-sizing: border-box;\n      }\n\n      html,\n      body {\n        margin: 0;\n        min-height: 100%;\n        background: var(--bg);\n        color: var(--text);\n        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;\n      }\n\n      header {\n        padding: 1.25rem 1.5rem 0.5rem;\n        border-bottom: 1px solid var(--stroke);\n      }\n\n      header h1 {\n        margin: 0;\n        font-size: 1.35rem;\n        font-weight: 600;\n        letter-spacing: -0.02em;\n      }\n\n      header p {\n        margin: 0.35rem 0 0;\n        color: var(--muted);\n        font-size: 0.95rem;\n        max-width: 52rem;\n      }\n\n      .legend {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 0.75rem 1.25rem;\n        padding: 0.85rem 1.5rem 1rem;\n        border-bottom: 1px solid var(--stroke);\n        font-size: 0.8rem;\n      }\n\n      .legend span {\n        display: inline-flex;\n        align-items: center;\n        gap: 0.45rem;\n      }\n\n      .dot {\n        width: 10px;\n        height: 10px;\n        border-radius: 50%;\n        flex-shrink: 0;\n      }\n\n      .stage {\n        position: relative;\n        width: min(1200px, 100%);\n        margin: 0 auto;\n        padding: 1rem;\n      }\n\n      svg.mindmap {\n        display: block;\n        width: 100%;\n        height: auto;\n        overflow: visible;\n      }\n\n      .link {\n        fill: none;\n        stroke: var(--stroke);\n        stroke-width: 1.5;\n        stroke-dasharray: 6 5;\n        opacity: 0.55;\n        transition: stroke 0.35s ease, opacity 0.35s ease, stroke-width 0.35s ease;\n      }\n\n      .link.active {\n        stroke-width: 2.5;\n        opacity: 1;\n        animation: flow 1.2s linear infinite;\n      }\n\n      .link.entry.active {\n        stroke: var(--blue);\n      }\n      .link.discover.active {\n        stroke: var(--cyan);\n      }\n      .link.map.active {\n        stroke: var(--purple);\n      }\n      .link.change.active {\n        stroke: var(--yellow);\n      }\n      .link.review.active {\n        stroke: var(--green);\n      }\n      .link.output.active {\n        stroke: var(--orange);\n      }\n\n      @keyframes flow {\n        to {\n          stroke-dashoffset: -22;\n        }\n      }\n\n      .node {\n        cursor: default;\n      }\n\n      .node circle,\n      .node rect {\n        transition: transform 0.35s ease, filter 0.35s ease;\n        transform-origin: center;\n        transform-box: fill-box;\n      }\n\n      .node.active circle,\n      .node.active rect {\n        filter: drop-shadow(0 0 10px currentColor);\n        transform: scale(1.06);\n      }\n\n      .node text {\n        font-size: 11px;\n        fill: var(--text);\n        text-anchor: middle;\n        pointer-events: none;\n      }\n\n      .node .label {\n        font-weight: 600;\n        font-size: 12px;\n      }\n\n      .node .sub {\n        fill: var(--muted);\n        font-size: 9.5px;\n      }\n\n      .center-ring {\n        animation: pulse 2.8s ease-in-out infinite;\n      }\n\n      @keyframes pulse {\n        0%,\n        100% {\n          opacity: 0.35;\n          r: 58;\n        }\n        50% {\n          opacity: 0.75;\n          r: 66;\n        }\n      }\n\n      .flow-dot {\n        fill: var(--green);\n        opacity: 0;\n      }\n\n      .flow-dot.on {\n        opacity: 1;\n        animation: travel 2.4s ease-in-out infinite;\n      }\n\n      @keyframes travel {\n        0% {\n          opacity: 0;\n        }\n        10% {\n          opacity: 1;\n        }\n        90% {\n          opacity: 1;\n        }\n        100% {\n          opacity: 0;\n        }\n      }\n\n      .panel {\n        margin: 0 auto 1.5rem;\n        width: min(1200px, calc(100% - 2rem));\n        display: grid;\n        grid-template-columns: 1.1fr 0.9fr;\n        gap: 1rem;\n      }\n\n      @media (max-width: 900px) {\n        .panel {\n          grid-template-columns: 1fr;\n        }\n      }\n\n      .card {\n        background: var(--panel);\n        border: 1px solid var(--stroke);\n        border-radius: 10px;\n        padding: 1rem 1.1rem;\n      }\n\n      .card h2 {\n        margin: 0 0 0.65rem;\n        font-size: 0.95rem;\n        font-weight: 600;\n      }\n\n      .steps {\n        display: grid;\n        gap: 0.45rem;\n      }\n\n      .step {\n        display: grid;\n        grid-template-columns: 1.4rem 1fr;\n        gap: 0.55rem;\n        align-items: start;\n        padding: 0.45rem 0.5rem;\n        border-radius: 8px;\n        border: 1px solid transparent;\n        transition: border-color 0.3s ease, background 0.3s ease;\n      }\n\n      .step.active {\n        border-color: var(--stroke);\n        background: #0d1117;\n      }\n\n      .step-num {\n        width: 1.4rem;\n        height: 1.4rem;\n        border-radius: 50%;\n        display: grid;\n        place-items: center;\n        font-size: 0.72rem;\n        font-weight: 700;\n        color: var(--bg);\n      }\n\n      .step strong {\n        display: block;\n        font-size: 0.86rem;\n        margin-bottom: 0.15rem;\n      }\n\n      .step span {\n        color: var(--muted);\n        font-size: 0.8rem;\n        line-height: 1.35;\n      }\n\n      .detail {\n        min-height: 7.5rem;\n      }\n\n      .detail h3 {\n        margin: 0 0 0.4rem;\n        font-size: 1rem;\n      }\n\n      .detail p {\n        margin: 0;\n        color: var(--muted);\n        font-size: 0.86rem;\n        line-height: 1.5;\n      }\n\n      .chips {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 0.4rem;\n        margin-top: 0.75rem;\n      }\n\n      .chip {\n        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n        font-size: 0.72rem;\n        padding: 0.2rem 0.45rem;\n        border-radius: 999px;\n        border: 1px solid var(--stroke);\n        color: var(--text);\n      }\n\n      footer {\n        text-align: center;\n        color: var(--muted);\n        font-size: 0.78rem;\n        padding: 0 1rem 1.5rem;\n      }\n\n      footer a {\n        color: var(--blue);\n        text-decoration: none;\n      }\n    ";
+export const FONTS_HREF = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap";
 
-export const SCRIPT_HEAD =
-  '\n      const nodes = [...document.querySelectorAll(".node[data-id]")];\n      const links = [...document.querySelectorAll(".link")];\n      const steps = [...document.querySelectorAll(".step")];\n      const detailTitle = document.getElementById("detail-title");\n      const detailBody = document.getElementById("detail-body");\n      const detailChips = document.getElementById("detail-chips");\n\n';
+export const STYLE = `
+:root {
+  --bg: #f4f7f8;
+  --surface: #ffffff;
+  --surface-2: #eef3f5;
+  --ink: #132029;
+  --text: #22333d;
+  --muted: #5b6b75;
+  --line: rgba(19, 32, 41, 0.14);
+  --line-strong: rgba(19, 32, 41, 0.28);
+  --teal: #14746f;
+  --cyan: #168aad;
+  --green: #2d7d56;
+  --amber: #b7791f;
+  --violet: #6b5bb5;
+  --slate: #4a5a66;
+  --red: #b3403a;
+  --shadow: 0 0.45rem 1.4rem rgba(19, 32, 41, 0.08);
+  --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
 
-export const SCRIPT_TAIL =
-  '\n      let stepIndex = 0;\n      let timer;\n\n      function setActive(step) {\n        const group = step.dataset.group;\n        const nodeId = step.dataset.node;\n\n        steps.forEach((el) => el.classList.toggle("active", el === step));\n        links.forEach((link) => link.classList.toggle("active", link.dataset.group === group));\n        nodes.forEach((node) => node.classList.toggle("active", node.dataset.id === nodeId));\n\n        const node = document.querySelector(`.node[data-id="${nodeId}"]`);\n        if (node) {\n          detailTitle.textContent = node.dataset.title;\n          detailBody.textContent = node.dataset.desc;\n          detailChips.innerHTML = (chipMap[nodeId] || [])\n            .map((chip) => `<span class="chip">${chip}</span>`)\n            .join("");\n        }\n      }\n\n      function cycle() {\n        setActive(steps[stepIndex]);\n        stepIndex = (stepIndex + 1) % steps.length;\n      }\n\n      steps.forEach((step, index) => {\n        step.addEventListener("click", () => {\n          stepIndex = index;\n          cycle();\n          clearInterval(timer);\n          timer = setInterval(cycle, 3200);\n        });\n      });\n\n      nodes.forEach((node) => {\n        node.addEventListener("mouseenter", () => {\n          clearInterval(timer);\n          links.forEach((link) => link.classList.toggle("active", link.dataset.group === node.dataset.group));\n          nodes.forEach((n) => n.classList.toggle("active", n === node));\n          detailTitle.textContent = node.dataset.title;\n          detailBody.textContent = node.dataset.desc;\n          detailChips.innerHTML = (chipMap[node.dataset.id] || [])\n            .map((chip) => `<span class="chip">${chip}</span>`)\n            .join("");\n        });\n        node.addEventListener("mouseleave", () => {\n          timer = setInterval(cycle, 3200);\n        });\n      });\n\n      nodes.forEach((node, i) => {\n        node.style.opacity = "0";\n        node.style.transform = "scale(0.92)";\n        node.style.transition = "opacity 0.5s ease, transform 0.5s ease";\n        setTimeout(() => {\n          node.style.opacity = "1";\n          node.style.transform = "scale(1)";\n        }, 80 + i * 45);\n      });\n\n      cycle();\n      timer = setInterval(cycle, 3200);\n    ';
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f171c;
+    --surface: #16222a;
+    --surface-2: #1c2a33;
+    --ink: #eef3f6;
+    --text: #d9e2e8;
+    --muted: #9fb0ba;
+    --line: rgba(230, 237, 241, 0.13);
+    --line-strong: rgba(230, 237, 241, 0.3);
+    --teal: #3fb6ae;
+    --cyan: #4fb5d8;
+    --green: #58b283;
+    --amber: #e0a84a;
+    --violet: #a99be0;
+    --slate: #9aacb8;
+    --red: #ef7b74;
+    --shadow: 0 0.45rem 1.4rem rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f171c;
+  --surface: #16222a;
+  --surface-2: #1c2a33;
+  --ink: #eef3f6;
+  --text: #d9e2e8;
+  --muted: #9fb0ba;
+  --line: rgba(230, 237, 241, 0.13);
+  --line-strong: rgba(230, 237, 241, 0.3);
+  --teal: #3fb6ae;
+  --cyan: #4fb5d8;
+  --green: #58b283;
+  --amber: #e0a84a;
+  --violet: #a99be0;
+  --slate: #9aacb8;
+  --red: #ef7b74;
+  --shadow: 0 0.45rem 1.4rem rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--cyan);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+.mono {
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+.wrap {
+  width: min(1180px, 100% - 32px);
+  margin: 0 auto;
+}
+
+/* ---- masthead ------------------------------------------------------- */
+
+.masthead {
+  padding: 2.4rem 0 1.6rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(1.55rem, 1.1rem + 2vw, 2.45rem);
+  font-weight: 720;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--ink);
+  max-width: 30ch;
+}
+
+.masthead h1 em {
+  font-style: normal;
+  color: var(--teal);
+}
+
+.lede {
+  margin: 0.9rem 0 0;
+  max-width: 62ch;
+  font-size: 1.02rem;
+  color: var(--muted);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.6rem;
+  margin: 1.2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 0.8rem;
+  color: var(--text);
+}
+
+.facts i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal);
+  flex: none;
+}
+
+/* ---- strips (ways in, what comes out) -------------------------------- */
+
+.strip {
+  padding: 0.4rem 0 1.2rem;
+}
+
+.strip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  margin: 0 0 0.7rem;
+}
+
+.strip-head h2,
+.section-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.strip-head p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.7rem;
+}
+
+/* ---- cards ------------------------------------------------------------ */
+
+.card {
+  --c: var(--teal);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0.75rem 0.85rem 0.7rem;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: 12px 0 0 12px;
+  background: var(--c);
+  opacity: 0.85;
+}
+
+.card:hover,
+.card:focus-visible {
+  border-color: var(--c);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.card.is-active {
+  border-color: var(--c);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--c) 40%, transparent),
+    var(--shadow);
+}
+
+.card-name {
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.card.surface .card-name {
+  font-family: var(--font);
+  font-size: 0.95rem;
+}
+
+.card-sub {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.card-cli {
+  margin-top: 0.3rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--text);
+}
+
+.card-hosts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.card-hosts span {
+  padding: 0.12rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  color: var(--text);
+}
+
+/* ---- layout: timeline + rail ---------------------------------------- */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.6rem 0 1.6rem;
+}
+
+@media (min-width: 980px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 1.4rem;
+    align-items: start;
+  }
+
+  .rail {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+}
+
+.timeline {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: 1.2rem;
+  bottom: 1.2rem;
+  left: 13px;
+  width: 2px;
+  background: var(--line-strong);
+  opacity: 0.5;
+}
+
+.phase {
+  --c: var(--teal);
+  position: relative;
+  margin: 0 0 0.85rem;
+  padding: 0.95rem 1rem 1rem 2.4rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  transition:
+    opacity 0.35s ease,
+    border-color 0.35s ease,
+    background 0.35s ease;
+}
+
+@supports (background: color-mix(in srgb, red 10%, white)) {
+  .phase {
+    background: color-mix(in srgb, var(--c) 4%, var(--surface));
+  }
+
+  .phase.is-active {
+    background: color-mix(in srgb, var(--c) 9%, var(--surface));
+  }
+}
+
+.phase.is-active {
+  border-color: var(--c);
+}
+
+.timeline.has-focus .phase:not(.is-active) {
+  opacity: 0.62;
+}
+
+.phase::before {
+  content: "";
+  position: absolute;
+  top: 1.25rem;
+  left: -1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--c);
+  border: 3px solid var(--bg);
+  box-shadow: 0 0 0 2px var(--c);
+  transform: translateX(-7px);
+}
+
+.phase-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.7rem;
+  align-items: baseline;
+  margin-bottom: 0.7rem;
+}
+
+.phase-index {
+  grid-row: 1 / span 2;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--c);
+  padding-top: 0.2rem;
+}
+
+.phase-head h2 {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 680;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.phase-actor {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--c);
+  font-weight: 600;
+}
+
+.phase-sub {
+  grid-column: 2;
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  max-width: 70ch;
+}
+
+.phase .grid {
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 0.6rem;
+}
+
+.phase .card {
+  --c: inherit;
+}
+
+.phase.model .grid {
+  grid-template-columns: 1fr;
+}
+
+/* ---- rail: walkthrough + detail ------------------------------------- */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1rem 1.05rem;
+}
+
+.panel + .panel {
+  margin-top: 0.85rem;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+}
+
+.play {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.play:hover,
+.play:focus-visible {
+  border-color: var(--teal);
+  outline: none;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.step {
+  --c: var(--teal);
+  display: grid;
+  grid-template-columns: 1.6rem 1fr;
+  gap: 0.15rem 0.7rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.step:hover,
+.step:focus-visible {
+  border-color: var(--line);
+  outline: none;
+}
+
+.step.is-active {
+  border-color: var(--c);
+  background: var(--surface-2);
+}
+
+.step .step-num {
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--c);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.step strong {
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.step span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.detail-kind {
+  margin: 0 0 0.25rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.detail h3 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.detail h3.plain {
+  font-family: var(--font);
+}
+
+.detail p {
+  margin: 0.55rem 0 0;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.chip {
+  padding: 0.18rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--text);
+}
+
+/* ---- guarantees --------------------------------------------------------- */
+
+.guarantees {
+  padding: 0.4rem 0 1.6rem;
+}
+
+.guarantees .grid {
+  grid-template-columns: 1fr;
+  margin-top: 0.7rem;
+}
+
+@media (min-width: 640px) {
+  .guarantees .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .guarantees .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.guarantee {
+  --c: var(--teal);
+  padding: 0.9rem 1rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.guarantee h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 680;
+  color: var(--ink);
+}
+
+.guarantee h3::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--c);
+  flex: none;
+}
+
+.guarantee p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+/* ---- footer ------------------------------------------------------------- */
+
+footer {
+  padding: 1.2rem 0 2.2rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+footer .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+}
+
+@media (max-width: 600px) {
+  .masthead {
+    padding-top: 1.6rem;
+  }
+
+  .phase {
+    padding-left: 2rem;
+  }
+
+  .phase .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .phase .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+`;
+
+export const SCRIPT = `
+const cards = [...document.querySelectorAll(".card[data-id]")];
+const phases = [...document.querySelectorAll(".phase[data-phase]")];
+const steps = [...document.querySelectorAll(".step[data-node]")];
+const timeline = document.getElementById("timeline");
+const toggle = document.getElementById("play-toggle");
+const detailKind = document.getElementById("detail-kind");
+const detailTitle = document.getElementById("detail-title");
+const detailBody = document.getElementById("detail-body");
+const detailChips = document.getElementById("detail-chips");
+
+const INTERVAL_MS = 4200;
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+let stepIndex = 0;
+let timer = null;
+let wantsPlay = !reduceMotion;
+
+function chip(text) {
+  const el = document.createElement("span");
+  el.className = "chip";
+  el.textContent = text;
+  return el;
+}
+
+function show(card) {
+  cards.forEach((el) => el.classList.toggle("is-active", el === card));
+  phases.forEach((el) => el.classList.toggle("is-active", el.dataset.phase === card.dataset.phase));
+  timeline.classList.toggle(
+    "has-focus",
+    phases.some((el) => el.dataset.phase === card.dataset.phase),
+  );
+
+  detailKind.textContent = card.dataset.kind === "tool" ? "MCP tool · also a CLI command" : card.dataset.kind === "cli" ? "CLI command" : "Surface";
+  detailTitle.textContent = card.dataset.title;
+  detailTitle.classList.toggle("plain", card.dataset.kind !== "tool");
+  detailBody.textContent = card.dataset.desc;
+  detailChips.replaceChildren(...(card.dataset.chips || "").split("|").filter(Boolean).map(chip));
+}
+
+function focusStep(index) {
+  stepIndex = index;
+  const step = steps[index];
+  steps.forEach((el) => el.classList.toggle("is-active", el === step));
+  const card = cards.find((el) => el.dataset.id === step.dataset.node);
+  if (card) show(card);
+}
+
+function tick() {
+  focusStep((stepIndex + 1) % steps.length);
+}
+
+function start() {
+  if (timer !== null) return;
+  timer = window.setInterval(tick, INTERVAL_MS);
+}
+
+function stop() {
+  if (timer === null) return;
+  window.clearInterval(timer);
+  timer = null;
+}
+
+function renderToggle() {
+  toggle.textContent = wantsPlay ? "Pause" : "Play";
+  toggle.setAttribute("aria-pressed", wantsPlay ? "true" : "false");
+}
+
+function pauseByUser() {
+  wantsPlay = false;
+  stop();
+  renderToggle();
+}
+
+toggle.addEventListener("click", () => {
+  wantsPlay = !wantsPlay;
+  if (wantsPlay) {
+    tick();
+    start();
+  } else {
+    stop();
+  }
+  renderToggle();
+});
+
+steps.forEach((step, index) => {
+  step.addEventListener("click", () => {
+    pauseByUser();
+    focusStep(index);
+  });
+});
+
+cards.forEach((card) => {
+  card.addEventListener("click", () => {
+    pauseByUser();
+    show(card);
+    const step = steps.findIndex((el) => el.dataset.node === card.dataset.id);
+    steps.forEach((el, i) => el.classList.toggle("is-active", i === step));
+    if (step >= 0) stepIndex = step;
+  });
+  card.addEventListener("focus", () => {
+    pauseByUser();
+    show(card);
+  });
+  card.addEventListener("mouseenter", () => {
+    stop();
+    show(card);
+  });
+  card.addEventListener("mouseleave", () => {
+    if (wantsPlay) start();
+  });
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stop();
+  else if (wantsPlay) start();
+});
+
+focusStep(0);
+renderToggle();
+if (wantsPlay) start();
+`;
