@@ -320,7 +320,7 @@ commit.
 
 ### Legacy tool names
 
-The older names below still work through `tools/call`, although `tools/list` does not advertise them. They date from Repoctx 2.0, which folded 18 tools into 11. Each call is forwarded to its canonical tool with the arguments translated, so a host configured with the old names keeps working. They still work in 3.x, and no release has been named to remove them; use the canonical names in new configs.
+The older names below still work through `tools/call`, although `tools/list` does not advertise them. They date from otito 2.0, which folded 18 tools into 11. Each call is forwarded to its canonical tool with the arguments translated, so a host configured with the old names keeps working. They still work in 3.x, and no release has been named to remove them; use the canonical names in new configs.
 
 | Legacy name                | Canonical tool   | Arguments                                                    |
 | -------------------------- | ---------------- | ------------------------------------------------------------ |
