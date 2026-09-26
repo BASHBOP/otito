@@ -453,11 +453,76 @@ writes about `inferRisk`, and it applies here with no discount:
 
 So the router ships **advisory**: it prints a decision and a recommended tier,
 and it does not pick a model for you. Promoting it past advisory needs the same
-treatment `otito calibrate` gives the gate, replay the repository's history,
+treatment `otito calibrate` gives the gate: replay the repository's history,
 recompute the tier from the state as it was, and join to outcomes. The metric is
-not accuracy. It is **regret**: changes routed cheap that ended in a revert or a
-repair, weighed against the spend avoided. A router with zero regret and zero
-savings is the table above.
+not accuracy. It is **regret**: a change routed cheap that was repaired, by a
+fix or a revert, within the outcome window. It is never a saving, because otito
+does not know whether a host switched models.
+
+`otito regret <repo>` runs that backtest. For each non-fix commit it checks the
+parent tree out into a temporary worktree, scores the commit subject as the
+request, and grades three tiers side by side: the deterministic half alone (AX,
+containment and the bumps, every model term at zero), the shipped offline
+heuristic, and the Jev read when a key is present. The deterministic tier is
+the cheapest the router can give a request, since a model read can only move
+it toward premium. Outcomes are the same line-overlap `repaired` join calibrate
+uses, with the same minimum-sample rule applied to every published rate, the
+base rate included; each rate carries a Wilson 95% interval, and two rates
+whose intervals overlap are not shown to differ. A commit younger than the
+window is censored rather than graded as unrepaired. Offline it is a pure
+function of repository state with a receipt; with a key the model's answers
+are not replayable and the receipt says so.
+
+```bash
+otito regret . --window 30 --max 150 --offline   # keyless, replayable
+otito regret . --window 30 --max 150             # adds the jev variant on your key
+```
+
+### Measured, otito, 2026-09-26
+
+The 150 most recent gradable non-fix commits of this repository (20 of them
+docs-only), replayed against their parents; 47 younger commits censored, 30-day
+window, minimum sample 30, `jev-1.13.0`. Receipts: `regret_4175d2b39031`
+(offline, replayable) and `regret_40d8924d473b` (with the model; 150 calls,
+$0.013, not replayable). Base rate: 17.3% of commits were repaired within the
+window (26 of 150; 95% interval 12.1% to 24.2%).
+
+| Variant | cheap | mid | premium | Ordered | Contradicted |
+| --- | --- | --- | --- | --- | --- |
+| deterministic | 120 · 17.5% (11.7 to 25.3) | 30 · 16.7% (7.3 to 33.6) | 0 | unknown | 21 of 120 (17.5%) |
+| offline | 69 · 20.3% (12.5 to 31.2) | 81 · 14.8% (8.7 to 24.1) | 0 | unknown | 14 of 69 (20.3%) |
+| jev | 34 · 14.7% (6.4 to 30.1) | 112 · 17.9% (11.9 to 26.0) | 4 · withheld | unknown | 5 of 34 (14.7%) |
+
+Each cell is commits routed to that tier, the share of them repaired, and the
+Wilson 95% interval. _Ordered_ asks whether cheap < mid < premium, and is only
+claimed when every tier clears the minimum sample. _Contradicted_ is the regret
+count: routed cheap, then repaired.
+
+What it says, plainly:
+
+- **No variant is shown to order outcomes.** Every interval overlaps every
+  other, and no variant routes premium often enough to grade the top tier at
+  all: the deterministic and offline halves never reach it, and the model read
+  reaches it four times in 150.
+- **The deterministic half is the base rate.** It puts four fifths of commits
+  in the cheap lane, and those are repaired as often as the rest.
+- **The offline heuristic runs the wrong way, within noise.** The commits it
+  routed cheap were repaired more often than the ones it routed mid; the
+  intervals overlap, so this is not a finding, but it is not a reason to trust
+  the keyless tier either.
+- **The model read runs the right way, within noise.** Its cheap lane has the
+  lowest repair rate of the three (14.7%), and its answers now separate their
+  inputs: specificity ranged 0.02 to 0.88 (stdev 0.13), blast radius 0.01 to
+  0.97 (0.23), novelty 0.05 to 0.68 (0.17). But the arithmetic still funnels
+  three quarters of commits into `mid`, so most of that spread never reaches
+  the tier, and 34 cheap commits cannot show a difference this size.
+
+This is the number the router had been missing, and it is why `route` stays
+advisory, why no host integration turns it on by default, and why no partner
+claim rests on it. The next change to the router is the arithmetic that turns
+spread answers into a tier, and it will be graded by this command before it
+ships. One repository is not a sample of repositories; the caveats the command
+prints apply in full.
 
 ## References
 

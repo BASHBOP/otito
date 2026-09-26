@@ -48,7 +48,7 @@ const BLAME_LINE = /^([0-9a-f]{40}) \d+ \d+/;
 // A commit is treated as a repair when its subject announces one. This is a
 // convention, not a fact: a fix that is not labelled one is invisible here, and
 // that limitation is reported in the payload rather than hidden.
-const FIX_SUBJECT = /^(fix|hotfix|bugfix|revert)\b|^(fix|hotfix|bugfix|revert)[(!:]/i;
+export const FIX_SUBJECT = /^(fix|hotfix|bugfix|revert)\b|^(fix|hotfix|bugfix|revert)[(!:]/i;
 
 /**
  * @typedef {object} CalibrateOptions
@@ -83,28 +83,7 @@ export function generateCalibration(repoPath = ".", options = {}) {
   // outcome. Docs-only commits are excluded because no risk flag can fire.
   const scoreable = commits.filter((commit) => !FIX_SUBJECT.test(commit.subject) && commit.files.some((file) => !isDocPath(file.path)));
   const fixes = commits.filter((commit) => FIX_SUBJECT.test(commit.subject) && commit.parents.length === 1).slice(0, maxFixes);
-  const scoreableTime = new Map(scoreable.map((commit) => [commit.sha, commit.time]));
-
-  // sha -> seconds until the earliest later fix that touched its lines
-  /** @type {Map<string, number>} */
-  const repairedAfter = new Map();
-  let joinedFixes = 0;
-  for (const fix of fixes) {
-    const blamed = blameRepairedCommits(root, fix);
-    if (blamed.size) joinedFixes += 1;
-    for (const sha of blamed) {
-      const introducedAt = scoreableTime.get(sha);
-      if (introducedAt === undefined) continue;
-      // Blaming at the fix's *parent* means the blamed commit is always an
-      // ancestor, so ordering is guaranteed by topology rather than by the
-      // clock. A negative gap can only be clock skew; a zero gap is a real
-      // same-second repair and counts.
-      const elapsed = fix.time - introducedAt;
-      if (elapsed < 0) continue;
-      const best = repairedAfter.get(sha);
-      if (best === undefined || elapsed < best) repairedAfter.set(sha, elapsed);
-    }
-  }
+  const { repairedAfter, joinedFixes } = joinRepairs(root, scoreable, fixes);
 
   const graded = scoreable.map((commit) => ({
     sha: commit.sha,
@@ -158,6 +137,38 @@ export function generateCalibration(repoPath = ".", options = {}) {
     ],
   };
   return { ...data, receipt: makeCalibrationReceipt(data) };
+}
+
+/**
+ * The outcome join, shared with the route regret backtest so both grade
+ * against the same notion of "repaired".
+ * @param {string} root
+ * @param {{ sha: string, time: number }[]} scoreable
+ * @param {{ sha: string, parents: string[], time: number }[]} fixes
+ * @returns {{ repairedAfter: Map<string, number>, joinedFixes: number }} sha -> seconds until the earliest later fix that touched its lines
+ */
+export function joinRepairs(root, scoreable, fixes) {
+  const scoreableTime = new Map(scoreable.map((commit) => [commit.sha, commit.time]));
+  /** @type {Map<string, number>} */
+  const repairedAfter = new Map();
+  let joinedFixes = 0;
+  for (const fix of fixes) {
+    const blamed = blameRepairedCommits(root, fix);
+    if (blamed.size) joinedFixes += 1;
+    for (const sha of blamed) {
+      const introducedAt = scoreableTime.get(sha);
+      if (introducedAt === undefined) continue;
+      // Blaming at the fix's *parent* means the blamed commit is always an
+      // ancestor, so ordering is guaranteed by topology rather than by the
+      // clock. A negative gap can only be clock skew; a zero gap is a real
+      // same-second repair and counts.
+      const elapsed = fix.time - introducedAt;
+      if (elapsed < 0) continue;
+      const best = repairedAfter.get(sha);
+      if (best === undefined || elapsed < best) repairedAfter.set(sha, elapsed);
+    }
+  }
+  return { repairedAfter, joinedFixes };
 }
 
 /**
@@ -320,11 +331,12 @@ function blameRepairedCommits(root, fix) {
 }
 
 /**
+ * Non-merge commits, newest first, with per-file line counts.
  * @param {string} root
  * @param {string} [since]
  * @returns {{ sha: string, parents: string[], time: number, subject: string, files: { path: string, additions: number, deletions: number }[] }[]}
  */
-function readHistory(root, since) {
+export function readHistory(root, since) {
   // Record separator: built from a character code so no literal control
   // byte lands in the source, and spawn never sees a null in an argument.
   const separator = `${String.fromCharCode(30)}otito${String.fromCharCode(30)}`;
