@@ -775,21 +775,48 @@ test("convergence_score and review_gate score an exact base..head commit through
   assert.equal(gate.checks.find((check) => check.name === "Convergence").status, "PASS");
 });
 
-test("review_gate with a pr selector runs the GitHub gate path (vs local without one)", async () => {
-  // Without gh / a real PR this surfaces a verdict or an error — what matters is
-  // that the pr selector routes through the GitHub gate (evaluatePR), not the
-  // local gate, exactly as the old pr_merge_readiness did.
+test("review_gate and review_verdict gate a named PR on GitHub, and run the local gate for an omitted or blank pr", async (t) => {
   const fixture = makeGitRepoFixture("gate-pr");
+  withFakeGh(t, ghPullRequests(fixture));
+  const call = (id, name, args) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: { path: fixture, base: "HEAD~1", ...args } } });
   const messages = await runRequests([
-    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, pr: "" } } },
-    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, pr: "123" } } },
+    call(1, "review_gate", {}),
+    call(2, "review_gate", { pr: "" }),
+    call(3, "review_gate", { pr: " " }),
+    call(4, "review_gate", { pr: "42" }),
+    call(5, "review_verdict", { pr: "" }),
+    call(6, "review_verdict", { pr: " " }),
+    call(7, "review_verdict", { pr: "42" }),
   ]);
+  // The PR gate reports the PR it gated; the local gate reports no PR, and the base ref it diffed.
+  const gated = (id) => {
+    const report = structured(messages, id);
+    return report.pr?.number ?? report.base;
+  };
+  // review_verdict reports only the gate's checks, and only the PR gate has a PR state check.
+  const prState = (id) => structured(messages, id).pass.checks.find((check) => check.name === "PR state")?.summary;
 
-  const emptySelector = byId(messages, 1).result;
-  assert.ok(emptySelector.content[0].text.length > 0, "empty pr selector still routes to the PR gate and returns a payload");
+  assert.equal(gated(1), "HEAD~1", "no pr runs the local gate");
+  assert.equal(gated(2), "HEAD~1", "a blank pr counts as omitted");
+  assert.equal(gated(3), "HEAD~1", "so does a whitespace pr, not the checked-out branch's PR (#7)");
+  assert.equal(gated(4), 42, "a pr naming a PR gates that PR on GitHub");
+  assert.equal(prState(5), undefined, "review_verdict runs the local gate for a blank pr");
+  assert.equal(prState(6), undefined, "and for a whitespace pr, as review_gate does");
+  assert.equal(prState(7), "PR is not draft and has no reported merge conflicts.", "review_verdict gates a named PR on GitHub");
+});
 
-  const withSelector = byId(messages, 2).result;
-  assert.ok(withSelector.content[0].text.length > 0, "a pr selector routes to the PR gate and returns a payload");
+test("pr_merge_readiness gates the checked-out branch's PR when its selector is omitted or blank, as it did before 2.0", async (t) => {
+  const fixture = makeGitRepoFixture("gate-pr-legacy");
+  withFakeGh(t, ghPullRequests(fixture));
+  const call = (id, args) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "pr_merge_readiness", arguments: { path: fixture, ...args } } });
+  const messages = await runRequests([call(1, {}), call(2, { selector: "" }), call(3, { selector: " " }), call(4, { selector: "42" }), call(5, { pr: "42" })]);
+  const gated = (id) => structured(messages, id).pr?.number;
+
+  assert.equal(gated(1), 7, "no selector gates the checked-out branch's PR, as `gh pr view` does");
+  assert.equal(gated(2), 7, "a blank selector counts as omitted");
+  assert.equal(gated(3), 7, "so does a whitespace selector");
+  assert.equal(gated(4), 42, "a selector names the PR to gate");
+  assert.equal(gated(5), 42, "review_gate's pr still stands in for the selector");
 });
 
 // Pin the user config tier to an empty directory, so a developer's own
@@ -835,6 +862,32 @@ function withFakeGh(t, responses) {
   t.after(() => {
     process.env.PATH = saved;
   });
+}
+
+// withFakeGh responses for a makeGitRepoFixture repository: `gh pr view 42`
+// answers #42, and a bare `gh pr view`, which gh reads as the checked-out
+// branch's PR, answers #7. Any other `pr view` fails.
+function ghPullRequests(fixture) {
+  const pullRequest = (number) =>
+    JSON.stringify({
+      number,
+      title: "Tweak greeting",
+      url: `https://github.com/org/repo/pull/${number}`,
+      state: "OPEN",
+      mergedAt: null,
+      baseRefName: "main",
+      baseRefOid: git(fixture, "rev-parse", "HEAD~1").trim(),
+      headRefOid: git(fixture, "rev-parse", "HEAD").trim(),
+      changedFiles: 1,
+      isDraft: false,
+      mergeStateStatus: "CLEAN",
+      mergeable: "MERGEABLE",
+      reviewDecision: "APPROVED",
+      files: [{ path: "src/index.ts" }],
+      reviews: [],
+      statusCheckRollup: [],
+    });
+  return { "pr view 42": pullRequest(42), "pr view --json": pullRequest(7) };
 }
 
 test("review_gate and review_verdict fill an omitted policy and governance from the gated repository's config", async (t) => {
