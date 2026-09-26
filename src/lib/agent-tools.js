@@ -40,6 +40,7 @@ function deriveAgentTool(tool) {
     name: tool.name,
     command: cliCommandByTool[tool.name] ?? `otito mcp (tools/call ${tool.name})`,
     mcpOnly: !(tool.name in cliCommandByTool),
+    summary: tool.summary,
     description: tool.description,
     input: deriveInput(tool.inputSchema),
   };

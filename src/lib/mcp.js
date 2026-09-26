@@ -36,6 +36,8 @@ import { generateWorkspaceReport } from "./workspace.js";
  * @typedef {object} McpTool
  * @property {string} name
  * @property {string} title
+ * @property {string} summary One or two plain sentences on what the tool is for. Not sent over tools/list;
+ *   it is the blurb the How It Works page and `otito agent-tools` print, so a change in meaning is made here once.
  * @property {string} description
  * @property {{ readOnlyHint?: boolean, openWorldHint?: boolean }} annotations
  * @property {McpInputSchema} inputSchema
@@ -72,6 +74,7 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.j
 export const tools = [
   {
     name: "repo_inspect",
+    summary: "Repository facts: languages, scripts, package managers, entrypoints and git state.",
     title: "Inspect Repository",
     description:
       "Inspect repository shape, languages, package managers, script names, entrypoints, and git metadata. Returns up to 200 representative file paths; pass includeScripts:true to get full script command bodies instead of just names.",
@@ -86,6 +89,7 @@ export const tools = [
   },
   {
     name: "repo_map",
+    summary: "AST-backed JSON code map: imports, exports, routes, domains and data access across TS/JS, Go, C#, Python, Java, Ruby and Rust.",
     title: "Map Repository",
     description:
       "Map a repository into a compact JSON code map, optionally narrowed by domain, file kind, or controller route. Pass domain to find files for a feature, kind to find files of a type (route, controller, service, apiClient, component, test), or route to match Nest controller routes by substring/regex. Replaces the old find_domain, find_file_kind, find_backend_route, and find_frontend_api_client tools. Uses a per-user external cache and leaves the target repository unchanged.",
@@ -108,6 +112,8 @@ export const tools = [
   },
   {
     name: "repo_index",
+    summary:
+      "Index local repositories into a per-user catalog; dryRun discovers read-only. Markdown is indexed too, so skills and docs pages rank alongside code. The inspected repository is never modified.",
     title: "Index Repositories",
     description:
       "Index local repositories: generate per-user external indexes and add them to the local catalog. Pass discover:true to find repository roots under the given paths first. Pass dryRun:true to discover and report without writing any indexes or catalog (read-only); this replaces the old repo_discover tool. Without dryRun this mutates the persistent local catalog, so it is not a pure read.",
@@ -130,6 +136,7 @@ export const tools = [
   },
   {
     name: "repo_search",
+    summary: "Search indexed repositories by path, domain, kind, route, imports, exports and symbols. Omit the query to list the catalog.",
     title: "Search Repository Catalog",
     description:
       "Search indexed local repositories by path, domain, kind, route, imports, exports, and symbols. Omit query to list the local repository catalog instead (the catalog listing the old repo_catalog tool returned). Only searches repositories already in the local catalog — if the catalog is empty this returns no matches, so call repo_index on the target repositories first.",
@@ -146,6 +153,8 @@ export const tools = [
   },
   {
     name: "context_pack",
+    summary:
+      "Task-aware packet: primary and related files, hotspots, tests, validation commands and token estimates, with git state read live. online lets a model read demote files it judges irrelevant; it is off unless asked. Run before planning or editing.",
     title: "Context Pack",
     description:
       "Generate a task-aware local context packet with primary files, related files, tests, and validation commands. Uses a per-user external cache and leaves the target repository unchanged. Deterministic by default; pass online:true to also ask a System One model (needs TYPESAFE_API_KEY) what kind of work the request is and which candidate files it needs, which relabels a confidently read intent and demotes files it judges irrelevant, reported under modelRead.",
@@ -176,6 +185,8 @@ export const tools = [
   },
   {
     name: "change_impact",
+    summary:
+      "Ranks the files most likely to own a plain-English change request, with risk flags and suggested tests. A diff base adds exact changed-file evidence beside the heuristic.",
     title: "Change Impact",
     description:
       "Given a plain-English change request, rank the files most likely to own the change, with risk flags, suggested tests, and an implementation plan. Optional diff base surfaces exact changed-file evidence alongside the heuristic. Uses a per-user external cache and leaves the target repository unchanged.",
@@ -194,6 +205,8 @@ export const tools = [
   },
   {
     name: "agent_experience",
+    summary:
+      "Agent Experience: how cheap and safe it is for an agent to make this change here. Changeability, Containment, Guardrails and Clarity, with concrete recommendations for raising the score.",
     title: "Agent Experience (AX)",
     description:
       'Score Agent Experience (AX): a single 0–100 number answering "how cheap and safe is it for an agent to make this change here?", blending Changeability (token cost), Containment (blast radius), Guardrails (tests / validation / CODEOWNERS / CI), and Clarity (task groundedness). Deterministic and composed from the change_impact, token-estimate, and CODEOWNERS engines — no new analysis. Returns sub-scores, drivers, and concrete recommendations for raising AX. Uses a per-user external cache and leaves the target repository unchanged.',
@@ -211,6 +224,8 @@ export const tools = [
   },
   {
     name: "model_route",
+    summary:
+      "Recommends a model tier (cheap, mid or premium) before work starts. otito answers the repository half deterministically; TypeSafe's Jev reads the request when TYPESAFE_API_KEY is set, otherwise the read is a labelled offline estimate. Advisory: it never feeds the gate.",
     title: "Model Route",
     description:
       "Recommend a model tier (cheap, mid or premium) for a coding request before any work starts. Combines otito's deterministic repository half (AX, containment, top-severity risk paths) with a System One model's calibrated read of the request (specificity, blast radius, novelty). The model is called only when TYPESAFE_API_KEY is set in this server's environment and offline is not true; otherwise the read is a labelled offline estimate, and model.source says which. Advisory: it recommends a tier and never feeds review_gate or review_verdict. Pass host to map the tier to that host's model id.",
@@ -233,6 +248,8 @@ export const tools = [
   },
   {
     name: "convergence_score",
+    summary:
+      "0–100 distance between the stated task and the actual diff: Coverage, Scope and Risk alignment. head scores exactly base..head; staged binds to the index tree. Emits a timestamp-free receipt anyone can recompute, which a model cannot award itself.",
     title: "Convergence Score",
     description:
       "Score convergence: a deterministic 0–100 measure of the distance between a stated task (intent) and the actual git diff (execution), with sub-scores for Coverage (did the intent happen?), Scope (did only the intent happen?), and Risk alignment (did unrequested drift land on risk-sensitive paths?). Composed from the change_impact diff comparison and the shared risk vocabulary — no model, no new analysis. New files beside a confirmed owner and tests of confirmed files count as in scope, listed under drivers.inferredRelated. Emits a recomputable receipt (a timestamp-free hash anyone can regenerate and verify) as durable evidence. Requires a base git ref to diff against; scores the working tree's tracked changes unless head or staged selects an exact subject.",
@@ -266,6 +283,8 @@ export const tools = [
   },
   {
     name: "review_gate",
+    summary:
+      "The merge gate, from repository state alone: changed files, secret safety, risk paths, release discipline, validation, dependency audit, policy profile and a convergence floor. With pr, adds review decision, CODEOWNERS, branch protection and checks through your own gh login.",
     title: "Review Gate",
     description:
       "Gate a change for merge and return a PASS / WARN / FAIL verdict. Omit pr to run the local, no-GitHub gate against a base ref (changed files, secret safety, risk-sensitive paths, release discipline, validation commands, dependency audit, policy profile). Set pr to gate an open GitHub PR via `gh` (PR state, review decision, CODEOWNERS approvals, unresolved conversations, branch protection, status checks). Merges the old merge_readiness and pr_merge_readiness tools. Use review_verdict instead when you want the full impact + review + gate composite, or review_context when you want diff/comment context with no verdict.",
@@ -303,6 +322,8 @@ export const tools = [
   },
   {
     name: "review_verdict",
+    summary:
+      "change_impact plus review_context plus review_gate in one call, with a derived confidence score and a schemaVersion the attestation ledger records.",
     title: "Review Verdict",
     description:
       "Run the full review pipeline in one shot: change_impact plus review_context plus review_gate, returning a unified verdict with a derived confidence score. Use review_verdict when you want the complete picture of a change in a single call. Use review_context instead for diff metadata only (no verdict), or review_gate for the gate verdict alone.",
@@ -328,6 +349,7 @@ export const tools = [
   },
   {
     name: "workspace_report",
+    summary: "One report across related repositories for cross-service work. workspace-gate gates them together.",
     title: "Workspace Report",
     description: "Generate a product-level report across multiple related repositories.",
     annotations: { readOnlyHint: true },
@@ -346,6 +368,7 @@ export const tools = [
   },
   {
     name: "review_context",
+    summary: "Diff-aware review context for a human: changed domains, risk flags and review targets, optionally with GitHub comments. No verdict.",
     title: "Review Context",
     description:
       "Produce PR review context from local git diff metadata, optionally enriched with GitHub PR comments. Use review_context when you want the raw diff/comment context for a change, not a verdict. Use review_verdict instead for the full impact + review + gate composite, or review_gate for the gate verdict alone.",
@@ -365,6 +388,7 @@ export const tools = [
   },
   {
     name: "repo_harness",
+    summary: "Setup, validation and runtime commands inferred from the repository: the first artifact an agent or CI job should read.",
     title: "Repository Harness",
     description: "Generate setup, validation, runtime, and context commands for an agent or CI harness.",
     annotations: { readOnlyHint: true },
@@ -512,7 +536,7 @@ async function handleMessage(message) {
       case "ping":
         return successResponse(message.id, {});
       case "tools/list":
-        return successResponse(message.id, { tools });
+        return successResponse(message.id, { tools: tools.map(({ summary: _summary, ...tool }) => tool) });
       case "tools/call":
         return successResponse(message.id, await callTool(message.params));
       default:
