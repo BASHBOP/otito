@@ -849,8 +849,20 @@ function gateRepoPath(parsed) {
 /** @param {CliArgs} parsed */
 async function handleReview(parsed) {
   const { formatReviewMermaid, formatReviewTerminal, generateReview } = await import("./lib/review.js");
-  const repoPath = parsed.positionals[0] ?? ".";
-  const trailingRequest = parsed.positionals.slice(1).join(" ").trim();
+  // Mirror `impact` and `ax` arg parsing: `review "<request>" --path <repo>` or
+  // `review <repo> "<request>"`. Policy and governance come from the same repo.
+  if (parsed.flags.path === true) {
+    throw new Error("review --path needs a repository, e.g. `otito review --path .`");
+  }
+  let repoPath;
+  let trailingRequest;
+  if (parsed.flags.path) {
+    repoPath = parsed.flags.path;
+    trailingRequest = parsed.positionals.join(" ").trim();
+  } else {
+    repoPath = parsed.positionals[0] ?? ".";
+    trailingRequest = parsed.positionals.slice(1).join(" ").trim();
+  }
   const { policy, governance } = gatePolicy(repoPath, parsed.flags);
   const { data } = await generateReview(repoPath, {
     request: parsed.flags.request ?? (trailingRequest || undefined),

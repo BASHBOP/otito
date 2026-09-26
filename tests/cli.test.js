@@ -505,6 +505,49 @@ test("review runs the composite review on a git fixture", async () => {
   assert.ok(text.stdout.length > 0);
 });
 
+test("review takes the repository from --path or the positional, and the request from the positionals left", async (t) => {
+  withEmptyUserConfig(t);
+  const fixture = makeGitFixture("review-repo");
+  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
+  // Run from another repository, so a review that dropped the one it was given
+  // would review this one instead, under this one's config.
+  const cwd = makeGitFixture("review-repo-cwd");
+  fs.writeFileSync(path.join(cwd, ".otitorc.json"), JSON.stringify({ policy: "company", governance: "team" }));
+  withCwd(t, cwd);
+  const review = async (...argv) => {
+    const report = parseJsonOutput((await runCli(["review", ...argv, "--base", "HEAD~1", "--json"])).stdout);
+    return { root: report.repo?.root, request: report.request, policy: report.pass?.policy, governance: report.pass?.governance };
+  };
+  const reviewed = { root: fs.realpathSync(fixture), policy: "high-risk", governance: "solo" };
+
+  assert.deepEqual(await review("--path", fixture), { ...reviewed, request: "review this change" }, "--path names the repository");
+  assert.deepEqual(await review("--path", fixture, "tweak greeting"), { ...reviewed, request: "tweak greeting" }, "every positional is then the request");
+  assert.deepEqual(await review("tweak", "greeting", "--path", fixture), { ...reviewed, request: "tweak greeting" }, "wherever --path sits");
+  assert.deepEqual(await review(fixture, "tweak greeting"), { ...reviewed, request: "tweak greeting" }, "without --path the first positional names it");
+
+  const bare = await runCli(["review", "--path", "--json"]);
+  assert.equal(bare.exitCode, 1);
+  assert.equal(parseJsonOutput(bare.stdout).error, "review --path needs a repository, e.g. `otito review --path .`");
+});
+
+test("review --pr takes the repository from --path or the positional", async (t) => {
+  withEmptyUserConfig(t);
+  const fixture = makeGitFixture("review-pr-repo");
+  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  withFakeGh(t, pullRequest42(fixture));
+  // Run from another repository, one with no config, so a review that dropped
+  // the one it was given would review this one instead, under team governance.
+  withCwd(t, makeGitFixture("review-pr-repo-cwd"));
+  const review = async (...argv) => {
+    const report = parseJsonOutput((await runCli(["review", ...argv, "--pr", "42", "--json"])).stdout);
+    return { root: report.repo?.root, governance: report.pass?.governance };
+  };
+  const reviewed = { root: fs.realpathSync(fixture), governance: "solo" };
+
+  assert.deepEqual(await review("--path", fixture), reviewed, "--path names the repository");
+  assert.deepEqual(await review(fixture), reviewed, "so does the positional");
+});
+
 // Pin the user config tier to an empty directory, so a developer's own
 // ~/.config/otito/config.json cannot decide a gate's policy or governance.
 function withEmptyUserConfig(t) {

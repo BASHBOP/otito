@@ -83,7 +83,7 @@ Usage:
   otito pass <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
   otito gate [repo | --path repo] [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
   otito pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
-  otito review <repo> [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--min-convergence n] [--receipt hash|file] [--json] [--mermaid] [--no-emoji]
+  otito review [repo | --path repo] [request] [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--min-convergence n] [--receipt hash|file] [--json] [--mermaid] [--no-emoji]
   otito install|i [--global|--link] [--json]
   otito map <path> [--out file] [--json] [--mermaid]
   otito structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
