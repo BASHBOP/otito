@@ -431,6 +431,62 @@ test("gate --pr routes to the GitHub PR gate (delegates to pass-pr)", async () =
   assert.ok(payload.verdict || payload.ok === false, "gate --pr produces a PR-gate result or a surfaced error");
 });
 
+test("gate takes the repository from the positional or --path, and refuses two different ones", async (t) => {
+  withEmptyUserConfig(t);
+  const fixture = makeGitFixture("gate-repo");
+  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
+  // Run from another repository, so a gate that dropped the one it was given
+  // would gate this one instead, under this one's config.
+  const cwd = makeGitFixture("gate-repo-cwd");
+  fs.writeFileSync(path.join(cwd, ".otitorc.json"), JSON.stringify({ policy: "company", governance: "team" }));
+  withCwd(t, cwd);
+  const gate = async (...argv) => {
+    const report = parseJsonOutput((await runCli(["gate", ...argv, "--base", "HEAD~1", "--json"])).stdout);
+    return { root: report.repo?.root, policy: report.policy, governance: report.governance };
+  };
+  const gated = { root: fs.realpathSync(fixture), policy: "high-risk", governance: "solo" };
+
+  assert.deepEqual(await gate(fixture), gated, "the positional names the repository");
+  assert.deepEqual(await gate("--path", fixture), gated, "so does --path");
+  assert.deepEqual(await gate(fixture, "--path", fixture), gated, "both may name it");
+  assert.deepEqual(
+    await gate(".", "--path", cwd),
+    { root: fs.realpathSync(cwd), policy: "company", governance: "team" },
+    "two spellings of one directory are one repository",
+  );
+
+  const refused = await runCli(["gate", fixture, "--path", cwd, "--base", "HEAD~1", "--json"]);
+  assert.equal(refused.exitCode, 1);
+  assert.equal(parseJsonOutput(refused.stdout).error, `gate was given two repositories (${fixture} and --path ${cwd}); pass only one`);
+  const bare = await runCli(["gate", "--path", "--json"]);
+  assert.equal(bare.exitCode, 1);
+  assert.equal(parseJsonOutput(bare.stdout).error, "gate --path needs a repository, e.g. `otito gate --path .`");
+});
+
+test("gate --pr takes the repository from the positional or --path, and refuses two different ones", async (t) => {
+  withEmptyUserConfig(t);
+  const fixture = makeGitFixture("gate-pr-repo");
+  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  withFakeGh(t, pullRequest42(fixture));
+  // Run from another repository, one with no config, so a gate that dropped
+  // the one it was given would gate this one instead, under team governance.
+  const cwd = makeGitFixture("gate-pr-repo-cwd");
+  withCwd(t, cwd);
+  const gate = async (...argv) => {
+    const report = parseJsonOutput((await runCli(["gate", ...argv, "--json"])).stdout);
+    return { root: report.repo?.root, pr: report.pr?.number, governance: report.governance };
+  };
+  const gated = { root: fs.realpathSync(fixture), pr: 42, governance: "solo" };
+
+  assert.deepEqual(await gate(fixture, "--pr", "42"), gated, "the positional names the repository");
+  assert.deepEqual(await gate("--pr", "42", "--path", fixture), gated, "so does --path");
+  assert.deepEqual(await gate(fixture, "--pr", "42", "--path", fixture), gated, "both may name it");
+
+  const refused = await runCli(["gate", fixture, "--pr", "42", "--path", cwd, "--json"]);
+  assert.equal(refused.exitCode, 1);
+  assert.equal(parseJsonOutput(refused.stdout).error, `gate was given two repositories (${fixture} and --path ${cwd}); pass only one`);
+});
+
 test("help lists the gate command and the canonical-vs-legacy guidance", async () => {
   const result = await runCli(["help"]);
   assert.equal(result.exitCode, 0);
@@ -502,6 +558,39 @@ function withFakeGh(t, responses) {
   });
 }
 
+// What `gh` answers for org/repo#42: an open PR whose base and head are the
+// fixture's last two commits, changing src/index.ts, awaiting a CODEOWNERS
+// review that branch protection requires.
+function pullRequest42(fixture) {
+  return {
+    "pr view": JSON.stringify({
+      number: 42,
+      title: "Tweak greeting",
+      url: "https://github.com/org/repo/pull/42",
+      state: "OPEN",
+      mergedAt: null,
+      baseRefName: "main",
+      baseRefOid: git(fixture, "rev-parse", "HEAD~1").trim(),
+      headRefOid: git(fixture, "rev-parse", "HEAD").trim(),
+      changedFiles: 1,
+      isDraft: false,
+      mergeStateStatus: "CLEAN",
+      mergeable: "MERGEABLE",
+      reviewDecision: "REVIEW_REQUIRED",
+      files: [{ path: "src/index.ts" }],
+      reviews: [],
+      statusCheckRollup: [{ name: "tests", conclusion: "SUCCESS" }],
+    }),
+    "repo view": JSON.stringify({ nameWithOwner: "org/repo" }),
+    "api graphql": JSON.stringify({ data: { repository: { pullRequest: { reviewThreads: { nodes: [], pageInfo: { hasNextPage: false } } } } } }),
+    "api repos/org/repo/branches/main/protection": JSON.stringify({
+      required_pull_request_reviews: { required_approving_review_count: 1, require_code_owner_reviews: true },
+      required_status_checks: { contexts: ["tests"], checks: [{ context: "tests" }] },
+      required_conversation_resolution: { enabled: true },
+    }),
+  };
+}
+
 test("pass, gate and review take policy and governance from the gated repository's config, not the directory otito runs in", async (t) => {
   withEmptyUserConfig(t);
   const configured = makeGitFixture("gate-config");
@@ -544,33 +633,7 @@ test("pass-pr, gate --pr and review --pr take the config of the repository they 
     ".otitorc.json": JSON.stringify({ governance: "solo" }),
     ".github/CODEOWNERS": "src/index.ts @alice\n",
   });
-  withFakeGh(t, {
-    "pr view": JSON.stringify({
-      number: 42,
-      title: "Tweak greeting",
-      url: "https://github.com/org/repo/pull/42",
-      state: "OPEN",
-      mergedAt: null,
-      baseRefName: "main",
-      baseRefOid: git(fixture, "rev-parse", "HEAD~1").trim(),
-      headRefOid: git(fixture, "rev-parse", "HEAD").trim(),
-      changedFiles: 1,
-      isDraft: false,
-      mergeStateStatus: "CLEAN",
-      mergeable: "MERGEABLE",
-      reviewDecision: "REVIEW_REQUIRED",
-      files: [{ path: "src/index.ts" }],
-      reviews: [],
-      statusCheckRollup: [{ name: "tests", conclusion: "SUCCESS" }],
-    }),
-    "repo view": JSON.stringify({ nameWithOwner: "org/repo" }),
-    "api graphql": JSON.stringify({ data: { repository: { pullRequest: { reviewThreads: { nodes: [], pageInfo: { hasNextPage: false } } } } } }),
-    "api repos/org/repo/branches/main/protection": JSON.stringify({
-      required_pull_request_reviews: { required_approving_review_count: 1, require_code_owner_reviews: true },
-      required_status_checks: { contexts: ["tests"], checks: [{ context: "tests" }] },
-      required_conversation_resolution: { enabled: true },
-    }),
-  });
+  withFakeGh(t, pullRequest42(fixture));
   // `otito pass-pr 42 --path <repo>` run from another directory, one whose
   // config says team.
   withCwd(t, makeConfiguredDir("gate-pr-cwd", { governance: "team" }));

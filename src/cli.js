@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, realpathSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { parseArgv } from "./lib/args.js";
@@ -691,10 +691,6 @@ async function handlePassPr(parsed) {
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
 
-// `gate` is the canonical v2 merge-gate command. It maps to `pass` for the
-// local gate (no --pr) and to `pass-pr` for the GitHub gate (--pr <selector>),
-// mirroring the review_gate MCP tool's local-vs-PR dispatch. `pass` and
-// `pass-pr` remain available as legacy aliases.
 /**
  * `otito attest [repo] --verdict file --merge sha [...]` appends a hash-chained
  * record to the repository's audit ledger; `otito attest [repo] --verify`
@@ -798,17 +794,56 @@ async function handleRegret(parsed) {
   });
 }
 
+// `gate` is the canonical v2 merge-gate command. It maps to `pass` for the
+// local gate (no --pr) and to `pass-pr` for the GitHub gate (--pr <selector>),
+// mirroring the review_gate MCP tool's local-vs-PR dispatch. `pass` and
+// `pass-pr` remain available as legacy aliases.
 /** @param {CliArgs} parsed */
 async function handleGate(parsed) {
+  const repoPath = gateRepoPath(parsed);
   const selector = parsed.flags.pr;
   if (selector && selector !== true) {
     // pass-pr reads the selector from positionals[0] and the repo from --path.
     return handlePassPr({
       ...parsed,
       positionals: [selector],
+      flags: { ...parsed.flags, path: repoPath },
     });
   }
-  return handlePass(parsed);
+  // pass reads the repo from positionals[0].
+  return handlePass({ ...parsed, positionals: [repoPath] });
+}
+
+/**
+ * The repository `gate` runs against, in either mode: the positional `<repo>`
+ * or `--path`, else the working directory. pass reads only the positional and
+ * pass-pr only --path, so gate settles it here and hands each the form it
+ * reads. Both may name it only if they name the same directory; otherwise
+ * gating either would silently ignore the other, so gate refuses.
+ * @param {CliArgs} parsed
+ * @returns {string}
+ */
+function gateRepoPath(parsed) {
+  const positional = parsed.positionals[0];
+  const flag = parsed.flags.path;
+  if (flag === true) {
+    throw new Error("gate --path needs a repository, e.g. `otito gate --path .`");
+  }
+  if (positional === undefined || flag === undefined) {
+    return positional ?? flag ?? ".";
+  }
+  // realpath, so `.` and a symlinked spelling of the same checkout agree.
+  const identity = (/** @type {string} */ dir) => {
+    try {
+      return realpathSync(dir);
+    } catch {
+      return resolve(dir);
+    }
+  };
+  if (identity(positional) !== identity(flag)) {
+    throw new Error(`gate was given two repositories (${positional} and --path ${flag}); pass only one`);
+  }
+  return positional;
 }
 
 /** @param {CliArgs} parsed */
@@ -1527,8 +1562,8 @@ function handleHelp(_parsed) {
   printText(
     [
       "Merge gate (v2):",
-      "  otito gate <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
-      "  otito gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
+      "  otito gate [repo | --path repo] [--base ref] [--head ref | --staged] [--run-validation] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
+      "  otito gate --pr <selector> [repo | --path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
       "  otito workspace-gate <repo...> [--base ref] [--run-validation] [--policy x] [--governance x] [--request text] [--json]                           # one staged receipt across repositories",
       "",
       "Evaluation gates (v2):",
