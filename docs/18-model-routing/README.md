@@ -801,6 +801,99 @@ places to look. Until then `route` stays advisory, and the earlier sections
 stand as the record of what was measured on the corpus that included release
 commits.
 
+### Audited, 2026-09-26: the join
+
+The prior question was put to the frozen runs offline, on the rows plus git,
+with no model call: is `repaired` an outcome a tier can be graded against on
+these repositories, or is the join itself what the tables are measuring?
+Four cuts, all on the corpus without release commits, under the shipped
+arithmetic. The scripts, the per-fix blame tables and every output are beside
+the frozen runs in `.otito/runs/2026-09-26/tier-arithmetic/join-audit/`
+(local only, like the runs).
+
+- **The join reproduces.** A fresh blame pass at each repository's frozen head
+  gives the frozen `repairedAfter` on every row of all three runs.
+- **Shorter windows.** Rescored at 7 and 14 days from the stored
+  `repairedAfter`, the base rates fall as they must (bashbop-api 41.7% at 30
+  days, 34.6% at 14, 26.6% at 7) and the order of the tiers does not move. On
+  bashbop-api the keyless cheap lane is the most-repaired tier at every
+  window. The 30-day window was not counting churn a shorter one removes.
+- **A stricter join.** Eight rules: at least 2 or 3 overlapping lines instead
+  of 1, fix commits capped at 10 or 5 files or 200 changed lines, and their
+  combinations. The strictest halves the base rate (bashbop-api 41.7% to
+  15.8%, bashbop-event-web 50.5% to 17.1%) and orders nothing new. One cell
+  of 81 per repository separates: bashbop-event-web, 14 days, fixes of at most
+  5 files, the deterministic half, cheap 14.9% (10.3 to 21.0) against premium
+  25.9% (21.4 to 31.0). The keyless heuristic at the same cut is inverted
+  (cheap 17.3%, mid 16.7%), and the bar grades the model variants, not the
+  deterministic half. It is noise.
+- **Who repairs whom.** On the bashbop repositories repairs are not a few
+  sweeping fixes: bashbop-api's 296 repairs come from 204 distinct earliest
+  fixes and bashbop-event-web's 472 from 284, a median of one row each. The
+  ten largest fixes by files touched account for 6% and 11% of repairs, and
+  dropping them leaves every tier where it was (bashbop-api cheap 36.7%, mid
+  35.3%, premium 41.1%). otito is the opposite case: 21 of its 24 repairs are
+  ten sweeping fixes, and a fix of at most 5 files with at least 2 overlapping
+  lines repairs nothing, so its proxy measures those sweeps. otito was already
+  ungradable, with one premium commit.
+- **Fixes the rule did not label.** `FIX_SUBJECT` matched `fix`, `hotfix`,
+  `bugfix` and `revert`, and the bashbop histories write `hot-fix(...)`,
+  `hot-fit`, `bug(...)`, `patch` and `fixes`: 79 rows on bashbop-api and 40 on
+  bashbop-event-web were fixes graded as requests and invisible as repairs.
+  Blamed as outcomes they join 6 and 9 more repairs and move no tier. The rule
+  is widened in 0.4.1 because it was wrong, not because it changes the answer;
+  `--rescore` drops the rows it now reads as fixes and says that their own
+  repairs need a replay to join.
+- **The two remaining suspects.** There are no dependency bumps on either
+  bashbop repository in this corpus. `Develop (#N)` squash merges are 24 and 7
+  rows, almost all routed `premium`, and leaving them out changes nothing. On
+  otito the 17 dependency bumps do what the release commits did (16 of 17
+  routed cheap, 1 repaired; the keyless cheap lane goes from 17.5% to 21.3%
+  without them), but there is no ordering on otito for a corpus rule to
+  rescue.
+
+Rescored under 0.4.1 (release commits and the newly labelled fixes out):
+
+| Run | Graded | Base rate | Variant | cheap | mid | premium | Ordered |
+| --- | --: | --- | --- | --- | --- | --- | --- |
+| bashbop-api | 631 | 41.2% (37.4 to 45.1) | deterministic | 99 · 39.4% (30.3 to 49.2) | 148 · 35.1% (27.9 to 43.1) | 384 · 44.0% (39.1 to 49.0) | no |
+| bashbop-api | | | offline | 53 · 43.4% (31.0 to 56.7) | 140 · 34.3% (26.9 to 42.5) | 438 · 43.2% (38.6 to 47.8) | no |
+| bashbop-api | | | jev | 17 · withheld | 112 · 39.3% (30.7 to 48.5) | 502 · 42.2% (38.0 to 46.6) | unknown |
+| bashbop-event-web | 894 | 50.0% (46.7 to 53.3) | deterministic | 165 · 44.8% (37.5 to 52.5) | 438 · 52.3% (47.6 to 56.9) | 291 · 49.5% (43.8 to 55.2) | no |
+| bashbop-event-web | | | offline | 50 · 44.0% (31.2 to 57.7) | 383 · 48.8% (43.9 to 53.8) | 461 · 51.6% (47.1 to 56.2) | yes, overlapping |
+| bashbop-event-web | | | jev | 8 · withheld | 268 · 46.6% (40.8 to 52.6) | 618 · 51.8% (47.8 to 55.7) | unknown |
+| otito | 129 | 18.6% (12.8 to 26.2) | unchanged | | | | |
+
+The conclusion is the one worth having before anyone touches the arithmetic
+again: **commit history cannot grade the router on these repositories.** The
+outcome is real, the join is faithful and not dominated by a few fixes, and
+the tiers do not order it at any window, under any stricter join, with or
+without the suspect commits. The exclusions do not earn a corpus rule on this
+evidence. The next evidence has to come from live requests.
+
+What a live request fixes, and what it does not. Every graded row above
+carries two caveats history can never remove: the request is a commit subject
+written after the change, and the corpus is whatever landed, not what a router
+was asked. A decision recorded at prompt time removes both. The `route-prompt`
+hook already scores every prompt; it prints the tier and keeps nothing. The
+record it should keep, one line per routed prompt in a local append-only log:
+
+| Field | Why |
+| --- | --- |
+| `ts`, `repo` (hashed root), `branch`, `head` | the head at prompt time names the change: the next commit on that branch whose first parent is `head` |
+| `promptHash` | joins a follow-up to its request without keeping the text |
+| `tiers` and `routes` per variant, `signals`, `answers` | exactly what `--rescore` needs, so a live corpus rescores the way a frozen run does |
+| `subagentModel`, when one was launched | the only tier the hook actually actuates |
+
+The caveat it does not remove: the tier the session ran on stays unknown
+unless the host records it, and no hook can. Volume is the other cost. Across
+these three repositories the first rows old enough for a 30-day window arrive
+five to six weeks after the log starts, and thirty per tier takes months. A
+same-session outcome, a request routed cheap whose next prompt in the session
+is a correction, is available in minutes through the canvas, and is a
+different proxy with an audit of its own to pass first. Which outcome the log
+serves decides its fields, so that choice comes before the log.
+
 ## References
 
 - TypeSafe AI, _System One_: <https://docs.typesafe.ai/concepts/system-one>

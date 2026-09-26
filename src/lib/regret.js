@@ -39,14 +39,14 @@ import { setImmediate } from "node:timers";
 
 import { generateAxScore } from "./ax.js";
 import { generateCodeMap } from "./code-map.js";
-import { DEFAULT_MIN_SAMPLE, DEFAULT_WINDOW_DAYS, FIX_SUBJECT, joinRepairs, readHistory } from "./calibrate.js";
+import { DEFAULT_MIN_SAMPLE, DEFAULT_WINDOW_DAYS, FIX_COMMIT_RULE, FIX_SUBJECT, joinRepairs, readHistory } from "./calibrate.js";
 import { generateImpact } from "./impact.js";
 import { priceJevCall } from "./jev.js";
 import { askJev, modelRouteEngineVersion, offlineAnswers, scoreDecision, signalsFrom, TIERS } from "./model-route.js";
 import { inspectRepo } from "./repo.js";
 import { runCommand } from "./tools.js";
 
-export const regretEngineVersion = "0.4.0";
+export const regretEngineVersion = "0.4.1";
 
 /**
  * A commit written by release tooling rather than asked of anyone: a
@@ -270,7 +270,7 @@ async function replay(repoPath, options) {
     method: {
       join: "line-overlap",
       outcome: "repaired",
-      fixCommitRule: "subject begins fix/hotfix/bugfix/revert",
+      fixCommitRule: FIX_COMMIT_RULE,
       releaseCommitRule: "subject is marked [skip ci], is a bare version, or is a chore/build/ci/release subject that names a version",
       requestProxy: "commit subject",
       stateAt: "first parent, checked out into a temporary worktree",
@@ -345,11 +345,15 @@ export function rescoreRegret(saved, options = {}) {
   const minSample = saved.method.minSample;
 
   // A run saved before the corpus rule graded release commits; they leave
-  // here, so a rescore grades the same corpus a fresh replay would.
-  const kept = rows.filter((row) => !RELEASE_SUBJECT.test(String(row.subject ?? "")));
-  const dropped = rows.length - kept.length;
+  // here, so a rescore grades the same corpus a fresh replay would. The same
+  // for a commit the current fix rule reads as a repair: it is an outcome, not
+  // a request. Its own repairs cannot be joined without a replay, and the
+  // caveat says so.
+  const kept = rows.filter((row) => !RELEASE_SUBJECT.test(String(row.subject ?? "")) && !FIX_SUBJECT.test(String(row.subject ?? "")));
+  const droppedFixes = rows.filter((row) => FIX_SUBJECT.test(String(row.subject ?? ""))).length;
+  const dropped = rows.length - kept.length - droppedFixes;
   if (!kept.length) {
-    throw new Error("every commit in this run is a release commit; there is nothing to grade");
+    throw new Error("every commit in this run is a release or fix commit; there is nothing to grade");
   }
 
   const commits = kept.map((row) => {
@@ -374,8 +378,18 @@ export function rescoreRegret(saved, options = {}) {
     generatedAt: new Date().toISOString(),
     regretEngineVersion,
     modelRouteEngineVersion,
-    method: { ...saved.method, releaseCommitRule: saved.method.releaseCommitRule ?? "applied at rescore: " + RELEASE_SUBJECT.source, rescoredFrom },
-    range: { ...saved.range, replayed: commits.length, releaseCommits: (saved.range?.releaseCommits ?? 0) + dropped },
+    method: {
+      ...saved.method,
+      fixCommitRule: FIX_COMMIT_RULE,
+      releaseCommitRule: saved.method.releaseCommitRule ?? "applied at rescore: " + RELEASE_SUBJECT.source,
+      rescoredFrom,
+    },
+    range: {
+      ...saved.range,
+      replayed: commits.length,
+      releaseCommits: (saved.range?.releaseCommits ?? 0) + dropped,
+      fixCommits: (saved.range?.fixCommits ?? 0) + droppedFixes,
+    },
     base,
     variants,
     questions,
@@ -387,6 +401,11 @@ export function rescoreRegret(saved, options = {}) {
       ...(dropped
         ? [
             `Dropped ${dropped} release commit${dropped === 1 ? "" : "s"} the saved run had graded; this version's corpus rule leaves them out, so the base rate and every tier are over ${commits.length} commits, not ${rows.length}.`,
+          ]
+        : []),
+      ...(droppedFixes
+        ? [
+            `Dropped ${droppedFixes} fix commit${droppedFixes === 1 ? "" : "s"} the saved run had graded as requests; this version's fix rule reads them as repairs. The lines they repaired are not joined here, so a replay would count a few more repairs than this rescore does.`,
           ]
         : []),
       `Rescored from ${rescoredFrom ?? "a saved run"}: no commit was replayed and no model was called. The tiers are this version's arithmetic applied to the signals and answers that run recorded.`,
