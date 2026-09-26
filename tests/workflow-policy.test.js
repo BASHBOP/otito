@@ -39,6 +39,44 @@ function createLinearRepo() {
   return { root, commits };
 }
 
+// A repository whose first commit is 1.0.0 and whose head carries `version`,
+// with a CHANGELOG section for each of `changelog` and `tags` on the first.
+function createReleaseRepo({ version, changelog, tags }) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-tag-release-"));
+  fs.mkdirSync(path.join(root, "scripts"), { recursive: true });
+  fs.copyFileSync(path.join(repoRoot, "scripts", "tag-release.sh"), path.join(root, "scripts", "tag-release.sh"));
+
+  git(root, ["init", "-q"]);
+  git(root, ["config", "user.name", "Òtítọ́ Test"]);
+  git(root, ["config", "user.email", "otito@example.test"]);
+
+  let commits = 0;
+  const commit = (packageVersion, sections) => {
+    // Every commit changes something, as a main push that is not a release does.
+    fs.writeFileSync(path.join(root, "change.txt"), `${++commits}\n`);
+    fs.writeFileSync(path.join(root, "package.json"), `${JSON.stringify({ name: "fixture", version: packageVersion })}\n`);
+    const notes = sections.map((section) => `## [${section}] - 2026-09-26\n\n- A change.\n`);
+    fs.writeFileSync(path.join(root, "CHANGELOG.md"), ["# Changelog\n", "## [Unreleased]\n", ...notes].join("\n"));
+    git(root, ["add", "."]);
+    git(root, ["commit", "-qm", `version ${packageVersion}`]);
+    return git(root, ["rev-parse", "HEAD"]);
+  };
+
+  const base = commit("1.0.0", ["1.0.0"]);
+  for (const tag of tags) git(root, ["tag", tag, base]);
+  const head = commit(version, changelog);
+  return { root, base, head };
+}
+
+function tagRelease(root, env = {}) {
+  return spawnSync("bash", [path.join(root, "scripts", "tag-release.sh")], {
+    cwd: root,
+    encoding: "utf8",
+    // Never inherit a CI job's GITHUB_OUTPUT: the script would write to it.
+    env: { ...process.env, OTITO_TAG_SHA: "", OTITO_TAG_DRY_RUN: "1", GITHUB_OUTPUT: "", ...env },
+  });
+}
+
 test("CI validates PRs once and reserves push validation for main", () => {
   const workflow = read(".github/workflows/otito-ci.yml");
   assert.match(workflow, /pull_request:\n\s+types:/);
@@ -168,4 +206,76 @@ test("reconciliation rejects a cryptographically valid ledger with a first-paren
 
   assert.equal(result.status, 1);
   assert.match(result.stderr, /first-parent coverage gap/);
+});
+
+test("a version bump that reaches main is tagged once CI passes on it, and the tag starts Release", () => {
+  const workflow = read(".github/workflows/tag-release.yml");
+  assert.match(workflow, /workflow_run:\n\s+workflows: \["otito CI"\]\n\s+types: \[completed\]/);
+  assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
+  assert.match(workflow, /github\.event\.workflow_run\.event == 'push'/);
+  assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'/);
+  // The script needs every tag to tell a new version from a tagged one.
+  assert.match(workflow, /ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}\n\s+fetch-depth: 0/);
+  assert.match(workflow, /OTITO_TAG_SHA: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/);
+  assert.match(workflow, /bash scripts\/tag-release\.sh/);
+  // A tag pushed with GITHUB_TOKEN starts no workflow, so Release is dispatched on it.
+  assert.match(workflow, /if: steps\.tag\.outputs\.tag != ''/);
+  assert.match(workflow, /gh workflow run release\.yml --ref "\$TAG"/);
+
+  const release = read(".github/workflows/release.yml");
+  assert.match(release, /^ {2}workflow_dispatch:/m);
+  // Dispatched on a branch, Release refuses rather than publish from it.
+  assert.match(release, /if \[ "\$GITHUB_REF_TYPE" != "tag" \]; then/);
+});
+
+test("tag-release tags a new version with release notes on the commit that carries it", () => {
+  const { root, head } = createReleaseRepo({ version: "1.1.0", changelog: ["1.1.0", "1.0.0"], tags: ["v1.0.0"] });
+  const result = tagRelease(root);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), `would tag ${head} as v1.1.0`);
+});
+
+test("tag-release tags nothing when the version is already tagged", () => {
+  const { root, base } = createReleaseRepo({ version: "1.0.0", changelog: ["1.0.0"], tags: ["v1.0.0"] });
+  const result = tagRelease(root);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), `v1.0.0 is already tagged at ${base}; nothing to release.`);
+});
+
+test("tag-release orders versions numerically and ignores pre-release tags", () => {
+  const numeric = createReleaseRepo({ version: "1.10.0", changelog: ["1.10.0"], tags: ["v1.9.0"] });
+  assert.equal(tagRelease(numeric.root).stdout.trim(), `would tag ${numeric.head} as v1.10.0`);
+
+  const afterCandidate = createReleaseRepo({ version: "1.1.0", changelog: ["1.1.0"], tags: ["v1.0.0", "v1.1.0-rc.1"] });
+  assert.equal(tagRelease(afterCandidate.root).stdout.trim(), `would tag ${afterCandidate.head} as v1.1.0`);
+});
+
+test("tag-release refuses a version that is not newer than the latest tag", () => {
+  const { root } = createReleaseRepo({ version: "1.1.0", changelog: ["1.1.0"], tags: ["v1.0.0", "v1.2.0"] });
+  const result = tagRelease(root);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /says 1\.1\.0, which is not newer than v1\.2\.0; refusing to tag it/);
+  assert.equal(result.stdout, "");
+});
+
+test("tag-release refuses a version CHANGELOG.md has no section for", () => {
+  const { root } = createReleaseRepo({ version: "1.1.0", changelog: ["1.0.0"], tags: ["v1.0.0"] });
+  const result = tagRelease(root);
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /CHANGELOG\.md at [0-9a-f]{40} has no \[1\.1\.0\] section/);
+  assert.equal(result.stdout, "");
+});
+
+test("tag-release pushes the tag to origin and hands it to the step that starts Release", () => {
+  const { root, head } = createReleaseRepo({ version: "1.1.0", changelog: ["1.1.0"], tags: ["v1.0.0"] });
+  const remote = fs.mkdtempSync(path.join(os.tmpdir(), "otito-tag-release-remote-"));
+  git(remote, ["init", "-q", "--bare"]);
+  git(root, ["remote", "add", "origin", remote]);
+  const output = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "otito-tag-release-output-")), "github-output");
+
+  const result = tagRelease(root, { OTITO_TAG_SHA: head, OTITO_TAG_DRY_RUN: "0", GITHUB_OUTPUT: output });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(git(remote, ["rev-parse", "v1.1.0^{commit}"]), head);
+  assert.equal(git(remote, ["cat-file", "-t", "v1.1.0"]), "tag");
+  assert.equal(fs.readFileSync(output, "utf8"), "tag=v1.1.0\n");
 });

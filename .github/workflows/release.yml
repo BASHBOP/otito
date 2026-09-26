@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*"
+  # tag-release.yml starts this on the tag it pushes: a tag pushed with
+  # GITHUB_TOKEN does not trigger the push event above.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,6 +38,10 @@ jobs:
 
       - name: Verify tag matches package version
         run: |
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "Release runs on a v* tag, not the $GITHUB_REF_TYPE $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
           TAG="${GITHUB_REF_NAME#v}"
           PKG="$(node -p "require('./package.json').version")"
           if [ "$TAG" != "$PKG" ]; then
