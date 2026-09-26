@@ -492,7 +492,13 @@ test("help lists the gate command and the canonical-vs-legacy guidance", async (
   assert.equal(result.exitCode, 0);
   assert.match(result.stdout, /otito gate/);
   assert.match(result.stdout, /Canonical vs legacy/);
-  assert.match(result.stdout, /MIGRATION-2\.0\.md/);
+  // The legacy MCP tool note once promised removal "until 3.0" and linked
+  // docs/MIGRATION-2.0.md, which the otito rebrand deleted; the section it
+  // links now has to exist.
+  assert.doesNotMatch(result.stdout, /until 3\.0|MIGRATION-2\.0/);
+  assert.match(result.stdout, /https:\/\/bashbop\.github\.io\/otito\/02-mcp-agent-workflows\/#legacy-tool-names/);
+  const mcpDoc = fs.readFileSync(new URL("../docs/02-mcp-agent-workflows/README.md", import.meta.url), "utf8");
+  assert.match(mcpDoc, /^### Legacy tool names$/m);
 });
 
 test("review runs the composite review on a git fixture", async () => {

@@ -318,6 +318,25 @@ commit.
 | `workspace_report` | Build product-level context across multiple repos                                     |
 | `repo_harness`     | Generate setup, validation, runtime, and context commands                             |
 
+### Legacy tool names
+
+The older names below still work through `tools/call`, although `tools/list` does not advertise them. They date from Repoctx 2.0, which folded 18 tools into 11. Each call is forwarded to its canonical tool with the arguments translated, so a host configured with the old names keeps working. They still work in 3.x, and no release has been named to remove them; use the canonical names in new configs.
+
+| Legacy name                | Canonical tool   | Arguments                                                    |
+| -------------------------- | ---------------- | ------------------------------------------------------------ |
+| `pr_review`                | `review_context` | Unchanged                                                    |
+| `review_pr`                | `review_verdict` | Unchanged                                                    |
+| `merge_readiness`          | `review_gate`    | `selector` is dropped, so it runs the local gate             |
+| `pr_merge_readiness`       | `review_gate`    | `selector` becomes `pr`, so it runs the GitHub PR gate       |
+| `repo_catalog`             | `repo_search`    | `query` is dropped, so it returns the catalog listing        |
+| `repo_discover`            | `repo_index`     | Adds `discover: true, dryRun: true`: read-only discovery     |
+| `find_domain`              | `repo_map`       | `domain`, with `includeFiles: true`                          |
+| `find_file_kind`           | `repo_map`       | `kind`, with `includeFiles: true`                            |
+| `find_backend_route`       | `repo_map`       | `kind: "controller"`, and `query` becomes `route`, with `includeFiles: true` |
+| `find_frontend_api_client` | `repo_map`       | `kind: "apiClient"`, and `query` (else `domain`) becomes `route`, with `includeFiles: true` |
+
+The four `find_*` tools pass `limit` through, use the first of `paths` when `path` is absent, and drop any other argument.
+
 ---
 
 ## Agent Loop

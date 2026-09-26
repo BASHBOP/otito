@@ -1589,8 +1589,9 @@ function handleHelp(_parsed) {
       "  pr                   produces review context only (diff/comment metadata, no verdict)",
       "",
       "Legacy MCP tool names (pr_review, review_pr, merge_readiness, pr_merge_readiness,",
-      "repo_catalog, repo_discover, find_*) keep working via tools/call until 3.0.",
-      "See docs/MIGRATION-2.0.md.",
+      "repo_catalog, repo_discover, find_*) still work via tools/call in 3.x, and no",
+      "release is named to remove them. Each maps to a canonical tool:",
+      "https://bashbop.github.io/otito/02-mcp-agent-workflows/#legacy-tool-names",
     ].join("\n"),
   );
 }

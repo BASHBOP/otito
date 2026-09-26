@@ -412,8 +412,11 @@ export const tools = [
 // Legacy MCP tool names remain callable through tools/call even though they no
 // longer appear in tools/list. Each entry maps an old name to its canonical
 // successor plus a pure arguments translator. Renames forward 1:1; folded tools
-// translate params (e.g. find_backend_route's query → repo_map.route). This
-// guarantee holds until otito 3.0; see docs/MIGRATION-2.0.md.
+// translate params (e.g. find_backend_route's query → repo_map.route). The
+// names date from Repoctx 2.0's 18-to-11 consolidation and still work in 3.x;
+// no release is named to remove them, and removing one is a breaking change.
+// The mapping is documented under "Legacy tool names" in
+// docs/02-mcp-agent-workflows/README.md, which a test keeps in step with this.
 /**
  * @typedef {{ tool: string, mapArgs: (args?: ToolArgs) => (ToolArgs | undefined) }} LegacyAlias
  * @type {Record<string, LegacyAlias>}
