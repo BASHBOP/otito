@@ -537,7 +537,10 @@ test("evaluateLocal gives the tieline installation command when its configured b
   const result = evaluateLocal(root, { base: "HEAD" });
   const contracts = result.checks.find((check) => check.name === "Contract drift");
   assert.equal(contracts.status, "WARN");
-  assert.ok(contracts.details.includes("Repair command: npm install --save-dev @bashbop/tieline"));
+  assert.match(contracts.summary, /install @nugehs\/tieline to enable this gate/);
+  assert.ok(contracts.details.includes("Repair command: npm install --save-dev @nugehs/tieline"));
+  // @bashbop/tieline was never published: npm answers that install with a 404.
+  assert.doesNotMatch(JSON.stringify(contracts), /@bashbop\/tieline/);
 });
 
 test("evaluateLocal includes configured bouncer compliance evidence", () => {
