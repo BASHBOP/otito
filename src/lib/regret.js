@@ -46,10 +46,29 @@ import { askJev, modelRouteEngineVersion, offlineAnswers, scoreDecision, signals
 import { inspectRepo } from "./repo.js";
 import { runCommand } from "./tools.js";
 
-export const regretEngineVersion = "0.3.0";
+export const regretEngineVersion = "0.4.0";
+
+/**
+ * A commit written by release tooling rather than asked of anyone: a
+ * semantic-release `chore(release): 2.26.5 [skip ci]`, a `chore: bump version
+ * to 1.4.0`, a bare `1.2.0`, anything marked `[skip ci]`. No host would route
+ * one, and the join almost never reads one as repaired: on bashbop-api they
+ * were 463 of 1,214 gradable commits, repaired 0.9%, and 353 of the 474
+ * commits in the deterministic cheap lane. Graded, they made that lane look
+ * clean (10.1%) when the human commits in it were repaired 39.8% of the time,
+ * and the keyless heuristic looked inverted for moving them out of it. A
+ * subject that merely mentions a release (`release: issue (#277)`) is a
+ * request like any other and stays: the rule needs a version number, or the
+ * `[skip ci]` marker, beside a chore, build, ci or release type.
+ */
+export const RELEASE_SUBJECT =
+  /\[skip ci\]|^v?\d+\.\d+(\.\d+)?\s*$|^(?=(chore|build|ci|release)\b)(?=.*\b(release|version|prepare|publish)\b)(?=.*\bv?\d+\.\d+)/i;
 
 const DAY_SECONDS = 86400;
 const Z95 = 1.96;
+
+const RELEASE_CAVEAT =
+  "Release and version-bump commits are not graded: tooling writes them, no model is asked for them, and the join almost never reads one as repaired, so grading them flatters whichever tier they land in.";
 
 /**
  * The deterministic half on its own: every model term at zero, so the route
@@ -122,10 +141,13 @@ async function replay(repoPath, options) {
   const horizon = commits.reduce((latest, commit) => Math.max(latest, commit.time), 0);
   const gradable = (/** @type {{ time: number }} */ commit) => horizon - commit.time >= windowDays * DAY_SECONDS;
 
-  // Fix commits are the outcome, so they cannot also be inputs. Everything
-  // else with a parent and a subject is a request the router would have seen,
-  // docs-only changes included: a typo fix is a request too.
-  const candidates = commits.filter((commit) => !FIX_SUBJECT.test(commit.subject) && commit.parents.length === 1 && commit.subject.trim());
+  // Fix commits are the outcome, so they cannot also be inputs. Release
+  // commits are neither: tooling wrote them, so no router saw a request.
+  // Everything else with a parent and a subject is a request the router would
+  // have seen, docs-only changes included: a typo fix is a request too.
+  const requests = commits.filter((commit) => !FIX_SUBJECT.test(commit.subject) && commit.parents.length === 1 && commit.subject.trim());
+  const releases = requests.filter((commit) => RELEASE_SUBJECT.test(commit.subject)).length;
+  const candidates = requests.filter((commit) => !RELEASE_SUBJECT.test(commit.subject));
   const censored = candidates.filter((commit) => !gradable(commit)).length;
   const scoreable = candidates.filter(gradable).slice(0, max === Infinity ? undefined : max);
   const fixes = commits.filter((commit) => FIX_SUBJECT.test(commit.subject) && commit.parents.length === 1);
@@ -249,6 +271,7 @@ async function replay(repoPath, options) {
       join: "line-overlap",
       outcome: "repaired",
       fixCommitRule: "subject begins fix/hotfix/bugfix/revert",
+      releaseCommitRule: "subject is marked [skip ci], is a bare version, or is a chore/build/ci/release subject that names a version",
       requestProxy: "commit subject",
       stateAt: "first parent, checked out into a temporary worktree",
       horizon: "the newest commit in history; a commit younger than the window is censored, not graded",
@@ -264,6 +287,7 @@ async function replay(repoPath, options) {
       commits: commits.length,
       candidates: candidates.length,
       censored,
+      releaseCommits: releases,
       replayed: graded.length,
       docsOnly: graded.filter((row) => row.docsOnly).length,
       fixCommits: fixes.length,
@@ -283,6 +307,7 @@ async function replay(repoPath, options) {
       "The state is the first parent's tree. Work in progress, untracked files and the developer's local index are not replayed.",
       "`repaired` is a proxy inherited from calibrate: blame attributes a line to its last toucher, and an unlabelled fix is invisible.",
       "Fix commits are outcomes here, so requests that were themselves fixes are not graded. The router serves them in production.",
+      RELEASE_CAVEAT,
       "The tier that was actually used, if any, is unknown; this grades what the router would have said, not what happened.",
       `Rates over fewer than ${minSample} commits are withheld rather than published, the base rate included. A published rate carries a 95% interval; two rates whose intervals overlap are not shown to differ.`,
       ...(wantsModel ? ["The model's answers are not replayable; the receipt covers this run's inputs and outputs, not a recomputation."] : []),
@@ -319,7 +344,15 @@ export function rescoreRegret(saved, options = {}) {
   const windowDays = saved.method.windowDays;
   const minSample = saved.method.minSample;
 
-  const commits = rows.map((row) => {
+  // A run saved before the corpus rule graded release commits; they leave
+  // here, so a rescore grades the same corpus a fresh replay would.
+  const kept = rows.filter((row) => !RELEASE_SUBJECT.test(String(row.subject ?? "")));
+  const dropped = rows.length - kept.length;
+  if (!kept.length) {
+    throw new Error("every commit in this run is a release commit; there is nothing to grade");
+  }
+
+  const commits = kept.map((row) => {
     const signals = { ax: row.ax, containment: row.containment, candidates: row.candidates, riskPaths: row.riskPaths };
     const deterministic = score({ answers: NEUTRAL_ANSWERS, signals });
     const offline = score({ answers: row.inputs.offline, signals });
@@ -341,14 +374,21 @@ export function rescoreRegret(saved, options = {}) {
     generatedAt: new Date().toISOString(),
     regretEngineVersion,
     modelRouteEngineVersion,
-    method: { ...saved.method, rescoredFrom },
+    method: { ...saved.method, releaseCommitRule: saved.method.releaseCommitRule ?? "applied at rescore: " + RELEASE_SUBJECT.source, rescoredFrom },
+    range: { ...saved.range, replayed: commits.length, releaseCommits: (saved.range?.releaseCommits ?? 0) + dropped },
     base,
     variants,
     questions,
     commits,
     caveats: [
       // A rescore of a rescore names only the run it read, not the whole chain.
-      ...saved.caveats.filter((/** @type {string} */ caveat) => !caveat.startsWith("Rescored from")),
+      ...saved.caveats.filter((/** @type {string} */ caveat) => !caveat.startsWith("Rescored from") && !caveat.startsWith("Dropped ")),
+      ...(saved.caveats.includes(RELEASE_CAVEAT) ? [] : [RELEASE_CAVEAT]),
+      ...(dropped
+        ? [
+            `Dropped ${dropped} release commit${dropped === 1 ? "" : "s"} the saved run had graded; this version's corpus rule leaves them out, so the base rate and every tier are over ${commits.length} commits, not ${rows.length}.`,
+          ]
+        : []),
       `Rescored from ${rescoredFrom ?? "a saved run"}: no commit was replayed and no model was called. The tiers are this version's arithmetic applied to the signals and answers that run recorded.`,
     ],
   };
@@ -682,7 +722,7 @@ export function formatRegretMarkdown(data) {
     "",
     `Join: ${data.method.join} · outcome: \`${data.method.outcome}\` · window: ${data.method.windowDays}d · minimum sample: ${data.method.minSample}`,
     `Request: ${data.method.requestProxy} · state: ${data.method.stateAt}`,
-    `Corpus: ${data.range.replayed} commits replayed (${data.range.docsOnly} docs-only) of ${data.range.candidates} candidates; ${data.range.censored} younger than the window, not graded; ${data.range.fixCommits} fix commits (${data.range.fixCommitsJoined} joined)`,
+    `Corpus: ${data.range.replayed} commits replayed (${data.range.docsOnly} docs-only) of ${data.range.candidates} candidates; ${data.range.censored} younger than the window, not graded; ${data.range.releaseCommits ?? 0} release commits, not graded; ${data.range.fixCommits} fix commits (${data.range.fixCommitsJoined} joined)`,
     `Base rate: ${data.base.publishable ? `${pct(data.base.rate)}${ci(data.base.ci95)}` : withheld.trim()} (${data.base.repaired}/${data.base.n})`,
     `Model: ${data.model.name ?? data.model.source}${data.model.calls ? `, ${data.model.calls} calls, ${data.model.failures} failed, $${data.model.costUsd.toFixed(4)}` : ""}`,
     ...(data.method.rescoredFrom === undefined
