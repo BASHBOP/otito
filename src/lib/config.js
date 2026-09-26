@@ -51,12 +51,14 @@ function getUserConfigPath(env = process.env) {
 
 /**
  * Walk up from cwd looking for .otitorc.json, stopping at the home dir.
+ * A relative cwd (an MCP tool's `path: "."`) is resolved first: path.dirname
+ * cannot climb above ".", so the walk would otherwise stop where it began.
  * @param {string} cwd
  * @returns {string | null}
  */
 function findLocalConfigPath(cwd) {
   const home = os.homedir();
-  let dir = cwd;
+  let dir = path.resolve(cwd);
   for (;;) {
     const candidate = path.join(dir, ".otitorc.json");
     if (fs.existsSync(candidate)) return candidate;
