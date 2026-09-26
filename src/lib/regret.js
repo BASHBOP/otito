@@ -28,6 +28,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { setImmediate } from "node:timers";
 
 import { generateAxScore } from "./ax.js";
 import { generateCodeMap } from "./code-map.js";
@@ -74,6 +75,24 @@ export const VARIANTS = /** @type {const} */ (["deterministic", "offline", "jev"
  * @returns {Promise<Record<string, any>>}
  */
 export async function generateRegret(repoPath = ".", options = {}) {
+  // Every git process this run starts, including the `git status` that
+  // inspectRepo and the code map run inside the replay worktree, inherits an
+  // environment with the caller's redirections removed and hooks, filters and
+  // fsmonitor switched off. Restored exactly when the run ends.
+  const restore = isolateGit(repoPath);
+  try {
+    return await replay(repoPath, options);
+  } finally {
+    restore();
+  }
+}
+
+/**
+ * @param {string} repoPath
+ * @param {RegretOptions} options
+ * @returns {Promise<Record<string, any>>}
+ */
+async function replay(repoPath, options) {
   const repo = inspectRepo(repoPath);
   if (!repo.git.available) {
     throw new Error(`regret requires a git repository: ${repo.root}`);
@@ -93,7 +112,7 @@ export async function generateRegret(repoPath = ".", options = {}) {
   // so the run stays a function of repository state. A commit younger than
   // the window has not had its chance to be repaired yet; grading it as
   // unrepaired would flatter every tier it landed in, so it is censored.
-  const horizon = Math.max(...commits.map((commit) => commit.time));
+  const horizon = commits.reduce((latest, commit) => Math.max(latest, commit.time), 0);
   const gradable = (/** @type {{ time: number }} */ commit) => horizon - commit.time >= windowDays * DAY_SECONDS;
 
   // Fix commits are the outcome, so they cannot also be inputs. Everything
@@ -103,8 +122,11 @@ export async function generateRegret(repoPath = ".", options = {}) {
   const censored = candidates.filter((commit) => !gradable(commit)).length;
   const scoreable = candidates.filter(gradable).slice(0, max === Infinity ? undefined : max);
   const fixes = commits.filter((commit) => FIX_SUBJECT.test(commit.subject) && commit.parents.length === 1);
+  if (!candidates.length) {
+    throw new Error("regret found no non-fix commit with a parent to grade");
+  }
   if (!scoreable.length) {
-    throw new Error(`regret found no commit old enough to grade: every candidate is younger than the ${windowDays}-day window`);
+    throw new Error(`regret found no commit old enough to grade: all ${censored} candidates are younger than the ${windowDays}-day window`);
   }
   const { repairedAfter, joinedFixes } = joinRepairs(root, scoreable, fixes);
 
@@ -120,18 +142,29 @@ export async function generateRegret(repoPath = ".", options = {}) {
 
   /** @type {Record<string, any>[]} */
   const graded = [];
-  const worktree = addWorktree(root, scoreable[0].parents[0]);
   // A Ctrl-C or a kill mid-replay must not leave a worktree registered in the
-  // user's repository. The handlers are removed once the run has cleaned up.
+  // user's repository. The handler only records the signal; the loop yields
+  // once per commit so it can arrive, then throws, and `finally` cleans up.
+  // The directory and the handler exist before `git worktree add`, so a
+  // signal during the first checkout is cleaned up too. The library never
+  // exits the process; the CLI turns the error into exit 130 or 143.
+  /** @type {NodeJS.Signals|null} */
+  let interrupted = null;
   const onInterrupt = (/** @type {NodeJS.Signals} */ signal) => {
-    removeWorktree(root, worktree);
-    process.exit(signal === "SIGTERM" ? 143 : 130);
+    interrupted = signal;
   };
-  process.once("SIGINT", onInterrupt);
-  process.once("SIGTERM", onInterrupt);
+  const yieldForSignals = async () => {
+    await new Promise((resolve) => setImmediate(resolve));
+    if (interrupted) throw Object.assign(new Error(`regret interrupted by ${interrupted}`), { signal: interrupted });
+  };
+  process.on("SIGINT", onInterrupt);
+  process.on("SIGTERM", onInterrupt);
+  const worktree = fs.mkdtempSync(path.join(os.tmpdir(), "otito-regret-"));
   try {
+    addWorktree(root, scoreable[0].parents[0], worktree);
     let done = 0;
     for (const commit of scoreable) {
+      await yieldForSignals();
       checkout(root, worktree, commit.parents[0]);
       const request = commit.subject;
       // A fresh map per checkout, handed in directly: the per-user index
@@ -151,7 +184,8 @@ export async function generateRegret(repoPath = ".", options = {}) {
         sha: commit.sha,
         subject: commit.subject,
         time: commit.time,
-        docsOnly: !commit.files.some((file) => !isDocLike(file.path)),
+        // Binary-only and empty commits have no text files; they are not docs.
+        docsOnly: commit.files.length > 0 && commit.files.every((file) => isDocLike(file.path)),
         ax: signals.ax,
         candidates: signals.candidates ?? 0,
         repairedAfter: repairedAfter.get(commit.sha) ?? null,
@@ -385,59 +419,86 @@ function isDocLike(filePath) {
   return /\.(md|mdx|markdown|txt|rst|adoc)$/i.test(filePath) || /^docs?\//i.test(filePath);
 }
 
-/**
- * Git for the replay runs with the caller's GIT_* redirections stripped, so a
- * run started from inside a hook (GIT_DIR, GIT_INDEX_FILE set) cannot land
- * its checkouts on the user's own index, and with hooks and LFS smudge
- * disabled, so checking out a historical tree runs nothing and fetches nothing.
- * @returns {NodeJS.ProcessEnv}
- */
-function gitEnv() {
-  /** @type {NodeJS.ProcessEnv} */
-  const env = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (/^GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|COMMON_DIR|NAMESPACE|PREFIX|CEILING_DIRECTORIES)$/.test(key)) continue;
-    env[key] = value;
-  }
-  env.GIT_LFS_SKIP_SMUDGE = "1";
-  return env;
-}
+const REDIRECTIONS = /^GIT_(DIR|WORK_TREE|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|COMMON_DIR|NAMESPACE|PREFIX|CEILING_DIRECTORIES)$/;
 
-const GIT_QUIET = [
-  "-c",
-  `core.hooksPath=${os.devNull}`,
-  "-c",
-  "filter.lfs.smudge=",
-  "-c",
-  "filter.lfs.process=",
-  "-c",
-  "filter.lfs.required=false",
-  "-c",
-  "core.fsmonitor=false",
-];
+/**
+ * Put process.env into the state the replay needs and return a function that
+ * puts it back exactly. Set on process.env rather than per call because git
+ * also runs inside helpers this module does not own (inspectRepo, the code
+ * map), and a `git status` there fires post-index-change hooks.
+ *
+ * - The caller's GIT_* redirections are removed, so a run started from a hook
+ *   or wrapper reads and writes the repository it was asked about.
+ * - Hooks are pointed at the null device, fsmonitor is off, and every
+ *   configured smudge or process filter is emptied (LFS, git-crypt, custom),
+ *   so checking out a historical tree runs nothing, decrypts nothing and
+ *   fetches nothing. Settings go through GIT_CONFIG_COUNT (git 2.31+), after
+ *   any the caller already set.
+ * @param {string} repoPath
+ * @returns {() => void}
+ */
+export function isolateGit(repoPath) {
+  /** @type {Record<string, string|undefined>} */
+  const saved = {};
+  const set = (/** @type {string} */ key, /** @type {string|undefined} */ value) => {
+    if (!(key in saved)) saved[key] = process.env[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  };
+  for (const key of Object.keys(process.env)) {
+    if (REDIRECTIONS.test(key)) set(key, undefined);
+  }
+  set("GIT_LFS_SKIP_SMUDGE", "1");
+
+  /** @type {[string, string][]} */
+  const pairs = [
+    ["core.hooksPath", os.devNull],
+    ["core.fsmonitor", "false"],
+    ["filter.lfs.smudge", ""],
+    ["filter.lfs.process", ""],
+    ["filter.lfs.required", "false"],
+  ];
+  const configured = runCommand("git", ["config", "--get-regexp", "^filter\\..*\\.(smudge|process)$"], { cwd: path.resolve(repoPath) });
+  for (const line of configured.ok ? configured.stdout.split("\n") : []) {
+    const match = /^filter\.(.+)\.(smudge|process)\s/.exec(line);
+    if (!match || match[1] === "lfs") continue;
+    pairs.push([`filter.${match[1]}.smudge`, ""], [`filter.${match[1]}.process`, ""], [`filter.${match[1]}.required`, "false"]);
+  }
+  const offset = Number(process.env.GIT_CONFIG_COUNT) || 0;
+  pairs.forEach(([key, value], index) => {
+    set(`GIT_CONFIG_KEY_${offset + index}`, key);
+    set(`GIT_CONFIG_VALUE_${offset + index}`, value);
+  });
+  set("GIT_CONFIG_COUNT", String(offset + pairs.length));
+
+  return () => {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  };
+}
 
 /**
  * @param {string} cwd
  * @param {string[]} args
  */
 function git(cwd, args) {
-  return runCommand("git", [...GIT_QUIET, ...args], { cwd, env: gitEnv() });
+  return runCommand("git", args, { cwd });
 }
 
 /**
+ * Check `sha` out into `dir`, which the caller created with mkdtemp and will
+ * remove; git accepts an existing empty directory.
  * @param {string} root
  * @param {string} sha
- * @returns {string}
+ * @param {string} dir
  */
-function addWorktree(root, sha) {
-  // mkdtemp owns the path from here on; git accepts an existing empty
-  // directory, so nothing is removed and re-created in between.
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-regret-"));
+function addWorktree(root, sha, dir) {
   const result = git(root, ["worktree", "add", "--detach", "--quiet", dir, sha]);
   if (!result.ok) {
     throw new Error(`regret could not check out ${sha.slice(0, 7)} into a worktree: ${result.stderr || result.stdout}`);
   }
-  return dir;
 }
 
 /**

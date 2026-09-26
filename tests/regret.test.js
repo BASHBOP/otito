@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
-import { formatRegretMarkdown, generateRegret, wilson } from "../src/lib/regret.js";
+import { spawn, spawnSync } from "node:child_process";
+import { formatRegretMarkdown, generateRegret, isolateGit, wilson } from "../src/lib/regret.js";
 import { TIERS } from "../src/lib/model-route.js";
 import { getCodeMapCachePath } from "../src/lib/index-cache.js";
 
@@ -267,4 +267,101 @@ test("a run started from inside a git hook cannot redirect its checkouts onto th
   assert.ok(worktree, "progress names the replay worktree");
   assert.equal(fs.existsSync(worktree), false, "the replay worktree is gone");
   assert.equal(fs.existsSync(getCodeMapCachePath(worktree)), false, "no index-cache entry is created for the temporary worktree");
+});
+
+/** Many gradable commits, so a signal can land mid-replay. */
+function longRepo(prefix, count) {
+  const root = initRepo(prefix);
+  commit(root, { "package.json": JSON.stringify({ name: "fixture" }), "src/a.js": lines("export const a = 0;") }, "chore: seed", 200);
+  for (let index = 1; index <= count; index += 1) {
+    commit(root, { [`src/m${index}.js`]: lines(`export const m${index} = ${index};`) }, `feat: add module ${index}`, 200 - index);
+  }
+  // The horizon is the newest commit; one well after the rest makes them all gradable.
+  commit(root, { "src/late.js": lines("export const late = 1;") }, "chore: horizon", 0);
+  return root;
+}
+
+test("no user hook, smudge filter or post-index-change notifier runs during a replay", async () => {
+  const { root } = historyRepo("hooks");
+  const marker = path.join(root, "..", `${path.basename(root)}-hook-ran`);
+  for (const hook of ["post-checkout", "post-index-change"]) {
+    const file = path.join(root, ".git", "hooks", hook);
+    fs.writeFileSync(file, `#!/bin/sh\necho ${hook} >> "${marker}"\n`);
+    fs.chmodSync(file, 0o755);
+  }
+  // A custom filter configured for every file: it would run on each checkout.
+  fs.writeFileSync(path.join(root, ".git", "info", "attributes"), "* filter=marker\n");
+  git(root, "config", "filter.marker.smudge", `sh -c 'echo smudge >> "${marker}"; cat'`);
+
+  const data = await generateRegret(root, { offline: true, minSample: 1 });
+  assert.equal(data.range.replayed, 3);
+  assert.equal(fs.existsSync(marker), false, fs.existsSync(marker) ? fs.readFileSync(marker, "utf8") : "");
+  assert.equal(git(root, "worktree", "list").trim().split("\n").length, 1);
+});
+
+test("a caller's GIT_DIR cannot make the run replay a different repository", async () => {
+  const { root: asked } = historyRepo("asked");
+  const other = longRepo("other", 2);
+  const saved = { GIT_DIR: process.env.GIT_DIR, GIT_WORK_TREE: process.env.GIT_WORK_TREE };
+  process.env.GIT_DIR = path.join(other, ".git");
+  process.env.GIT_WORK_TREE = other;
+  try {
+    const data = await generateRegret(asked, { offline: true, minSample: 1 });
+    assert.equal(fs.realpathSync(data.repo.root), fs.realpathSync(asked));
+    assert.equal(data.range.replayed, 3);
+    assert.equal(process.env.GIT_DIR, path.join(other, ".git"), "the caller's environment is restored afterwards");
+  } finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+  assert.equal(git(other, "worktree", "list").trim().split("\n").length, 1, "nothing was added to the other repository");
+});
+
+test("isolateGit restores the environment exactly, including keys it added", () => {
+  const before = { ...process.env };
+  const restore = isolateGit(".");
+  assert.equal(process.env.GIT_LFS_SKIP_SMUDGE, "1");
+  assert.ok(Number(process.env.GIT_CONFIG_COUNT) >= 5);
+  restore();
+  assert.deepEqual({ ...process.env }, before);
+});
+
+test("SIGINT mid-replay stops the run, removes the worktree and exits 130", async () => {
+  const root = longRepo("signal", 12);
+  const child = spawn(process.execPath, [path.resolve("src/cli.js"), "regret", root, "--offline", "--json"], { stdio: ["ignore", "pipe", "pipe"] });
+  let stderr = "";
+  let sent = false;
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+    if (!sent && /regret: 1\//.test(stderr)) {
+      sent = true;
+      child.kill("SIGINT");
+    }
+  });
+  const code = await new Promise((resolve) => child.on("exit", (exitCode) => resolve(exitCode)));
+  assert.ok(sent, stderr);
+  assert.equal(code, 130, stderr);
+  assert.match(stderr, /interrupted by SIGINT/);
+  assert.doesNotMatch(stderr, /regret: 12\/12/, "the run stopped before the end");
+  assert.equal(git(root, "worktree", "list").trim().split("\n").length, 1, "the replay worktree is gone");
+});
+
+test("errors name what is actually missing, and a binary-only commit is not docs-only", async () => {
+  const lone = initRepo("lone");
+  commit(lone, { "a.txt": "a\n" }, "chore: seed", 100);
+  await assert.rejects(() => generateRegret(lone, { offline: true }), /no non-fix commit with a parent/);
+
+  const root = initRepo("binary");
+  commit(root, { "src/a.js": lines("export const a = 1;") }, "chore: seed", 100);
+  const full = path.join(root, "logo.png");
+  fs.writeFileSync(full, Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 3, 0, 0]));
+  const binary = commit(root, {}, "feat: update brand assets", 90);
+  commit(root, { "src/late.js": lines("export const late = 1;") }, "chore: horizon", 0);
+  const data = await generateRegret(root, { offline: true, minSample: 1 });
+  const row = data.commits.find((entry) => entry.sha === binary);
+  assert.ok(row, "the binary-only commit is replayed");
+  assert.equal(row.docsOnly, false);
+  assert.equal(data.range.docsOnly, 0);
 });
