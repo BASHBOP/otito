@@ -79,6 +79,8 @@ import { runCommand } from "./tools.js";
  * @property {string} [baseRefOid]
  * @property {string} [headRefOid]
  * @property {number} [changedFiles]
+ * @property {string} [state] OPEN, CLOSED or MERGED
+ * @property {string | null} [mergedAt]
  * @property {boolean} [isDraft]
  * @property {string} [mergeStateStatus]
  * @property {string} [mergeable]
@@ -159,6 +161,8 @@ export async function evaluatePR(repoPath, selector, options = {}) {
       baseRefName: pr.baseRefName,
       baseSha: pr.baseRefOid,
       headSha: pr.headRefOid,
+      state: pr.state ?? "",
+      mergedAt: pr.mergedAt ?? "",
       isDraft: Boolean(pr.isDraft),
       mergeStateStatus: pr.mergeStateStatus ?? "",
       mergeable: pr.mergeable ?? "",
@@ -232,7 +236,7 @@ function viewPR(root, selector, runner) {
   if (selector && String(selector).trim()) args.push(String(selector));
   args.push(
     "--json",
-    "number,title,url,baseRefName,baseRefOid,headRefOid,changedFiles,isDraft,mergeStateStatus,mergeable,reviewDecision,files,reviews,statusCheckRollup",
+    "number,title,url,state,mergedAt,baseRefName,baseRefOid,headRefOid,changedFiles,isDraft,mergeStateStatus,mergeable,reviewDecision,files,reviews,statusCheckRollup",
   );
   const out = runner.run(root, args);
   try {
@@ -348,6 +352,20 @@ function prStateCheck(pr) {
   const details = [`#${pr.number ?? 0} ${pr.title ?? ""}`.trim()];
   if (pr.url) details.push(pr.url);
 
+  // A merged or closed PR is settled, so read its state before mergeability:
+  // GitHub reports a merged PR's mergeability as UNKNOWN and keeps a closed
+  // PR's last value, which the branches below would read as still pending.
+  // A merged PR still gets the review evidence checks, because they describe
+  // what merged and post-merge attestation records them.
+  const state = String(pr.state ?? "").toUpperCase();
+  if (state === "MERGED") {
+    if (pr.mergedAt) details.push(`Merged at ${pr.mergedAt}`);
+    details.push("The other checks describe the merged change; they no longer gate it.");
+    return { name: "PR state", status: STATUS.pass, summary: "PR is already merged; there is nothing left to gate.", details };
+  }
+  if (state === "CLOSED") {
+    return { name: "PR state", status: STATUS.fail, summary: "PR is closed without merging and cannot merge unless it is reopened.", details };
+  }
   if (pr.isDraft) {
     return { name: "PR state", status: STATUS.fail, summary: "PR is a draft and should not merge.", details };
   }
@@ -902,7 +920,7 @@ function isNotFound(error) {
  * @typedef {Object} PassPrData
  * @property {Verdict} verdict
  * @property {{ root: string, name: string }} repo
- * @property {{ number?: number, title?: string, url?: string, baseRefName?: string, baseSha?: string, headSha?: string, isDraft: boolean, mergeStateStatus: string, mergeable: string, reviewDecision: string }} pr
+ * @property {{ number?: number, title?: string, url?: string, baseRefName?: string, baseSha?: string, headSha?: string, state: string, mergedAt: string, isDraft: boolean, mergeStateStatus: string, mergeable: string, reviewDecision: string }} pr
  * @property {{ kind?: string, repository?: string, number?: number, baseSha?: string, headSha?: string }} [subject]
  * @property {Record<string, any>} [receipt]
  * @property {string} policy
@@ -942,10 +960,12 @@ export function formatPassPrTerminal(data, rendererFactory) {
   lines.push("");
   const blocked = data.checks.find((entry) => entry.status === STATUS.fail);
   const warning = data.checks.find((entry) => entry.status === STATUS.warn);
+  // Nothing can block a merge that already happened.
+  const merged = data.pr.state.toUpperCase() === "MERGED";
   lines.push(
     renderer.verdict({
       verdict: data.verdict,
-      blockedBy: blocked ? blocked.name : undefined,
+      blockedBy: blocked && !merged ? blocked.name : undefined,
       nextStep: nextStep(data, blocked, warning),
     }),
   );
@@ -963,6 +983,9 @@ export function formatPassPrTerminal(data, rendererFactory) {
  * @returns {string}
  */
 function nextStep(data, blocked, warning) {
+  const state = data.pr.state.toUpperCase();
+  if (state === "MERGED") return "already merged; the checks describe the merged change";
+  if (state === "CLOSED") return "reopen the PR before it can merge";
   if (blocked) return `address ${blocked.name.toLowerCase()} before merge`;
   if (warning) return "review the warning before merge";
   return data.changedFiles.length === 0 ? "no changes reported" : "ready to merge";
