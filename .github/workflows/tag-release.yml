@@ -1,0 +1,51 @@
+name: Tag release
+
+# The release decision is the merge that brings a version bump to main. Once
+# otito CI passes on that commit, this tags it from package.json and starts
+# the Release workflow, so a release no longer waits on a tag somebody has to
+# remember to push. Every other main push carries a version that is already
+# tagged and does nothing.
+on:
+  workflow_run:
+    workflows: ["otito CI"]
+    types: [completed]
+
+permissions:
+  actions: write # start the Release workflow
+  contents: write # push the tag
+
+concurrency:
+  group: otito-tag-release
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the commit CI passed, with every tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Tag the version if it is new
+        id: tag
+        env:
+          OTITO_TAG_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/tag-release.sh
+
+      # A tag pushed with GITHUB_TOKEN starts no workflow, so its push never
+      # reaches release.yml. Dispatching release.yml on the tag does, and keeps
+      # it the workflow npm Trusted Publishing is configured to trust.
+      - name: Start the Release workflow on the tag
+        if: steps.tag.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: gh workflow run release.yml --ref "$TAG"

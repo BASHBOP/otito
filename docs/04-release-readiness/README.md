@@ -17,7 +17,7 @@ otito follows Semantic Versioning and keeps releases tied to tests, changelog di
 
 ## Release Gate
 
-Before tagging a release:
+Before merging a release into `main`:
 
 ```bash
 npm run ci
@@ -31,6 +31,8 @@ Maintainers should keep these aligned:
 - `CHANGELOG.md`
 - Git tag
 - GitHub release notes
+
+The Git tag follows from `package.json`. Once `otito CI` passes on the release commit on `main`, the `Tag release` workflow pushes `vX.Y.Z` and starts the `Release` workflow. It refuses a version that is not newer than the latest tag or that `CHANGELOG.md` has no section for.
 
 ---
 
