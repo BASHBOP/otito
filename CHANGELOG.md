@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-09-26
+
+The router gets graded, and the answer so far is that nothing can grade it yet. `otito regret` replays a repository's history and grades the tier each half of the router would have given against the same `repaired` outcome `otito calibrate` uses; `--rescore` grades a new arithmetic on frozen model answers. On three repositories no variant orders outcomes, and an offline audit of the join and of a same-session outcome says why, so the route stays advisory. The route-prompt hook now keeps every decision it makes, so the router can be graded once enough real requests exist. Attestation moves into the CLI as `otito attest`, with versioned records and a reusable workflow. No command, field or schema was removed.
+
 ### Added
 
 - **The How It Works page is tied to every change in the CLI, the tool catalog and the release.** Three new checks, each with a message that says where to make the fix. Every command `otito help` lists must be a card on the page or a row in `SUPPORTING_COMMANDS` (scripts/how-it-works/content.js) with the reason it is not a stage of the loop, so a new command cannot ship without deciding where it belongs, and a command that leaves the CLI has to leave the table too. Each MCP tool now carries a `summary` in `src/lib/mcp.js`, one or two plain sentences that the page and `otito agent-tools --json` print; the MCP description is unchanged and `summary` is not sent over `tools/list`. The page stamps the package version (`<meta name="otito:version">`) and the `version` lifecycle script re-renders it, so a release that skipped `npm run docs:diagram` fails `docs:diagram:check`.
