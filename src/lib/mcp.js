@@ -13,7 +13,7 @@ import { generateRoute, hostModelFor, TIERS } from "./model-route.js";
 import { formatRouteMarkdown } from "./render/route.js";
 import { appendEvent, extractSignals, redactError, shareEvent } from "./telemetry.js";
 import { forwardToCanvas } from "./canvas-tap.js";
-import { loadConfig } from "./config.js";
+import { gatePolicy } from "./config.js";
 import { evaluateLocal } from "./pass-local.js";
 import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
@@ -806,26 +806,6 @@ async function dispatchTool(name, args) {
     default:
       throw new McpProtocolError(-32602, `Unknown tool: ${name}`);
   }
-}
-
-// The CLI fills an omitted --policy / --governance from the persisted config
-// (.otitorc.json, then the user config) before any gate runs. The gate tools do
-// the same, or one repository gets a solo verdict from `otito pass-pr` and a
-// team one from review_gate. The config is found from the gated repository,
-// not from this server's cwd, which is wherever the MCP host launched it. An
-// explicit argument still wins; a blank one means "the default", as it does in
-// normalizeProfile and normalizeGovernance.
-/**
- * @param {string} repoPath
- * @param {ToolArgs} args
- * @returns {{ policy: string | undefined, governance: string | undefined }}
- */
-function gatePolicy(repoPath, args) {
-  const config = loadConfig({ cwd: repoPath });
-  return {
-    policy: String(args.policy ?? "").trim() ? args.policy : config.policy,
-    governance: String(args.governance ?? "").trim() ? args.governance : config.governance,
-  };
 }
 
 // repo_search only sees repositories already in the local catalog. When the
