@@ -25,11 +25,16 @@ import { parseArgv } from "./lib/args.js";
 /** @typedef {import('./lib/eval.js').EvalOptions} EvalOptions */
 import { createRenderer } from "./lib/render/fancy.js";
 import { formatTerminalSummary, printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
-import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
+import { CONFIG_KEYS, gatePolicy, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
 import { appendEvent, clearTelemetryLog, noteResult, redactError, shareEvent, takePendingSignals, telemetryStatus } from "./lib/telemetry.js";
 
 const packageVersion = String(JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
 const versionFlags = new Set(["--version", "-v"]);
+
+// Commands that gate a repository named by a positional or --path. They take
+// policy and governance from that repository's config (gatePolicy), not from
+// the directory otito runs in, so main() leaves those two flags to them.
+const gateCommands = new Set(["pass", "pass-pr", "gate", "review", "workspace-gate"]);
 
 /** @type {Record<string, ((parsed: CliArgs) => void | Promise<void>) | undefined>} */
 const commandHandlers = {
@@ -98,11 +103,13 @@ async function main(argv = process.argv.slice(2)) {
     if (cfg.theme !== undefined && cfg.theme !== "default" && parsed.flags.theme === undefined) {
       parsed.flags.theme = cfg.theme;
     }
-    if (cfg.policy !== undefined && parsed.flags.policy === undefined) {
-      parsed.flags.policy = cfg.policy;
-    }
-    if (cfg.governance !== undefined && parsed.flags.governance === undefined) {
-      parsed.flags.governance = cfg.governance;
+    if (!gateCommands.has(command)) {
+      if (cfg.policy !== undefined && parsed.flags.policy === undefined) {
+        parsed.flags.policy = cfg.policy;
+      }
+      if (cfg.governance !== undefined && parsed.flags.governance === undefined) {
+        parsed.flags.governance = cfg.governance;
+      }
     }
   }
 
@@ -607,13 +614,14 @@ async function handleConverge(parsed) {
 async function handlePass(parsed) {
   const { evaluateLocal, formatPassMarkdown, formatPassTerminal } = await import("./lib/pass-local.js");
   const repoPath = parsed.positionals[0] ?? ".";
+  const { policy, governance } = gatePolicy(repoPath, parsed.flags);
   // evaluateLocal returns a loosely-typed record; it is a PassData at runtime.
   const data = /** @type {PassData} */ (
     evaluateLocal(repoPath, {
       base: parsed.flags.base,
       head: parsed.flags.head,
-      policy: parsed.flags.policy,
-      governance: parsed.flags.governance,
+      policy,
+      governance,
       request: parsed.flags.request,
       minConvergence: parsed.flags.min_convergence,
       receipt: parsed.flags.receipt,
@@ -648,11 +656,13 @@ async function handlePass(parsed) {
 async function handlePassPr(parsed) {
   const { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } = await import("./lib/pass-pr.js");
   const selector = parsed.positionals[0] ?? "";
+  const repoPath = parsed.flags.path ?? ".";
+  const { policy, governance } = gatePolicy(repoPath, parsed.flags);
   // evaluatePR returns a loosely-typed record; it is a PassPrData at runtime.
   const data = /** @type {PassPrData} */ (
-    await evaluatePR(parsed.flags.path ?? ".", selector, {
-      policy: parsed.flags.policy,
-      governance: parsed.flags.governance,
+    await evaluatePR(repoPath, selector, {
+      policy,
+      governance,
       request: parsed.flags.request,
       minConvergence: parsed.flags.min_convergence,
       receipt: parsed.flags.receipt,
@@ -806,13 +816,14 @@ async function handleReview(parsed) {
   const { formatReviewMermaid, formatReviewTerminal, generateReview } = await import("./lib/review.js");
   const repoPath = parsed.positionals[0] ?? ".";
   const trailingRequest = parsed.positionals.slice(1).join(" ").trim();
+  const { policy, governance } = gatePolicy(repoPath, parsed.flags);
   const { data } = await generateReview(repoPath, {
     request: parsed.flags.request ?? (trailingRequest || undefined),
     base: parsed.flags.base,
     head: parsed.flags.head,
     prSelector: parsed.flags.pr,
-    policy: parsed.flags.policy,
-    governance: parsed.flags.governance,
+    policy,
+    governance,
     minConvergence: parsed.flags.min_convergence,
     receipt: parsed.flags.receipt,
     impactTop: parsed.flags.top,
@@ -1150,8 +1161,7 @@ async function handleWorkspaceGate(parsed) {
   }
   const data = evaluateWorkspaceGate(parsed.positionals, {
     base: parsed.flags.base,
-    policy: parsed.flags.policy,
-    governance: parsed.flags.governance,
+    ...workspaceGatePolicy(parsed.positionals, parsed.flags),
     request: parsed.flags.request,
     minConvergence: parsed.flags.min_convergence,
     runValidation: parsed.flags.run_validation,
@@ -1169,6 +1179,28 @@ async function handleWorkspaceGate(parsed) {
     });
   }
   if (data.verdict === "FAIL") process.exitCode = 1;
+}
+
+/**
+ * The one policy and governance a workspace gate runs every repository under:
+ * the flag when given, else what each repository's own config resolves to. The
+ * parent receipt records a single value of each for the whole change, so
+ * repositories whose configs disagree are refused rather than gated under a
+ * setting one of them did not choose. The flag settles it for all of them.
+ * @param {string[]} repoPaths
+ * @param {Record<string, any>} flags
+ */
+function workspaceGatePolicy(repoPaths, flags) {
+  const resolved = repoPaths.map((repoPath) => gatePolicy(repoPath, flags));
+  /** @param {"policy" | "governance"} key */
+  const agreed = (key) => {
+    if (new Set(resolved.map((entry) => entry[key])).size > 1) {
+      const each = repoPaths.map((repoPath, index) => `${repoPath}: ${resolved[index][key]}`).join(", ");
+      throw new Error(`workspace-gate runs every repository under one ${key}, and their configs disagree (${each}); pass --${key} to choose it`);
+    }
+    return resolved[0][key];
+  };
+  return { policy: agreed("policy"), governance: agreed("governance") };
 }
 
 /** @param {CliArgs} parsed */

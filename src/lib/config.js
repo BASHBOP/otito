@@ -52,7 +52,9 @@ function getUserConfigPath(env = process.env) {
 /**
  * Walk up from cwd looking for .otitorc.json, stopping at the home dir.
  * A relative cwd (an MCP tool's `path: "."`) is resolved first: path.dirname
- * cannot climb above ".", so the walk would otherwise stop where it began.
+ * cannot climb above ".", so the walk would otherwise stop where it began, and
+ * from `otito pass ../api` it would climb to "." and read this directory's
+ * config instead of reaching the one above ../api.
  * @param {string} cwd
  * @returns {string | null}
  */
@@ -154,6 +156,28 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
   }
   applyEnv(cfg, env);
   return /** @type {ResolvedConfig} */ (cfg);
+}
+
+/**
+ * The policy and governance a gate on `repoPath` runs under. An explicit value
+ * wins. An omitted or blank one comes from the config found from the gated
+ * repository (its .otitorc.json, then the user config), not from the process's
+ * cwd: `otito pass-pr 12 --path ../api` can run from inside another repository,
+ * and an MCP server runs wherever its host launched it. Blank counts as omitted,
+ * as it does in normalizeProfile and normalizeGovernance. The CLI gate commands
+ * and the MCP gate tools both resolve through here, so one repository gets the
+ * same verdict from either.
+ * @param {string} repoPath
+ * @param {Record<string, any>} [explicit] CLI flags or MCP tool arguments.
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {{ policy: string | undefined, governance: string | undefined }}
+ */
+export function gatePolicy(repoPath, explicit = {}, env = process.env) {
+  const config = loadConfig({ cwd: repoPath, env });
+  return {
+    policy: String(explicit.policy ?? "").trim() ? explicit.policy : config.policy,
+    governance: String(explicit.governance ?? "").trim() ? explicit.governance : config.governance,
+  };
 }
 
 /**

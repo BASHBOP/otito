@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig } from "../src/lib/config.js";
+import { CONFIG_KEYS, gatePolicy, getConfigPath, listConfigSources, loadConfig, writeConfig } from "../src/lib/config.js";
 
 // Every loadConfig call pins XDG_CONFIG_HOME to its temp dir. An empty env
 // still falls back to ~/.config/otito/config.json, so a developer who has run
@@ -173,6 +173,46 @@ test("loadConfig walks up from a relative cwd, such as an MCP tool's path: '.'",
   } finally {
     process.chdir(saved);
   }
+  fs.rmSync(tmp, { recursive: true });
+});
+
+test("loadConfig from a relative sibling path reads that path's config, not the cwd's", () => {
+  const tmp = makeTmpDir();
+  const here = path.join(tmp, "here");
+  const there = path.join(tmp, "there");
+  fs.mkdirSync(here);
+  fs.mkdirSync(there);
+  fs.writeFileSync(path.join(here, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  const saved = process.cwd();
+  process.chdir(here);
+  try {
+    // Unresolved, the walk from "../there" went to "..", then to ".", and read
+    // this directory's config: `otito pass ../there` gated there as solo.
+    assert.equal(loadConfig({ cwd: "../there", env: { XDG_CONFIG_HOME: tmp } }).governance, "team");
+  } finally {
+    process.chdir(saved);
+  }
+  fs.rmSync(tmp, { recursive: true });
+});
+
+test("gatePolicy fills an omitted or blank policy and governance from the gated repository's config", () => {
+  const tmp = makeTmpDir();
+  const repo = path.join(tmp, "repo");
+  const bare = path.join(tmp, "bare");
+  fs.mkdirSync(repo);
+  fs.mkdirSync(bare);
+  fs.writeFileSync(path.join(repo, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
+  const env = { XDG_CONFIG_HOME: tmp };
+
+  assert.deepEqual(gatePolicy(repo, {}, env), { policy: "high-risk", governance: "solo" });
+  assert.deepEqual(gatePolicy(repo, { policy: "standard", governance: "team" }, env), { policy: "standard", governance: "team" }, "an explicit value wins");
+  assert.deepEqual(gatePolicy(repo, { policy: " ", governance: "" }, env), { policy: "high-risk", governance: "solo" }, "a blank value counts as omitted");
+  assert.deepEqual(gatePolicy(bare, {}, env), { policy: "standard", governance: "team" }, "no config anywhere leaves the defaults");
+
+  // The user config fills what the gated repository leaves out.
+  fs.mkdirSync(path.join(tmp, "otito"));
+  fs.writeFileSync(path.join(tmp, "otito", "config.json"), JSON.stringify({ governance: "solo" }));
+  assert.deepEqual(gatePolicy(bare, {}, env), { policy: "standard", governance: "solo" });
   fs.rmSync(tmp, { recursive: true });
 });
 

@@ -449,6 +449,189 @@ test("review runs the composite review on a git fixture", async () => {
   assert.ok(text.stdout.length > 0);
 });
 
+// Pin the user config tier to an empty directory, so a developer's own
+// ~/.config/otito/config.json cannot decide a gate's policy or governance.
+function withEmptyUserConfig(t) {
+  const saved = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-xdg-"));
+  t.after(() => {
+    if (saved === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = saved;
+  });
+}
+
+// Run otito from `dir`, the way `otito pass ../other-repo` runs from inside
+// one repository while gating another.
+function withCwd(t, dir) {
+  const saved = process.cwd();
+  process.chdir(dir);
+  t.after(() => process.chdir(saved));
+}
+
+function makeConfiguredDir(prefix, config) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `otito-cli-${prefix}-`));
+  fs.writeFileSync(path.join(dir, ".otitorc.json"), JSON.stringify(config));
+  return dir;
+}
+
+// Put a `gh` on PATH that answers the GitHub gate from canned JSON, keyed by
+// argument prefix, so a PR-mode gate runs evaluatePR end to end offline.
+function withFakeGh(t, responses) {
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-gh-"));
+  const gh = path.join(bin, "gh");
+  fs.writeFileSync(
+    gh,
+    [
+      "#!/usr/bin/env node",
+      `const responses = ${JSON.stringify(responses)};`,
+      "const joined = process.argv.slice(2).join(' ');",
+      "const key = Object.keys(responses).find((prefix) => joined === prefix || joined.startsWith(prefix + ' '));",
+      "if (key === undefined) {",
+      "  console.error('unexpected gh args: ' + joined);",
+      "  process.exit(1);",
+      "}",
+      "process.stdout.write(responses[key]);",
+      "",
+    ].join("\n"),
+  );
+  fs.chmodSync(gh, 0o755);
+  const saved = process.env.PATH;
+  process.env.PATH = `${bin}${path.delimiter}${saved}`;
+  t.after(() => {
+    process.env.PATH = saved;
+  });
+}
+
+test("pass, gate and review take policy and governance from the gated repository's config, not the directory otito runs in", async (t) => {
+  withEmptyUserConfig(t);
+  const configured = makeGitFixture("gate-config");
+  fs.writeFileSync(path.join(configured, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo", emoji: false }));
+  const unconfigured = makeGitFixture("gate-no-config");
+  // The directory otito runs in names other settings, so a lookup from the cwd
+  // instead of the gated repository would show in every assertion below.
+  withCwd(t, makeConfiguredDir("gate-cwd", { policy: "company", governance: "team", emoji: true }));
+  const gate = async (...argv) => parseJsonOutput((await runCli([...argv, "--base", "HEAD~1", "--json"])).stdout);
+  const settings = (report) => ({ policy: report.policy, governance: report.governance });
+
+  assert.deepEqual(settings(await gate("pass", configured)), { policy: "high-risk", governance: "solo" }, "pass reads the gated repository's .otitorc.json");
+  assert.deepEqual(settings(await gate("gate", configured)), { policy: "high-risk", governance: "solo" }, "gate reads it too");
+  assert.deepEqual(settings((await gate("review", configured)).pass), { policy: "high-risk", governance: "solo" }, "review gates under it");
+  assert.deepEqual(
+    settings(await gate("pass", unconfigured)),
+    { policy: "standard", governance: "team" },
+    "a repository with no config gets the defaults, not the cwd's",
+  );
+  assert.deepEqual(
+    settings(await gate("pass", configured, "--policy", "standard", "--governance", "team")),
+    { policy: "standard", governance: "team" },
+    "an explicit flag still wins",
+  );
+  assert.deepEqual(
+    settings(await gate("pass", configured, "--policy=", "--governance=")),
+    { policy: "high-risk", governance: "solo" },
+    "a blank flag counts as omitted",
+  );
+
+  // Rendering preferences still come from the directory otito runs in.
+  const text = await runCli(["pass", configured, "--base", "HEAD~1"]);
+  assert.match(text.stdout, /📋 {2}otito pass/);
+});
+
+test("pass-pr, gate --pr and review --pr take the config of the repository they gate", async (t) => {
+  withEmptyUserConfig(t);
+  const fixture = makeGitFixture("gate-pr-config");
+  writeFiles(fixture, {
+    ".otitorc.json": JSON.stringify({ governance: "solo" }),
+    ".github/CODEOWNERS": "src/index.ts @alice\n",
+  });
+  withFakeGh(t, {
+    "pr view": JSON.stringify({
+      number: 42,
+      title: "Tweak greeting",
+      url: "https://github.com/org/repo/pull/42",
+      state: "OPEN",
+      mergedAt: null,
+      baseRefName: "main",
+      baseRefOid: git(fixture, "rev-parse", "HEAD~1").trim(),
+      headRefOid: git(fixture, "rev-parse", "HEAD").trim(),
+      changedFiles: 1,
+      isDraft: false,
+      mergeStateStatus: "CLEAN",
+      mergeable: "MERGEABLE",
+      reviewDecision: "REVIEW_REQUIRED",
+      files: [{ path: "src/index.ts" }],
+      reviews: [],
+      statusCheckRollup: [{ name: "tests", conclusion: "SUCCESS" }],
+    }),
+    "repo view": JSON.stringify({ nameWithOwner: "org/repo" }),
+    "api graphql": JSON.stringify({ data: { repository: { pullRequest: { reviewThreads: { nodes: [], pageInfo: { hasNextPage: false } } } } } }),
+    "api repos/org/repo/branches/main/protection": JSON.stringify({
+      required_pull_request_reviews: { required_approving_review_count: 1, require_code_owner_reviews: true },
+      required_status_checks: { contexts: ["tests"], checks: [{ context: "tests" }] },
+      required_conversation_resolution: { enabled: true },
+    }),
+  });
+  // `otito pass-pr 42 --path <repo>` run from another directory, one whose
+  // config says team.
+  withCwd(t, makeConfiguredDir("gate-pr-cwd", { governance: "team" }));
+  const gate = async (...argv) => parseJsonOutput((await runCli([...argv, "--json"])).stdout);
+  const codeowners = (report) => report.checks.find((check) => check.name === "CODEOWNERS");
+
+  for (const argv of [
+    ["pass-pr", "42", "--path", fixture],
+    ["gate", "--pr", "42", "--path", fixture],
+  ]) {
+    const report = await gate(...argv);
+    assert.equal(report.governance, "solo", `${argv[0]} reads the --path repository's .otitorc.json`);
+    assert.equal(codeowners(report).status, "WARN");
+    assert.match(codeowners(report).summary, /solo-maintainer mode requires an explicit owner\/admin merge decision/);
+  }
+  const review = await gate("review", fixture, "--pr", "42");
+  assert.equal(review.pass.governance, "solo", "review --pr reads the positional repository's .otitorc.json");
+  assert.equal(codeowners(review.pass).status, "WARN");
+
+  const team = await gate("pass-pr", "42", "--path", fixture, "--governance", "team");
+  assert.equal(team.governance, "team", "an explicit --governance still wins");
+  assert.equal(codeowners(team).status, "FAIL");
+  assert.equal(team.verdict, "FAIL");
+});
+
+test("workspace-gate runs every repository under the config they agree on, and refuses configs that disagree", async (t) => {
+  withEmptyUserConfig(t);
+  const stage = (repo) => {
+    fs.writeFileSync(path.join(repo, "src", "index.ts"), "export const greet = () => 'staged';\n");
+    git(repo, "add", "src/index.ts");
+    return repo;
+  };
+  const web = stage(makeGitFixture("workspace-web"));
+  const api = stage(makeGitFixture("workspace-api"));
+  fs.writeFileSync(path.join(api, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  withCwd(t, makeConfiguredDir("workspace-cwd", { governance: "team" }));
+  const workspaceGate = async (...flags) => {
+    const result = await runCli(["workspace-gate", web, api, "--base", "HEAD", ...flags, "--json"]);
+    return { exitCode: result.exitCode, report: parseJsonOutput(result.stdout) };
+  };
+  const governance = (report) => [report.governance, ...report.repositories.map((entry) => entry.gate.governance)];
+
+  // One receipt records one governance for the whole change, so web's team
+  // and api's solo cannot both hold.
+  const refused = await workspaceGate();
+  assert.equal(refused.exitCode, 1);
+  assert.equal(refused.report.ok, false);
+  assert.ok(refused.report.error.includes(`(${web}: team, ${api}: solo)`), refused.report.error);
+  assert.match(refused.report.error, /pass --governance to choose it$/);
+
+  const settled = await workspaceGate("--governance", "team");
+  assert.deepEqual(governance(settled.report), ["team", "team", "team"], "the flag settles it for every repository");
+  assert.ok(settled.report.receipt, "the settled workspace still gets its parent receipt");
+
+  // When each repository's own config agrees, that is the setting, whatever
+  // the directory otito runs in says.
+  fs.writeFileSync(path.join(web, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  const agreed = await workspaceGate();
+  assert.deepEqual(governance(agreed.report), ["solo", "solo", "solo"]);
+});
+
 test("map renders json, markdown, and writes an artifact", async () => {
   const fixture = makeRepoFixture();
   const json = await runCli(["map", fixture, "--json"]);
