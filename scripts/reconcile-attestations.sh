@@ -2,15 +2,22 @@
 # Reconcile the durable audit ledger through a target commit on main.
 # Missing first-parent commits are attested oldest-first so the hash chain
 # remains deterministic and complete even when a bot merge suppresses push CI.
+#
+# Runs against this checkout by default. OTITO_REPO, OTITO_BIN and
+# OTITO_LEDGER select another repository, otito command and ledger file; see
+# post-merge-attest.sh, which this script drives.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TOOL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="${OTITO_REPO:-$TOOL_ROOT}"
+ROOT="$(cd "$ROOT" && pwd)"
+OTITO_BIN="${OTITO_BIN:-node $TOOL_ROOT/src/cli.js}"
 cd "$ROOT"
 
 # OTITO_TARGET_SHA first: in Actions, GITHUB_SHA is the runner's own value and
 # cannot be overridden by the workflow. GITHUB_SHA remains for standalone use.
 TARGET_SHA="${OTITO_TARGET_SHA:-${GITHUB_SHA:-$(git rev-parse HEAD)}}"
-LEDGER="$ROOT/audit-pilot/ledger.jsonl"
+LEDGER="${OTITO_LEDGER:-$ROOT/audit-pilot/ledger.jsonl}"
 
 git rev-parse --verify "${TARGET_SHA}^{commit}" >/dev/null
 
@@ -57,7 +64,7 @@ if [ -n "$ORPHANED" ]; then
     # Deliberate, opt-in restart. The superseded chain is NOT deleted: it stays
     # in the history of whatever branch carries it, and is archived beside the
     # new one so an auditor can still verify it on its own terms.
-    ARCHIVE="$ROOT/audit-pilot/ledger-orphaned-$(date -u +%Y%m%dT%H%M%SZ).jsonl"
+    ARCHIVE="$(dirname "$LEDGER")/ledger-orphaned-$(date -u +%Y%m%dT%H%M%SZ).jsonl"
     if [ -f "$LEDGER" ]; then
       cp "$LEDGER" "$ARCHIVE"
       echo "reconcile-attestations: archived superseded chain to $(basename "$ARCHIVE")"
@@ -110,7 +117,7 @@ else
 fi
 if [ -z "$COMMITS" ]; then
   echo "reconcile-attestations: ledger already covers $TARGET_SHA"
-  node audit-pilot/attest.mjs --verify
+  $OTITO_BIN attest . --verify --ledger "$LEDGER"
   exit 0
 fi
 
@@ -132,12 +139,15 @@ for MERGE_SHA in $COMMITS; do
   fi
 
   OTITO_ATTEST_MODE="$ATTEST_MODE" \
+    OTITO_REPO="$ROOT" \
+    OTITO_BIN="$OTITO_BIN" \
+    OTITO_LEDGER="$LEDGER" \
     OTITO_TARGET_SHA="$MERGE_SHA" \
     GITHUB_SHA="$MERGE_SHA" \
     GITHUB_EVENT_BEFORE="$BASE_SHA" \
-    bash scripts/post-merge-attest.sh
+    bash "$TOOL_ROOT/scripts/post-merge-attest.sh"
 done
 
 if [ "${OTITO_ATTEST_DRY_RUN:-0}" != "1" ]; then
-  node audit-pilot/attest.mjs --verify
+  $OTITO_BIN attest . --verify --ledger "$LEDGER"
 fi

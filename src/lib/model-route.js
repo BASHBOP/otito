@@ -61,6 +61,17 @@ export const CONTAINMENT_BONUS = 0.1;
 export const CONTAINMENT_THRESHOLD = 40;
 
 /**
+ * The deterministic half on its own: every model term at zero, so the route
+ * is AX plus containment plus the bumps. `otito regret` grades it as a variant
+ * and `otito route` reports it beside the scored tier.
+ */
+export const NEUTRAL_ANSWERS = {
+  specificity: { score: 0, confidence: null },
+  blast_radius: { score: 0, confidence: null },
+  novelty: { noul: 0 },
+};
+
+/**
  * Only claude-code ships filled in, because those are the ids this repository
  * can verify. Add others in `.otito/model-route.json` (repo) or
  * `~/.otito/model-route.json` (user); the repo file wins.
@@ -378,7 +389,10 @@ const round2 = (/** @type {number} */ value) => Number(Number(value).toFixed(2))
 
 /**
  * The arithmetic. Every term is visible so a tier can be traced to its inputs.
- * @param {{ answers: any, signals: ReturnType<typeof signalsFrom> }} input
+ * `signals` names only the fields read here: `otito regret` saves exactly these
+ * per row so a saved run can be rescored, and reading a new one must fail the
+ * type check there rather than rescore on a field the run never kept.
+ * @param {{ answers: any, signals: Pick<ReturnType<typeof signalsFrom>, "ax" | "containment" | "candidates" | "riskPaths"> }} input
  */
 export function scoreDecision({ answers, signals }) {
   const ax = signals.ax;
@@ -535,6 +549,9 @@ export async function generateRoute(request, options = {}) {
   }
 
   const scoring = scoreDecision({ answers: jev.answers, signals });
+  // The tier the repository alone would give, so a caller can see how far the
+  // request read moved it, and a decision log can keep both halves.
+  const neutral = scoreDecision({ answers: NEUTRAL_ANSWERS, signals });
 
   return {
     ok: true,
@@ -547,6 +564,7 @@ export async function generateRoute(request, options = {}) {
     tier: scoring.tier,
     advisory: true,
     scoring,
+    deterministic: { tier: neutral.tier, route: neutral.route },
     model: jev,
     signals,
     costUsd: priceJevCall(jev.billableTokens),

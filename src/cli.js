@@ -45,7 +45,9 @@ const commandHandlers = {
   ax: handleAx,
   route: handleRoute,
   converge: handleConverge,
+  attest: handleAttest,
   calibrate: handleCalibrate,
+  regret: handleRegret,
   dashboard: handleDashboard,
   telemetry: handleTelemetry,
   pass: handlePass,
@@ -683,6 +685,109 @@ async function handlePassPr(parsed) {
 // local gate (no --pr) and to `pass-pr` for the GitHub gate (--pr <selector>),
 // mirroring the review_gate MCP tool's local-vs-PR dispatch. `pass` and
 // `pass-pr` remain available as legacy aliases.
+/**
+ * `otito attest [repo] --verdict file --merge sha [...]` appends a hash-chained
+ * record to the repository's audit ledger; `otito attest [repo] --verify`
+ * recomputes the whole chain and exits 1 if any record was altered.
+ * @param {CliArgs} parsed
+ */
+async function handleAttest(parsed) {
+  const { appendAttestation, formatAttested, formatVerify, resolveLedgerPath, verifyLedger } = await import("./lib/attest.js");
+  const repoPath = parsed.flags.path ?? parsed.positionals[0] ?? ".";
+  const ledgerPath = resolveLedgerPath({ ledger: parsed.flags.ledger, path: repoPath });
+
+  if (parsed.flags.verify) {
+    const result = verifyLedger(ledgerPath);
+    if (!result.ok) process.exitCode = 1;
+    if (parsed.flags.json) {
+      printJson(result);
+      return;
+    }
+    printText(formatVerify(result));
+    return;
+  }
+
+  if (!parsed.flags.verdict || parsed.flags.verdict === true) {
+    throw new Error("attest requires --verdict <file> (from `otito review --json`) and --merge <sha>, or --verify");
+  }
+  const verdict = JSON.parse(readFileSync(String(parsed.flags.verdict), "utf8"));
+  const record = appendAttestation({
+    ledgerPath,
+    verdict,
+    merge: String(parsed.flags.merge ?? ""),
+    prev: parsed.flags.prev === undefined ? undefined : String(parsed.flags.prev),
+    pr: parsed.flags.pr === undefined ? null : String(parsed.flags.pr),
+    author: parsed.flags.author === undefined ? undefined : String(parsed.flags.author),
+    committed: parsed.flags.committed === undefined ? null : String(parsed.flags.committed),
+  });
+  if (parsed.flags.json) {
+    printJson({ ok: true, ledger: ledgerPath, record });
+    return;
+  }
+  printText(formatAttested(record));
+}
+
+/**
+ * `otito regret <repo>` grades the router's tier against the repository's own
+ * history: replay commits, recompute the tier from the parent tree, join to
+ * the same `repaired` outcome calibrate uses. Offline unless a key is set;
+ * `--offline` keeps it keyless either way. `--rescore <run.json>` grades the
+ * current arithmetic against a saved run's answers instead of replaying.
+ * @param {CliArgs} parsed
+ */
+async function handleRegret(parsed) {
+  const { formatRegretMarkdown, generateRegret, rescoreRegret } = await import("./lib/regret.js");
+  const quiet = parsed.flags.quiet === true;
+  /** @type {Record<string, any>} */
+  let data;
+  try {
+    const rescore = parsed.flags.rescore;
+    if (rescore === true) {
+      throw new Error("--rescore needs the path of a saved `otito regret --json` run");
+    }
+    data =
+      rescore === undefined
+        ? await generateRegret(parsed.positionals[0] ?? parsed.flags.path ?? ".", {
+            window: parsed.flags.window,
+            minSample: parsed.flags.min_sample,
+            since: parsed.flags.since,
+            max: parsed.flags.max,
+            top: parsed.flags.top,
+            offline: parsed.flags.offline === true,
+            // Progress goes to stderr so `--json` on stdout stays parseable.
+            onProgress: quiet ? undefined : ({ done, total, sha }) => process.stderr.write(`regret: ${done}/${total} ${sha.slice(0, 7)}\n`),
+          })
+        : // Nothing is replayed or called: the saved rows carry what the arithmetic reads.
+          rescoreRegret(JSON.parse(readFileSync(String(rescore), "utf8")));
+  } catch (error) {
+    // The replay has already removed its worktree; exit the way a shell
+    // expects an interrupted command to, not as a failed one.
+    const signal = /** @type {any} */ (error)?.signal;
+    if (signal === "SIGINT" || signal === "SIGTERM") {
+      process.stderr.write(`otito: regret interrupted by ${signal}; the replay worktree was removed\n`);
+      process.exit(signal === "SIGTERM" ? 143 : 130);
+    }
+    throw error;
+  }
+  noteResult(data);
+
+  if (parsed.flags.json) {
+    printJson(data);
+    return;
+  }
+
+  if (parsed.flags.out) {
+    const artifact = writeArtifact(parsed.flags.out, formatRegretMarkdown(data));
+    printText(`Route regret written: ${artifact.path}`);
+    return;
+  }
+
+  await printDocument(parsed, formatRegretMarkdown(data), {
+    title: `ROUTE REGRET   ${data.repo?.name ?? ""}`,
+    glyph: "\u{1F4C9}",
+  });
+}
+
 /** @param {CliArgs} parsed */
 async function handleGate(parsed) {
   const selector = parsed.flags.pr;

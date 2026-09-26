@@ -93,10 +93,12 @@ pattern, and it is the same division of labour otito already draws between
 evidence and verdict.
 
 Score `criteria` is an **ordered list**, not an object, index 0 is level 0.
-Noul answers carry no `confidence`, only Score and Choice do, so the router's
-confidence floor reads the weaker of the two Score answers. The offline
-estimator reports `null` for both: it has a shape, not a measurement, and the
-floor is a fail-safe on a measured number rather than a default.
+Noul answers carry no `confidence`, only Score and Choice do, so the router
+reports the weaker of the two Score confidences, for a reader. It is a display
+threshold only, and not a routing input: a spread answer already pays through
+its own score term, and reading confidence as a second input escalated 67% of
+requests on this repository (see the otito dogfood below). The offline estimator
+reports `null`: it has a shape, not a measurement.
 
 ### The arithmetic
 
@@ -123,11 +125,22 @@ the repository has no checkout and no auth controller, so `add refund handling
 to checkout` ranks `evals/fixtures/shop-api/.../checkout.service.ts` first and
 used to escalate to premium on evidence from a corpus that ships nothing.
 
+### What the call carries
+
+Every call goes out under a `user-agent` of `otito/<version>`, so TypeSafe can
+tell Otito's traffic from a hand-written client. The tag holds the client name
+and version only: no user, no repository, no key. The body is the state
+described above and the questions; file contents never leave the machine.
+
 ### Cost and latency
 
-Jev bills input only, at $0.042/Mtok. Measured on this corpus: **728 to 845 input
-tokens, $0.000019 to $0.000034 per decision, 534 to 764 ms.** The money is a rounding
-error against one premium turn. Latency is the budget that binds, and otito's
+Jev bills input only, at $0.042/Mtok. Measured on this repository on 2026-09-26
+against `jev-1.13.0`, with the request read folded into the same call: **2,059 to
+2,165 input tokens, $0.000086 to $0.000091 per decision, 291 to 323 ms.** A
+`context --online` read at the 24-file cap is 2,827 tokens, $0.000119 (below).
+The pre-read figure this section used to print, 728 to 845 tokens, is 2.6× lower
+than the call that ships today. The money is a rounding error against one
+premium turn. Latency is the budget that binds, and otito's
 own half costs more than Jev's, about 5s, because `generateAxScore` recomputes
 the impact pass the router already ran. A real `otito route` should compute
 impact once.
@@ -265,7 +278,9 @@ session and **binds the subagent**, and says so in as many words — claiming th
 host switched models when it only recommended a tier is an anti-pattern the
 skill names.
 
-Wire it up per repository, in `.claude/settings.local.json`:
+Wire it up once for every repository in `~/.claude/settings.json`, or for one
+repository in its `.claude/settings.local.json`. Not both: a prompt would route
+twice and be logged twice.
 
 ```json
 {
@@ -302,6 +317,31 @@ subagent.
 Keying is the same as `otito route`: with `TYPESAFE_API_KEY` set it asks Jev,
 and without one it falls back to the offline estimate, which is weaker but free
 and needs no network.
+
+**It keeps its decision.** A tier printed as context is gone when the turn
+ends, and a router can only be graded against decisions that were kept. So
+every routed prompt leaves one line in `~/.otito/route-decisions.jsonl`
+(`OTITO_ROUTE_LOG` moves it, `OTITO_ROUTE_LOG=off` keeps nothing). The line
+never holds the prompt, only its hash, and never leaves the machine.
+
+| Field | Why it is there |
+| --- | --- |
+| `sessionId`, `ts`, `promptHash`, `promptChars` | joins the decision to the prompt in the session transcript, which holds everything else: the prompts in order, interruptions, the assistant's edits |
+| `repo`, `root`, `branch`, `head` | the head at prompt time names the change: the next commit on that branch whose first parent is `head`, for the `repaired` join later |
+| `tiers`, `routes` per variant (`deterministic`, and `offline` or `jev`) | what each half of the router said; `otito route --json` now reports `deterministic` beside the scored tier |
+| `signals`, `answers`, `modelRouteEngineVersion` | exactly what `otito regret --rescore` reads, so a live corpus re-tiers under a new arithmetic the way a frozen run does |
+| `hostModel` | the only tier the hook actuates, through a subagent launch |
+
+The caveat the log does not remove: the tier the session ran on stays
+unknown, and no hook can learn it.
+
+`node scripts/hooks/route-outcomes.mjs` joins the log to the transcripts and
+grades every variant per tier on two same-session outcomes, with regret's
+minimum-sample rule and intervals: `corrected` (the next prompt inside the hour
+is an interruption or opens by pushing back) and `reworked` (the assistant's
+next turn edits a file this turn edited). Both were audited before they were
+written, on twenty days of this machine's transcripts, and the audit is the
+reason they carry the caveats they print; it is in the next section.
 
 ## Dogfood, bashbop-event-web, 2026-09-19
 
@@ -440,11 +480,479 @@ writes about `inferRisk`, and it applies here with no discount:
 
 So the router ships **advisory**: it prints a decision and a recommended tier,
 and it does not pick a model for you. Promoting it past advisory needs the same
-treatment `otito calibrate` gives the gate, replay the repository's history,
+treatment `otito calibrate` gives the gate: replay the repository's history,
 recompute the tier from the state as it was, and join to outcomes. The metric is
-not accuracy. It is **regret**: changes routed cheap that ended in a revert or a
-repair, weighed against the spend avoided. A router with zero regret and zero
-savings is the table above.
+not accuracy. It is **regret**: a change routed cheap that was repaired, by a
+fix or a revert, within the outcome window. It is never a saving, because otito
+does not know whether a host switched models.
+
+`otito regret <repo>` runs that backtest. For each commit that is neither a
+fix nor a release (a `chore(release): 2.26.5 [skip ci]`, a `chore: bump version
+to 1.4.0`: tooling wrote it, so no router saw a request) it checks the
+parent tree out into a temporary worktree, scores the commit subject as the
+request, and grades three tiers side by side: the deterministic half alone (AX,
+containment and the bumps, every model term at zero), the shipped offline
+heuristic, and the Jev read when a key is present. The deterministic tier is
+the cheapest the router can give a request, since a model read can only move
+it toward premium. Outcomes are the same line-overlap `repaired` join calibrate
+uses, with the same minimum-sample rule applied to every published rate, the
+base rate included; each rate carries a Wilson 95% interval, and two rates
+whose intervals overlap are not shown to differ. A commit younger than the
+window is censored rather than graded as unrepaired. Offline it is a pure
+function of repository state with a receipt; with a key the model's answers
+are not replayable and the receipt says so.
+
+```bash
+otito regret . --window 30 --max 150 --offline   # keyless, replayable
+otito regret . --window 30 --max 150             # adds the jev variant on your key
+```
+
+### Measured, otito, 2026-09-26
+
+The 150 most recent gradable non-fix commits of this repository (20 of them
+docs-only), replayed against their parents; 47 younger commits censored, 30-day
+window, minimum sample 30, `jev-1.13.0`. Receipts: `regret_4175d2b39031`
+(offline, replayable) and `regret_40d8924d473b` (with the model; 150 calls,
+$0.013, not replayable). Base rate: 17.3% of commits were repaired within the
+window (26 of 150; 95% interval 12.1% to 24.2%).
+
+| Variant | cheap | mid | premium | Ordered | Contradicted |
+| --- | --- | --- | --- | --- | --- |
+| deterministic | 120 · 17.5% (11.7 to 25.3) | 30 · 16.7% (7.3 to 33.6) | 0 | unknown | 21 of 120 (17.5%) |
+| offline | 69 · 20.3% (12.5 to 31.2) | 81 · 14.8% (8.7 to 24.1) | 0 | unknown | 14 of 69 (20.3%) |
+| jev | 34 · 14.7% (6.4 to 30.1) | 112 · 17.9% (11.9 to 26.0) | 4 · withheld | unknown | 5 of 34 (14.7%) |
+
+Each cell is commits routed to that tier, the share of them repaired, and the
+Wilson 95% interval. _Ordered_ asks whether cheap < mid < premium, and is only
+claimed when every tier clears the minimum sample. _Contradicted_ is the regret
+count: routed cheap, then repaired.
+
+What it says, plainly:
+
+- **No variant is shown to order outcomes.** Every interval overlaps every
+  other, and no variant routes premium often enough to grade the top tier at
+  all: the deterministic and offline halves never reach it, and the model read
+  reaches it four times in 150.
+- **The deterministic half is the base rate.** It puts four fifths of commits
+  in the cheap lane, and those are repaired as often as the rest.
+- **The offline heuristic runs the wrong way, within noise.** The commits it
+  routed cheap were repaired more often than the ones it routed mid; the
+  intervals overlap, so this is not a finding, but it is not a reason to trust
+  the keyless tier either.
+- **The model read runs the right way, within noise.** Its cheap lane has the
+  lowest repair rate of the three (14.7%), and its answers now separate their
+  inputs: specificity ranged 0.02 to 0.88 (stdev 0.13), blast radius 0.01 to
+  0.97 (0.23), novelty 0.05 to 0.68 (0.17). But the arithmetic still funnels
+  three quarters of commits into `mid`, so most of that spread never reaches
+  the tier, and 34 cheap commits cannot show a difference this size.
+
+This is the number the router had been missing, and it is why `route` stays
+advisory, why no host integration turns it on by default, and why no partner
+claim rests on it. The next change to the router is the arithmetic that turns
+spread answers into a tier, and it is graded under the bar below before it
+ships. One repository is not a sample of repositories; the caveats the command
+prints apply in full.
+
+### Grading the next arithmetic
+
+Jev's answers are not replayable: run twice against the same corpus they moved
+by up to 0.05. Two versions of the arithmetic graded on two runs therefore
+differ in the arithmetic **and** in however far the model drifted between the
+runs, and a change to the arithmetic cannot be told apart from noise in the
+model. So each row of a regret run keeps the signals and the exact answers its
+tiers were scored from, and `--rescore` applies the current arithmetic to a
+saved run without checking anything out or calling anything:
+
+```bash
+otito regret . --json > run.json          # once, with the key: the answers are frozen here
+otito regret --rescore run.json           # any number of times: this version's arithmetic, same answers
+```
+
+The rescore carries its own receipt, names the run it read in
+`method.rescoredFrom`, and keeps that run's `replayable: false`: rescoring
+does not make a model's answers reproducible, it only stops them from moving.
+Runs saved before the rows kept their inputs (regret 0.2.0) are refused
+rather than rescored on rounded answers, since a route one rounding from a
+band edge changes tier.
+
+**The bar, written before any candidate was scored.** A new arithmetic
+replaces the shipped one only if, rescored on the frozen runs below:
+
+1. **It orders outcomes.** On both bashbop repositories, for the `jev` and
+   `offline` variants, every tier clears the minimum sample, cheap < mid <
+   premium, and the cheap and premium intervals do not overlap.
+2. **The model earns its call.** Under the current invariant a model read can
+   only move a tier toward premium, so the model's cheap lane is a subset of
+   the deterministic one. On both bashbop repositories the `jev` cheap lane is
+   repaired less often than the deterministic cheap lane over the same rows.
+   If it is not, the model is removing commits from the cheap lane without
+   making it any cleaner.
+3. **Regret does not rise.** On every frozen run, for both variants, the
+   cheap lane's repair rate is no higher than the shipped arithmetic's on
+   that run.
+4. **Tune on two, confirm on one.** Candidates are compared on bashbop-api
+   and otito. bashbop-event-web, the run with the most outcomes, is scored
+   once, on the candidate chosen, and a failure there is a failure.
+5. **Nothing it does not own moves.** The `no evidence` ceiling and the
+   `risk path` bump are unchanged, `modelRouteEngineVersion` is bumped, and
+   the change prints the before and after tables with both receipts.
+
+**The frozen runs.** Each repository's whole history, replayed on 2026-09-26:
+30-day window, minimum sample 30, `jev-1.13.0`, 2,385 answered calls and 2
+failed, $0.20 in all. The runs are kept under `.otito/runs/`, outside the
+repository, because two of the three are private and every row carries a
+commit subject; the receipts identify them.
+
+| Run | Graded | Base rate | Receipt |
+| --- | --: | --- | --- |
+| otito | 157 | 19.7% (14.3 to 26.7) | `regret_7d94fd0a73bd` |
+| bashbop-api | 1,214 | 24.7% (22.4 to 27.2) | `regret_a4499a13f0ee` |
+| bashbop-event-web | 1,016 | 46.9% (43.8 to 49.9) | `regret_9582de4ba43a` |
+
+Rescored with the shipped arithmetic, every saved tier and route comes back
+unchanged, 2,387 rows of 2,387. otito's run is too small to grade the top tier,
+as in the section above. The two bashbop runs are not:
+
+| Run | Variant | cheap | mid | premium | Ordered |
+| --- | --- | --- | --- | --- | --- |
+| bashbop-api | deterministic | 474 · 10.1% (7.7 to 13.2) | 312 · 19.6% (15.5 to 24.3) | 428 · 44.6% (40.0 to 49.4) | yes |
+| bashbop-api | offline | 129 · 22.5% (16.1 to 30.4) | 546 · 10.1% (7.8 to 12.9) | 539 · 40.1% (36.0 to 44.3) | **no** |
+| bashbop-api | jev | 186 · 4.8% (2.6 to 8.9) | 398 · 12.1% (9.2 to 15.6) | 630 · 38.6% (34.9 to 42.4) | yes |
+| bashbop-event-web | deterministic | 233 · 33.5% (27.7 to 39.8) | 463 · 51.2% (46.6 to 55.7) | 320 · 50.3% (44.9 to 55.8) | no |
+| bashbop-event-web | offline | 97 · 24.7% (17.2 to 34.2) | 425 · 46.1% (41.4 to 50.9) | 494 · 51.8% (47.4 to 56.2) | yes |
+| bashbop-event-web | jev | 8 · withheld | 352 · 37.5% (32.6 to 42.7) | 656 · 52.1% (48.3 to 55.9) | unknown |
+
+The shipped arithmetic fails criterion 1 twice (the keyless tier on
+bashbop-api, the model tier on bashbop-event-web) and criterion 2 once
+(bashbop-event-web). What that looks like:
+
+- **The keyless tier runs the wrong way on bashbop-api, and it is not
+  noise.** _Superseded the same day: the lane it moved out of `cheap` was
+  release commits, see "Re-graded without release commits" below._ Its cheap lane is repaired 22.5% of the time and its mid lane
+  10.1%, and the intervals do not overlap. Split the deterministic cheap lane
+  by what the heuristic did with it: the 345 commits it moved out were
+  repaired 5.5% (3.6 to 8.4) of the time, the 129 it kept 22.5%. It escalates
+  the safe commits and keeps the risky ones cheap.
+- **The model read orders bashbop-api, and its escalations are right.** Split
+  the same way, the 288 commits it moved out of the cheap lane were repaired
+  13.5% (10.1 to 18.0) of the time, the 186 it kept 4.8% (2.6 to 8.9). No
+  model term in this document had been shown to separate outcomes before.
+- **On bashbop-event-web the model read cannot be graded, because it almost
+  never says cheap:** 8 commits of 1,016, against 656 premium. Its AX runs
+  lower than bashbop-api's (median 66 against 80) and a typical read costs a
+  little more of it (a median 31% of AX against 28%), so almost nothing
+  clears the cheap band.
+- **A shorter window hid the inversion.** Replayed over about the last year
+  only (440 and 398 commits, since late September 2025), the keyless tier was
+  ordered on both repositories. A tier that is ordered over one window and
+  inverted over another is not yet a tier.
+
+Neither split is printed by the command; both come from the rows the frozen
+runs saved. The next arithmetic therefore has two jobs the bar can see: stop
+the keyless terms inverting bashbop-api's cheap lane, and let a read that
+separates outcomes reach the cheap band in a repository like
+bashbop-event-web, without giving back what it does on bashbop-api.
+
+### Graded, 2026-09-26: a centre for the model terms
+
+The shipped arithmetic charges every model term from zero: a read that names
+the target costs nothing, and no read can put a request above AX. The first
+candidate under the bar lets it. Each Score term is charged from a **centre**
+instead of from zero, so a read at the easy end of a question earns a share
+of AX back and a read past the centre costs one. Shares, bands, the
+containment bonus and both bumps are exactly as shipped:
+
+```
+route = clamp(AX x (1 - 0.25 x (specificity/2  - c)
+                    - 0.20 x (blast_radius/2 - c)
+                    - 0.15 x novelty
+                    + bonus), 0, 100)
+```
+
+`c = 0` is the shipped arithmetic. Novelty keeps its zero, because a request
+that needs no new design is the default rather than a discount. The
+deterministic variant sits at the centre, so its tiers do not move and the
+tables stay comparable. "Confident" is not a separate gate: a read earns the
+whole of the cheap-ward share only when its distribution puts most of its
+mass on the easiest level, which is what the expectation already measures.
+
+Swept on the tuning runs, bashbop-api and otito, rescored on the frozen
+answers. Cheap lanes only, as commits · repaired; every centre above zero
+orders both variants on bashbop-api with cheap and premium apart:
+
+| c | bashbop-api · offline | bashbop-api · jev | otito · offline | otito · jev | Bar, tuning runs |
+| --- | --- | --- | --- | --- | --- |
+| 0, shipped | 129 · 22.5% | 186 · 4.8% | 72 · 22.2% | 35 · 14.3% | fails 1: keyless inverted |
+| 0.1 | 326 · 11.3% | 332 · 4.2% | 103 · 21.4% | 53 · 15.1% | fails 3: otito jev |
+| 0.2 | 424 · 10.8% | 384 · 4.7% | 115 · 19.1% | 73 · 12.3% | **passes** |
+| 0.25 | 449 · 10.5% | 396 · 5.3% | 121 · 20.7% | 83 · 15.7% | fails 3: both jev |
+| 0.5, symmetric | 509 · 11.2% | 469 · 9.8% | 151 · 19.9% | 124 · 18.5% | fails 3: both jev |
+
+Two things the sweep says on its own. **Every centre above zero fixes the
+keyless inversion on bashbop-api**: the offline cheap lane goes from 129
+commits at 22.5% to 424 at 10.8%, ordered, cheap and premium apart. The term
+that inverted it was blast radius, which the heuristic derives from how many
+top-level areas the candidate files span, and on this repository the commits
+that span several are the clean ones (the 345 it moved out of the cheap lane
+were repaired 5.5% of the time). **The symmetric centre makes the model read
+worth nothing at the tier level.** At `c = 0.5` the Jev cheap lane on
+bashbop-api is 469 commits at 9.8%, against 474 at 10.1% with no model at
+all: the lane the read carves out is the deterministic lane. The read's value
+is in the other direction. Of the 312 commits the deterministic half puts in
+`mid` on bashbop-api, Jev puts most of the mass on "names the target" for
+three and on "one file" for three, so there is almost nothing for a
+cheap-ward push to lift. What a centre does on this corpus is stop charging
+for reads that are only mildly unspecific, and those are clean: the 59
+deterministic-cheap commits Jev read below level 1 on both Score questions
+were repaired once.
+
+`c = 0.2`, the one centre that passes, is a knife edge. Its neighbours fail
+criterion 3 by amounts inside every interval, 15.1% against 14.3% over 53
+otito commits and 5.3% against 4.8% on bashbop-api. That is the shape of a fit
+to noise, and it is why the bar keeps a run back.
+
+**Confirmed once on bashbop-event-web, and failed.**
+
+| Variant | cheap | mid | premium | Ordered | Criterion 3 |
+| --- | --- | --- | --- | --- | --- |
+| offline, shipped | 97 · 24.7% (17.2 to 34.2) | 425 · 46.1% | 494 · 51.8% | yes | |
+| offline, c = 0.2 | 177 · 28.8% (22.6 to 35.9) | 463 · 50.1% | 376 · 51.3% | yes | 28.8% > 24.7%, **fails** |
+| jev, shipped | 8 · withheld | 352 · 37.5% | 656 · 52.1% | unknown | |
+| jev, c = 0.2 | 44 · 31.8% (20.0 to 46.6) | 478 · 40.8% | 494 · 54.0% | yes | 31.8% > 25.0%, **fails** |
+
+Criteria 1 and 2 pass: for the first time on this repository the model tier
+is gradable and ordered, cheap and premium apart, and its cheap lane (31.8%)
+is cleaner than the deterministic one (33.5%). Criterion 3 fails for both
+variants. Both failures are inside the intervals, and the model's reference
+is a rate over 8 commits that the command itself would withhold, which is a
+defect in how the criterion was written rather than a finding. The bar stands
+as written and the candidate does not ship. It also could not have done what
+it was built for: the keyless variant lifted no commit out of the
+deterministic `mid` lane and the model lifted one. At `c = 0.2` a read earns
+back at most 9% of AX, and all of it only when both Score answers sit at the
+easy end, which on these runs almost none do.
+
+What this leaves:
+
+- The shipped one-sided arithmetic stays. Its keyless variant is inverted on
+  bashbop-api, and the change that fixes it cannot be told from noise on the
+  confirmation run under the bar as written.
+- A cheap-ward push has nothing to act on in this backtest. Whether that is a
+  property of the router or of commit subjects as request proxies is
+  unmeasured: a subject is written after the change and rarely names the file
+  it changed, where a live request often does.
+- Any further candidate needs a confirmation run this one has not seen.
+  bashbop-event-web has been scored and cannot confirm again.
+- On bashbop-api, 9 of the 16 dependency bumps count as repaired, against
+  24.3% of everything else, which is consistent with a later bump touching
+  the same lockfile lines and the join reading it as a repair. That is the
+  calibration thesis's `configuration` finding on the outcome side, and how
+  much of any tier's rate it carries is unmeasured.
+
+The sweep, the buckets and the confirmation are reproducible from the frozen
+runs with `rescoreRegret(saved, { score })`; the harness and its output are
+kept beside the runs.
+
+### Re-graded, 2026-09-26: without release commits
+
+The keyless inversion above was chased to its rows and turned out not to be
+about blast radius. Split bashbop-api's deterministic cheap lane by the
+heuristic's blast score and the lane falls into two pieces: 353 of its 474
+commits have exactly five candidate files, a blast score of 1.2 or 1.6, and
+were repaired 0.9% of the time; the other 121 were repaired 36%. The 353
+are `chore(release): N [skip ci]`, written by semantic-release after every
+merge. Across the run, 504 of 1,214 graded commits were written by tooling
+(463 of those, and 37 `chore: Update schema snapshot after merge [skip ci]`),
+4 of them repaired. No one asks a model for a release commit, and the join almost
+never reads one as repaired, so they flattered whichever tier they landed in:
+the deterministic half put 365 of them in `cheap`, which is the whole of
+that lane's 10.1%, and the keyless heuristic moved them to `mid`
+because their candidates (a lockfile, a changelog, a manifest) span areas,
+which is the whole of the "inversion". bashbop-event-web has 82
+`chore: bump version to N` commits with the same shape, and otito 28 release
+commits of its own.
+
+`otito regret` 0.4.0 leaves release commits out of the corpus the way it
+already leaves fix commits out: a subject marked `[skip ci]`, a bare version,
+or a chore, build, ci or release subject that names a version
+(`RELEASE_SUBJECT` in `regret.js`). A subject that merely mentions a release
+(`release: issue (#277)`) is a request and stays. The count is printed on the
+corpus line, and `--rescore` applies the rule to a run saved before it, so the
+frozen runs re-grade without a model call. Rescored, shipped arithmetic:
+
+| Run | Graded | Base rate | Variant | cheap | mid | premium | Ordered |
+| --- | --: | --- | --- | --- | --- | --- | --- |
+| bashbop-api | 710 | 41.7% (38.1 to 45.4) | deterministic | 109 · 40.4% (31.6 to 49.8) | 173 · 35.3% (28.5 to 42.6) | 428 · 44.6% (40.0 to 49.4) | no |
+| bashbop-api | | | offline | 59 · 45.8% (33.7 to 58.3) | 156 · 34.0% (27.0 to 41.7) | 495 · 43.6% (39.3 to 48.0) | no |
+| bashbop-api | | | jev | 20 · withheld | 121 · 38.0% (29.9 to 46.9) | 569 · 42.7% (38.7 to 46.8) | unknown |
+| bashbop-event-web | 934 | 50.5% (47.3 to 53.7) | deterministic | 168 · 45.2% (37.9 to 52.8) | 446 · 52.7% (48.1 to 57.3) | 320 · 50.3% (44.9 to 55.8) | no |
+| bashbop-event-web | | | offline | 52 · 44.2% (31.6 to 57.7) | 390 · 49.5% (44.6 to 54.4) | 492 · 52.0% (47.6 to 56.4) | yes, overlapping |
+| bashbop-event-web | | | jev | 8 · withheld | 273 · 46.9% (41.1 to 52.8) | 653 · 52.4% (48.5 to 56.2) | unknown |
+| otito | 129 | 18.6% (12.8 to 26.2) | deterministic | 98 · 18.4% (11.9 to 27.2) | 30 · 16.7% (7.3 to 33.6) | 1 · withheld | unknown |
+| otito | | | offline | 63 · 17.5% (10.0 to 28.6) | 65 · 18.5% (10.9 to 29.6) | 1 · withheld | unknown |
+| otito | | | jev | 29 · withheld | 94 · 20.2% (13.3 to 29.4) | 4 · withheld | unknown |
+
+What the corrected corpus says:
+
+- **Nothing orders outcomes on either bashbop repository.** Every cheap lane
+  sits inside its base rate's interval, and the deterministic half is not
+  ordered on bashbop-api after all: the "yes" in the earlier table was the
+  release commits. The model's cheap lane on bashbop-api shrinks from 186
+  commits to 20, so the finding that "the model read orders bashbop-api and
+  its escalations are right" was 166 release commits too, and is withdrawn.
+- **The base rates are not what the earlier tables said.** bashbop-api's
+  human commits are repaired 41.7% of the time within 30 days, not 24.7%, and
+  bashbop-event-web's 50.5%. At those rates the `repaired` proxy is close to a
+  coin flip, and a tier would need a large lane to show a difference through
+  it.
+- **The centre candidate's pass does not survive.** Re-swept on the corrected
+  tuning runs, no centre from 0.1 to 0.5 clears criterion 1 or 2 on
+  bashbop-api, and `c = 0.2` fails criterion 3 on otito and on
+  bashbop-event-web. Its confirmation failure stands for a further reason.
+- **One lane moves the right way, on the run too small to grade it.** On
+  otito the model's cheap lane under a centre is repaired 4.9% (41 commits,
+  `c = 0.1`) to 5.8% (52, `c = 0.2`) against 23 to 26% for its mid lane; the
+  intervals separate at `c = 0.2`. otito's premium lane is one commit, so the
+  bar cannot see this, and it is one repository.
+
+The bar as written cannot currently be met on these runs: criterion 1 needs
+the model's cheap lane to clear the minimum sample on both bashbop
+repositories, and under the shipped arithmetic it is 20 and 8 commits. The
+next candidate therefore has a prior question to answer before any arithmetic:
+whether the `repaired` join, at 42 to 50% of human commits, is an outcome a
+tier can be graded against on these repositories at all. Dependency bumps
+(the calibration thesis's `configuration` finding), squash merges titled
+`Develop (#451)` that match no file and route `premium` on the no-evidence
+ceiling, and a 30-day line-overlap window on a busy monorepo are the three
+places to look. Until then `route` stays advisory, and the earlier sections
+stand as the record of what was measured on the corpus that included release
+commits.
+
+### Audited, 2026-09-26: the join
+
+The prior question was put to the frozen runs offline, on the rows plus git,
+with no model call: is `repaired` an outcome a tier can be graded against on
+these repositories, or is the join itself what the tables are measuring?
+Four cuts, all on the corpus without release commits, under the shipped
+arithmetic. The scripts, the per-fix blame tables and every output are beside
+the frozen runs in `.otito/runs/2026-09-26/tier-arithmetic/join-audit/`
+(local only, like the runs).
+
+- **The join reproduces.** A fresh blame pass at each repository's frozen head
+  gives the frozen `repairedAfter` on every row of all three runs.
+- **Shorter windows.** Rescored at 7 and 14 days from the stored
+  `repairedAfter`, the base rates fall as they must (bashbop-api 41.7% at 30
+  days, 34.6% at 14, 26.6% at 7) and the order of the tiers does not move. On
+  bashbop-api the keyless cheap lane is the most-repaired tier at every
+  window. The 30-day window was not counting churn a shorter one removes.
+- **A stricter join.** Eight rules: at least 2 or 3 overlapping lines instead
+  of 1, fix commits capped at 10 or 5 files or 200 changed lines, and their
+  combinations. The strictest halves the base rate (bashbop-api 41.7% to
+  15.8%, bashbop-event-web 50.5% to 17.1%) and orders nothing new. One cell
+  of 81 per repository separates: bashbop-event-web, 14 days, fixes of at most
+  5 files, the deterministic half, cheap 14.9% (10.3 to 21.0) against premium
+  25.9% (21.4 to 31.0). The keyless heuristic at the same cut is inverted
+  (cheap 17.3%, mid 16.7%), and the bar grades the model variants, not the
+  deterministic half. It is noise.
+- **Who repairs whom.** On the bashbop repositories repairs are not a few
+  sweeping fixes: bashbop-api's 296 repairs come from 204 distinct earliest
+  fixes and bashbop-event-web's 472 from 284, a median of one row each. The
+  ten largest fixes by files touched account for 6% and 11% of repairs, and
+  dropping them leaves every tier where it was (bashbop-api cheap 36.7%, mid
+  35.3%, premium 41.1%). otito is the opposite case: 21 of its 24 repairs are
+  ten sweeping fixes, and a fix of at most 5 files with at least 2 overlapping
+  lines repairs nothing, so its proxy measures those sweeps. otito was already
+  ungradable, with one premium commit.
+- **Fixes the rule did not label.** `FIX_SUBJECT` matched `fix`, `hotfix`,
+  `bugfix` and `revert`, and the bashbop histories write `hot-fix(...)`,
+  `hot-fit`, `bug(...)`, `patch` and `fixes`: 79 rows on bashbop-api and 40 on
+  bashbop-event-web were fixes graded as requests and invisible as repairs.
+  Blamed as outcomes they join 6 and 9 more repairs and move no tier. The rule
+  is widened in 0.4.1 because it was wrong, not because it changes the answer;
+  `--rescore` drops the rows it now reads as fixes and says that their own
+  repairs need a replay to join.
+- **The two remaining suspects.** There are no dependency bumps on either
+  bashbop repository in this corpus. `Develop (#N)` squash merges are 24 and 7
+  rows, almost all routed `premium`, and leaving them out changes nothing. On
+  otito the 17 dependency bumps do what the release commits did (16 of 17
+  routed cheap, 1 repaired; the keyless cheap lane goes from 17.5% to 21.3%
+  without them), but there is no ordering on otito for a corpus rule to
+  rescue.
+
+Rescored under 0.4.1 (release commits and the newly labelled fixes out):
+
+| Run | Graded | Base rate | Variant | cheap | mid | premium | Ordered |
+| --- | --: | --- | --- | --- | --- | --- | --- |
+| bashbop-api | 631 | 41.2% (37.4 to 45.1) | deterministic | 99 · 39.4% (30.3 to 49.2) | 148 · 35.1% (27.9 to 43.1) | 384 · 44.0% (39.1 to 49.0) | no |
+| bashbop-api | | | offline | 53 · 43.4% (31.0 to 56.7) | 140 · 34.3% (26.9 to 42.5) | 438 · 43.2% (38.6 to 47.8) | no |
+| bashbop-api | | | jev | 17 · withheld | 112 · 39.3% (30.7 to 48.5) | 502 · 42.2% (38.0 to 46.6) | unknown |
+| bashbop-event-web | 894 | 50.0% (46.7 to 53.3) | deterministic | 165 · 44.8% (37.5 to 52.5) | 438 · 52.3% (47.6 to 56.9) | 291 · 49.5% (43.8 to 55.2) | no |
+| bashbop-event-web | | | offline | 50 · 44.0% (31.2 to 57.7) | 383 · 48.8% (43.9 to 53.8) | 461 · 51.6% (47.1 to 56.2) | yes, overlapping |
+| bashbop-event-web | | | jev | 8 · withheld | 268 · 46.6% (40.8 to 52.6) | 618 · 51.8% (47.8 to 55.7) | unknown |
+| otito | 129 | 18.6% (12.8 to 26.2) | unchanged | | | | |
+
+The conclusion is the one worth having before anyone touches the arithmetic
+again: **commit history cannot grade the router on these repositories.** The
+outcome is real, the join is faithful and not dominated by a few fixes, and
+the tiers do not order it at any window, under any stricter join, with or
+without the suspect commits. The exclusions do not earn a corpus rule on this
+evidence. The next evidence has to come from live requests.
+
+What a live request fixes, and what it does not. Every graded row above
+carries two caveats history can never remove: the request is a commit subject
+written after the change, and the corpus is whatever landed, not what a router
+was asked. A decision recorded at prompt time removes both, which is why the
+`route-prompt` hook now keeps one (the section above). It does not remove the
+third: the tier the session ran on stays unknown. And it does not make the
+evidence arrive faster.
+
+### Audited, 2026-09-26: a same-session outcome
+
+The same day, the shorter road was tried: a request routed cheap whose next
+prompt in the session is a correction, an outcome available minutes after the
+request instead of thirty days after the commit. It was audited before the log
+existed, on the corpus that already did: every Claude Code transcript on this
+machine (twenty days, one user, 1,122 prompt records) and the tiers the canvas
+had recorded when the hook ran (376 routed prompts, otito only, since the hook
+was wired in one repository). Evidence beside the frozen runs in
+`.otito/runs/2026-09-26/session-correction/`, local only.
+
+| | count |
+| --- | --: |
+| real requests (not notifications, shell output, slash commands, interruptions, duplicate copies) | 755 |
+| with a follow-up prompt inside the hour | 616 |
+| whose turn edited any file | 143 |
+| with a tier recorded at the time | 84, of which 20 edited a file |
+
+**Pushback**, the next prompt opening with a negation, a complaint, still or
+again, an interruption, or a re-ask: 8.2% of follow-ups. Read one by one they
+are mostly the user fixing their own typo ("i meant commercial"), reporting a
+deploy or environment failure ("DB not working", "not reflecting in
+production"), interrupting to add information, or turn-taking. A handful are
+the model being wrong. **Rework**, the next turn's assistant edits touching a
+file this turn's edits touched: 24 of the 143 editing requests, 16.8%, and
+the samples are a plan file or a migration worked on across consecutive
+prompts. Iteration, not repair. The two labels barely overlap (21 of the 24
+reworked requests read as "moved on"). A **git undo** in the next turn (45
+turns) is stash-and-test workflow, staging fixes, and discards the user asked
+for, not a repair signal either.
+
+With 84 tiered requests every lane is below the minimum sample, so nothing is
+graded. The rate matters more than the count: about seven editing requests a
+day across every repository, about one of them routed cheap, so thirty per
+tier is weeks away and separating two rates at a 10 to 17% base rate is
+months. The outcome arrives in minutes; the corpus that carries it grows no
+faster than commits do. That was the wrong half of the earlier claim that this
+road was fast.
+
+So the hook keeps its decision and `route-outcomes` grades it, with both
+proxies' failure modes printed as caveats, and no number from either is
+published until a lane clears the minimum sample. Neither the commit join nor
+the session read grades the router today. What would: the tier the session
+actually ran on, recorded by the host; an outcome that reads the assistant's
+turn rather than the user's words (tests failing after the turn, an edit
+rejected at the permission prompt), each audited before it counts; and more
+than one user's sessions.
 
 ## References
 

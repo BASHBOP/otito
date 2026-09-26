@@ -13,7 +13,7 @@
 
     Its command-line and package identity is `otito`.
 
-    :material-animation-play: See the [**How It Works** visual walkthrough](assets/otito-how-it-works.html), a layered diagram of the discover → index → context → gate flow.
+    :material-animation-play: See the [**How It Works** visual walkthrough](assets/otito-how-it-works.html): the loop from context before the edit, to a verdict before the merge, to an attestation after it, with every shipped MCP tool in its place.
 
 ---
 
@@ -80,6 +80,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 
 | Document | What it covers |
 | --- | --- |
+| [Local Core, Optional Hosted](./19-local-core-optional-hosted/README.md) | The three core commands, what the optional hosted pieces send and where, and the rules that do not change with a paid plan |
 | [Context Foundation](./01-context-foundation/README.md) | Repository inspection, maps, search, context packs, and harnesses |
 | [MCP and Agents](./02-mcp-agent-workflows/README.md) | MCP tools and agent-facing workflows |
 | [Publishing to npm and the MCP Registry](./02-mcp-agent-workflows/publishing.md) | How Òtítọ́ itself is released |
@@ -138,7 +139,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@3.0.0
+    npm install -g @bashbop/otito@3.1.0
     otito doctor
     otito context "review this change" --path .
     ```
@@ -146,7 +147,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@3.0.0 doctor
+    npx -y @bashbop/otito@3.1.0 doctor
     ```
 
 === "Source Checkout"

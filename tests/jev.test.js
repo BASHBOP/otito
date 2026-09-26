@@ -9,6 +9,7 @@ import {
   interpretRead,
   JEV_API_URL,
   JEV_PER_MTOK,
+  JEV_USER_AGENT,
   MAX_RELEVANCE_FILES,
   pickAnswers,
   priceJevCall,
@@ -108,6 +109,10 @@ test("askSystemOne posts one call with a bearer key and a timeout, and reports u
   );
   assert.equal(sent.url, JEV_API_URL);
   assert.equal(sent.init.headers.authorization, "Bearer test-key");
+  // The call identifies its client and nothing else: no user, repo or key.
+  assert.equal(sent.init.headers["user-agent"], JEV_USER_AGENT);
+  assert.match(JEV_USER_AGENT, /^otito\/\d+\.\d+\.\d+/);
+  assert.deepEqual(Object.keys(sent.init.headers).sort(), ["authorization", "content-type", "user-agent"]);
   assert.ok(sent.init.signal, "a hung vendor call must not hang the tool that made it");
   const body = JSON.parse(sent.init.body);
   assert.deepEqual(body, { state: { request: "q" }, model: "jev-latest", questions: { read_intent: { type: "choice" } } });
