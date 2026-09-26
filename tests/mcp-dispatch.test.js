@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { PassThrough } from "node:stream";
-import { startMcpServer, tools } from "../src/lib/mcp.js";
+import { LEGACY_TOOL_ALIASES, startMcpServer, tools } from "../src/lib/mcp.js";
 import { getAgentTools } from "../src/lib/agent-tools.js";
 import { BUILTIN_HOSTS } from "../src/lib/model-route.js";
 
@@ -1064,6 +1064,14 @@ test("every legacy tool name still dispatches to a sane result via tools/call", 
   assert.ok(findApi.files.every((file) => file.kind === "apiClient"));
 
   if (fs.existsSync(catalogPath)) fs.unlinkSync(catalogPath);
+});
+
+test("docs/02 maps every legacy tool name to the tool it dispatches to", () => {
+  const doc = fs.readFileSync(new URL("../docs/02-mcp-agent-workflows/README.md", import.meta.url), "utf8");
+  const section = doc.split(/^### Legacy tool names$/m)[1]?.split(/^#{1,3} |^---$/m)[0] ?? "";
+  const documented = Object.fromEntries([...section.matchAll(/^\| `(\w+)`\s*\| `(\w+)`/gm)].map(([, legacy, tool]) => [legacy, tool]));
+  const dispatched = Object.fromEntries(Object.entries(LEGACY_TOOL_ALIASES).map(([legacy, alias]) => [legacy, alias.tool]));
+  assert.deepEqual(documented, dispatched);
 });
 
 test("startMcpServer never responds to notifications, including unknown methods", async () => {
