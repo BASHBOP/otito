@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 // Generate docs/assets/otito-how-it-works.html from the canonical tool catalog.
 //
-// The diagram is linked from the docs home page as *the* visual explanation of
-// how otito works, and it was hand-maintained: it drifted for eighteen releases
-// while still advertising a `repo_catalog` tool that no longer exists and
+// The page is linked from the docs home page as *the* visual explanation of
+// how otito works. It was once hand-maintained and drifted for eighteen
+// releases, still advertising a `repo_catalog` tool that no longer existed and
 // omitting `agent_experience` and `convergence_score` entirely.
 //
-// Tool names and CLI invocations now come from `getAgentTools()`, the same
-// catalog the MCP server and `otito agent-tools` are derived from. The LAYOUT
-// table below owns only what a catalog cannot know: which layer a tool belongs
-// in, where it sits, and a one-line blurb short enough for a tooltip.
+// Tool names and CLI invocations come from `getAgentTools()`, the same catalog
+// the MCP server and `otito agent-tools` are derived from. The tables below own
+// only what a catalog cannot know: which phase of the loop a tool belongs to,
+// a one-line sub-label, and a blurb short enough for the detail panel.
 //
 // The generator fails when LAYOUT and the catalog disagree in either direction,
-// so adding or removing an MCP tool forces the diagram to be updated in the
-// same change. `--check` re-renders and diffs against the committed file; it
-// runs in `npm run quality`.
+// so adding or removing an MCP tool forces the page to be updated in the same
+// change. `--check` re-renders and diffs against the committed file; it runs in
+// `npm run quality`.
 //
 // Usage:
 //   node scripts/generate-how-it-works.mjs            # write the file
@@ -25,253 +25,356 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import prettier from "prettier";
 import { getAgentTools } from "../src/lib/agent-tools.js";
-import { SCRIPT_HEAD, SCRIPT_TAIL, STYLE } from "./how-it-works/presentation.js";
+import { FONTS_HREF, SCRIPT, STYLE } from "./how-it-works/presentation.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outputPath = path.join(repoRoot, "docs", "assets", "otito-how-it-works.html");
 
-/** Layer bands, top to bottom. */
-const LAYERS = [
-  { id: "entry", label: "ENTRY", color: "#58a6ff", legend: "Entry surfaces", y: 38, height: 74 },
-  { id: "discover", label: "DISCOVER", color: "#79c0ff", legend: "Discover & index", y: 154, height: 74 },
-  { id: "map", label: "CONTEXT", color: "#d2a8ff", legend: "Context & maps", y: 275, height: 74 },
-  { id: "change", label: "IMPACT", color: "#ffd866", legend: "Change impact", y: 390, height: 88 },
-  { id: "review", label: "REVIEW", color: "#7ee787", legend: "Review & gates", y: 515, height: 82 },
-  { id: "output", label: "OUTPUT", color: "#ffa657", legend: "Evidence", y: 645, height: 72 },
+/**
+ * The loop, top to bottom. `actor` says who does the work in that phase; the
+ * point of the page is that otito is absent from exactly one of them.
+ */
+const PHASES = [
+  {
+    id: "know",
+    index: "01",
+    title: "Know the repository",
+    actor: "otito · reads the checkout",
+    color: "var(--cyan)",
+    sub: "Shape, symbols, commands and ownership, from the code rather than from a rules file. Cached per user; the repository itself is never written to.",
+  },
+  {
+    id: "before",
+    index: "02",
+    title: "Before the edit",
+    actor: "otito · deterministic, with one optional advisory read",
+    color: "var(--teal)",
+    sub: "What the request actually touches, what it will cost an agent, and how much model it deserves. All of it is computed before a token is spent on the change.",
+  },
+  {
+    id: "edit",
+    index: "03",
+    title: "The edit",
+    actor: "the model · through its own harness",
+    color: "var(--violet)",
+    sub: "Otito does not generate code. The agent writes the change in Claude Code, Codex, Cursor, Gemini or any MCP host, calling the tools above through MCP or the CLI.",
+  },
+  {
+    id: "merge",
+    index: "04",
+    title: "Before the merge",
+    actor: "otito · from the diff and the repository, never from the model",
+    color: "var(--green)",
+    sub: "Did the intent happen, did only the intent happen, and is the exact staged tree safe to merge? The verdict recomputes to the same value on any checkout.",
+  },
+  {
+    id: "after",
+    index: "05",
+    title: "After the merge",
+    actor: "CI · otito attest",
+    color: "var(--amber)",
+    sub: "Every merge to main leaves a hash-chained record of what shipped and under which verdict, in your own repository, verifiable by anyone.",
+  },
+  {
+    id: "time",
+    index: "06",
+    title: "Over time",
+    actor: "otito · graded against the repository's own history",
+    color: "var(--slate)",
+    sub: "The risk flags and the router are measured against what this repository actually needed to fix, and decline to answer when the sample is too small.",
+  },
 ];
 
 /**
  * Placement and blurb for every MCP tool. `tool` keys into the catalog: the
- * node's title and its CLI chip are read from there, never written here.
+ * card's title and its CLI chip are read from there, never written here.
  */
 const LAYOUT = [
   {
     id: "inspect",
     tool: "repo_inspect",
-    layer: "discover",
-    label: "inspect",
+    phase: "know",
     sub: "repo facts",
-    cx: 220,
-    r: 34,
-    blurb: "Repository facts: languages, scripts, package managers, entrypoints, git state.",
+    blurb: "Repository facts: languages, scripts, package managers, entrypoints and git state.",
+  },
+  {
+    id: "map",
+    tool: "repo_map",
+    phase: "know",
+    sub: "AST code map",
+    blurb: "AST-backed JSON code map: imports, exports, routes, domains and data access across TS/JS, Go, C#, Python, Java, Ruby and Rust.",
   },
   {
     id: "index",
     tool: "repo_index",
-    layer: "discover",
-    label: "index",
-    sub: "catalog",
-    cx: 550,
-    r: 34,
-    blurb: "Index local repositories into a per-user catalog. dryRun discovers read-only; the inspected repo is never modified.",
+    phase: "know",
+    sub: "per-user catalog",
+    blurb:
+      "Index local repositories into a per-user catalog; dryRun discovers read-only. Markdown is indexed too, so skills and docs pages rank alongside code. The inspected repository is never modified.",
   },
   {
     id: "search",
     tool: "repo_search",
-    layer: "discover",
-    label: "search",
-    sub: "symbols",
-    cx: 880,
-    r: 34,
-    blurb: "Search indexed repos by path, domain, kind, route, imports, exports, and symbols. Omit the query to list the catalog.",
-  },
-
-  {
-    id: "map",
-    tool: "repo_map",
-    layer: "map",
-    label: "map",
-    sub: "AST graph",
-    cx: 165,
-    r: 34,
-    blurb: "AST-backed JSON code map: imports, exports, routes, domains across TS/JS/Go/C#/Python/Java/Ruby/Rust.",
-  },
-  {
-    id: "context",
-    tool: "context_pack",
-    layer: "map",
-    label: "context",
-    sub: "task pack",
-    cx: 415,
-    r: 34,
-    blurb: "Task-aware context packet: primary files, tests, validation commands, token estimates. Run before planning or editing.",
+    phase: "know",
+    sub: "symbols & routes",
+    blurb: "Search indexed repositories by path, domain, kind, route, imports, exports and symbols. Omit the query to list the catalog.",
   },
   {
     id: "harness",
     tool: "repo_harness",
-    layer: "map",
-    label: "harness",
-    sub: "scripts",
-    cx: 685,
-    r: 34,
-    blurb: "Setup, validation, and runtime commands inferred from the repo. The first artifact an agent or CI job should read.",
+    phase: "know",
+    sub: "commands",
+    blurb: "Setup, validation and runtime commands inferred from the repository: the first artifact an agent or CI job should read.",
   },
   {
     id: "workspace",
     tool: "workspace_report",
-    layer: "map",
-    label: "workspace",
+    phase: "know",
     sub: "multi-repo",
-    cx: 935,
-    r: 34,
-    blurb: "Product-level report across related repositories, for cross-service work.",
+    blurb: "One report across related repositories for cross-service work. workspace-gate gates them together.",
   },
 
   {
+    id: "context",
+    tool: "context_pack",
+    phase: "before",
+    sub: "task pack",
+    blurb:
+      "Task-aware packet: primary and related files, hotspots, tests, validation commands and token estimates, with git state read live. --online lets a model read demote files it judges irrelevant; it is off unless asked. Run before planning or editing.",
+  },
+  {
     id: "impact",
     tool: "change_impact",
-    layer: "change",
-    label: "impact",
+    phase: "before",
     sub: "blast radius",
-    cx: 415,
-    r: 44,
     blurb:
-      "Ranks the files most likely to own a plain-English change request, with risk flags and suggested tests. A diff base adds exact changed-file evidence.",
+      "Ranks the files most likely to own a plain-English change request, with risk flags and suggested tests. A diff base adds exact changed-file evidence beside the heuristic.",
   },
   {
     id: "ax",
     tool: "agent_experience",
-    layer: "change",
-    label: "AX",
-    sub: "0–100",
-    cx: 685,
-    r: 34,
-    blurb: "Agent Experience: how cheap and safe it is for an agent to make this change here — changeability, containment, guardrails, clarity.",
+    phase: "before",
+    sub: "AX 0–100",
+    blurb:
+      "Agent Experience: how cheap and safe it is for an agent to make this change here. Changeability, Containment, Guardrails and Clarity, with concrete recommendations for raising the score.",
   },
   {
     id: "route",
     tool: "model_route",
-    layer: "change",
-    label: "route",
+    phase: "before",
     sub: "model tier",
-    cx: 935,
-    r: 34,
     blurb:
-      "Advisory model tier (cheap, mid, premium) before work starts: AX and risk paths from otito, plus a System One read of the request when a TypeSafe key is set. Never feeds the gate.",
+      "Recommends a model tier (cheap, mid or premium) before work starts. otito answers the repository half deterministically; TypeSafe's Jev reads the request when TYPESAFE_API_KEY is set, otherwise the read is a labelled offline estimate. Advisory: it never feeds the gate.",
   },
 
   {
-    id: "reviewctx",
-    tool: "review_context",
-    layer: "review",
-    label: "review ctx",
-    sub: "diff pack",
-    cx: 165,
-    r: 34,
-    blurb: "PR/commit review context from git diff metadata, optionally enriched with GitHub comments. No verdict.",
-  },
-  {
     id: "converge",
     tool: "convergence_score",
-    layer: "review",
-    label: "converge",
+    phase: "merge",
     sub: "intent vs diff",
-    cx: 415,
-    r: 34,
-    blurb: "Distance between the stated task and the actual diff: coverage, scope, risk alignment. Emits a recomputable receipt as durable evidence.",
+    blurb:
+      "0–100 distance between the stated task and the actual diff: Coverage, Scope and Risk alignment. --head scores exactly base..head; --staged binds to the index tree. Emits a timestamp-free receipt anyone can recompute, which a model cannot award itself.",
   },
   {
     id: "gate",
     tool: "review_gate",
-    layer: "review",
-    label: "gate",
-    sub: "merge ready",
-    cx: 685,
-    r: 34,
+    phase: "merge",
+    sub: "PASS · WARN · FAIL",
     blurb:
-      "PASS/WARN/FAIL merge gate: changed files, secret safety (path and content), risk paths, release discipline, validation, dependency audit, policy profile. With pr, adds GitHub review, CODEOWNERS, branch protection, and checks.",
+      "The merge gate, from repository state alone: changed files, secret safety, risk paths, release discipline, validation, dependency audit, policy profile and a convergence floor. With pr, adds review decision, CODEOWNERS, branch protection and checks through your own gh login.",
+  },
+  {
+    id: "reviewctx",
+    tool: "review_context",
+    phase: "merge",
+    sub: "reviewer pack",
+    blurb: "Diff-aware review context for a human: changed domains, risk flags and review targets, optionally with GitHub comments. No verdict.",
   },
   {
     id: "verdict",
     tool: "review_verdict",
-    layer: "review",
-    label: "verdict",
+    phase: "merge",
     sub: "composite",
-    cx: 935,
-    r: 34,
-    blurb: "Composite verdict: change impact plus review context plus the gate, with a derived confidence score.",
+    blurb:
+      "change_impact plus review_context plus review_gate in one call, with a derived confidence score and a schemaVersion the attestation ledger records.",
   },
 ];
 
-/** Entry and output nodes are surfaces, not catalog tools, so they are declared whole. */
+/**
+ * Entry surfaces, the edit itself, CLI-only stages and outputs are not catalog
+ * tools, so they are declared whole. A `cli` surface names the CLI command it
+ * stands for; the test checks that command still exists.
+ */
 const SURFACES = [
   {
     id: "cli",
-    layer: "entry",
+    section: "entry",
+    kind: "surface",
     title: "CLI",
-    label: "CLI",
-    sub: "otito …",
-    x: 155,
-    blurb: "Human and script entrypoint. Every command takes --json.",
-    chips: ["otito doctor", "otito context", "otito gate"],
+    sub: "otito <command> --json",
+    blurb: "Human and script entrypoint. Every command takes --json, prints the same evidence a tool returns, and runs without a server or an account.",
+    chips: ["npm install -g @bashbop/otito", "otito doctor", "otito context", "otito gate"],
   },
-  { id: "mcp", layer: "entry", title: "MCP server", label: "MCP", sub: "otito mcp", x: 485, blurb: "", chips: ["otito mcp", "context_pack", "review_gate"] },
+  {
+    id: "mcp",
+    section: "entry",
+    kind: "surface",
+    title: "MCP server",
+    sub: "otito mcp · stdio",
+    blurb: "",
+    chips: ["otito mcp", "context_pack", "review_gate", "io.github.BASHBOP/otito"],
+  },
   {
     id: "ci",
-    layer: "entry",
-    title: "CI scaffold",
-    label: "CI",
-    sub: "init scaffold",
-    x: 815,
-    blurb: "otito init writes .github/workflows/otito-ci.yml, a pre-commit hook, and .otito/ assets into a target repository.",
-    chips: ["otito init .", "otito-ci.yml"],
+    section: "entry",
+    kind: "surface",
+    title: "CI, hooks and skills",
+    sub: "otito init",
+    blurb:
+      "otito init writes otito-ci.yml, a pre-commit hook and .otito/ assets into a target repository. A UserPromptSubmit hook routes every request before work starts, and the model-router skill teaches an agent to call otito first.",
+    chips: ["otito init .", "otito-ci.yml", "attest.yml", "model-router skill"],
+  },
+
+  {
+    id: "edit",
+    section: "edit",
+    kind: "surface",
+    title: "The edit",
+    sub: "the model writes the change",
+    blurb:
+      "The agent generates the change in its own harness. Otito never writes code and is handed only the request text and the checkout. What it produced before the edit is context; what it produces after is evidence about the diff that appeared.",
+    chips: ["Claude Code", "Codex", "Cursor", "Gemini", "VS Code", "any MCP host"],
+    hosts: ["Claude Code", "Codex", "Cursor", "Gemini", "VS Code", "any MCP host"],
+  },
+
+  {
+    id: "attest",
+    section: "after",
+    kind: "cli",
+    command: "attest",
+    title: "otito attest",
+    sub: "hash-chained record",
+    blurb:
+      "After a merge to main, CI appends a record of the merge commit, its verdict and their hashes to a ledger branch in your own repository. Never the diff or the source. A reusable workflow does it with one uses: line.",
+    chips: ["otito attest --verdict … --merge <sha>", ".github/workflows/attest.yml", "audit-pilot/ledger.jsonl"],
   },
   {
+    id: "verify",
+    section: "after",
+    kind: "cli",
+    command: "attest",
+    title: "otito attest --verify",
+    sub: "recompute the chain",
+    blurb:
+      "Walks the ledger, recomputes every hash and exits 1 if any record was altered or any merge is missing. Open JSON Lines with a schemaVersion on every record; the export is the file itself.",
+    chips: ["otito attest --verify", "schemaVersion: 1"],
+  },
+
+  {
+    id: "calibrate",
+    section: "time",
+    kind: "cli",
+    command: "calibrate",
+    title: "otito calibrate",
+    sub: "risk flags vs history",
+    blurb:
+      "Grades the gate's risk flags against this repository's own history, joining fix commits to the commits they repaired by line overlap rather than by filename. Below the minimum sample it declines to answer, which is the honest result.",
+    chips: ["otito calibrate <repo>", "--window 30", "--min-sample"],
+  },
+  {
+    id: "regret",
+    section: "time",
+    kind: "cli",
+    command: "regret",
+    title: "otito regret",
+    sub: "router tiers vs history",
+    blurb:
+      "Grades the router's tiers the same way, three variants side by side: the deterministic half alone, the offline heuristic, and the model read. --rescore regrades a saved run on frozen answers with no checkout and no model call. Never a saving: otito does not know which model a host used.",
+    chips: ["otito regret <repo>", "otito regret --rescore run.json"],
+  },
+
+  {
     id: "artifacts",
-    layer: "output",
-    title: ".otito/",
-    label: ".otito",
-    sub: "artifacts",
-    x: 155,
-    blurb: "Durable Markdown/JSON artifacts: pr-review.md, harness.md, workspace.md, context-pack.md. Gitignored by init.",
-    chips: [".otito/pr-review.md", ".otito/harness.md"],
+    section: "output",
+    kind: "surface",
+    title: ".otito/ artifacts",
+    sub: "Markdown and JSON",
+    blurb:
+      "Durable evidence a reviewer can read: context-pack.md, pr-review.md, harness.md, workspace.md. Gitignored by init; kept under .otito/runs/ when you want it to survive.",
+    chips: [".otito/pr-review.md", ".otito/harness.md", ".otito/runs/"],
   },
   {
     id: "receipt",
-    layer: "output",
-    title: "Receipt",
-    label: "receipt",
-    sub: "staged tree",
-    x: 485,
+    section: "output",
+    kind: "surface",
+    title: "Convergence receipt",
+    sub: "bound to the tree",
     blurb:
-      "A convergence or workspace receipt binding the exact base, parent, and staged-tree identity — recomputable by anyone, and not something a model can award itself.",
-    chips: ["otito converge", "otito gate --staged"],
+      "A timestamp-free hash binding the score to the exact base, parent and staged tree or commit it measured. Anyone with the checkout recomputes it; a receipt whose subject does not match what the gate measured fails with the mode to rerun in.",
+    chips: ["rcpt_…", "otito converge --staged", "otito gate --receipt <hash>"],
   },
   {
     id: "verdictout",
-    layer: "output",
+    section: "output",
+    kind: "surface",
     title: "PASS / WARN / FAIL",
-    label: "verdict",
-    sub: "PASS · WARN · FAIL",
-    x: 815,
-    blurb: "Merge-readiness signal for humans and agents. WARN surfaces risk; FAIL blocks merge. A passing local gate is evidence, never an approval.",
+    sub: "the merge verdict",
+    blurb:
+      "Merge-readiness for humans, agents and CI. WARN surfaces risk that needs an explicit reviewer; FAIL blocks the merge. A passing local gate is evidence, never an approval.",
     chips: ["PASS", "WARN", "FAIL"],
   },
-];
-
-/** The animated walkthrough. Each step focuses one node. */
-const STEPS = [
-  { node: "mcp", layer: "entry", title: "Connect", text: "Install the CLI or wire an MCP host · optional init scaffold for CI and hooks" },
-  { node: "inspect", layer: "discover", title: "Discover", text: "Inspect repo shape · index a catalog · search paths and symbols" },
-  { node: "context", layer: "map", title: "Context", text: "Generate maps, task packs, and harness commands before the agent edits" },
   {
-    node: "impact",
-    layer: "change",
-    title: "Impact",
-    text: "Rank the files a change should touch · score how agent-friendly the repo is · recommend a model tier",
+    id: "ledger",
+    section: "output",
+    kind: "surface",
+    title: "Ledger record",
+    sub: "one per merge",
+    blurb:
+      "One JSON line per merged commit: commit identity, verdict, and the hash of the record before it. Optional hosted copy per organisation for teams with SOC 2, ISO 27001 or regulated audits.",
+    chips: ["audit-pilot/ledger.jsonl", "audit-ledger branch"],
   },
-  { node: "gate", layer: "review", title: "Review & gate", text: "Build PR context · score intent against the diff · run the merge gate" },
-  { node: "receipt", layer: "output", title: "Evidence", text: "Artifacts, recomputable receipts, PR comments, and a CI verdict" },
 ];
 
-const NODE_WIDTH = 130;
-const NODE_HEIGHT = 52;
-const CENTER_X = 550;
+/** The animated walkthrough. Each step focuses one card. */
+const STEPS = [
+  { node: "mcp", title: "Connect", text: "Install the CLI or wire the MCP server into any host; init scaffolds CI and hooks." },
+  { node: "map", title: "Know the repository", text: "Inspect, map, index and search the checkout; infer its commands." },
+  { node: "context", title: "Before the edit", text: "Build the task pack, rank what the request touches, score AX, pick a tier." },
+  { node: "edit", title: "The edit", text: "The model writes the change in its own harness. Otito waits." },
+  { node: "gate", title: "Before the merge", text: "Score intent against the diff, then gate the exact staged tree." },
+  { node: "attest", title: "After the merge", text: "CI appends a hash-chained record; anyone can verify the chain." },
+  { node: "calibrate", title: "Over time", text: "Grade the flags and the router against what the repository actually had to fix." },
+];
+
+/** The four things the page exists to say. */
+const GUARANTEES = [
+  {
+    color: "var(--green)",
+    title: "The gate never consults a model",
+    text: "PASS, WARN and FAIL are computed from repository state. The one model read otito can make, for a tier or a context pack, is advisory and has no path into the verdict.",
+  },
+  {
+    color: "var(--teal)",
+    title: "Nothing leaves the machine by default",
+    text: "The core commands and every MCP tool open no socket. --pr reads GitHub through your own gh login; route sends the request text to Jev only on your own key.",
+  },
+  {
+    color: "var(--cyan)",
+    title: "Same inputs, same output",
+    text: "Run anything twice and get the same answer. Receipts and ledger records are timestamp-free hashes anyone can regenerate from the same checkout.",
+  },
+  {
+    color: "var(--amber)",
+    title: "Evidence, not approval",
+    text: "A passing local gate is never an automatic merge. Hosted CI, GitHub review, CODEOWNERS and the human release decision remain separate authorities.",
+  },
+];
 
 async function main() {
   const check = process.argv.includes("--check");
   const catalog = getAgentTools().tools;
   assertLayoutMatchesCatalog(catalog);
+  assertStepsResolve();
 
   const rendered = render(catalog);
   const formatted = await prettier.format(rendered, { ...loadPrettierConfig(), parser: "html" });
@@ -293,7 +396,7 @@ async function main() {
 
 /**
  * The whole point of generating this file: a tool can never appear in the
- * catalog without appearing in the diagram, and the diagram can never keep
+ * catalog without appearing on the page, and the page can never keep
  * advertising a tool that was removed.
  * @param {{ name: string }[]} catalog
  */
@@ -305,11 +408,21 @@ function assertLayoutMatchesCatalog(catalog) {
   const stale = [...layoutNames].filter((name) => !catalogNames.has(name)).sort();
 
   const problems = [];
-  if (missing.length) problems.push(`missing from the diagram LAYOUT: ${missing.join(", ")}`);
-  if (stale.length) problems.push(`in the diagram LAYOUT but not in the tool catalog: ${stale.join(", ")}`);
+  if (missing.length) problems.push(`missing from the page LAYOUT: ${missing.join(", ")}`);
+  if (stale.length) problems.push(`in the page LAYOUT but not in the tool catalog: ${stale.join(", ")}`);
+  for (const node of LAYOUT) {
+    if (!PHASES.some((phase) => phase.id === node.phase)) problems.push(`layout node ${node.id} names unknown phase ${node.phase}`);
+  }
   if (problems.length) {
     throw new Error(`scripts/generate-how-it-works.mjs is out of sync with the MCP tool catalog — ${problems.join("; ")}`);
   }
+}
+
+/** Every walkthrough step must focus a card that exists. */
+function assertStepsResolve() {
+  const ids = new Set([...LAYOUT.map((node) => node.id), ...SURFACES.map((surface) => surface.id)]);
+  const dangling = STEPS.filter((step) => !ids.has(step.node)).map((step) => step.node);
+  if (dangling.length) throw new Error(`walkthrough steps focus cards that do not exist: ${dangling.join(", ")}`);
 }
 
 function loadPrettierConfig() {
@@ -323,119 +436,11 @@ function escapeHtml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-/** @param {string} layerId */
-function layerFor(layerId) {
-  const layer = LAYERS.find((entry) => entry.id === layerId);
-  if (!layer) throw new Error(`unknown layer: ${layerId}`);
-  return layer;
-}
-
-/**
- * @param {{ name: string, command: string, mcpOnly: boolean }[]} catalog
- * @returns {string}
- */
-function render(catalog) {
-  const byName = new Map(catalog.map((tool) => [tool.name, tool]));
-  const mcpTools = catalog.map((tool) => tool.name);
-
-  /** @type {Record<string, string[]>} */
-  const chipMap = {};
-  for (const surface of SURFACES) chipMap[surface.id] = surface.chips;
-  for (const node of LAYOUT) {
-    const tool = byName.get(node.tool);
-    chipMap[node.id] = [node.tool, cliChip(tool?.command ?? "")].filter(Boolean);
-  }
-
-  const mcpBlurb = `stdio MCP server exposing ${mcpTools.length} tools: ${mcpTools.join(", ")}. ` + `Published in the MCP Registry as io.github.BASHBOP/otito.`;
-
-  return [
-    "<!DOCTYPE html>",
-    '<html lang="en">',
-    "  <head>",
-    '    <meta charset="UTF-8" />',
-    '    <meta name="viewport" content="width=device-width, initial-scale=1" />',
-    "    <title>otito — How It Works</title>",
-    "    <!-- Generated by scripts/generate-how-it-works.mjs. Do not edit by hand: run `npm run docs:diagram`. -->",
-    `    <style>${STYLE}</style>`,
-    "  </head>",
-    "  <body>",
-    "    <header>",
-    "      <h1>otito — layered diagram</h1>",
-    "      <p>",
-    "        Local-first repository intelligence: discover code, build context for agents, rank change impact, and gate merges on",
-    "        recomputable evidence — via CLI, MCP, or CI.",
-    "      </p>",
-    "    </header>",
-    "",
-    '    <div class="legend" aria-hidden="true">',
-    ...LAYERS.map((layer) => `      <span><i class="dot" style="background: ${layer.color}"></i> ${escapeHtml(layer.legend)}</span>`),
-    "    </div>",
-    "",
-    '    <div class="stage">',
-    '      <svg class="mindmap" viewBox="0 0 1100 730" role="img" aria-label="otito layered diagram">',
-    "        <!-- layer background bands -->",
-    ...LAYERS.map((layer) => `        <rect x="90" y="${layer.y}" width="1005" height="${layer.height}" rx="8" fill="${layer.color}" opacity="0.04" />`),
-    "",
-    "        <!-- layer labels -->",
-    ...LAYERS.map(
-      (layer) =>
-        `        <text x="45" y="${layer.y + Math.round(layer.height / 2) + 5}" text-anchor="middle" fill="${layer.color}" font-size="9" font-weight="700">${layer.label}</text>`,
-    ),
-    "",
-    "        <!-- flow connectors (animated dashes show downward direction) -->",
-    '        <g id="links">',
-    ...LAYERS.slice(0, -1).map((layer, index) => {
-      const next = LAYERS[index + 1];
-      return `          <line class="link ${next.id}" data-group="${next.id}" x1="${CENTER_X}" y1="${layer.y + layer.height}" x2="${CENTER_X}" y2="${next.y}" />`;
-    }),
-    "        </g>",
-    "",
-    ...renderSurfaces("entry", mcpBlurb),
-    ...renderToolLayer("discover", byName),
-    ...renderToolLayer("map", byName),
-    ...renderToolLayer("change", byName),
-    ...renderToolLayer("review", byName),
-    ...renderSurfaces("output", mcpBlurb),
-    "      </svg>",
-    "    </div>",
-    "",
-    '    <div class="panel">',
-    '      <section class="card">',
-    "        <h2>Animated workflow</h2>",
-    '        <div class="steps" id="steps">',
-    ...STEPS.flatMap((step, index) => {
-      const layer = layerFor(step.layer);
-      return [
-        `          <div class="step${index === 0 ? " active" : ""}" data-step="${index}" data-node="${step.node}" data-group="${step.layer}">`,
-        `            <div class="step-num" style="background: ${layer.color}">${index + 1}</div>`,
-        `            <div><strong>${escapeHtml(step.title)}</strong><span>${escapeHtml(step.text)}</span></div>`,
-        "          </div>",
-      ];
-    }),
-    "        </div>",
-    "      </section>",
-    "",
-    '      <section class="card detail" id="detail">',
-    '        <h3 id="detail-title">MCP server</h3>',
-    '        <p id="detail-body">',
-    `          ${escapeHtml(mcpBlurb)}`,
-    "        </p>",
-    '        <div class="chips" id="detail-chips">',
-    ...chipMap.mcp.map((chip) => `          <span class="chip">${escapeHtml(chip)}</span>`),
-    "        </div>",
-    "      </section>",
-    "    </div>",
-    "",
-    "    <footer>",
-    "      Open this file in any browser ·",
-    '      <a href="https://bashbop.github.io/otito/">bashbop.github.io/otito</a>',
-    "    </footer>",
-    "",
-    `    <script>${SCRIPT_HEAD}      const chipMap = ${JSON.stringify(chipMap, null, 8).replace(/\n/g, "\n      ")};\n${SCRIPT_TAIL}</script>`,
-    "  </body>",
-    "</html>",
-    "",
-  ].join("\n");
+/** @param {string} phaseId */
+function phaseFor(phaseId) {
+  const phase = PHASES.find((entry) => entry.id === phaseId);
+  if (!phase) throw new Error(`unknown phase: ${phaseId}`);
+  return phase;
 }
 
 /**
@@ -450,49 +455,219 @@ function cliChip(command) {
 }
 
 /**
- * @param {string} layerId
- * @param {string} mcpBlurb
+ * @param {{ name: string, command: string }[]} catalog
+ * @returns {string}
  */
-function renderSurfaces(layerId, mcpBlurb) {
-  const layer = layerFor(layerId);
-  const y = layer.y + Math.round((layer.height - NODE_HEIGHT) / 2);
-  const lines = [`        <!-- ${layer.label} -->`];
-  for (const surface of SURFACES.filter((entry) => entry.layer === layerId)) {
-    const blurb = surface.id === "mcp" ? mcpBlurb : surface.blurb;
-    const cx = surface.x + NODE_WIDTH / 2;
-    lines.push(
-      `        <g class="node" data-id="${surface.id}" data-group="${layerId}" data-title="${escapeHtml(surface.title)}" data-desc="${escapeHtml(blurb)}">`,
-      `          <rect x="${surface.x}" y="${y}" width="${NODE_WIDTH}" height="${NODE_HEIGHT}" rx="10" fill="#161b22" stroke="${layer.color}" color="${layer.color}" />`,
-      `          <text x="${cx}" y="${y + 24}" class="label">${escapeHtml(surface.label)}</text>`,
-      `          <text x="${cx}" y="${y + 40}" class="sub">${escapeHtml(surface.sub)}</text>`,
-      "        </g>",
-    );
+function render(catalog) {
+  const byName = new Map(catalog.map((tool) => [tool.name, tool]));
+  const mcpTools = catalog.map((tool) => tool.name);
+  const mcpBlurb =
+    `stdio MCP server exposing ${mcpTools.length} tools: ${mcpTools.join(", ")}. ` +
+    `Published in the MCP Registry as io.github.BASHBOP/otito and listed on mcpservers.org and Glama. Cursor, VS Code, Claude Desktop, Claude Code, Codex and Gemini all speak to it the same way.`;
+  const surfaces = SURFACES.map((surface) => (surface.id === "mcp" ? { ...surface, blurb: mcpBlurb } : surface));
+  const first = surfaces.find((surface) => surface.id === STEPS[0].node) ?? surfaces[0];
+
+  return [
+    "<!DOCTYPE html>",
+    '<html lang="en">',
+    "  <head>",
+    '    <meta charset="UTF-8" />',
+    '    <meta name="viewport" content="width=device-width, initial-scale=1" />',
+    "    <title>How Otito works</title>",
+    '    <meta name="description" content="Models generate the change. Otito proves whether it is safe to merge: context before the edit, evidence before the merge, an attestation after it." />',
+    "    <!-- Generated by scripts/generate-how-it-works.mjs. Do not edit by hand: run `npm run docs:diagram`. -->",
+    '    <link rel="preconnect" href="https://fonts.googleapis.com" />',
+    '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />',
+    `    <link rel="stylesheet" href="${FONTS_HREF}" />`,
+    `    <style>${STYLE}</style>`,
+    "  </head>",
+    "  <body>",
+    '    <header class="masthead wrap">',
+    '      <p class="eyebrow">Òtítọ́ · how it works</p>',
+    "      <h1>Models generate the change. <em>Otito proves whether it is safe to merge.</em></h1>",
+    '      <p class="lede">',
+    "        A local-first, deterministic trust layer that runs beside Claude Code, Codex, Cursor and Gemini. It builds context before the agent edits,",
+    "        measures how far the change reached, gates the exact staged tree, and leaves a record after the merge. No server, no account, and no code",
+    "        leaves the machine.",
+    "      </p>",
+    '      <ul class="facts">',
+    `        <li><i></i>${mcpTools.length} MCP tools, each also a CLI command</li>`,
+    "        <li><i></i>every command takes <code>--json</code></li>",
+    "        <li><i></i>same inputs, same output</li>",
+    "        <li><i></i>no model inside the gate</li>",
+    "      </ul>",
+    "    </header>",
+    "",
+    ...renderStrip("entry", surfaces, "Three ways in", "Pick one; the evidence is identical."),
+    "",
+    '    <div class="layout wrap">',
+    '      <ol class="timeline" id="timeline" aria-label="The loop">',
+    ...PHASES.flatMap((phase) => renderPhase(phase, byName, surfaces)),
+    "      </ol>",
+    "",
+    '      <aside class="rail">',
+    '        <section class="panel" aria-labelledby="walkthrough-title">',
+    '          <div class="panel-head">',
+    '            <h2 class="section-title" id="walkthrough-title">The loop</h2>',
+    '            <button class="play" id="play-toggle" type="button" aria-pressed="true">Pause</button>',
+    "          </div>",
+    '          <ol class="steps">',
+    ...STEPS.flatMap((step, index) => {
+      const card = LAYOUT.find((node) => node.id === step.node) ?? surfaces.find((surface) => surface.id === step.node);
+      const phaseId = card && "phase" in card ? card.phase : sectionPhase(card && "section" in card ? card.section : "");
+      const color = phaseId ? phaseFor(phaseId).color : "var(--teal)";
+      return [
+        "            <li>",
+        `              <button class="step${index === 0 ? " is-active" : ""}" type="button" data-node="${step.node}" style="--c: ${color}">`,
+        `                <span class="step-num">${index + 1}</span>`,
+        `                <strong>${escapeHtml(step.title)}</strong>`,
+        `                <span>${escapeHtml(step.text)}</span>`,
+        "              </button>",
+        "            </li>",
+      ];
+    }),
+    "          </ol>",
+    "        </section>",
+    "",
+    '        <section class="panel detail" aria-live="polite">',
+    `          <p class="detail-kind" id="detail-kind">Surface</p>`,
+    `          <h3 id="detail-title" class="plain">${escapeHtml(first.title)}</h3>`,
+    `          <p id="detail-body">${escapeHtml(first.blurb)}</p>`,
+    '          <div class="chips" id="detail-chips">',
+    ...first.chips.map((chip) => `            <span class="chip">${escapeHtml(chip)}</span>`),
+    "          </div>",
+    "        </section>",
+    "      </aside>",
+    "    </div>",
+    "",
+    ...renderStrip("output", surfaces, "What comes out", "Durable, recomputable, and readable without otito installed."),
+    "",
+    '    <section class="guarantees wrap" aria-labelledby="guarantees-title">',
+    '      <h2 class="section-title" id="guarantees-title">What never happens</h2>',
+    '      <div class="grid">',
+    ...GUARANTEES.flatMap((item) => [
+      `        <div class="guarantee" style="--c: ${item.color}">`,
+      `          <h3>${escapeHtml(item.title)}</h3>`,
+      `          <p>${escapeHtml(item.text)}</p>`,
+      "        </div>",
+    ]),
+    "      </div>",
+    "    </section>",
+    "",
+    "    <footer>",
+    '      <div class="wrap">',
+    `        <span>Generated from the shipped tool catalog · ${mcpTools.length} tools</span>`,
+    '        <a href="https://bashbop.github.io/otito/">Documentation</a>',
+    '        <a href="https://github.com/BASHBOP/otito">GitHub</a>',
+    '        <a href="https://www.npmjs.com/package/@bashbop/otito">npm</a>',
+    "      </div>",
+    "    </footer>",
+    "",
+    `    <script>${SCRIPT}</script>`,
+    "  </body>",
+    "</html>",
+    "",
+  ].join("\n");
+}
+
+/**
+ * Surfaces outside the loop are grouped under the phase whose colour they
+ * borrow; entry and output surfaces belong to no phase.
+ * @param {string} section
+ */
+function sectionPhase(section) {
+  return PHASES.some((phase) => phase.id === section) ? section : "";
+}
+
+/**
+ * @param {string} section
+ * @param {typeof SURFACES} surfaces
+ * @param {string} title
+ * @param {string} note
+ */
+function renderStrip(section, surfaces, title, note) {
+  const lines = [
+    `    <section class="strip wrap" aria-labelledby="strip-${section}">`,
+    '      <div class="strip-head">',
+    `        <h2 id="strip-${section}">${escapeHtml(title)}</h2>`,
+    `        <p>${escapeHtml(note)}</p>`,
+    "      </div>",
+    '      <div class="grid">',
+  ];
+  const color = section === "output" ? "var(--amber)" : "var(--teal)";
+  for (const surface of surfaces.filter((entry) => entry.section === section)) {
+    lines.push(...renderSurfaceCard(surface, section, color));
   }
-  lines.push("");
+  lines.push("      </div>", "    </section>");
   return lines;
 }
 
 /**
- * @param {string} layerId
- * @param {Map<string, { name: string, command: string }>} byName
+ * @param {(typeof SURFACES)[number]} surface
+ * @param {string} phaseId
+ * @param {string} color
  */
-function renderToolLayer(layerId, byName) {
-  const layer = layerFor(layerId);
-  const cy = layer.y + Math.round(layer.height / 2);
-  const lines = [`        <!-- ${layer.label} -->`];
-  for (const node of LAYOUT.filter((entry) => entry.layer === layerId)) {
+function renderSurfaceCard(surface, phaseId, color) {
+  const attrs = [
+    `class="card surface"`,
+    `type="button"`,
+    `data-id="${surface.id}"`,
+    `data-phase="${phaseId}"`,
+    `data-kind="${surface.kind}"`,
+    surface.kind === "cli" && "command" in surface ? `data-command="${surface.command}"` : "",
+    `data-title="${escapeHtml(surface.title)}"`,
+    `data-desc="${escapeHtml(surface.blurb)}"`,
+    `data-chips="${escapeHtml(surface.chips.join("|"))}"`,
+    `style="--c: ${color}"`,
+  ].filter(Boolean);
+  const lines = [
+    `        <button ${attrs.join(" ")}>`,
+    `          <span class="card-name">${escapeHtml(surface.title)}</span>`,
+    `          <span class="card-sub">${escapeHtml(surface.sub)}</span>`,
+  ];
+  if ("hosts" in surface && surface.hosts) {
+    lines.push('          <span class="card-hosts">', ...surface.hosts.map((host) => `            <span>${escapeHtml(host)}</span>`), "          </span>");
+  }
+  lines.push("        </button>");
+  return lines;
+}
+
+/**
+ * @param {(typeof PHASES)[number]} phase
+ * @param {Map<string, { name: string, command: string }>} byName
+ * @param {typeof SURFACES} surfaces
+ */
+function renderPhase(phase, byName, surfaces) {
+  const tools = LAYOUT.filter((node) => node.phase === phase.id);
+  const extras = surfaces.filter((surface) => surface.section === phase.id);
+  const lines = [
+    `        <li class="phase${phase.id === "edit" ? " model" : ""}" data-phase="${phase.id}" style="--c: ${phase.color}">`,
+    '          <div class="phase-head">',
+    `            <span class="phase-index">${phase.index}</span>`,
+    `            <h2>${escapeHtml(phase.title)}</h2>`,
+    `            <p class="phase-actor">${escapeHtml(phase.actor)}</p>`,
+    `            <p class="phase-sub">${escapeHtml(phase.sub)}</p>`,
+    "          </div>",
+    '          <div class="grid">',
+  ];
+  for (const node of tools) {
     const tool = byName.get(node.tool);
     if (!tool) throw new Error(`layout node ${node.id} references unknown tool ${node.tool}`);
-    const desc = `${node.blurb} CLI: ${cliChip(tool.command) || "otito mcp"}.`;
+    const cli = cliChip(tool.command);
+    const desc = `${node.blurb} CLI: ${cli || "otito mcp"}.`;
+    const chips = [node.tool, cli].filter(Boolean);
     lines.push(
-      `        <g class="node" data-id="${node.id}" data-group="${layerId}" data-title="${escapeHtml(tool.name)}" data-desc="${escapeHtml(desc)}">`,
-      `          <circle cx="${node.cx}" cy="${cy}" r="${node.r}" fill="#161b22" stroke="${layer.color}" color="${layer.color}" />`,
-      `          <text x="${node.cx}" y="${cy - 4}" class="label">${escapeHtml(node.label)}</text>`,
-      `          <text x="${node.cx}" y="${cy + 12}" class="sub">${escapeHtml(node.sub)}</text>`,
-      "        </g>",
+      `        <button class="card tool" type="button" data-id="${node.id}" data-phase="${phase.id}" data-kind="tool" data-title="${escapeHtml(tool.name)}" data-desc="${escapeHtml(desc)}" data-chips="${escapeHtml(chips.join("|"))}">`,
+      `          <span class="card-name">${escapeHtml(tool.name)}</span>`,
+      `          <span class="card-sub">${escapeHtml(node.sub)}</span>`,
+      ...(cli ? [`          <span class="card-cli">${escapeHtml(cli)}</span>`] : []),
+      "        </button>",
     );
   }
-  lines.push("");
+  for (const surface of extras) {
+    lines.push(...renderSurfaceCard(surface, phase.id, phase.color));
+  }
+  lines.push("          </div>", "        </li>");
   return lines;
 }
 
