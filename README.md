@@ -88,6 +88,7 @@ Nothing hosted is required, and nothing hosted can change a verdict. [Local Core
 | Gate a product change across repos | `otito workspace-gate ../web ../api --request "ship change"`                |
 | Grade risk flags against history   | `otito calibrate . --window 30`                                             |
 | Grade route tiers against history  | `otito regret . --window 30 --offline`                                      |
+| Regrade a saved run, same answers  | `otito regret --rescore run.json`                                           |
 | Score Agent Experience             | `otito ax . "add a new MCP tool"`                                           |
 | Recommend a model tier             | `otito route . "add a new MCP tool"`                                        |
 | Sharpen context with a model read  | `otito context "add a new MCP tool" --path . --online`                      |
