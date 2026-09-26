@@ -15,7 +15,7 @@ Preserve this discipline across the stable 3.x line. There is no Òtítọ́ 2.x
 3. Run `npm run ci`.
 4. Choose the release type from merged PR version-impact notes: patch, minor, or major.
 5. Update `CHANGELOG.md`.
-6. Bump `package.json` and `package-lock.json` together with `npm version <patch|minor|major> --no-git-tag-version`.
+6. Bump `package.json` and `package-lock.json` together with `npm version <patch|minor|major> --no-git-tag-version`. The `version` lifecycle script resyncs `server.json` and the pinned doc versions and re-renders `docs/assets/otito-how-it-works.html` with the new version; commit them with the bump.
 7. Run `npm run version:check`.
 8. Commit the release changes.
 9. Tag the release as `vX.Y.Z` and push the tag.
