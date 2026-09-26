@@ -23,6 +23,13 @@
 // With no key this is a pure function of repository state, recorded in a
 // receipt. With a key, the model's answers are not replayable and the receipt
 // says so. Nothing here reaches the gate.
+//
+// Because the model's answers are not replayable, each row keeps the exact
+// signals and answers its tiers were scored from, and `rescoreRegret` applies
+// the current arithmetic to a saved run without checking anything out or
+// calling anything. Two versions of the arithmetic compared on one saved run
+// differ only in the arithmetic; compared on two runs they also differ by
+// however far the model drifted between them.
 
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -39,7 +46,7 @@ import { askJev, modelRouteEngineVersion, offlineAnswers, scoreDecision, signals
 import { inspectRepo } from "./repo.js";
 import { runCommand } from "./tools.js";
 
-export const regretEngineVersion = "0.2.0";
+export const regretEngineVersion = "0.3.0";
 
 const DAY_SECONDS = 86400;
 const Z95 = 1.96;
@@ -186,12 +193,19 @@ async function replay(repoPath, options) {
         time: commit.time,
         // Binary-only and empty commits have no text files; they are not docs.
         docsOnly: commit.files.length > 0 && commit.files.every((file) => isDocLike(file.path)),
+        // Every signal scoreDecision reads, so a saved run can be rescored.
         ax: signals.ax,
         candidates: signals.candidates ?? 0,
+        containment: signals.containment,
+        riskPaths: signals.riskPaths ?? [],
         repairedAfter: repairedAfter.get(commit.sha) ?? null,
         tiers: { deterministic: deterministic.tier, offline: offlineScore.tier },
         routes: { deterministic: deterministic.route, offline: offlineScore.route },
         answers: { offline: fractionsOf(offline.answers) },
+        // The answers exactly as scored. `answers` above is rounded for the
+        // spread table, which is close enough to read and not to rescore: a
+        // route one rounding away from a band edge would change tier.
+        inputs: { offline: exactAnswers(offline.answers) },
       };
 
       if (wantsModel) {
@@ -204,6 +218,7 @@ async function replay(repoPath, options) {
           row.tiers.jev = scored.tier;
           row.routes.jev = scored.route;
           row.answers.jev = fractionsOf(jev.answers);
+          row.inputs.jev = exactAnswers(jev.answers);
         } catch (error) {
           model.failures += 1;
           row.jevError = String(/** @type {any} */ (error)?.message ?? error).slice(0, 120);
@@ -222,29 +237,7 @@ async function replay(repoPath, options) {
   // Priced once from the total, with the same function every surface uses.
   model.costUsd = priceJevCall(model.billableTokens) ?? 0;
 
-  const within = (/** @type {any} */ row, /** @type {number} */ days) => row.repairedAfter !== null && row.repairedAfter <= days * DAY_SECONDS;
-  const base = summarizeRows("base", graded, windowDays, minSample, within, null);
-
-  /** @type {Record<string, any>} */
-  const variants = {};
-  for (const variant of VARIANTS) {
-    const rows = graded.filter((row) => row.tiers[variant] !== undefined);
-    if (!rows.length) continue;
-    variants[variant] = gradeVariant(variant, rows, windowDays, minSample, within);
-  }
-
-  /** @type {Record<string, any>} */
-  const questions = {};
-  for (const variant of ["offline", "jev"]) {
-    const rows = graded.filter((row) => row.answers[variant]);
-    if (!rows.length) continue;
-    questions[variant] = ["specificity", "blast_radius", "novelty"].map((name) =>
-      spread(
-        name,
-        rows.map((row) => row.answers[variant][name]),
-      ),
-    );
-  }
+  const { base, variants, questions } = gradeRows(graded, windowDays, minSample);
 
   const data = {
     ok: true,
@@ -276,7 +269,7 @@ async function replay(repoPath, options) {
       fixCommits: fixes.length,
       fixCommitsJoined: joinedFixes,
     },
-    base: { rate: base.rate, ci95: base.ci95, repaired: base.repaired, n: base.n, publishable: base.publishable },
+    base,
     model: {
       ...model,
       name: model.name ?? (wantsModel ? null : "offline estimate"),
@@ -296,6 +289,106 @@ async function replay(repoPath, options) {
     ],
   };
   return { ...data, receipt: makeRegretReceipt(data) };
+}
+
+/**
+ * Apply the router's arithmetic to a saved `otito regret --json` run and grade
+ * it again. Nothing is checked out and no model is called: each row carries
+ * the signals and the exact answers it was first scored from, so the only
+ * thing that can differ from the saved run is the arithmetic. That is what
+ * makes a change to the arithmetic gradable against model answers that cannot
+ * be asked for again.
+ *
+ * `score` defaults to the shipped `scoreDecision`; passing another lets a
+ * candidate be graded before it replaces it.
+ * @param {Record<string, any>} saved
+ * @param {{ score?: typeof scoreDecision }} [options]
+ * @returns {Record<string, any>}
+ */
+export function rescoreRegret(saved, options = {}) {
+  const score = options.score ?? scoreDecision;
+  const rows = Array.isArray(saved?.commits) ? saved.commits : null;
+  if (!rows?.length || !saved.method) {
+    throw new Error("rescore needs the JSON of an `otito regret --json` run");
+  }
+  if (rows.some((row) => typeof row.containment !== "number" || !row.inputs?.offline)) {
+    throw new Error(
+      `this run was saved by regret ${saved.regretEngineVersion ?? "(unknown)"}, which did not keep the signals and answers a rescore needs; replay the repository again`,
+    );
+  }
+  const windowDays = saved.method.windowDays;
+  const minSample = saved.method.minSample;
+
+  const commits = rows.map((row) => {
+    const signals = { ax: row.ax, containment: row.containment, candidates: row.candidates, riskPaths: row.riskPaths };
+    const deterministic = score({ answers: NEUTRAL_ANSWERS, signals });
+    const offline = score({ answers: row.inputs.offline, signals });
+    const tiers = { deterministic: deterministic.tier, offline: offline.tier };
+    const routes = { deterministic: deterministic.route, offline: offline.route };
+    if (row.inputs.jev) {
+      const jev = score({ answers: row.inputs.jev, signals });
+      Object.assign(tiers, { jev: jev.tier });
+      Object.assign(routes, { jev: jev.route });
+    }
+    return { ...row, tiers, routes };
+  });
+
+  const { base, variants, questions } = gradeRows(commits, windowDays, minSample);
+  const rescoredFrom = saved.receipt?.id ?? null;
+  /** @type {Record<string, any>} */
+  const data = {
+    ...saved,
+    generatedAt: new Date().toISOString(),
+    regretEngineVersion,
+    modelRouteEngineVersion,
+    method: { ...saved.method, rescoredFrom },
+    base,
+    variants,
+    questions,
+    commits,
+    caveats: [
+      // A rescore of a rescore names only the run it read, not the whole chain.
+      ...saved.caveats.filter((/** @type {string} */ caveat) => !caveat.startsWith("Rescored from")),
+      `Rescored from ${rescoredFrom ?? "a saved run"}: no commit was replayed and no model was called. The tiers are this version's arithmetic applied to the signals and answers that run recorded.`,
+    ],
+  };
+  delete data.receipt;
+  return { ...data, receipt: makeRegretReceipt(data) };
+}
+
+/**
+ * The base rate, every variant's grade and the question spread over a set of
+ * scored rows. Shared by a replay and a rescore so both grade identically.
+ * @param {Record<string, any>[]} graded
+ * @param {number} windowDays
+ * @param {number} minSample
+ */
+function gradeRows(graded, windowDays, minSample) {
+  const within = (/** @type {any} */ row, /** @type {number} */ days) => row.repairedAfter !== null && row.repairedAfter <= days * DAY_SECONDS;
+  const base = summarizeRows("base", graded, windowDays, minSample, within, null);
+
+  /** @type {Record<string, any>} */
+  const variants = {};
+  for (const variant of VARIANTS) {
+    const rows = graded.filter((row) => row.tiers[variant] !== undefined);
+    if (!rows.length) continue;
+    variants[variant] = gradeVariant(variant, rows, windowDays, minSample, within);
+  }
+
+  /** @type {Record<string, any>} */
+  const questions = {};
+  for (const variant of ["offline", "jev"]) {
+    const rows = graded.filter((row) => row.answers[variant]);
+    if (!rows.length) continue;
+    questions[variant] = ["specificity", "blast_radius", "novelty"].map((name) =>
+      spread(
+        name,
+        rows.map((row) => row.answers[variant][name]),
+      ),
+    );
+  }
+
+  return { base: { rate: base.rate, ci95: base.ci95, repaired: base.repaired, n: base.n, publishable: base.publishable }, variants, questions };
 }
 
 /**
@@ -399,6 +492,26 @@ function fractionsOf(answers) {
     specificity: specificity === null ? null : round(specificity / 2),
     blast_radius: blast === null ? null : round(blast / 2),
     novelty: novelty === null ? null : round(novelty),
+  };
+}
+
+/**
+ * The fields of an answer set the arithmetic can read, unrounded: the Score
+ * expectation, its confidence and level distribution, and the Noul
+ * probability. Kept whole so an arithmetic that reads the distribution rather
+ * than its expectation can be graded on the same saved run.
+ * @param {any} answers
+ */
+function exactAnswers(answers) {
+  const score = (/** @type {any} */ answer) => ({
+    score: answer?.score ?? null,
+    confidence: answer?.confidence ?? null,
+    probabilities: answer?.probabilities ?? null,
+  });
+  return {
+    specificity: score(answers?.specificity),
+    blast_radius: score(answers?.blast_radius),
+    novelty: { noul: answers?.novelty?.noul ?? null },
   };
 }
 
@@ -572,6 +685,11 @@ export function formatRegretMarkdown(data) {
     `Corpus: ${data.range.replayed} commits replayed (${data.range.docsOnly} docs-only) of ${data.range.candidates} candidates; ${data.range.censored} younger than the window, not graded; ${data.range.fixCommits} fix commits (${data.range.fixCommitsJoined} joined)`,
     `Base rate: ${data.base.publishable ? `${pct(data.base.rate)}${ci(data.base.ci95)}` : withheld.trim()} (${data.base.repaired}/${data.base.n})`,
     `Model: ${data.model.name ?? data.model.source}${data.model.calls ? `, ${data.model.calls} calls, ${data.model.failures} failed, $${data.model.costUsd.toFixed(4)}` : ""}`,
+    ...(data.method.rescoredFrom === undefined
+      ? []
+      : [
+          `Rescored from \`${data.method.rescoredFrom ?? "a saved run"}\`: saved signals and answers, route engine ${data.modelRouteEngineVersion}; nothing replayed, no model called`,
+        ]),
     "",
     "Regret is a commit routed cheap that was repaired within the window. It is never a saving: otito does not know which model was used. Two rates whose intervals overlap are not shown to differ.",
   ];

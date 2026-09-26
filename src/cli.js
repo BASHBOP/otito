@@ -731,25 +731,34 @@ async function handleAttest(parsed) {
  * `otito regret <repo>` grades the router's tier against the repository's own
  * history: replay commits, recompute the tier from the parent tree, join to
  * the same `repaired` outcome calibrate uses. Offline unless a key is set;
- * `--offline` keeps it keyless either way.
+ * `--offline` keeps it keyless either way. `--rescore <run.json>` grades the
+ * current arithmetic against a saved run's answers instead of replaying.
  * @param {CliArgs} parsed
  */
 async function handleRegret(parsed) {
-  const { formatRegretMarkdown, generateRegret } = await import("./lib/regret.js");
+  const { formatRegretMarkdown, generateRegret, rescoreRegret } = await import("./lib/regret.js");
   const quiet = parsed.flags.quiet === true;
   /** @type {Record<string, any>} */
   let data;
   try {
-    data = await generateRegret(parsed.positionals[0] ?? parsed.flags.path ?? ".", {
-      window: parsed.flags.window,
-      minSample: parsed.flags.min_sample,
-      since: parsed.flags.since,
-      max: parsed.flags.max,
-      top: parsed.flags.top,
-      offline: parsed.flags.offline === true,
-      // Progress goes to stderr so `--json` on stdout stays parseable.
-      onProgress: quiet ? undefined : ({ done, total, sha }) => process.stderr.write(`regret: ${done}/${total} ${sha.slice(0, 7)}\n`),
-    });
+    const rescore = parsed.flags.rescore;
+    if (rescore === true) {
+      throw new Error("--rescore needs the path of a saved `otito regret --json` run");
+    }
+    data =
+      rescore === undefined
+        ? await generateRegret(parsed.positionals[0] ?? parsed.flags.path ?? ".", {
+            window: parsed.flags.window,
+            minSample: parsed.flags.min_sample,
+            since: parsed.flags.since,
+            max: parsed.flags.max,
+            top: parsed.flags.top,
+            offline: parsed.flags.offline === true,
+            // Progress goes to stderr so `--json` on stdout stays parseable.
+            onProgress: quiet ? undefined : ({ done, total, sha }) => process.stderr.write(`regret: ${done}/${total} ${sha.slice(0, 7)}\n`),
+          })
+        : // Nothing is replayed or called: the saved rows carry what the arithmetic reads.
+          rescoreRegret(JSON.parse(readFileSync(String(rescore), "utf8")));
   } catch (error) {
     // The replay has already removed its worktree; exit the way a shell
     // expects an interrupted command to, not as a failed one.

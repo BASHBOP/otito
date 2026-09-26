@@ -520,9 +520,108 @@ What it says, plainly:
 This is the number the router had been missing, and it is why `route` stays
 advisory, why no host integration turns it on by default, and why no partner
 claim rests on it. The next change to the router is the arithmetic that turns
-spread answers into a tier, and it will be graded by this command before it
+spread answers into a tier, and it is graded under the bar below before it
 ships. One repository is not a sample of repositories; the caveats the command
 prints apply in full.
+
+### Grading the next arithmetic
+
+Jev's answers are not replayable: run twice against the same corpus they moved
+by up to 0.05. Two versions of the arithmetic graded on two runs therefore
+differ in the arithmetic **and** in however far the model drifted between the
+runs, and a change to the arithmetic cannot be told apart from noise in the
+model. So each row of a regret run keeps the signals and the exact answers its
+tiers were scored from, and `--rescore` applies the current arithmetic to a
+saved run without checking anything out or calling anything:
+
+```bash
+otito regret . --json > run.json          # once, with the key: the answers are frozen here
+otito regret --rescore run.json           # any number of times: this version's arithmetic, same answers
+```
+
+The rescore carries its own receipt, names the run it read in
+`method.rescoredFrom`, and keeps that run's `replayable: false`: rescoring
+does not make a model's answers reproducible, it only stops them from moving.
+Runs saved before the rows kept their inputs (regret 0.2.0) are refused
+rather than rescored on rounded answers, since a route one rounding from a
+band edge changes tier.
+
+**The bar, written before any candidate was scored.** A new arithmetic
+replaces the shipped one only if, rescored on the frozen runs below:
+
+1. **It orders outcomes.** On both bashbop repositories, for the `jev` and
+   `offline` variants, every tier clears the minimum sample, cheap < mid <
+   premium, and the cheap and premium intervals do not overlap.
+2. **The model earns its call.** Under the current invariant a model read can
+   only move a tier toward premium, so the model's cheap lane is a subset of
+   the deterministic one. On both bashbop repositories the `jev` cheap lane is
+   repaired less often than the deterministic cheap lane over the same rows.
+   If it is not, the model is removing commits from the cheap lane without
+   making it any cleaner.
+3. **Regret does not rise.** On every frozen run, for both variants, the
+   cheap lane's repair rate is no higher than the shipped arithmetic's on
+   that run.
+4. **Tune on two, confirm on one.** Candidates are compared on bashbop-api
+   and otito. bashbop-event-web, the run with the most outcomes, is scored
+   once, on the candidate chosen, and a failure there is a failure.
+5. **Nothing it does not own moves.** The `no evidence` ceiling and the
+   `risk path` bump are unchanged, `modelRouteEngineVersion` is bumped, and
+   the change prints the before and after tables with both receipts.
+
+**The frozen runs.** Each repository's whole history, replayed on 2026-09-26:
+30-day window, minimum sample 30, `jev-1.13.0`, 2,385 answered calls and 2
+failed, $0.20 in all. The runs are kept under `.otito/runs/`, outside the
+repository, because two of the three are private and every row carries a
+commit subject; the receipts identify them.
+
+| Run | Graded | Base rate | Receipt |
+| --- | --: | --- | --- |
+| otito | 157 | 19.7% (14.3 to 26.7) | `regret_7d94fd0a73bd` |
+| bashbop-api | 1,214 | 24.7% (22.4 to 27.2) | `regret_a4499a13f0ee` |
+| bashbop-event-web | 1,016 | 46.9% (43.8 to 49.9) | `regret_9582de4ba43a` |
+
+Rescored with the shipped arithmetic, every saved tier and route comes back
+unchanged, 2,387 rows of 2,387. otito's run is too small to grade the top tier,
+as in the section above. The two bashbop runs are not:
+
+| Run | Variant | cheap | mid | premium | Ordered |
+| --- | --- | --- | --- | --- | --- |
+| bashbop-api | deterministic | 474 · 10.1% (7.7 to 13.2) | 312 · 19.6% (15.5 to 24.3) | 428 · 44.6% (40.0 to 49.4) | yes |
+| bashbop-api | offline | 129 · 22.5% (16.1 to 30.4) | 546 · 10.1% (7.8 to 12.9) | 539 · 40.1% (36.0 to 44.3) | **no** |
+| bashbop-api | jev | 186 · 4.8% (2.6 to 8.9) | 398 · 12.1% (9.2 to 15.6) | 630 · 38.6% (34.9 to 42.4) | yes |
+| bashbop-event-web | deterministic | 233 · 33.5% (27.7 to 39.8) | 463 · 51.2% (46.6 to 55.7) | 320 · 50.3% (44.9 to 55.8) | no |
+| bashbop-event-web | offline | 97 · 24.7% (17.2 to 34.2) | 425 · 46.1% (41.4 to 50.9) | 494 · 51.8% (47.4 to 56.2) | yes |
+| bashbop-event-web | jev | 8 · withheld | 352 · 37.5% (32.6 to 42.7) | 656 · 52.1% (48.3 to 55.9) | unknown |
+
+The shipped arithmetic fails criterion 1 twice (the keyless tier on
+bashbop-api, the model tier on bashbop-event-web) and criterion 2 once
+(bashbop-event-web). What that looks like:
+
+- **The keyless tier runs the wrong way on bashbop-api, and it is not
+  noise.** Its cheap lane is repaired 22.5% of the time and its mid lane
+  10.1%, and the intervals do not overlap. Split the deterministic cheap lane
+  by what the heuristic did with it: the 345 commits it moved out were
+  repaired 5.5% (3.6 to 8.4) of the time, the 129 it kept 22.5%. It escalates
+  the safe commits and keeps the risky ones cheap.
+- **The model read orders bashbop-api, and its escalations are right.** Split
+  the same way, the 288 commits it moved out of the cheap lane were repaired
+  13.5% (10.1 to 18.0) of the time, the 186 it kept 4.8% (2.6 to 8.9). No
+  model term in this document had been shown to separate outcomes before.
+- **On bashbop-event-web the model read cannot be graded, because it almost
+  never says cheap:** 8 commits of 1,016, against 656 premium. Its AX runs
+  lower than bashbop-api's (median 66 against 80) and a typical read costs a
+  little more of it (a median 31% of AX against 28%), so almost nothing
+  clears the cheap band.
+- **A shorter window hid the inversion.** Replayed over about the last year
+  only (440 and 398 commits, since late September 2025), the keyless tier was
+  ordered on both repositories. A tier that is ordered over one window and
+  inverted over another is not yet a tier.
+
+Neither split is printed by the command; both come from the rows the frozen
+runs saved. The next arithmetic therefore has two jobs the bar can see: stop
+the keyless terms inverting bashbop-api's cheap lane, and let a read that
+separates outcomes reach the cheap band in a repository like
+bashbop-event-web, without giving back what it does on bashbop-api.
 
 ## References
 

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
-import { formatRegretMarkdown, generateRegret, isolateGit, wilson } from "../src/lib/regret.js";
+import { formatRegretMarkdown, generateRegret, isolateGit, rescoreRegret, wilson } from "../src/lib/regret.js";
 import { TIERS } from "../src/lib/model-route.js";
 import { getCodeMapCachePath } from "../src/lib/index-cache.js";
 
@@ -364,4 +364,107 @@ test("errors name what is actually missing, and a binary-only commit is not docs
   assert.ok(row, "the binary-only commit is replayed");
   assert.equal(row.docsOnly, false);
   assert.equal(data.range.docsOnly, 0);
+});
+
+/** A model that answers every call the same way, so a run can carry a jev variant offline. */
+const jevFetch = async () =>
+  /** @type {any} */ ({
+    ok: true,
+    json: async () => ({
+      model: "jev-test",
+      usage: { input_tokens: 2000 },
+      answers: {
+        specificity: { type: "score", score: 2, confidence: 0.9, probabilities: [0.05, 0.05, 0.9] },
+        blast_radius: { type: "score", score: 1, confidence: 0.8, probabilities: [0.2, 0.6, 0.2] },
+        novelty: { type: "noul", noul: 0.7 },
+      },
+    }),
+  });
+
+test("a saved run rescored with the shipped arithmetic reproduces every tier and route, and replays and calls nothing", async () => {
+  const { root } = historyRepo("rescore");
+  const data = await generateRegret(root, { apiKey: "test-key", fetchImpl: jevFetch, minSample: 1 });
+  const saved = JSON.parse(JSON.stringify(data));
+  // The repository is gone: a rescore can only be reading the saved rows.
+  fs.rmSync(root, { recursive: true, force: true });
+
+  const rescored = rescoreRegret(saved);
+
+  for (const row of saved.commits) {
+    assert.equal(typeof row.containment, "number", "every row keeps the signals scoreDecision reads");
+    assert.ok(Array.isArray(row.riskPaths));
+    assert.equal(row.inputs.jev.specificity.score, 2, "and the answers exactly as scored");
+    assert.equal(row.inputs.jev.specificity.probabilities["names a symptom"], 0.9);
+  }
+  assert.deepEqual(
+    rescored.commits.map((row) => [row.sha, row.tiers, row.routes]),
+    data.commits.map((row) => [row.sha, row.tiers, row.routes]),
+  );
+  assert.deepEqual(rescored.variants, data.variants);
+  assert.deepEqual(rescored.base, data.base);
+  assert.deepEqual(rescored.questions, data.questions);
+  assert.equal(rescored.method.rescoredFrom, data.receipt.id);
+  assert.notEqual(rescored.receipt.id, data.receipt.id, "a rescore is its own run, traceable to the one it read");
+  assert.equal(rescored.receipt.replayable, false, "the model's answers stay unreplayable; the rescore does not launder that");
+  assert.ok(rescored.caveats.some((caveat) => /no commit was replayed and no model was called/.test(caveat)));
+  assert.match(formatRegretMarkdown(rescored), /Rescored from `regret_[0-9a-f]{12}`/);
+  assert.doesNotMatch(formatRegretMarkdown(data), /Rescored from/);
+
+  const twice = rescoreRegret(JSON.parse(JSON.stringify(rescored)));
+  assert.deepEqual(twice.variants, data.variants, "a rescore of a rescore is still the same grade");
+  assert.equal(twice.method.rescoredFrom, rescored.receipt.id, "and names the run it read");
+  assert.equal(twice.caveats.filter((caveat) => caveat.startsWith("Rescored from")).length, 1, "without stacking caveats");
+});
+
+test("a candidate arithmetic is graded on the same saved answers, and the grade follows it", async () => {
+  const { root } = historyRepo("candidate");
+  const saved = JSON.parse(JSON.stringify(await generateRegret(root, { apiKey: "test-key", fetchImpl: jevFetch, minSample: 1 })));
+  const seen = [];
+  const everythingPremium = (/** @type {any} */ input) => {
+    seen.push(input);
+    return /** @type {any} */ ({ tier: "premium", route: 0 });
+  };
+
+  const rescored = rescoreRegret(saved, { score: everythingPremium });
+
+  assert.equal(seen.length, saved.commits.length * 3, "deterministic, offline and jev, once per row");
+  assert.ok(
+    seen.some((input) => input.answers.specificity.probabilities?.["names a symptom"] === 0.9),
+    "the candidate reads the saved distribution",
+  );
+  assert.ok(seen.every((input) => typeof input.signals.containment === "number"));
+  for (const variant of Object.values(rescored.variants)) {
+    assert.equal(variant.contradicted.ofCheap, 0);
+    assert.equal(variant.tiers.find((row) => row.name === "premium").n, saved.commits.length);
+  }
+  assert.deepEqual(rescored.base, saved.base, "the outcomes are the saved ones; only the tiers move");
+});
+
+test("rescore refuses a run that did not keep its inputs, and anything that is not a regret run", async () => {
+  const { root } = historyRepo("old");
+  const saved = JSON.parse(JSON.stringify(await generateRegret(root, { offline: true, minSample: 1 })));
+  const before = {
+    ...saved,
+    regretEngineVersion: "0.2.0",
+    commits: saved.commits.map(({ containment: _containment, riskPaths: _riskPaths, inputs: _inputs, ...row }) => row),
+  };
+  assert.throws(() => rescoreRegret(before), /saved by regret 0\.2\.0, which did not keep the signals and answers a rescore needs/);
+  assert.throws(() => rescoreRegret({}), /needs the JSON of an `otito regret --json` run/);
+});
+
+test("the CLI rescores a saved run from a file, and says what --rescore needs when it has no path", async () => {
+  const { root } = historyRepo("cli-rescore");
+  const saved = await generateRegret(root, { offline: true, minSample: 1 });
+  const file = path.join(root, "..", `${path.basename(root)}-run.json`);
+  fs.writeFileSync(file, JSON.stringify(saved));
+
+  const ok = spawnSync(process.execPath, [path.resolve("src/cli.js"), "regret", "--rescore", file, "--json"], { encoding: "utf8" });
+  assert.equal(ok.status, 0, ok.stderr);
+  const rescored = JSON.parse(ok.stdout);
+  assert.equal(rescored.method.rescoredFrom, saved.receipt.id);
+  assert.doesNotMatch(ok.stderr, /regret: \d+\//, "nothing is replayed, so there is no progress to report");
+
+  const missing = spawnSync(process.execPath, [path.resolve("src/cli.js"), "regret", "--rescore"], { encoding: "utf8" });
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /--rescore needs the path of a saved `otito regret --json` run/);
 });

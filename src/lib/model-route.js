@@ -378,7 +378,10 @@ const round2 = (/** @type {number} */ value) => Number(Number(value).toFixed(2))
 
 /**
  * The arithmetic. Every term is visible so a tier can be traced to its inputs.
- * @param {{ answers: any, signals: ReturnType<typeof signalsFrom> }} input
+ * `signals` names only the fields read here: `otito regret` saves exactly these
+ * per row so a saved run can be rescored, and reading a new one must fail the
+ * type check there rather than rescore on a field the run never kept.
+ * @param {{ answers: any, signals: Pick<ReturnType<typeof signalsFrom>, "ax" | "containment" | "candidates" | "riskPaths"> }} input
  */
 export function scoreDecision({ answers, signals }) {
   const ax = signals.ax;
