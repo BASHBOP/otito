@@ -47,8 +47,14 @@ const BLAME_LINE = /^([0-9a-f]{40}) \d+ \d+/;
 
 // A commit is treated as a repair when its subject announces one. This is a
 // convention, not a fact: a fix that is not labelled one is invisible here, and
-// that limitation is reported in the payload rather than hidden.
-export const FIX_SUBJECT = /^(fix|hotfix|bugfix|revert)\b|^(fix|hotfix|bugfix|revert)[(!:]/i;
+// that limitation is reported in the payload rather than hidden. The spellings
+// are the ones real histories use: on the two bashbop repositories 119
+// commits were `hot-fix(...)`, `bug(...)`, `patch` or `fixes`, and under the
+// narrower rule they were graded as requests and invisible as repairs.
+// `hot-fit` is a typo those histories repeat. A word boundary already covers
+// `fix:`, `fix(scope)` and `fix!`.
+export const FIX_SUBJECT = /^(fix(es|ed|ing)?|hot-?fix|hot-fit|bug(s|fix)?|patch|revert)\b/i;
+export const FIX_COMMIT_RULE = "subject begins fix/fixes/hot-fix/hotfix/bugfix/bug/patch/revert";
 
 /**
  * @typedef {object} CalibrateOptions
@@ -111,7 +117,7 @@ export function generateCalibration(repoPath = ".", options = {}) {
       join: "line-overlap",
       joinDescription: "blame the pre-image lines each fix modifies at its parent; the commits owning those lines are the ones it repairs",
       outcome: "repaired",
-      fixCommitRule: "subject begins fix/hotfix/bugfix/revert",
+      fixCommitRule: FIX_COMMIT_RULE,
       windowDays,
       minSample,
       maxRangesPerFile: MAX_RANGES_PER_FILE,

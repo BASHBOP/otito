@@ -547,5 +547,26 @@ test("release and version-bump commits are not graded, in a replay or in a resco
   assert.equal(twice.caveats.filter((caveat) => /Release and version-bump/.test(caveat)).length, 1);
 
   const onlyReleases = { ...before, commits: before.commits.filter((row) => RELEASE_SUBJECT.test(row.subject)) };
-  assert.throws(() => rescoreRegret(onlyReleases), /every commit in this run is a release commit/);
+  assert.throws(() => rescoreRegret(onlyReleases), /every commit in this run is a release or fix commit/);
+
+  // A run saved under a narrower fix rule graded `hot-fix(...)` and `bug(...)`
+  // subjects as requests. They are outcomes now, so they leave the corpus,
+  // counted as fix commits, and the caveat says their own repairs are not
+  // joined without a replay.
+  const narrower = JSON.parse(JSON.stringify(data));
+  narrower.commits.push({ ...template, sha: "e".repeat(40), subject: "hot-fix(payment): guest login", repairedAfter: null });
+  narrower.commits.push({ ...template, sha: "d".repeat(40), subject: "bug(email): confirmation temps", repairedAfter: 60 });
+  const widened = rescoreRegret(narrower);
+  assert.deepEqual(
+    widened.commits.map((row) => row.sha),
+    data.commits.map((row) => row.sha),
+    "the fix rows are gone and nothing else moved",
+  );
+  assert.equal(widened.range.fixCommits, data.range.fixCommits + 2);
+  assert.equal(widened.range.releaseCommits, data.range.releaseCommits, "a fix row is not counted as a release");
+  assert.match(widened.method.fixCommitRule, /hot-fix/);
+  assert.ok(widened.caveats.some((caveat) => /^Dropped 2 fix commits the saved run had graded as requests/.test(caveat)));
+  const widenedTwice = rescoreRegret(JSON.parse(JSON.stringify(widened)));
+  assert.equal(widenedTwice.range.fixCommits, widened.range.fixCommits, "a rescore of a rescore does not count the drop again");
+  assert.equal(widenedTwice.caveats.filter((caveat) => /^Dropped /.test(caveat)).length, 0);
 });

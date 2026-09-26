@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { generateCalibration, makeCalibrationReceipt, formatCalibrationMarkdown } from "../src/lib/calibrate.js";
+import { FIX_SUBJECT, generateCalibration, makeCalibrationReceipt, formatCalibrationMarkdown } from "../src/lib/calibrate.js";
 
 function git(cwd, ...args) {
   const result = spawnSync("git", args, {
@@ -140,4 +140,38 @@ test("markdown names the join, the floor, and whether ordering is known", () => 
   assert.match(markdown, /withheld/);
   assert.match(markdown, /Monotonic \(low < medium < high\): unknown/);
   assert.match(markdown, /Receipt: `cal_/);
+});
+
+// The fix rule is a convention over real subjects, so it is pinned to the
+// spellings histories actually use, and to the requests it must not swallow.
+test("FIX_SUBJECT reads the spellings real histories use as repairs, and nothing else", () => {
+  const repairs = [
+    "fix: correct line two",
+    "fix(email): dates",
+    "fix!: breaking repair",
+    "Fixes #12",
+    "fixed the build",
+    "fixing tests",
+    "hotfix: prod",
+    "hot-fix(verification): cleanup",
+    "hot-fix/payment retry",
+    "hot-fit(pricing): test update",
+    "bug(email): confirmation temps",
+    "Bug payment (#299)",
+    "bugs: sorted",
+    "bugfix: null check",
+    "patch: guard the null",
+    "revert: undo #40",
+  ];
+  const requests = [
+    "feat: fixtures for the harness",
+    "chore(deps): bump fixpack",
+    "docs: how to fix a red build",
+    "refactor: bugsnag client",
+    "feat(patches): patch endpoint",
+    "test: reverting is covered",
+    "Prefix the log lines",
+  ];
+  for (const subject of repairs) assert.ok(FIX_SUBJECT.test(subject), `${subject} is a repair`);
+  for (const subject of requests) assert.ok(!FIX_SUBJECT.test(subject), `${subject} is a request`);
 });

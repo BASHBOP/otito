@@ -278,7 +278,9 @@ session and **binds the subagent**, and says so in as many words — claiming th
 host switched models when it only recommended a tier is an anti-pattern the
 skill names.
 
-Wire it up per repository, in `.claude/settings.local.json`:
+Wire it up once for every repository in `~/.claude/settings.json`, or for one
+repository in its `.claude/settings.local.json`. Not both: a prompt would route
+twice and be logged twice.
 
 ```json
 {
@@ -315,6 +317,31 @@ subagent.
 Keying is the same as `otito route`: with `TYPESAFE_API_KEY` set it asks Jev,
 and without one it falls back to the offline estimate, which is weaker but free
 and needs no network.
+
+**It keeps its decision.** A tier printed as context is gone when the turn
+ends, and a router can only be graded against decisions that were kept. So
+every routed prompt leaves one line in `~/.otito/route-decisions.jsonl`
+(`OTITO_ROUTE_LOG` moves it, `OTITO_ROUTE_LOG=off` keeps nothing). The line
+never holds the prompt, only its hash, and never leaves the machine.
+
+| Field | Why it is there |
+| --- | --- |
+| `sessionId`, `ts`, `promptHash`, `promptChars` | joins the decision to the prompt in the session transcript, which holds everything else: the prompts in order, interruptions, the assistant's edits |
+| `repo`, `root`, `branch`, `head` | the head at prompt time names the change: the next commit on that branch whose first parent is `head`, for the `repaired` join later |
+| `tiers`, `routes` per variant (`deterministic`, and `offline` or `jev`) | what each half of the router said; `otito route --json` now reports `deterministic` beside the scored tier |
+| `signals`, `answers`, `modelRouteEngineVersion` | exactly what `otito regret --rescore` reads, so a live corpus re-tiers under a new arithmetic the way a frozen run does |
+| `hostModel` | the only tier the hook actuates, through a subagent launch |
+
+The caveat the log does not remove: the tier the session ran on stays
+unknown, and no hook can learn it.
+
+`node scripts/hooks/route-outcomes.mjs` joins the log to the transcripts and
+grades every variant per tier on two same-session outcomes, with regret's
+minimum-sample rule and intervals: `corrected` (the next prompt inside the hour
+is an interruption or opens by pushing back) and `reworked` (the assistant's
+next turn edits a file this turn edited). Both were audited before they were
+written, on twenty days of this machine's transcripts, and the audit is the
+reason they carry the caveats they print; it is in the next section.
 
 ## Dogfood, bashbop-event-web, 2026-09-19
 
@@ -800,6 +827,132 @@ ceiling, and a 30-day line-overlap window on a busy monorepo are the three
 places to look. Until then `route` stays advisory, and the earlier sections
 stand as the record of what was measured on the corpus that included release
 commits.
+
+### Audited, 2026-09-26: the join
+
+The prior question was put to the frozen runs offline, on the rows plus git,
+with no model call: is `repaired` an outcome a tier can be graded against on
+these repositories, or is the join itself what the tables are measuring?
+Four cuts, all on the corpus without release commits, under the shipped
+arithmetic. The scripts, the per-fix blame tables and every output are beside
+the frozen runs in `.otito/runs/2026-09-26/tier-arithmetic/join-audit/`
+(local only, like the runs).
+
+- **The join reproduces.** A fresh blame pass at each repository's frozen head
+  gives the frozen `repairedAfter` on every row of all three runs.
+- **Shorter windows.** Rescored at 7 and 14 days from the stored
+  `repairedAfter`, the base rates fall as they must (bashbop-api 41.7% at 30
+  days, 34.6% at 14, 26.6% at 7) and the order of the tiers does not move. On
+  bashbop-api the keyless cheap lane is the most-repaired tier at every
+  window. The 30-day window was not counting churn a shorter one removes.
+- **A stricter join.** Eight rules: at least 2 or 3 overlapping lines instead
+  of 1, fix commits capped at 10 or 5 files or 200 changed lines, and their
+  combinations. The strictest halves the base rate (bashbop-api 41.7% to
+  15.8%, bashbop-event-web 50.5% to 17.1%) and orders nothing new. One cell
+  of 81 per repository separates: bashbop-event-web, 14 days, fixes of at most
+  5 files, the deterministic half, cheap 14.9% (10.3 to 21.0) against premium
+  25.9% (21.4 to 31.0). The keyless heuristic at the same cut is inverted
+  (cheap 17.3%, mid 16.7%), and the bar grades the model variants, not the
+  deterministic half. It is noise.
+- **Who repairs whom.** On the bashbop repositories repairs are not a few
+  sweeping fixes: bashbop-api's 296 repairs come from 204 distinct earliest
+  fixes and bashbop-event-web's 472 from 284, a median of one row each. The
+  ten largest fixes by files touched account for 6% and 11% of repairs, and
+  dropping them leaves every tier where it was (bashbop-api cheap 36.7%, mid
+  35.3%, premium 41.1%). otito is the opposite case: 21 of its 24 repairs are
+  ten sweeping fixes, and a fix of at most 5 files with at least 2 overlapping
+  lines repairs nothing, so its proxy measures those sweeps. otito was already
+  ungradable, with one premium commit.
+- **Fixes the rule did not label.** `FIX_SUBJECT` matched `fix`, `hotfix`,
+  `bugfix` and `revert`, and the bashbop histories write `hot-fix(...)`,
+  `hot-fit`, `bug(...)`, `patch` and `fixes`: 79 rows on bashbop-api and 40 on
+  bashbop-event-web were fixes graded as requests and invisible as repairs.
+  Blamed as outcomes they join 6 and 9 more repairs and move no tier. The rule
+  is widened in 0.4.1 because it was wrong, not because it changes the answer;
+  `--rescore` drops the rows it now reads as fixes and says that their own
+  repairs need a replay to join.
+- **The two remaining suspects.** There are no dependency bumps on either
+  bashbop repository in this corpus. `Develop (#N)` squash merges are 24 and 7
+  rows, almost all routed `premium`, and leaving them out changes nothing. On
+  otito the 17 dependency bumps do what the release commits did (16 of 17
+  routed cheap, 1 repaired; the keyless cheap lane goes from 17.5% to 21.3%
+  without them), but there is no ordering on otito for a corpus rule to
+  rescue.
+
+Rescored under 0.4.1 (release commits and the newly labelled fixes out):
+
+| Run | Graded | Base rate | Variant | cheap | mid | premium | Ordered |
+| --- | --: | --- | --- | --- | --- | --- | --- |
+| bashbop-api | 631 | 41.2% (37.4 to 45.1) | deterministic | 99 · 39.4% (30.3 to 49.2) | 148 · 35.1% (27.9 to 43.1) | 384 · 44.0% (39.1 to 49.0) | no |
+| bashbop-api | | | offline | 53 · 43.4% (31.0 to 56.7) | 140 · 34.3% (26.9 to 42.5) | 438 · 43.2% (38.6 to 47.8) | no |
+| bashbop-api | | | jev | 17 · withheld | 112 · 39.3% (30.7 to 48.5) | 502 · 42.2% (38.0 to 46.6) | unknown |
+| bashbop-event-web | 894 | 50.0% (46.7 to 53.3) | deterministic | 165 · 44.8% (37.5 to 52.5) | 438 · 52.3% (47.6 to 56.9) | 291 · 49.5% (43.8 to 55.2) | no |
+| bashbop-event-web | | | offline | 50 · 44.0% (31.2 to 57.7) | 383 · 48.8% (43.9 to 53.8) | 461 · 51.6% (47.1 to 56.2) | yes, overlapping |
+| bashbop-event-web | | | jev | 8 · withheld | 268 · 46.6% (40.8 to 52.6) | 618 · 51.8% (47.8 to 55.7) | unknown |
+| otito | 129 | 18.6% (12.8 to 26.2) | unchanged | | | | |
+
+The conclusion is the one worth having before anyone touches the arithmetic
+again: **commit history cannot grade the router on these repositories.** The
+outcome is real, the join is faithful and not dominated by a few fixes, and
+the tiers do not order it at any window, under any stricter join, with or
+without the suspect commits. The exclusions do not earn a corpus rule on this
+evidence. The next evidence has to come from live requests.
+
+What a live request fixes, and what it does not. Every graded row above
+carries two caveats history can never remove: the request is a commit subject
+written after the change, and the corpus is whatever landed, not what a router
+was asked. A decision recorded at prompt time removes both, which is why the
+`route-prompt` hook now keeps one (the section above). It does not remove the
+third: the tier the session ran on stays unknown. And it does not make the
+evidence arrive faster.
+
+### Audited, 2026-09-26: a same-session outcome
+
+The same day, the shorter road was tried: a request routed cheap whose next
+prompt in the session is a correction, an outcome available minutes after the
+request instead of thirty days after the commit. It was audited before the log
+existed, on the corpus that already did: every Claude Code transcript on this
+machine (twenty days, one user, 1,122 prompt records) and the tiers the canvas
+had recorded when the hook ran (376 routed prompts, otito only, since the hook
+was wired in one repository). Evidence beside the frozen runs in
+`.otito/runs/2026-09-26/session-correction/`, local only.
+
+| | count |
+| --- | --: |
+| real requests (not notifications, shell output, slash commands, interruptions, duplicate copies) | 755 |
+| with a follow-up prompt inside the hour | 616 |
+| whose turn edited any file | 143 |
+| with a tier recorded at the time | 84, of which 20 edited a file |
+
+**Pushback**, the next prompt opening with a negation, a complaint, still or
+again, an interruption, or a re-ask: 8.2% of follow-ups. Read one by one they
+are mostly the user fixing their own typo ("i meant commercial"), reporting a
+deploy or environment failure ("DB not working", "not reflecting in
+production"), interrupting to add information, or turn-taking. A handful are
+the model being wrong. **Rework**, the next turn's assistant edits touching a
+file this turn's edits touched: 24 of the 143 editing requests, 16.8%, and
+the samples are a plan file or a migration worked on across consecutive
+prompts. Iteration, not repair. The two labels barely overlap (21 of the 24
+reworked requests read as "moved on"). A **git undo** in the next turn (45
+turns) is stash-and-test workflow, staging fixes, and discards the user asked
+for, not a repair signal either.
+
+With 84 tiered requests every lane is below the minimum sample, so nothing is
+graded. The rate matters more than the count: about seven editing requests a
+day across every repository, about one of them routed cheap, so thirty per
+tier is weeks away and separating two rates at a 10 to 17% base rate is
+months. The outcome arrives in minutes; the corpus that carries it grows no
+faster than commits do. That was the wrong half of the earlier claim that this
+road was fast.
+
+So the hook keeps its decision and `route-outcomes` grades it, with both
+proxies' failure modes printed as caveats, and no number from either is
+published until a lane clears the minimum sample. Neither the commit join nor
+the session read grades the router today. What would: the tier the session
+actually ran on, recorded by the host; an outcome that reads the assistant's
+turn rather than the user's words (tests failing after the turn, an edit
+rejected at the permission prompt), each audited before it counts; and more
+than one user's sessions.
 
 ## References
 
