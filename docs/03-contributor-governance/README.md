@@ -11,7 +11,7 @@ This page is the governance contract for `BASHBOP/otito`. Contributor workflow l
 | Authority | Role |
 | --- | --- |
 | Contributors | Propose changes with evidence: tests, docs, and a focused diff |
-| CODEOWNERS | Review the files they own; currently `* @BASHBOP/bashbop-team` |
+| CODEOWNERS | Review the files they own; currently `* @BASHBOP/bashbop-team`, whose only member is the maintainer |
 | Required checks | Prove quality, docs, and merge readiness on the exact PR |
 | Maintainers | Record the merge decision; they are not replaced by a local gate |
 | Hosted CI | Independent of any agent or local `otito gate` result |
@@ -37,16 +37,28 @@ Otito readiness exits non-zero only on a blocking `FAIL`. A `WARN` must still be
 
 ## Governance Mode
 
-This repository itself is a **team** repository: shared ownership, required review, and CODEOWNERS.
+This repository itself is a **solo** repository: one maintainer owns it, so no second person can approve the maintainer's own changes.
 
-When Otito evaluates other repositories, the same product supports:
+Otito defaults to team governance. The checked-in `.otitorc.json` sets `"governance": "solo"`, and every `otito` command run in this repository reads it, including the post-merge attestation. Solo governance keeps one-person maintainer work moving while making missing separate review explicit `WARN` evidence. On this repository's PR gate (`otito gate --pr`, `otito review --pr`):
+
+- `Review decision` is `WARN`, not `FAIL`, when GitHub reports a required review that nobody has given. The maintainer records the owner/admin merge decision before merging.
+- `CODEOWNERS` is `WARN`, not `FAIL`, when changed files have no code-owner approval.
+- Requested changes still `FAIL`. No other check changes.
+
+An explicit flag still overrides the file. Use it when a separate reviewer is required, or to see what team governance would block:
+
+```bash
+otito gate --pr "$PR_NUMBER" --path . --governance team
+```
+
+When Otito evaluates other repositories, the same product supports both modes:
 
 ```bash
 otito gate --pr "$PR_NUMBER" --path . --governance solo
 otito gate --pr "$PR_NUMBER" --path . --governance team --policy company
 ```
 
-Solo governance keeps one-person maintainer work moving while making missing separate review explicit `WARN` evidence. Team and company policies keep those gaps as blocking or high-severity evidence. Do not copy solo governance onto this repository.
+Team and company policies keep missing review and CODEOWNERS approval as blocking or high-severity evidence. Once a second maintainer can review, set `.otitorc.json` to `team`.
 
 ---
 
@@ -54,9 +66,9 @@ Solo governance keeps one-person maintainer work moving while making missing sep
 
 1. Open an issue or draft PR for substantial work.
 2. Run `npm run ci` on the change.
-3. Request review from `@BASHBOP/bashbop-team`.
+3. Mark the PR ready for review; CODEOWNERS requests the maintainer's review.
 4. Address required checks and review comments.
-5. A maintainer records the merge decision.
+5. The maintainer records the merge decision.
 
 Security reports skip this public path. Use [SECURITY.md](https://github.com/BASHBOP/otito/blob/main/SECURITY.md).
 

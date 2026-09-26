@@ -102,7 +102,7 @@ The protected `main` branch requires maintainer approval, passing required check
 
 ## Governance For This Repository
 
-This project uses team governance: code owners listed in `.github/CODEOWNERS` review changes, and humans remain the merge authority.
+This project uses solo governance: one maintainer reviews changes as the code owner in `.github/CODEOWNERS`, and humans remain the merge authority. The checked-in `.otitorc.json` sets it, so the Otito gate reports a missing separate review or CODEOWNERS approval as `WARN` evidence rather than `FAIL`; an explicit `--governance team` still overrides it. See [Governance Mode](docs/03-contributor-governance/README.md#governance-mode).
 
 Release tagging, npm publish, and MCP Registry publish are maintainer tasks. See [Release Readiness](docs/04-release-readiness/README.md).
 

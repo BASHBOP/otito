@@ -689,8 +689,11 @@ function localReviewCheck(options) {
   };
 }
 
+/** The npm package tieline is published as; there is no @bashbop/tieline. */
+const TIELINE_PACKAGE = "@nugehs/tieline";
+
 // Optional FE↔BE contract-drift gate, powered by tieline
-// (https://github.com/BASHBOP/tieline). Runs only when a tieline config is
+// (https://github.com/nugehs/tieline). Runs only when a tieline config is
 // discoverable AND the binary resolves; otherwise it skips silently so the gate
 // never hard-depends on tieline being installed.
 /**
@@ -706,8 +709,8 @@ function contractDriftCheck(root) {
     return {
       name: "Contract drift",
       status: STATUS.warn,
-      summary: "tieline config found but the tieline binary could not be resolved — install @bashbop/tieline to enable this gate.",
-      details: [cfg, "Repair command: npm install --save-dev @bashbop/tieline"],
+      summary: `tieline config found but the tieline binary could not be resolved — install ${TIELINE_PACKAGE} to enable this gate.`,
+      details: [cfg, `Repair command: npm install --save-dev ${TIELINE_PACKAGE}`],
     };
   }
   const res = runCommand(bin, ["check", "--json", "--no-fail", "--config", cfg], { cwd, timeout: 60000 });
@@ -735,6 +738,9 @@ function contractDriftCheck(root) {
   };
 }
 
+/** The npm package bouncer is published as; there is no @bashbop/bouncer. */
+const BOUNCER_PACKAGE = "@nugehs/bouncer";
+
 /**
  * Optional compliance-controls gate, powered by bouncer. A config explicitly
  * opts a repository into the applicable regulation packs.
@@ -747,11 +753,24 @@ function complianceControlsCheck(root) {
   const cwd = path.dirname(cfg);
   const bin = resolveToolBin("bouncer", cwd, root);
   if (!bin) {
+    const repair = `Repair command: npm install --save-dev ${BOUNCER_PACKAGE}`;
+    // A repository may run bouncer only in CI (npx, no devDependency). Say where
+    // instead of reporting a broken install, but keep the warning: the gate reads
+    // the workflow and never runs npx, so it has no evidence for this change.
+    const ci = findWorkflowReference(root, BOUNCER_PACKAGE);
+    if (ci) {
+      return {
+        name: "Compliance controls",
+        status: STATUS.warn,
+        summary: `bouncer runs in CI (${ci.file}) but not locally, so compliance controls were not evaluated for this change; the gate does not run npx or install packages.`,
+        details: [cfg, `CI workflow: ${ci.file}:${ci.line} · ${ci.text}`, repair],
+      };
+    }
     return {
       name: "Compliance controls",
       status: STATUS.warn,
-      summary: "bouncer config found but the bouncer binary could not be resolved — install @bashbop/bouncer to enable this gate.",
-      details: [cfg, "Repair command: npm install --save-dev @bashbop/bouncer"],
+      summary: `bouncer config found but the bouncer binary could not be resolved — install ${BOUNCER_PACKAGE} to enable this gate.`,
+      details: [cfg, repair],
     };
   }
   const result = runCommand(bin, ["check", "--json", "--no-fail", "--config", cfg], { cwd, timeout: 60000 });
@@ -863,6 +882,29 @@ function findToolConfig(root, fileName, environmentVariable) {
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
+  }
+  return null;
+}
+
+/**
+ * First non-comment line of a GitHub Actions workflow that references a
+ * package, so a gate can say where a tool it could not resolve locally runs.
+ * The workflow is only read, never executed.
+ * @param {string} root
+ * @param {string} packageName
+ * @returns {{ file: string, line: number, text: string } | null}
+ */
+function findWorkflowReference(root, packageName) {
+  const dir = path.join(root, ".github", "workflows");
+  try {
+    const names = fs.readdirSync(dir).filter((entry) => /\.ya?ml$/.test(entry));
+    for (const name of names.sort()) {
+      const lines = fs.readFileSync(path.join(dir, name), "utf8").split(/\r?\n/);
+      const index = lines.findIndex((line) => !line.trimStart().startsWith("#") && line.includes(packageName));
+      if (index !== -1) return { file: `.github/workflows/${name}`, line: index + 1, text: lines[index].trim() };
+    }
+  } catch {
+    // No readable workflows: fall back to the install hint.
   }
   return null;
 }

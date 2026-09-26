@@ -13,6 +13,7 @@ import { generateRoute, hostModelFor, TIERS } from "./model-route.js";
 import { formatRouteMarkdown } from "./render/route.js";
 import { appendEvent, extractSignals, redactError, shareEvent } from "./telemetry.js";
 import { forwardToCanvas } from "./canvas-tap.js";
+import { gatePolicy } from "./config.js";
 import { evaluateLocal } from "./pass-local.js";
 import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
@@ -292,7 +293,10 @@ export const tools = [
     inputSchema: {
       type: "object",
       properties: {
-        pr: { type: "string", description: "Optional PR selector (number, URL, or branch). When set, runs the GitHub gate; when absent, runs the local gate." },
+        pr: {
+          type: "string",
+          description: "PR selector (number, URL, or branch). Set, runs the GitHub gate on that PR; omitted or blank, runs the local gate.",
+        },
         staged: {
           type: "boolean",
           description:
@@ -305,8 +309,11 @@ export const tools = [
         },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         base: { type: "string", description: "Base ref for the local gate. Defaults to origin/main, then HEAD. Ignored in PR mode." },
-        policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
-        governance: { type: "string", description: "Governance: team (default) or solo." },
+        policy: {
+          type: "string",
+          description: "Policy profile: standard, company, or high-risk. Omitted, the repository's .otitorc.json or user config decides, else standard.",
+        },
+        governance: { type: "string", description: "Governance: team or solo. Omitted, the repository's .otitorc.json or user config decides, else team." },
         request: { type: "string", description: "Optional change request for context evidence output." },
         minConvergence: {
           type: "number",
@@ -334,9 +341,15 @@ export const tools = [
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         request: { type: "string", description: "Plain-English change request for impact scoring." },
         base: { type: "string", description: "Base ref for local diff. Defaults to origin/main, then HEAD." },
-        pr: { type: "string", description: "Optional PR selector. When set, pass-pr runs against GitHub instead of local mode." },
-        policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
-        governance: { type: "string", description: "Governance: team (default) or solo." },
+        pr: {
+          type: "string",
+          description: "PR selector (number, URL, or branch). Set, gates that GitHub PR, as review_gate does; omitted or blank, runs the local gate.",
+        },
+        policy: {
+          type: "string",
+          description: "Policy profile: standard, company, or high-risk. Omitted, the repository's .otitorc.json or user config decides, else standard.",
+        },
+        governance: { type: "string", description: "Governance: team or solo. Omitted, the repository's .otitorc.json or user config decides, else team." },
         impactTop: { type: "number", description: "Number of impact files. Defaults to 8." },
         minConvergence: { type: "number", description: "Optional minimum convergence score (0–100) enforced by the merge gate." },
         receipt: {
@@ -402,11 +415,20 @@ export const tools = [
   },
 ];
 
+// review_gate reads a blank pr as omitted and runs the local gate, so no pr a
+// client can send asks for the checked-out branch's PR. pr_merge_readiness
+// gated that PR when its selector was left out, as `gh pr view` does, so its
+// alias passes this instead: a value JSON cannot carry.
+const CURRENT_BRANCH_PR = Symbol("the checked-out branch's PR");
+
 // Legacy MCP tool names remain callable through tools/call even though they no
 // longer appear in tools/list. Each entry maps an old name to its canonical
 // successor plus a pure arguments translator. Renames forward 1:1; folded tools
-// translate params (e.g. find_backend_route's query → repo_map.route). This
-// guarantee holds until otito 3.0; see docs/MIGRATION-2.0.md.
+// translate params (e.g. find_backend_route's query → repo_map.route). The
+// names date from Repoctx 2.0's 18-to-11 consolidation and still work in 3.x;
+// no release is named to remove them, and removing one is a breaking change.
+// The mapping is documented under "Legacy tool names" in
+// docs/02-mcp-agent-workflows/README.md, which a test keeps in step with this.
 /**
  * @typedef {{ tool: string, mapArgs: (args?: ToolArgs) => (ToolArgs | undefined) }} LegacyAlias
  * @type {Record<string, LegacyAlias>}
@@ -415,12 +437,13 @@ export const LEGACY_TOOL_ALIASES = {
   // Renames — same schema, new name.
   pr_review: { tool: "review_context", mapArgs: (args) => args },
   review_pr: { tool: "review_verdict", mapArgs: (args) => args },
-  // merge_readiness is the local gate (no pr); pr_merge_readiness is the GitHub
-  // gate — map its `selector` onto review_gate's `pr`.
+  // merge_readiness is the local gate (no pr). pr_merge_readiness is the GitHub
+  // gate: its `selector` becomes review_gate's `pr`, and an omitted or blank one
+  // gates the checked-out branch's PR, the old tool's documented default.
   merge_readiness: { tool: "review_gate", mapArgs: ({ selector: _selector, ...rest } = {}) => rest },
   pr_merge_readiness: {
     tool: "review_gate",
-    mapArgs: ({ selector, ...rest } = {}) => ({ ...rest, pr: selector ?? rest.pr ?? "" }),
+    mapArgs: ({ selector, ...rest } = {}) => ({ ...rest, pr: optionalString(selector) ?? optionalString(rest.pr) ?? CURRENT_BRANCH_PR }),
   },
   // repo_catalog → repo_search with no query returns the catalog listing.
   repo_catalog: { tool: "repo_search", mapArgs: ({ query: _query, ...rest } = {}) => rest },
@@ -743,23 +766,28 @@ async function dispatchTool(name, args) {
       return args.includeMarkdown ? { data, markdown: formatConvergenceMarkdown(data) } : data;
     }
     case "review_gate": {
-      // pr set → GitHub gate (evaluatePR); pr absent → local gate (evaluateLocal).
-      // This is exactly what the old pr_merge_readiness and merge_readiness did.
-      const hasPr = typeof args.pr === "string" && args.pr.trim();
-      if (hasPr) {
-        return evaluatePR(args.path ?? ".", args.pr, {
-          policy: args.policy,
-          governance: args.governance,
+      // pr naming a PR → GitHub gate (evaluatePR); pr omitted or blank → local
+      // gate (evaluateLocal), as merge_readiness did. A blank pr is no PR, as a
+      // blank policy or governance is no setting; passed on, `gh pr view` would
+      // drop it and gate the checked-out branch's PR, which nobody named. Only
+      // the pr_merge_readiness alias asks for that PR, with CURRENT_BRANCH_PR.
+      const repoPath = args.path ?? ".";
+      const { policy, governance } = gatePolicy(repoPath, args);
+      const pr = args.pr === CURRENT_BRANCH_PR ? "" : optionalString(args.pr);
+      if (pr !== undefined) {
+        return evaluatePR(repoPath, pr, {
+          policy,
+          governance,
           request: args.request,
           minConvergence: args.minConvergence,
           receipt: args.receipt,
         });
       }
-      return evaluateLocal(args.path ?? ".", {
+      return evaluateLocal(repoPath, {
         base: args.base,
         head: args.head,
-        policy: args.policy,
-        governance: args.governance,
+        policy,
+        governance,
         request: args.request,
         minConvergence: args.minConvergence,
         receipt: args.receipt,
@@ -767,12 +795,17 @@ async function dispatchTool(name, args) {
       });
     }
     case "review_verdict": {
-      const { data } = await generateReview(args.path ?? ".", {
+      const repoPath = args.path ?? ".";
+      const { policy, governance } = gatePolicy(repoPath, args);
+      const { data } = await generateReview(repoPath, {
         request: args.request,
         base: args.base,
-        prSelector: args.pr,
-        policy: args.policy,
-        governance: args.governance,
+        // Blank runs the local gate, as for review_gate. generateReview would
+        // take " " for a PR, and gh would drop it and gate the checked-out
+        // branch's PR instead.
+        prSelector: optionalString(args.pr),
+        policy,
+        governance,
         minConvergence: args.minConvergence,
         receipt: args.receipt,
         impactTop: args.impactTop,
@@ -941,6 +974,16 @@ function requiredString(value, name) {
     throw new McpProtocolError(-32602, `${name} is required`);
   }
   return value;
+}
+
+/**
+ * An optional string argument, or undefined when it is missing or blank: a
+ * blank argument counts as omitted.
+ * @param {unknown} value
+ * @returns {string | undefined}
+ */
+function optionalString(value) {
+  return typeof value === "string" && value.trim() ? value : undefined;
 }
 
 /**

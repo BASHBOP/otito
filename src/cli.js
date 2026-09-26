@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, realpathSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { parseArgv } from "./lib/args.js";
@@ -25,11 +25,16 @@ import { parseArgv } from "./lib/args.js";
 /** @typedef {import('./lib/eval.js').EvalOptions} EvalOptions */
 import { createRenderer } from "./lib/render/fancy.js";
 import { formatTerminalSummary, printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
-import { CONFIG_KEYS, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
+import { CONFIG_KEYS, gatePolicy, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
 import { appendEvent, clearTelemetryLog, noteResult, redactError, shareEvent, takePendingSignals, telemetryStatus } from "./lib/telemetry.js";
 
 const packageVersion = String(JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version);
 const versionFlags = new Set(["--version", "-v"]);
+
+// Commands that gate a repository named by a positional or --path. They take
+// policy and governance from that repository's config (gatePolicy), not from
+// the directory otito runs in, so main() leaves those two flags to them.
+const gateCommands = new Set(["pass", "pass-pr", "gate", "review", "workspace-gate"]);
 
 /** @type {Record<string, ((parsed: CliArgs) => void | Promise<void>) | undefined>} */
 const commandHandlers = {
@@ -98,11 +103,13 @@ async function main(argv = process.argv.slice(2)) {
     if (cfg.theme !== undefined && cfg.theme !== "default" && parsed.flags.theme === undefined) {
       parsed.flags.theme = cfg.theme;
     }
-    if (cfg.policy !== undefined && parsed.flags.policy === undefined) {
-      parsed.flags.policy = cfg.policy;
-    }
-    if (cfg.governance !== undefined && parsed.flags.governance === undefined) {
-      parsed.flags.governance = cfg.governance;
+    if (!gateCommands.has(command)) {
+      if (cfg.policy !== undefined && parsed.flags.policy === undefined) {
+        parsed.flags.policy = cfg.policy;
+      }
+      if (cfg.governance !== undefined && parsed.flags.governance === undefined) {
+        parsed.flags.governance = cfg.governance;
+      }
     }
   }
 
@@ -607,13 +614,14 @@ async function handleConverge(parsed) {
 async function handlePass(parsed) {
   const { evaluateLocal, formatPassMarkdown, formatPassTerminal } = await import("./lib/pass-local.js");
   const repoPath = parsed.positionals[0] ?? ".";
+  const { policy, governance } = gatePolicy(repoPath, parsed.flags);
   // evaluateLocal returns a loosely-typed record; it is a PassData at runtime.
   const data = /** @type {PassData} */ (
     evaluateLocal(repoPath, {
       base: parsed.flags.base,
       head: parsed.flags.head,
-      policy: parsed.flags.policy,
-      governance: parsed.flags.governance,
+      policy,
+      governance,
       request: parsed.flags.request,
       minConvergence: parsed.flags.min_convergence,
       receipt: parsed.flags.receipt,
@@ -647,12 +655,20 @@ async function handlePass(parsed) {
 /** @param {CliArgs} parsed */
 async function handlePassPr(parsed) {
   const { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } = await import("./lib/pass-pr.js");
-  const selector = parsed.positionals[0] ?? "";
+  // No selector gates the current branch's PR, as `gh pr view` does. A blank
+  // one is `otito pass-pr "$PR_NUMBER"` with the variable unset, not a request
+  // for that PR.
+  const selector = parsed.positionals[0];
+  if (selector !== undefined && !isPrSelector(selector)) {
+    throw new Error("pass-pr was given a blank PR selector; name the PR, e.g. `otito pass-pr 123 --path .`, or leave it out to gate the current branch's PR");
+  }
+  const repoPath = parsed.flags.path ?? ".";
+  const { policy, governance } = gatePolicy(repoPath, parsed.flags);
   // evaluatePR returns a loosely-typed record; it is a PassPrData at runtime.
   const data = /** @type {PassPrData} */ (
-    await evaluatePR(parsed.flags.path ?? ".", selector, {
-      policy: parsed.flags.policy,
-      governance: parsed.flags.governance,
+    await evaluatePR(repoPath, selector ?? "", {
+      policy,
+      governance,
       request: parsed.flags.request,
       minConvergence: parsed.flags.min_convergence,
       receipt: parsed.flags.receipt,
@@ -681,10 +697,6 @@ async function handlePassPr(parsed) {
   if (data.verdict === "FAIL") process.exitCode = 1;
 }
 
-// `gate` is the canonical v2 merge-gate command. It maps to `pass` for the
-// local gate (no --pr) and to `pass-pr` for the GitHub gate (--pr <selector>),
-// mirroring the review_gate MCP tool's local-vs-PR dispatch. `pass` and
-// `pass-pr` remain available as legacy aliases.
 /**
  * `otito attest [repo] --verdict file --merge sha [...]` appends a hash-chained
  * record to the repository's audit ledger; `otito attest [repo] --verify`
@@ -788,31 +800,104 @@ async function handleRegret(parsed) {
   });
 }
 
+// `gate` is the canonical v2 merge-gate command. It maps to `pass` for the
+// local gate (no --pr) and to `pass-pr` for the GitHub gate (--pr <selector>),
+// mirroring the review_gate MCP tool's local-vs-PR dispatch. `pass` and
+// `pass-pr` remain available as legacy aliases.
 /** @param {CliArgs} parsed */
 async function handleGate(parsed) {
   const selector = parsed.flags.pr;
-  if (selector && selector !== true) {
+  // Refused before the repository is settled: `--pr "$PR_NUMBER"` with the
+  // variable unset leaves --pr bare and its empty string as a positional,
+  // which would otherwise be taken for the repository.
+  if (selector !== undefined && !isPrSelector(selector)) {
+    throw new Error("gate --pr needs a PR number or URL, e.g. `otito gate --pr 123 --path .`");
+  }
+  const repoPath = gateRepoPath(parsed);
+  if (selector !== undefined) {
     // pass-pr reads the selector from positionals[0] and the repo from --path.
     return handlePassPr({
       ...parsed,
       positionals: [selector],
+      flags: { ...parsed.flags, path: repoPath },
     });
   }
-  return handlePass(parsed);
+  // pass reads the repo from positionals[0].
+  return handlePass({ ...parsed, positionals: [repoPath] });
+}
+
+/**
+ * Whether a --pr value (or pass-pr's positional) names a PR. A bare `--pr`
+ * parses as `true` and `--pr=` as `""`; read as "no PR", either ran the local
+ * gate instead, and a blank selector that reached `gh pr view` gated whatever
+ * PR the checked-out branch has. The PR commands refuse both.
+ * @param {unknown} selector
+ * @returns {selector is string}
+ */
+function isPrSelector(selector) {
+  return typeof selector === "string" && selector.trim() !== "";
+}
+
+/**
+ * The repository `gate` runs against, in either mode: the positional `<repo>`
+ * or `--path`, else the working directory. pass reads only the positional and
+ * pass-pr only --path, so gate settles it here and hands each the form it
+ * reads. Both may name it only if they name the same directory; otherwise
+ * gating either would silently ignore the other, so gate refuses.
+ * @param {CliArgs} parsed
+ * @returns {string}
+ */
+function gateRepoPath(parsed) {
+  const positional = parsed.positionals[0];
+  const flag = parsed.flags.path;
+  if (flag === true) {
+    throw new Error("gate --path needs a repository, e.g. `otito gate --path .`");
+  }
+  if (positional === undefined || flag === undefined) {
+    return positional ?? flag ?? ".";
+  }
+  // realpath, so `.` and a symlinked spelling of the same checkout agree.
+  const identity = (/** @type {string} */ dir) => {
+    try {
+      return realpathSync(dir);
+    } catch {
+      return resolve(dir);
+    }
+  };
+  if (identity(positional) !== identity(flag)) {
+    throw new Error(`gate was given two repositories (${positional} and --path ${flag}); pass only one`);
+  }
+  return positional;
 }
 
 /** @param {CliArgs} parsed */
 async function handleReview(parsed) {
   const { formatReviewMermaid, formatReviewTerminal, generateReview } = await import("./lib/review.js");
-  const repoPath = parsed.positionals[0] ?? ".";
-  const trailingRequest = parsed.positionals.slice(1).join(" ").trim();
+  if (parsed.flags.pr !== undefined && !isPrSelector(parsed.flags.pr)) {
+    throw new Error("review --pr needs a PR number or URL, e.g. `otito review . --pr 123`");
+  }
+  // Mirror `impact` and `ax` arg parsing: `review "<request>" --path <repo>` or
+  // `review <repo> "<request>"`. Policy and governance come from the same repo.
+  if (parsed.flags.path === true) {
+    throw new Error("review --path needs a repository, e.g. `otito review --path .`");
+  }
+  let repoPath;
+  let trailingRequest;
+  if (parsed.flags.path) {
+    repoPath = parsed.flags.path;
+    trailingRequest = parsed.positionals.join(" ").trim();
+  } else {
+    repoPath = parsed.positionals[0] ?? ".";
+    trailingRequest = parsed.positionals.slice(1).join(" ").trim();
+  }
+  const { policy, governance } = gatePolicy(repoPath, parsed.flags);
   const { data } = await generateReview(repoPath, {
     request: parsed.flags.request ?? (trailingRequest || undefined),
     base: parsed.flags.base,
     head: parsed.flags.head,
     prSelector: parsed.flags.pr,
-    policy: parsed.flags.policy,
-    governance: parsed.flags.governance,
+    policy,
+    governance,
     minConvergence: parsed.flags.min_convergence,
     receipt: parsed.flags.receipt,
     impactTop: parsed.flags.top,
@@ -1150,8 +1235,7 @@ async function handleWorkspaceGate(parsed) {
   }
   const data = evaluateWorkspaceGate(parsed.positionals, {
     base: parsed.flags.base,
-    policy: parsed.flags.policy,
-    governance: parsed.flags.governance,
+    ...workspaceGatePolicy(parsed.positionals, parsed.flags),
     request: parsed.flags.request,
     minConvergence: parsed.flags.min_convergence,
     runValidation: parsed.flags.run_validation,
@@ -1169,6 +1253,28 @@ async function handleWorkspaceGate(parsed) {
     });
   }
   if (data.verdict === "FAIL") process.exitCode = 1;
+}
+
+/**
+ * The one policy and governance a workspace gate runs every repository under:
+ * the flag when given, else what each repository's own config resolves to. The
+ * parent receipt records a single value of each for the whole change, so
+ * repositories whose configs disagree are refused rather than gated under a
+ * setting one of them did not choose. The flag settles it for all of them.
+ * @param {string[]} repoPaths
+ * @param {Record<string, any>} flags
+ */
+function workspaceGatePolicy(repoPaths, flags) {
+  const resolved = repoPaths.map((repoPath) => gatePolicy(repoPath, flags));
+  /** @param {"policy" | "governance"} key */
+  const agreed = (key) => {
+    if (new Set(resolved.map((entry) => entry[key])).size > 1) {
+      const each = repoPaths.map((repoPath, index) => `${repoPath}: ${resolved[index][key]}`).join(", ");
+      throw new Error(`workspace-gate runs every repository under one ${key}, and their configs disagree (${each}); pass --${key} to choose it`);
+    }
+    return resolved[0][key];
+  };
+  return { policy: agreed("policy"), governance: agreed("governance") };
 }
 
 /** @param {CliArgs} parsed */
@@ -1495,8 +1601,8 @@ function handleHelp(_parsed) {
   printText(
     [
       "Merge gate (v2):",
-      "  otito gate <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
-      "  otito gate --pr <selector> [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
+      "  otito gate [repo | --path repo] [--base ref] [--head ref | --staged] [--run-validation] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
+      "  otito gate --pr <selector> [repo | --path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
       "  otito workspace-gate <repo...> [--base ref] [--run-validation] [--policy x] [--governance x] [--request text] [--json]                           # one staged receipt across repositories",
       "",
       "Evaluation gates (v2):",
@@ -1510,8 +1616,9 @@ function handleHelp(_parsed) {
       "  pr                   produces review context only (diff/comment metadata, no verdict)",
       "",
       "Legacy MCP tool names (pr_review, review_pr, merge_readiness, pr_merge_readiness,",
-      "repo_catalog, repo_discover, find_*) keep working via tools/call until 3.0.",
-      "See docs/MIGRATION-2.0.md.",
+      "repo_catalog, repo_discover, find_*) still work via tools/call in 3.x, and no",
+      "release is named to remove them. Each maps to a canonical tool:",
+      "https://bashbop.github.io/otito/02-mcp-agent-workflows/#legacy-tool-names",
     ].join("\n"),
   );
 }

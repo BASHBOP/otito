@@ -35,6 +35,7 @@ function fakeRunner(map) {
       for (const [keyPrefix, response] of Object.entries(map)) {
         if (joined === keyPrefix || joined.startsWith(`${keyPrefix} `)) {
           if (response instanceof Error) throw response;
+          if (typeof response === "function") return response(args);
           return response;
         }
       }
@@ -52,6 +53,8 @@ const baselineCanned = {
     baseRefOid: "a".repeat(40),
     headRefOid: "b".repeat(40),
     changedFiles: 1,
+    state: "OPEN",
+    mergedAt: null,
     isDraft: false,
     mergeStateStatus: "CLEAN",
     mergeable: "MERGEABLE",
@@ -579,6 +582,97 @@ test("evaluatePR FAILS PR state on merge conflicts", async () => {
   const state = data.checks.find((c) => c.name === "PR state");
   assert.equal(state.status, "FAIL");
   assert.match(state.summary, /merge conflicts/);
+});
+
+// --- PR lifecycle: merged and closed PRs are not gated as if still open ---
+
+// Answer `gh pr view --json <fields>` the way gh does, with only the fields
+// requested, so a state the gate never asks for never reaches it.
+function prView(overrides) {
+  const pr = { ...JSON.parse(baselineCanned["pr view"]), ...overrides };
+  return (args) => {
+    const fields = args[args.indexOf("--json") + 1].split(",");
+    return JSON.stringify(Object.fromEntries(fields.filter((field) => field in pr).map((field) => [field, pr[field]])));
+  };
+}
+
+function renderTerminal(data) {
+  const plain = formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: false, width: 100 }));
+  return { plain, nextStep: plain.split("\n").find((line) => line.includes("next step")) };
+}
+
+test("evaluatePR still gates an OPEN PR on GitHub mergeability", async () => {
+  const root = gitInit("state-open", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  const clean = await evaluatePR(root, "42", { runner: fakeRunner({ ...baselineCanned, "pr view": prView({ state: "OPEN" }) }) });
+  assert.equal(clean.pr.state, "OPEN");
+  assert.equal(clean.pr.mergedAt, "");
+  assert.equal(clean.checks.find((c) => c.name === "PR state").status, "PASS");
+
+  const unsettled = await evaluatePR(root, "42", {
+    runner: fakeRunner({ ...baselineCanned, "pr view": prView({ state: "OPEN", mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" }) }),
+  });
+  const state = unsettled.checks.find((c) => c.name === "PR state");
+  assert.equal(state.status, "WARN");
+  assert.match(state.summary, /not settled/);
+});
+
+test("evaluatePR reports a MERGED PR as merged, not pending, and keeps its review evidence", async () => {
+  const root = gitInit("state-merged", {
+    "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
+    "src/utils/format.ts": "export const fmt = 1;\n",
+    ".github/CODEOWNERS": "src/utils/format.ts @alice\n",
+  });
+  // What GitHub returns once a PR merges (BASHBOP/otito#214): mergeability UNKNOWN.
+  const merged = { state: "MERGED", mergedAt: "2026-09-26T17:33:49Z", mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" };
+  const data = await evaluatePR(root, "42", {
+    runner: fakeRunner({ ...baselineCanned, "pr view": prView({ ...merged, files: [{ path: "src/utils/format.ts" }] }) }),
+  });
+  const state = data.checks.find((c) => c.name === "PR state");
+  assert.equal(state.status, "PASS");
+  assert.equal(state.summary, "PR is already merged; there is nothing left to gate.");
+  assert.ok(state.details.includes("Merged at 2026-09-26T17:33:49Z"));
+  assert.equal(data.pr.state, "MERGED");
+  assert.equal(data.pr.mergedAt, "2026-09-26T17:33:49Z");
+  // Post-merge attestation records these, so a merged PR still gets them.
+  for (const name of ["Review decision", "CODEOWNERS", "Review conversations", "Branch protection", "Status checks"]) {
+    assert.equal(data.checks.find((c) => c.name === name)?.status, "PASS", name);
+  }
+  assert.equal(data.verdict, "PASS");
+  assert.match(renderTerminal(data).nextStep, /already merged/);
+});
+
+test("evaluatePR FAILs a MERGED PR on missing CODEOWNERS approval, not on its state", async () => {
+  const root = gitInit("state-merged-unowned", {
+    "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
+    "src/payment.ts": "export const refund = 1;\n",
+    ".github/CODEOWNERS": "src/payment.ts @bob\n",
+  });
+  const data = await evaluatePR(root, "42", {
+    runner: fakeRunner({
+      ...baselineCanned,
+      "pr view": prView({ state: "MERGED", mergedAt: "2026-09-26T17:33:49Z", mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" }),
+    }),
+  });
+  assert.equal(data.checks.find((c) => c.name === "PR state").status, "PASS");
+  assert.equal(data.checks.find((c) => c.name === "CODEOWNERS").status, "FAIL");
+  assert.equal(data.verdict, "FAIL");
+  const { plain, nextStep } = renderTerminal(data);
+  assert.doesNotMatch(plain, /blocked by/, "nothing can block a merge that already happened");
+  assert.match(nextStep, /already merged/);
+});
+
+test("evaluatePR FAILs a CLOSED PR as closed, whatever mergeability GitHub last reported", async () => {
+  const root = gitInit("state-closed", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
+  // BASHBOP/otito#188 closed BLOCKED and #153 closed CONFLICTING; a closed draft is closed first.
+  for (const last of [{ mergeable: "MERGEABLE", mergeStateStatus: "BLOCKED" }, { mergeable: "CONFLICTING", mergeStateStatus: "DIRTY" }, { isDraft: true }]) {
+    const data = await evaluatePR(root, "42", { runner: fakeRunner({ ...baselineCanned, "pr view": prView({ state: "CLOSED", ...last }) }) });
+    const state = data.checks.find((c) => c.name === "PR state");
+    assert.equal(state.status, "FAIL", JSON.stringify(last));
+    assert.equal(state.summary, "PR is closed without merging and cannot merge unless it is reopened.");
+    assert.equal(data.pr.state, "CLOSED");
+    assert.equal(data.verdict, "FAIL");
+    assert.match(renderTerminal(data).nextStep, /reopen/);
+  }
 });
 
 // --- Finding #8: renderers (terminal + markdown) exercised end-to-end ---

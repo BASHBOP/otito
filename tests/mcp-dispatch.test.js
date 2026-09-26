@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { PassThrough } from "node:stream";
-import { startMcpServer, tools } from "../src/lib/mcp.js";
+import { LEGACY_TOOL_ALIASES, startMcpServer, tools } from "../src/lib/mcp.js";
 import { getAgentTools } from "../src/lib/agent-tools.js";
 import { BUILTIN_HOSTS } from "../src/lib/model-route.js";
 
@@ -775,21 +775,198 @@ test("convergence_score and review_gate score an exact base..head commit through
   assert.equal(gate.checks.find((check) => check.name === "Convergence").status, "PASS");
 });
 
-test("review_gate with a pr selector runs the GitHub gate path (vs local without one)", async () => {
-  // Without gh / a real PR this surfaces a verdict or an error — what matters is
-  // that the pr selector routes through the GitHub gate (evaluatePR), not the
-  // local gate, exactly as the old pr_merge_readiness did.
+test("review_gate and review_verdict gate a named PR on GitHub, and run the local gate for an omitted or blank pr", async (t) => {
   const fixture = makeGitRepoFixture("gate-pr");
+  withFakeGh(t, ghPullRequests(fixture));
+  const call = (id, name, args) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: { path: fixture, base: "HEAD~1", ...args } } });
   const messages = await runRequests([
-    { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, pr: "" } } },
-    { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, pr: "123" } } },
+    call(1, "review_gate", {}),
+    call(2, "review_gate", { pr: "" }),
+    call(3, "review_gate", { pr: " " }),
+    call(4, "review_gate", { pr: "42" }),
+    call(5, "review_verdict", { pr: "" }),
+    call(6, "review_verdict", { pr: " " }),
+    call(7, "review_verdict", { pr: "42" }),
   ]);
+  // The PR gate reports the PR it gated; the local gate reports no PR, and the base ref it diffed.
+  const gated = (id) => {
+    const report = structured(messages, id);
+    return report.pr?.number ?? report.base;
+  };
+  // review_verdict reports only the gate's checks, and only the PR gate has a PR state check.
+  const prState = (id) => structured(messages, id).pass.checks.find((check) => check.name === "PR state")?.summary;
 
-  const emptySelector = byId(messages, 1).result;
-  assert.ok(emptySelector.content[0].text.length > 0, "empty pr selector still routes to the PR gate and returns a payload");
+  assert.equal(gated(1), "HEAD~1", "no pr runs the local gate");
+  assert.equal(gated(2), "HEAD~1", "a blank pr counts as omitted");
+  assert.equal(gated(3), "HEAD~1", "so does a whitespace pr, not the checked-out branch's PR (#7)");
+  assert.equal(gated(4), 42, "a pr naming a PR gates that PR on GitHub");
+  assert.equal(prState(5), undefined, "review_verdict runs the local gate for a blank pr");
+  assert.equal(prState(6), undefined, "and for a whitespace pr, as review_gate does");
+  assert.equal(prState(7), "PR is not draft and has no reported merge conflicts.", "review_verdict gates a named PR on GitHub");
+});
 
-  const withSelector = byId(messages, 2).result;
-  assert.ok(withSelector.content[0].text.length > 0, "a pr selector routes to the PR gate and returns a payload");
+test("pr_merge_readiness gates the checked-out branch's PR when its selector is omitted or blank, as it did before 2.0", async (t) => {
+  const fixture = makeGitRepoFixture("gate-pr-legacy");
+  withFakeGh(t, ghPullRequests(fixture));
+  const call = (id, args) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "pr_merge_readiness", arguments: { path: fixture, ...args } } });
+  const messages = await runRequests([call(1, {}), call(2, { selector: "" }), call(3, { selector: " " }), call(4, { selector: "42" }), call(5, { pr: "42" })]);
+  const gated = (id) => structured(messages, id).pr?.number;
+
+  assert.equal(gated(1), 7, "no selector gates the checked-out branch's PR, as `gh pr view` does");
+  assert.equal(gated(2), 7, "a blank selector counts as omitted");
+  assert.equal(gated(3), 7, "so does a whitespace selector");
+  assert.equal(gated(4), 42, "a selector names the PR to gate");
+  assert.equal(gated(5), 42, "review_gate's pr still stands in for the selector");
+});
+
+// Pin the user config tier to an empty directory, so a developer's own
+// ~/.config/otito/config.json cannot decide a gate's policy or governance.
+function withEmptyUserConfig(t) {
+  const saved = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "otito-mcp-xdg-"));
+  t.after(() => {
+    if (saved === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = saved;
+  });
+}
+
+function withCwd(t, dir) {
+  const saved = process.cwd();
+  process.chdir(dir);
+  t.after(() => process.chdir(saved));
+}
+
+// Put a `gh` on PATH that answers the GitHub gate from canned JSON, keyed by
+// argument prefix, so a review_gate pr call runs evaluatePR end to end offline.
+function withFakeGh(t, responses) {
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), "otito-mcp-gh-"));
+  const gh = path.join(bin, "gh");
+  fs.writeFileSync(
+    gh,
+    [
+      "#!/usr/bin/env node",
+      `const responses = ${JSON.stringify(responses)};`,
+      "const joined = process.argv.slice(2).join(' ');",
+      "const key = Object.keys(responses).find((prefix) => joined === prefix || joined.startsWith(prefix + ' '));",
+      "if (key === undefined) {",
+      "  console.error('unexpected gh args: ' + joined);",
+      "  process.exit(1);",
+      "}",
+      "process.stdout.write(responses[key]);",
+      "",
+    ].join("\n"),
+  );
+  fs.chmodSync(gh, 0o755);
+  const saved = process.env.PATH;
+  process.env.PATH = `${bin}${path.delimiter}${saved}`;
+  t.after(() => {
+    process.env.PATH = saved;
+  });
+}
+
+// withFakeGh responses for a makeGitRepoFixture repository: `gh pr view 42`
+// answers #42, and a bare `gh pr view`, which gh reads as the checked-out
+// branch's PR, answers #7. Any other `pr view` fails.
+function ghPullRequests(fixture) {
+  const pullRequest = (number) =>
+    JSON.stringify({
+      number,
+      title: "Tweak greeting",
+      url: `https://github.com/org/repo/pull/${number}`,
+      state: "OPEN",
+      mergedAt: null,
+      baseRefName: "main",
+      baseRefOid: git(fixture, "rev-parse", "HEAD~1").trim(),
+      headRefOid: git(fixture, "rev-parse", "HEAD").trim(),
+      changedFiles: 1,
+      isDraft: false,
+      mergeStateStatus: "CLEAN",
+      mergeable: "MERGEABLE",
+      reviewDecision: "APPROVED",
+      files: [{ path: "src/index.ts" }],
+      reviews: [],
+      statusCheckRollup: [],
+    });
+  return { "pr view 42": pullRequest(42), "pr view --json": pullRequest(7) };
+}
+
+test("review_gate and review_verdict fill an omitted policy and governance from the gated repository's config", async (t) => {
+  withEmptyUserConfig(t);
+  const configured = makeGitRepoFixture("gate-config");
+  fs.writeFileSync(path.join(configured, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
+  const unconfigured = makeGitRepoFixture("gate-no-config");
+  // The server runs inside the configured repository, so a lookup from its cwd
+  // instead of the gated path would wrongly gate `unconfigured` as solo too.
+  withCwd(t, configured);
+  const call = (id, name, args) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: { base: "HEAD~1", ...args } } });
+  const messages = await runRequests([
+    call(1, "review_gate", { path: configured }),
+    call(2, "review_verdict", { path: configured, request: "tweak greeting" }),
+    call(3, "review_gate", { path: configured, policy: "standard", governance: "team" }),
+    call(4, "review_gate", { path: configured, policy: " ", governance: "" }),
+    call(5, "review_gate", { path: unconfigured }),
+    call(6, "review_gate", {}),
+  ]);
+  const settings = (report) => ({ policy: report.policy, governance: report.governance });
+
+  assert.deepEqual(settings(structured(messages, 1)), { policy: "high-risk", governance: "solo" }, "the repository's .otitorc.json fills omitted arguments");
+  assert.deepEqual(settings(structured(messages, 2).pass), { policy: "high-risk", governance: "solo" }, "review_verdict gates under the same config");
+  assert.deepEqual(settings(structured(messages, 3)), { policy: "standard", governance: "team" }, "an explicit argument still wins");
+  assert.deepEqual(settings(structured(messages, 4)), { policy: "high-risk", governance: "solo" }, "a blank argument counts as omitted");
+  assert.deepEqual(settings(structured(messages, 5)), { policy: "standard", governance: "team" }, "config comes from the gated path, not the server's cwd");
+  assert.deepEqual(settings(structured(messages, 6)), { policy: "high-risk", governance: "solo" }, "no path gates the cwd under the cwd's config");
+});
+
+test("review_gate in PR mode applies the repository's solo governance, as `otito pass-pr` does", async (t) => {
+  // The 2026-09-26 split on PR #214: `otito pass-pr 214` read .otitorc.json and
+  // warned on CODEOWNERS under solo governance, while review_gate { pr: "214" }
+  // ignored it and failed CODEOWNERS under team governance.
+  withEmptyUserConfig(t);
+  const fixture = makeGitRepoFixture("gate-pr-config");
+  writeFiles(fixture, {
+    ".otitorc.json": JSON.stringify({ governance: "solo" }),
+    ".github/CODEOWNERS": "src/index.ts @alice\n",
+  });
+  withFakeGh(t, {
+    "pr view": JSON.stringify({
+      number: 42,
+      title: "Tweak greeting",
+      url: "https://github.com/org/repo/pull/42",
+      state: "OPEN",
+      mergedAt: null,
+      baseRefName: "main",
+      baseRefOid: git(fixture, "rev-parse", "HEAD~1").trim(),
+      headRefOid: git(fixture, "rev-parse", "HEAD").trim(),
+      changedFiles: 1,
+      isDraft: false,
+      mergeStateStatus: "CLEAN",
+      mergeable: "MERGEABLE",
+      reviewDecision: "REVIEW_REQUIRED",
+      files: [{ path: "src/index.ts" }],
+      reviews: [],
+      statusCheckRollup: [{ name: "tests", conclusion: "SUCCESS" }],
+    }),
+    "repo view": JSON.stringify({ nameWithOwner: "org/repo" }),
+    "api graphql": JSON.stringify({ data: { repository: { pullRequest: { reviewThreads: { nodes: [], pageInfo: { hasNextPage: false } } } } } }),
+    "api repos/org/repo/branches/main/protection": JSON.stringify({
+      required_pull_request_reviews: { required_approving_review_count: 1, require_code_owner_reviews: true },
+      required_status_checks: { contexts: ["tests"], checks: [{ context: "tests" }] },
+      required_conversation_resolution: { enabled: true },
+    }),
+  });
+  const gate = (id, args) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, pr: "42", ...args } } });
+  const messages = await runRequests([gate(1, {}), gate(2, { governance: "team" })]);
+  const codeowners = (report) => report.checks.find((check) => check.name === "CODEOWNERS");
+
+  const solo = structured(messages, 1);
+  assert.equal(solo.governance, "solo");
+  assert.equal(codeowners(solo).status, "WARN");
+  assert.match(codeowners(solo).summary, /solo-maintainer mode requires an explicit owner\/admin merge decision/);
+
+  const team = structured(messages, 2);
+  assert.equal(team.governance, "team", "an explicit governance still overrides the repository's config");
+  assert.equal(codeowners(team).status, "FAIL");
+  assert.equal(team.verdict, "FAIL");
 });
 
 test("workspace_report requires two paths and accepts includeMarkdown", async () => {
@@ -940,6 +1117,14 @@ test("every legacy tool name still dispatches to a sane result via tools/call", 
   assert.ok(findApi.files.every((file) => file.kind === "apiClient"));
 
   if (fs.existsSync(catalogPath)) fs.unlinkSync(catalogPath);
+});
+
+test("docs/02 maps every legacy tool name to the tool it dispatches to", () => {
+  const doc = fs.readFileSync(new URL("../docs/02-mcp-agent-workflows/README.md", import.meta.url), "utf8");
+  const section = doc.split(/^### Legacy tool names$/m)[1]?.split(/^#{1,3} |^---$/m)[0] ?? "";
+  const documented = Object.fromEntries([...section.matchAll(/^\| `(\w+)`\s*\| `(\w+)`/gm)].map(([, legacy, tool]) => [legacy, tool]));
+  const dispatched = Object.fromEntries(Object.entries(LEGACY_TOOL_ALIASES).map(([legacy, alias]) => [legacy, alias.tool]));
+  assert.deepEqual(documented, dispatched);
 });
 
 test("startMcpServer never responds to notifications, including unknown methods", async () => {
