@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v3.0.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
+**v3.1.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
 
 ---
 
@@ -18,6 +18,16 @@
 ---
 
 ## What's New
+
+!!! tip "v3.1.0 published (2026-09-26)"
+    The router gets graded, and the answer so far is that nothing can grade it yet. Nothing was removed or renamed.
+
+    - `otito regret` replays a repository's history and grades the tier each half of the router would have given against the same `repaired` outcome `otito calibrate` uses; `--rescore` grades a new arithmetic on frozen model answers, with no checkout and no model call.
+    - On three repositories no variant orders outcomes, and offline audits of the join and of a same-session outcome say why, so `otito route` stays advisory. [docs/18](18-model-routing/README.md) has the tables.
+    - The route-prompt hook now keeps every decision it makes (`~/.otito/route-decisions.jsonl`, never the prompt text), so the router can be graded once enough real requests exist.
+    - `otito attest` and `otito attest --verify` move post-merge attestation into the CLI, with versioned records and a reusable workflow.
+
+    [npm v3.1.0](https://www.npmjs.com/package/@bashbop/otito/v/3.1.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.1.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.0.0 published (2026-09-25)"
     The first major since the Òtítọ́ cutover. It follows 1.15.0 directly; the `v2.x` tags belong to the earlier Repoctx releases.
