@@ -62,6 +62,15 @@ test("loadConfig reads .otitorc.json from cwd", () => {
   fs.rmSync(tmp, { recursive: true });
 });
 
+test("loadConfig reads the gate defaults, policy and governance, from .otitorc.json", () => {
+  const tmp = makeTmpDir();
+  fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
+  const cfg = loadConfig({ cwd: tmp, env: { XDG_CONFIG_HOME: tmp } });
+  assert.equal(cfg.policy, "high-risk");
+  assert.equal(cfg.governance, "solo");
+  fs.rmSync(tmp, { recursive: true });
+});
+
 test("loadConfig env vars override local config", () => {
   const tmp = makeTmpDir();
   fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ color: true }));
@@ -146,6 +155,24 @@ test("loadConfig walks up to find .otitorc.json in parent", () => {
   fs.mkdirSync(nested, { recursive: true });
   const cfg = loadConfig({ cwd: nested, env: { XDG_CONFIG_HOME: tmp } });
   assert.equal(cfg.emoji, false);
+  fs.rmSync(tmp, { recursive: true });
+});
+
+test("loadConfig walks up from a relative cwd, such as an MCP tool's path: '.'", () => {
+  const tmp = makeTmpDir();
+  fs.writeFileSync(path.join(tmp, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  const nested = path.join(tmp, "packages", "web");
+  fs.mkdirSync(nested, { recursive: true });
+  const saved = process.cwd();
+  process.chdir(nested);
+  try {
+    // path.dirname(".") is ".", so an unresolved walk ended where it began and
+    // a gate on path "." fell back to team governance.
+    assert.equal(loadConfig({ cwd: ".", env: { XDG_CONFIG_HOME: tmp } }).governance, "solo");
+    assert.equal(loadConfig({ cwd: "..", env: { XDG_CONFIG_HOME: tmp } }).governance, "solo");
+  } finally {
+    process.chdir(saved);
+  }
   fs.rmSync(tmp, { recursive: true });
 });
 

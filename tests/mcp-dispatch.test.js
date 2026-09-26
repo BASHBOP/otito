@@ -792,6 +792,130 @@ test("review_gate with a pr selector runs the GitHub gate path (vs local without
   assert.ok(withSelector.content[0].text.length > 0, "a pr selector routes to the PR gate and returns a payload");
 });
 
+// Pin the user config tier to an empty directory, so a developer's own
+// ~/.config/otito/config.json cannot decide a gate's policy or governance.
+function withEmptyUserConfig(t) {
+  const saved = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "otito-mcp-xdg-"));
+  t.after(() => {
+    if (saved === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = saved;
+  });
+}
+
+function withCwd(t, dir) {
+  const saved = process.cwd();
+  process.chdir(dir);
+  t.after(() => process.chdir(saved));
+}
+
+// Put a `gh` on PATH that answers the GitHub gate from canned JSON, keyed by
+// argument prefix, so a review_gate pr call runs evaluatePR end to end offline.
+function withFakeGh(t, responses) {
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), "otito-mcp-gh-"));
+  const gh = path.join(bin, "gh");
+  fs.writeFileSync(
+    gh,
+    [
+      "#!/usr/bin/env node",
+      `const responses = ${JSON.stringify(responses)};`,
+      "const joined = process.argv.slice(2).join(' ');",
+      "const key = Object.keys(responses).find((prefix) => joined === prefix || joined.startsWith(prefix + ' '));",
+      "if (key === undefined) {",
+      "  console.error('unexpected gh args: ' + joined);",
+      "  process.exit(1);",
+      "}",
+      "process.stdout.write(responses[key]);",
+      "",
+    ].join("\n"),
+  );
+  fs.chmodSync(gh, 0o755);
+  const saved = process.env.PATH;
+  process.env.PATH = `${bin}${path.delimiter}${saved}`;
+  t.after(() => {
+    process.env.PATH = saved;
+  });
+}
+
+test("review_gate and review_verdict fill an omitted policy and governance from the gated repository's config", async (t) => {
+  withEmptyUserConfig(t);
+  const configured = makeGitRepoFixture("gate-config");
+  fs.writeFileSync(path.join(configured, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
+  const unconfigured = makeGitRepoFixture("gate-no-config");
+  // The server runs inside the configured repository, so a lookup from its cwd
+  // instead of the gated path would wrongly gate `unconfigured` as solo too.
+  withCwd(t, configured);
+  const call = (id, name, args) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: { base: "HEAD~1", ...args } } });
+  const messages = await runRequests([
+    call(1, "review_gate", { path: configured }),
+    call(2, "review_verdict", { path: configured, request: "tweak greeting" }),
+    call(3, "review_gate", { path: configured, policy: "standard", governance: "team" }),
+    call(4, "review_gate", { path: configured, policy: " ", governance: "" }),
+    call(5, "review_gate", { path: unconfigured }),
+    call(6, "review_gate", {}),
+  ]);
+  const settings = (report) => ({ policy: report.policy, governance: report.governance });
+
+  assert.deepEqual(settings(structured(messages, 1)), { policy: "high-risk", governance: "solo" }, "the repository's .otitorc.json fills omitted arguments");
+  assert.deepEqual(settings(structured(messages, 2).pass), { policy: "high-risk", governance: "solo" }, "review_verdict gates under the same config");
+  assert.deepEqual(settings(structured(messages, 3)), { policy: "standard", governance: "team" }, "an explicit argument still wins");
+  assert.deepEqual(settings(structured(messages, 4)), { policy: "high-risk", governance: "solo" }, "a blank argument counts as omitted");
+  assert.deepEqual(settings(structured(messages, 5)), { policy: "standard", governance: "team" }, "config comes from the gated path, not the server's cwd");
+  assert.deepEqual(settings(structured(messages, 6)), { policy: "high-risk", governance: "solo" }, "no path gates the cwd under the cwd's config");
+});
+
+test("review_gate in PR mode applies the repository's solo governance, as `otito pass-pr` does", async (t) => {
+  // The 2026-09-26 split on PR #214: `otito pass-pr 214` read .otitorc.json and
+  // warned on CODEOWNERS under solo governance, while review_gate { pr: "214" }
+  // ignored it and failed CODEOWNERS under team governance.
+  withEmptyUserConfig(t);
+  const fixture = makeGitRepoFixture("gate-pr-config");
+  writeFiles(fixture, {
+    ".otitorc.json": JSON.stringify({ governance: "solo" }),
+    ".github/CODEOWNERS": "src/index.ts @alice\n",
+  });
+  withFakeGh(t, {
+    "pr view": JSON.stringify({
+      number: 42,
+      title: "Tweak greeting",
+      url: "https://github.com/org/repo/pull/42",
+      state: "OPEN",
+      mergedAt: null,
+      baseRefName: "main",
+      baseRefOid: git(fixture, "rev-parse", "HEAD~1").trim(),
+      headRefOid: git(fixture, "rev-parse", "HEAD").trim(),
+      changedFiles: 1,
+      isDraft: false,
+      mergeStateStatus: "CLEAN",
+      mergeable: "MERGEABLE",
+      reviewDecision: "REVIEW_REQUIRED",
+      files: [{ path: "src/index.ts" }],
+      reviews: [],
+      statusCheckRollup: [{ name: "tests", conclusion: "SUCCESS" }],
+    }),
+    "repo view": JSON.stringify({ nameWithOwner: "org/repo" }),
+    "api graphql": JSON.stringify({ data: { repository: { pullRequest: { reviewThreads: { nodes: [], pageInfo: { hasNextPage: false } } } } } }),
+    "api repos/org/repo/branches/main/protection": JSON.stringify({
+      required_pull_request_reviews: { required_approving_review_count: 1, require_code_owner_reviews: true },
+      required_status_checks: { contexts: ["tests"], checks: [{ context: "tests" }] },
+      required_conversation_resolution: { enabled: true },
+    }),
+  });
+  const gate = (id, args) => ({ jsonrpc: "2.0", id, method: "tools/call", params: { name: "review_gate", arguments: { path: fixture, pr: "42", ...args } } });
+  const messages = await runRequests([gate(1, {}), gate(2, { governance: "team" })]);
+  const codeowners = (report) => report.checks.find((check) => check.name === "CODEOWNERS");
+
+  const solo = structured(messages, 1);
+  assert.equal(solo.governance, "solo");
+  assert.equal(codeowners(solo).status, "WARN");
+  assert.match(codeowners(solo).summary, /solo-maintainer mode requires an explicit owner\/admin merge decision/);
+
+  const team = structured(messages, 2);
+  assert.equal(team.governance, "team", "an explicit governance still overrides the repository's config");
+  assert.equal(codeowners(team).status, "FAIL");
+  assert.equal(team.verdict, "FAIL");
+});
+
 test("workspace_report requires two paths and accepts includeMarkdown", async () => {
   const fixtureA = makeRepoFixture();
   const fixtureB = makeRepoFixture();

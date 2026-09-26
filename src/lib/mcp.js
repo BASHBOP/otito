@@ -13,6 +13,7 @@ import { generateRoute, hostModelFor, TIERS } from "./model-route.js";
 import { formatRouteMarkdown } from "./render/route.js";
 import { appendEvent, extractSignals, redactError, shareEvent } from "./telemetry.js";
 import { forwardToCanvas } from "./canvas-tap.js";
+import { loadConfig } from "./config.js";
 import { evaluateLocal } from "./pass-local.js";
 import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
@@ -305,8 +306,11 @@ export const tools = [
         },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
         base: { type: "string", description: "Base ref for the local gate. Defaults to origin/main, then HEAD. Ignored in PR mode." },
-        policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
-        governance: { type: "string", description: "Governance: team (default) or solo." },
+        policy: {
+          type: "string",
+          description: "Policy profile: standard, company, or high-risk. Omitted, the repository's .otitorc.json or user config decides, else standard.",
+        },
+        governance: { type: "string", description: "Governance: team or solo. Omitted, the repository's .otitorc.json or user config decides, else team." },
         request: { type: "string", description: "Optional change request for context evidence output." },
         minConvergence: {
           type: "number",
@@ -335,8 +339,11 @@ export const tools = [
         request: { type: "string", description: "Plain-English change request for impact scoring." },
         base: { type: "string", description: "Base ref for local diff. Defaults to origin/main, then HEAD." },
         pr: { type: "string", description: "Optional PR selector. When set, pass-pr runs against GitHub instead of local mode." },
-        policy: { type: "string", description: "Policy profile: standard (default), company, or high-risk." },
-        governance: { type: "string", description: "Governance: team (default) or solo." },
+        policy: {
+          type: "string",
+          description: "Policy profile: standard, company, or high-risk. Omitted, the repository's .otitorc.json or user config decides, else standard.",
+        },
+        governance: { type: "string", description: "Governance: team or solo. Omitted, the repository's .otitorc.json or user config decides, else team." },
         impactTop: { type: "number", description: "Number of impact files. Defaults to 8." },
         minConvergence: { type: "number", description: "Optional minimum convergence score (0–100) enforced by the merge gate." },
         receipt: {
@@ -745,21 +752,23 @@ async function dispatchTool(name, args) {
     case "review_gate": {
       // pr set → GitHub gate (evaluatePR); pr absent → local gate (evaluateLocal).
       // This is exactly what the old pr_merge_readiness and merge_readiness did.
+      const repoPath = args.path ?? ".";
+      const { policy, governance } = gatePolicy(repoPath, args);
       const hasPr = typeof args.pr === "string" && args.pr.trim();
       if (hasPr) {
-        return evaluatePR(args.path ?? ".", args.pr, {
-          policy: args.policy,
-          governance: args.governance,
+        return evaluatePR(repoPath, args.pr, {
+          policy,
+          governance,
           request: args.request,
           minConvergence: args.minConvergence,
           receipt: args.receipt,
         });
       }
-      return evaluateLocal(args.path ?? ".", {
+      return evaluateLocal(repoPath, {
         base: args.base,
         head: args.head,
-        policy: args.policy,
-        governance: args.governance,
+        policy,
+        governance,
         request: args.request,
         minConvergence: args.minConvergence,
         receipt: args.receipt,
@@ -767,12 +776,14 @@ async function dispatchTool(name, args) {
       });
     }
     case "review_verdict": {
-      const { data } = await generateReview(args.path ?? ".", {
+      const repoPath = args.path ?? ".";
+      const { policy, governance } = gatePolicy(repoPath, args);
+      const { data } = await generateReview(repoPath, {
         request: args.request,
         base: args.base,
         prSelector: args.pr,
-        policy: args.policy,
-        governance: args.governance,
+        policy,
+        governance,
         minConvergence: args.minConvergence,
         receipt: args.receipt,
         impactTop: args.impactTop,
@@ -795,6 +806,26 @@ async function dispatchTool(name, args) {
     default:
       throw new McpProtocolError(-32602, `Unknown tool: ${name}`);
   }
+}
+
+// The CLI fills an omitted --policy / --governance from the persisted config
+// (.otitorc.json, then the user config) before any gate runs. The gate tools do
+// the same, or one repository gets a solo verdict from `otito pass-pr` and a
+// team one from review_gate. The config is found from the gated repository,
+// not from this server's cwd, which is wherever the MCP host launched it. An
+// explicit argument still wins; a blank one means "the default", as it does in
+// normalizeProfile and normalizeGovernance.
+/**
+ * @param {string} repoPath
+ * @param {ToolArgs} args
+ * @returns {{ policy: string | undefined, governance: string | undefined }}
+ */
+function gatePolicy(repoPath, args) {
+  const config = loadConfig({ cwd: repoPath });
+  return {
+    policy: String(args.policy ?? "").trim() ? args.policy : config.policy,
+    governance: String(args.governance ?? "").trim() ? args.governance : config.governance,
+  };
 }
 
 // repo_search only sees repositories already in the local catalog. When the

@@ -47,7 +47,7 @@ A harness that depends on no particular model outlives every model it is used wi
 
 **Intent against execution.** `convergence_score` measures the gap between what was asked and what was actually done, and stamps the measurement with a receipt that recomputes to the same value from the same inputs. This is the check a model structurally cannot run on itself: it requires an independent statement of intent to compare against. The method is in the [convergence score spec](./convergence-score-spec.md).
 
-**The gate.** `review_gate` and `review_verdict` return PASS, WARN or FAIL from repository state alone: changed paths and their risk classification, ownership, validation command availability, secret heuristics and policy profile. No model is consulted. The verdict is reproducible by anyone with the same checkout.
+**The gate.** `review_gate` and `review_verdict` return PASS, WARN or FAIL from repository state alone: changed paths and their risk classification, ownership, validation command availability, secret heuristics and policy profile. No model is consulted. The verdict names the policy profile and governance it ran under, which come from the caller or else from the repository's `.otitorc.json` and the user config, and anyone with the same checkout and those two settings reproduces it.
 
 ## Clean code, expressed as procedure
 
