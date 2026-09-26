@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { formatContext, isRoutable, shouldRoute } from "../scripts/hooks/route-prompt.mjs";
+import { appendDecision, decisionRecord, formatContext, isRoutable, routeLogPath, shouldRoute } from "../scripts/hooks/route-prompt.mjs";
 
 const HOOK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "scripts", "hooks", "route-prompt.mjs");
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -14,12 +17,13 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
  * stdout. Returns the exit code and the raw stdout.
  * @param {unknown} input
  */
-function runHook(input, { timeout = 30000 } = {}) {
+function runHook(input, { timeout = 30000, env: extra = {} } = {}) {
   return new Promise((resolve) => {
     // No vendor key reaches the hook: a test must not make a billed call
-    // because of what the developer's shell exports.
+    // because of what the developer's shell exports. And no test writes the
+    // developer's real decision log.
     const { TYPESAFE_API_KEY: _key, ...env } = process.env;
-    const child = spawn(process.execPath, [HOOK], { stdio: ["pipe", "pipe", "pipe"], env });
+    const child = spawn(process.execPath, [HOOK], { stdio: ["pipe", "pipe", "pipe"], env: { ...env, OTITO_ROUTE_LOG: "off", ...extra } });
     let out = "";
     let err = "";
     const timer = setTimeout(() => child.kill("SIGKILL"), timeout);
@@ -141,4 +145,64 @@ test("a real request produces the documented hook output shape", async () => {
   assert.match(context, /otito routed this request/);
   // The host map is real, so the model id must be one of the three it holds.
   assert.match(context, /claude-(haiku-4-5-20251001|sonnet-5|opus-5)/);
+});
+
+test("the decision record keeps what a rescore reads and never the prompt", () => {
+  const route = {
+    tier: "mid",
+    hostModel: "claude-sonnet-5",
+    scoring: { route: 61, baseTier: "mid" },
+    deterministic: { tier: "cheap", route: 80 },
+    repo: { name: "otito", root: "/repo" },
+    signals: { ax: 72, containment: 55, candidates: 4, riskPaths: ["configuration"], evidence: [{ path: "src/a.js" }] },
+    model: { source: "offline", model: "offline-heuristic", answers: { specificity: { score: 0.6 }, blast_radius: { score: 0.4 }, novelty: { noul: 0.1 } } },
+    modelRouteEngineVersion: "0.1.0",
+  };
+  const prompt = "rename running to score in model-route.js";
+  const record = decisionRecord({ session_id: "s-1", cwd: "/repo", prompt }, route, { head: "abc123", branch: "develop" });
+  assert.equal(record.v, 1);
+  assert.equal(record.sessionId, "s-1");
+  assert.equal(record.promptHash, crypto.createHash("sha256").update(prompt).digest("hex").slice(0, 16));
+  assert.equal(record.promptChars, prompt.length);
+  assert.deepEqual(record.tiers, { deterministic: "cheap", offline: "mid" });
+  assert.deepEqual(record.routes, { deterministic: 80, offline: 61 });
+  assert.deepEqual(record.signals, { ax: 72, containment: 55, candidates: 4, riskPaths: ["configuration"] });
+  assert.deepEqual(record.answers, route.model.answers);
+  assert.equal(record.head, "abc123");
+  assert.equal(record.hostModel, "claude-sonnet-5");
+  assert.doesNotMatch(JSON.stringify(record), /rename running/);
+  // A Jev-scored route files its tier under the model variant.
+  const jev = decisionRecord({ prompt }, { ...route, model: { ...route.model, source: "jev", model: "jev-1.13.0" } });
+  assert.deepEqual(jev.tiers, { deterministic: "cheap", jev: "mid" });
+});
+
+test("the decision log is on by default, movable, and off when asked", () => {
+  assert.match(routeLogPath({}), /\.otito[\\/]route-decisions\.jsonl$/);
+  assert.equal(routeLogPath({ OTITO_ROUTE_LOG: "off" }), null);
+  assert.equal(routeLogPath({ OTITO_ROUTE_LOG: "0" }), null);
+  assert.equal(routeLogPath({ OTITO_ROUTE_LOG: "/tmp/x.jsonl" }), path.resolve("/tmp/x.jsonl"));
+  assert.equal(appendDecision({ v: 1 }, null), false, "off keeps nothing and says so");
+});
+
+test("a routed prompt leaves one line in the decision log, and a skipped one leaves none", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "route-log-"));
+  const log = path.join(dir, "nested", "route-decisions.jsonl");
+  const prompt = "rename the variable running to score in model-route.js";
+  const { code } = await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt }, { env: { OTITO_ROUTE_LOG: log } });
+  assert.equal(code, 0);
+  const lines = fs.readFileSync(log, "utf8").trim().split("\n");
+  assert.equal(lines.length, 1);
+  const record = JSON.parse(lines[0]);
+  assert.equal(record.sessionId, "sess-42");
+  assert.equal(record.promptHash, crypto.createHash("sha256").update(prompt).digest("hex").slice(0, 16));
+  assert.ok(["cheap", "mid", "premium"].includes(record.tier));
+  assert.ok(["cheap", "mid", "premium"].includes(record.tiers.deterministic));
+  assert.equal(typeof record.signals.ax, "number");
+  assert.ok(record.answers?.specificity, "the answers ride along for a rescore");
+  assert.match(record.head ?? "", /^[0-9a-f]{12}$/, "the head at prompt time is kept");
+  assert.doesNotMatch(lines[0], /rename the variable/);
+
+  await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt: "ok" }, { env: { OTITO_ROUTE_LOG: log } });
+  assert.equal(fs.readFileSync(log, "utf8").trim().split("\n").length, 1, "a skipped prompt is not a decision");
+  fs.rmSync(dir, { recursive: true, force: true });
 });

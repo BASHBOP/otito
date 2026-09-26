@@ -278,7 +278,9 @@ session and **binds the subagent**, and says so in as many words — claiming th
 host switched models when it only recommended a tier is an anti-pattern the
 skill names.
 
-Wire it up per repository, in `.claude/settings.local.json`:
+Wire it up once for every repository in `~/.claude/settings.json`, or for one
+repository in its `.claude/settings.local.json`. Not both: a prompt would route
+twice and be logged twice.
 
 ```json
 {
@@ -315,6 +317,31 @@ subagent.
 Keying is the same as `otito route`: with `TYPESAFE_API_KEY` set it asks Jev,
 and without one it falls back to the offline estimate, which is weaker but free
 and needs no network.
+
+**It keeps its decision.** A tier printed as context is gone when the turn
+ends, and a router can only be graded against decisions that were kept. So
+every routed prompt leaves one line in `~/.otito/route-decisions.jsonl`
+(`OTITO_ROUTE_LOG` moves it, `OTITO_ROUTE_LOG=off` keeps nothing). The line
+never holds the prompt, only its hash, and never leaves the machine.
+
+| Field | Why it is there |
+| --- | --- |
+| `sessionId`, `ts`, `promptHash`, `promptChars` | joins the decision to the prompt in the session transcript, which holds everything else: the prompts in order, interruptions, the assistant's edits |
+| `repo`, `root`, `branch`, `head` | the head at prompt time names the change: the next commit on that branch whose first parent is `head`, for the `repaired` join later |
+| `tiers`, `routes` per variant (`deterministic`, and `offline` or `jev`) | what each half of the router said; `otito route --json` now reports `deterministic` beside the scored tier |
+| `signals`, `answers`, `modelRouteEngineVersion` | exactly what `otito regret --rescore` reads, so a live corpus re-tiers under a new arithmetic the way a frozen run does |
+| `hostModel` | the only tier the hook actuates, through a subagent launch |
+
+The caveat the log does not remove: the tier the session ran on stays
+unknown, and no hook can learn it.
+
+`node scripts/hooks/route-outcomes.mjs` joins the log to the transcripts and
+grades every variant per tier on two same-session outcomes, with regret's
+minimum-sample rule and intervals: `corrected` (the next prompt inside the hour
+is an interruption or opens by pushing back) and `reworked` (the assistant's
+next turn edits a file this turn edited). Both were audited before they were
+written, on twenty days of this machine's transcripts, and the audit is the
+reason they carry the caveats they print; it is in the next section.
 
 ## Dogfood, bashbop-event-web, 2026-09-19
 
@@ -874,25 +901,58 @@ evidence. The next evidence has to come from live requests.
 What a live request fixes, and what it does not. Every graded row above
 carries two caveats history can never remove: the request is a commit subject
 written after the change, and the corpus is whatever landed, not what a router
-was asked. A decision recorded at prompt time removes both. The `route-prompt`
-hook already scores every prompt; it prints the tier and keeps nothing. The
-record it should keep, one line per routed prompt in a local append-only log:
+was asked. A decision recorded at prompt time removes both, which is why the
+`route-prompt` hook now keeps one (the section above). It does not remove the
+third: the tier the session ran on stays unknown. And it does not make the
+evidence arrive faster.
 
-| Field | Why |
-| --- | --- |
-| `ts`, `repo` (hashed root), `branch`, `head` | the head at prompt time names the change: the next commit on that branch whose first parent is `head` |
-| `promptHash` | joins a follow-up to its request without keeping the text |
-| `tiers` and `routes` per variant, `signals`, `answers` | exactly what `--rescore` needs, so a live corpus rescores the way a frozen run does |
-| `subagentModel`, when one was launched | the only tier the hook actually actuates |
+### Audited, 2026-09-26: a same-session outcome
 
-The caveat it does not remove: the tier the session ran on stays unknown
-unless the host records it, and no hook can. Volume is the other cost. Across
-these three repositories the first rows old enough for a 30-day window arrive
-five to six weeks after the log starts, and thirty per tier takes months. A
-same-session outcome, a request routed cheap whose next prompt in the session
-is a correction, is available in minutes through the canvas, and is a
-different proxy with an audit of its own to pass first. Which outcome the log
-serves decides its fields, so that choice comes before the log.
+The same day, the shorter road was tried: a request routed cheap whose next
+prompt in the session is a correction, an outcome available minutes after the
+request instead of thirty days after the commit. It was audited before the log
+existed, on the corpus that already did: every Claude Code transcript on this
+machine (twenty days, one user, 1,122 prompt records) and the tiers the canvas
+had recorded when the hook ran (376 routed prompts, otito only, since the hook
+was wired in one repository). Evidence beside the frozen runs in
+`.otito/runs/2026-09-26/session-correction/`, local only.
+
+| | count |
+| --- | --: |
+| real requests (not notifications, shell output, slash commands, interruptions, duplicate copies) | 755 |
+| with a follow-up prompt inside the hour | 616 |
+| whose turn edited any file | 143 |
+| with a tier recorded at the time | 84, of which 20 edited a file |
+
+**Pushback**, the next prompt opening with a negation, a complaint, still or
+again, an interruption, or a re-ask: 8.2% of follow-ups. Read one by one they
+are mostly the user fixing their own typo ("i meant commercial"), reporting a
+deploy or environment failure ("DB not working", "not reflecting in
+production"), interrupting to add information, or turn-taking. A handful are
+the model being wrong. **Rework**, the next turn's assistant edits touching a
+file this turn's edits touched: 24 of the 143 editing requests, 16.8%, and
+the samples are a plan file or a migration worked on across consecutive
+prompts. Iteration, not repair. The two labels barely overlap (21 of the 24
+reworked requests read as "moved on"). A **git undo** in the next turn (45
+turns) is stash-and-test workflow, staging fixes, and discards the user asked
+for, not a repair signal either.
+
+With 84 tiered requests every lane is below the minimum sample, so nothing is
+graded. The rate matters more than the count: about seven editing requests a
+day across every repository, about one of them routed cheap, so thirty per
+tier is weeks away and separating two rates at a 10 to 17% base rate is
+months. The outcome arrives in minutes; the corpus that carries it grows no
+faster than commits do. That was the wrong half of the earlier claim that this
+road was fast.
+
+So the hook keeps its decision and `route-outcomes` grades it, with both
+proxies' failure modes printed as caveats, and no number from either is
+published until a lane clears the minimum sample. Neither the commit join nor
+the session read grades the router today. What would: the tier the session
+actually ran on, recorded by the host; an outcome that reads the assistant's
+turn rather than the user's words (tests failing after the turn, an edit
+rejected at the permission prompt), each audited before it counts; and more
+than one user's sessions.
 
 ## References
 

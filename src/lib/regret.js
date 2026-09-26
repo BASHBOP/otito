@@ -42,7 +42,7 @@ import { generateCodeMap } from "./code-map.js";
 import { DEFAULT_MIN_SAMPLE, DEFAULT_WINDOW_DAYS, FIX_COMMIT_RULE, FIX_SUBJECT, joinRepairs, readHistory } from "./calibrate.js";
 import { generateImpact } from "./impact.js";
 import { priceJevCall } from "./jev.js";
-import { askJev, modelRouteEngineVersion, offlineAnswers, scoreDecision, signalsFrom, TIERS } from "./model-route.js";
+import { askJev, modelRouteEngineVersion, NEUTRAL_ANSWERS, offlineAnswers, scoreDecision, signalsFrom, TIERS } from "./model-route.js";
 import { inspectRepo } from "./repo.js";
 import { runCommand } from "./tools.js";
 
@@ -69,16 +69,6 @@ const Z95 = 1.96;
 
 const RELEASE_CAVEAT =
   "Release and version-bump commits are not graded: tooling writes them, no model is asked for them, and the join almost never reads one as repaired, so grading them flatters whichever tier they land in.";
-
-/**
- * The deterministic half on its own: every model term at zero, so the route
- * is AX plus containment plus the bumps.
- */
-const NEUTRAL_ANSWERS = {
-  specificity: { score: 0, confidence: null },
-  blast_radius: { score: 0, confidence: null },
-  novelty: { noul: 0 },
-};
 
 export const VARIANTS = /** @type {const} */ (["deterministic", "offline", "jev"]);
 
