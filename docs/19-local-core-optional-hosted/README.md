@@ -18,7 +18,7 @@ Three commands are the product. Everything else supports them.
 
 None of the three calls a model, opens a socket, or reads anything outside the repository. Run them twice and you get the same answer.
 
-The supporting commands run the same way: `impact` and `converge` (the pieces `gate` is built from), `ax` and `route` (how well the repository serves an agent, and how much model the request deserves), `attest` (the post-merge record and its `--verify`), `map`, `repo`, `index` and `search` (repository shape), `harness`, `calibrate`, `workspace-gate`, `init` and `doctor`. `otito help` lists all of them, and every one takes `--json`.
+The supporting commands run the same way: `impact` and `converge` (the pieces `gate` is built from), `ax` and `route` (how well the repository serves an agent, and how much model the request deserves), `attest` (the post-merge record and its `--verify`), `map`, `repo`, `index` and `search` (repository shape), `harness`, `calibrate` and `regret` (how the gate's flags and the router's tiers have actually fared in this repository's history), `workspace-gate`, `init` and `doctor`. `otito help` lists all of them, and every one takes `--json`.
 
 ---
 
