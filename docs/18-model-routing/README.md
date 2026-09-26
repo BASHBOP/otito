@@ -623,6 +623,106 @@ the keyless terms inverting bashbop-api's cheap lane, and let a read that
 separates outcomes reach the cheap band in a repository like
 bashbop-event-web, without giving back what it does on bashbop-api.
 
+### Graded, 2026-09-26: a centre for the model terms
+
+The shipped arithmetic charges every model term from zero: a read that names
+the target costs nothing, and no read can put a request above AX. The first
+candidate under the bar lets it. Each Score term is charged from a **centre**
+instead of from zero, so a read at the easy end of a question earns a share
+of AX back and a read past the centre costs one. Shares, bands, the
+containment bonus and both bumps are exactly as shipped:
+
+```
+route = clamp(AX x (1 - 0.25 x (specificity/2  - c)
+                    - 0.20 x (blast_radius/2 - c)
+                    - 0.15 x novelty
+                    + bonus), 0, 100)
+```
+
+`c = 0` is the shipped arithmetic. Novelty keeps its zero, because a request
+that needs no new design is the default rather than a discount. The
+deterministic variant sits at the centre, so its tiers do not move and the
+tables stay comparable. "Confident" is not a separate gate: a read earns the
+whole of the cheap-ward share only when its distribution puts most of its
+mass on the easiest level, which is what the expectation already measures.
+
+Swept on the tuning runs, bashbop-api and otito, rescored on the frozen
+answers. Cheap lanes only, as commits · repaired; every centre above zero
+orders both variants on bashbop-api with cheap and premium apart:
+
+| c | bashbop-api · offline | bashbop-api · jev | otito · offline | otito · jev | Bar, tuning runs |
+| --- | --- | --- | --- | --- | --- |
+| 0, shipped | 129 · 22.5% | 186 · 4.8% | 72 · 22.2% | 35 · 14.3% | fails 1: keyless inverted |
+| 0.1 | 326 · 11.3% | 332 · 4.2% | 103 · 21.4% | 53 · 15.1% | fails 3: otito jev |
+| 0.2 | 424 · 10.8% | 384 · 4.7% | 115 · 19.1% | 73 · 12.3% | **passes** |
+| 0.25 | 449 · 10.5% | 396 · 5.3% | 121 · 20.7% | 83 · 15.7% | fails 3: both jev |
+| 0.5, symmetric | 509 · 11.2% | 469 · 9.8% | 151 · 19.9% | 124 · 18.5% | fails 3: both jev |
+
+Two things the sweep says on its own. **Every centre above zero fixes the
+keyless inversion on bashbop-api**: the offline cheap lane goes from 129
+commits at 22.5% to 424 at 10.8%, ordered, cheap and premium apart. The term
+that inverted it was blast radius, which the heuristic derives from how many
+top-level areas the candidate files span, and on this repository the commits
+that span several are the clean ones (the 345 it moved out of the cheap lane
+were repaired 5.5% of the time). **The symmetric centre makes the model read
+worth nothing at the tier level.** At `c = 0.5` the Jev cheap lane on
+bashbop-api is 469 commits at 9.8%, against 474 at 10.1% with no model at
+all: the lane the read carves out is the deterministic lane. The read's value
+is in the other direction. Of the 312 commits the deterministic half puts in
+`mid` on bashbop-api, Jev puts most of the mass on "names the target" for
+three and on "one file" for three, so there is almost nothing for a
+cheap-ward push to lift. What a centre does on this corpus is stop charging
+for reads that are only mildly unspecific, and those are clean: the 59
+deterministic-cheap commits Jev read below level 1 on both Score questions
+were repaired once.
+
+`c = 0.2`, the one centre that passes, is a knife edge. Its neighbours fail
+criterion 3 by amounts inside every interval, 15.1% against 14.3% over 53
+otito commits and 5.3% against 4.8% on bashbop-api. That is the shape of a fit
+to noise, and it is why the bar keeps a run back.
+
+**Confirmed once on bashbop-event-web, and failed.**
+
+| Variant | cheap | mid | premium | Ordered | Criterion 3 |
+| --- | --- | --- | --- | --- | --- |
+| offline, shipped | 97 · 24.7% (17.2 to 34.2) | 425 · 46.1% | 494 · 51.8% | yes | |
+| offline, c = 0.2 | 177 · 28.8% (22.6 to 35.9) | 463 · 50.1% | 376 · 51.3% | yes | 28.8% > 24.7%, **fails** |
+| jev, shipped | 8 · withheld | 352 · 37.5% | 656 · 52.1% | unknown | |
+| jev, c = 0.2 | 44 · 31.8% (20.0 to 46.6) | 478 · 40.8% | 494 · 54.0% | yes | 31.8% > 25.0%, **fails** |
+
+Criteria 1 and 2 pass: for the first time on this repository the model tier
+is gradable and ordered, cheap and premium apart, and its cheap lane (31.8%)
+is cleaner than the deterministic one (33.5%). Criterion 3 fails for both
+variants. Both failures are inside the intervals, and the model's reference
+is a rate over 8 commits that the command itself would withhold, which is a
+defect in how the criterion was written rather than a finding. The bar stands
+as written and the candidate does not ship. It also could not have done what
+it was built for: the keyless variant lifted no commit out of the
+deterministic `mid` lane and the model lifted one. At `c = 0.2` a read earns
+back at most 9% of AX, and all of it only when both Score answers sit at the
+easy end, which on these runs almost none do.
+
+What this leaves:
+
+- The shipped one-sided arithmetic stays. Its keyless variant is inverted on
+  bashbop-api, and the change that fixes it cannot be told from noise on the
+  confirmation run under the bar as written.
+- A cheap-ward push has nothing to act on in this backtest. Whether that is a
+  property of the router or of commit subjects as request proxies is
+  unmeasured: a subject is written after the change and rarely names the file
+  it changed, where a live request often does.
+- Any further candidate needs a confirmation run this one has not seen.
+  bashbop-event-web has been scored and cannot confirm again.
+- On bashbop-api, 9 of the 16 dependency bumps count as repaired, against
+  24.3% of everything else, which is consistent with a later bump touching
+  the same lockfile lines and the join reading it as a repair. That is the
+  calibration thesis's `configuration` finding on the outcome side, and how
+  much of any tier's rate it carries is unmeasured.
+
+The sweep, the buckets and the confirmation are reproducible from the frozen
+runs with `rescoreRegret(saved, { score })`; the harness and its output are
+kept beside the runs.
+
 ## References
 
 - TypeSafe AI, _System One_: <https://docs.typesafe.ai/concepts/system-one>
