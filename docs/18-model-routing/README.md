@@ -459,7 +459,9 @@ not accuracy. It is **regret**: a change routed cheap that was repaired, by a
 fix or a revert, within the outcome window. It is never a saving, because otito
 does not know whether a host switched models.
 
-`otito regret <repo>` runs that backtest. For each non-fix commit it checks the
+`otito regret <repo>` runs that backtest. For each commit that is neither a
+fix nor a release (a `chore(release): 2.26.5 [skip ci]`, a `chore: bump version
+to 1.4.0`: tooling wrote it, so no router saw a request) it checks the
 parent tree out into a temporary worktree, scores the commit subject as the
 request, and grades three tiers side by side: the deterministic half alone (AX,
 containment and the bumps, every model term at zero), the shipped offline
@@ -598,7 +600,8 @@ bashbop-api, the model tier on bashbop-event-web) and criterion 2 once
 (bashbop-event-web). What that looks like:
 
 - **The keyless tier runs the wrong way on bashbop-api, and it is not
-  noise.** Its cheap lane is repaired 22.5% of the time and its mid lane
+  noise.** _Superseded the same day: the lane it moved out of `cheap` was
+  release commits, see "Re-graded without release commits" below._ Its cheap lane is repaired 22.5% of the time and its mid lane
   10.1%, and the intervals do not overlap. Split the deterministic cheap lane
   by what the heuristic did with it: the 345 commits it moved out were
   repaired 5.5% (3.6 to 8.4) of the time, the 129 it kept 22.5%. It escalates
@@ -722,6 +725,81 @@ What this leaves:
 The sweep, the buckets and the confirmation are reproducible from the frozen
 runs with `rescoreRegret(saved, { score })`; the harness and its output are
 kept beside the runs.
+
+### Re-graded, 2026-09-26: without release commits
+
+The keyless inversion above was chased to its rows and turned out not to be
+about blast radius. Split bashbop-api's deterministic cheap lane by the
+heuristic's blast score and the lane falls into two pieces: 353 of its 474
+commits have exactly five candidate files, a blast score of 1.2 or 1.6, and
+were repaired 0.9% of the time; the other 121 were repaired 36%. The 353
+are `chore(release): N [skip ci]`, written by semantic-release after every
+merge. Across the run, 504 of 1,214 graded commits were written by tooling
+(463 of those, and 37 `chore: Update schema snapshot after merge [skip ci]`),
+4 of them repaired. No one asks a model for a release commit, and the join almost
+never reads one as repaired, so they flattered whichever tier they landed in:
+the deterministic half put 365 of them in `cheap`, which is the whole of
+that lane's 10.1%, and the keyless heuristic moved them to `mid`
+because their candidates (a lockfile, a changelog, a manifest) span areas,
+which is the whole of the "inversion". bashbop-event-web has 82
+`chore: bump version to N` commits with the same shape, and otito 28 release
+commits of its own.
+
+`otito regret` 0.4.0 leaves release commits out of the corpus the way it
+already leaves fix commits out: a subject marked `[skip ci]`, a bare version,
+or a chore, build, ci or release subject that names a version
+(`RELEASE_SUBJECT` in `regret.js`). A subject that merely mentions a release
+(`release: issue (#277)`) is a request and stays. The count is printed on the
+corpus line, and `--rescore` applies the rule to a run saved before it, so the
+frozen runs re-grade without a model call. Rescored, shipped arithmetic:
+
+| Run | Graded | Base rate | Variant | cheap | mid | premium | Ordered |
+| --- | --: | --- | --- | --- | --- | --- | --- |
+| bashbop-api | 710 | 41.7% (38.1 to 45.4) | deterministic | 109 · 40.4% (31.6 to 49.8) | 173 · 35.3% (28.5 to 42.6) | 428 · 44.6% (40.0 to 49.4) | no |
+| bashbop-api | | | offline | 59 · 45.8% (33.7 to 58.3) | 156 · 34.0% (27.0 to 41.7) | 495 · 43.6% (39.3 to 48.0) | no |
+| bashbop-api | | | jev | 20 · withheld | 121 · 38.0% (29.9 to 46.9) | 569 · 42.7% (38.7 to 46.8) | unknown |
+| bashbop-event-web | 934 | 50.5% (47.3 to 53.7) | deterministic | 168 · 45.2% (37.9 to 52.8) | 446 · 52.7% (48.1 to 57.3) | 320 · 50.3% (44.9 to 55.8) | no |
+| bashbop-event-web | | | offline | 52 · 44.2% (31.6 to 57.7) | 390 · 49.5% (44.6 to 54.4) | 492 · 52.0% (47.6 to 56.4) | yes, overlapping |
+| bashbop-event-web | | | jev | 8 · withheld | 273 · 46.9% (41.1 to 52.8) | 653 · 52.4% (48.5 to 56.2) | unknown |
+| otito | 129 | 18.6% (12.8 to 26.2) | deterministic | 98 · 18.4% (11.9 to 27.2) | 30 · 16.7% (7.3 to 33.6) | 1 · withheld | unknown |
+| otito | | | offline | 63 · 17.5% (10.0 to 28.6) | 65 · 18.5% (10.9 to 29.6) | 1 · withheld | unknown |
+| otito | | | jev | 29 · withheld | 94 · 20.2% (13.3 to 29.4) | 4 · withheld | unknown |
+
+What the corrected corpus says:
+
+- **Nothing orders outcomes on either bashbop repository.** Every cheap lane
+  sits inside its base rate's interval, and the deterministic half is not
+  ordered on bashbop-api after all: the "yes" in the earlier table was the
+  release commits. The model's cheap lane on bashbop-api shrinks from 186
+  commits to 20, so the finding that "the model read orders bashbop-api and
+  its escalations are right" was 166 release commits too, and is withdrawn.
+- **The base rates are not what the earlier tables said.** bashbop-api's
+  human commits are repaired 41.7% of the time within 30 days, not 24.7%, and
+  bashbop-event-web's 50.5%. At those rates the `repaired` proxy is close to a
+  coin flip, and a tier would need a large lane to show a difference through
+  it.
+- **The centre candidate's pass does not survive.** Re-swept on the corrected
+  tuning runs, no centre from 0.1 to 0.5 clears criterion 1 or 2 on
+  bashbop-api, and `c = 0.2` fails criterion 3 on otito and on
+  bashbop-event-web. Its confirmation failure stands for a further reason.
+- **One lane moves the right way, on the run too small to grade it.** On
+  otito the model's cheap lane under a centre is repaired 4.9% (41 commits,
+  `c = 0.1`) to 5.8% (52, `c = 0.2`) against 23 to 26% for its mid lane; the
+  intervals separate at `c = 0.2`. otito's premium lane is one commit, so the
+  bar cannot see this, and it is one repository.
+
+The bar as written cannot currently be met on these runs: criterion 1 needs
+the model's cheap lane to clear the minimum sample on both bashbop
+repositories, and under the shipped arithmetic it is 20 and 8 commits. The
+next candidate therefore has a prior question to answer before any arithmetic:
+whether the `repaired` join, at 42 to 50% of human commits, is an outcome a
+tier can be graded against on these repositories at all. Dependency bumps
+(the calibration thesis's `configuration` finding), squash merges titled
+`Develop (#451)` that match no file and route `premium` on the no-evidence
+ceiling, and a 30-day line-overlap window on a busy monorepo are the three
+places to look. Until then `route` stays advisory, and the earlier sections
+stand as the record of what was measured on the corpus that included release
+commits.
 
 ## References
 

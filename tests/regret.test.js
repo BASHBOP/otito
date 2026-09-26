@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
-import { formatRegretMarkdown, generateRegret, isolateGit, rescoreRegret, wilson } from "../src/lib/regret.js";
+import { formatRegretMarkdown, generateRegret, isolateGit, RELEASE_SUBJECT, rescoreRegret, wilson } from "../src/lib/regret.js";
 import { TIERS } from "../src/lib/model-route.js";
 import { getCodeMapCachePath } from "../src/lib/index-cache.js";
 
@@ -467,4 +467,85 @@ test("the CLI rescores a saved run from a file, and says what --rescore needs wh
   const missing = spawnSync(process.execPath, [path.resolve("src/cli.js"), "regret", "--rescore"], { encoding: "utf8" });
   assert.notEqual(missing.status, 0);
   assert.match(missing.stderr, /--rescore needs the path of a saved `otito regret --json` run/);
+});
+
+test("release and version-bump commits are not graded, in a replay or in a rescore of a run that had graded them", async () => {
+  for (const subject of [
+    "chore(release): 2.26.5 [skip ci]",
+    "chore: bump version to 1.4.0",
+    "chore: release v1.2.0",
+    "chore: prepare repoctx v0.3 release",
+    "release: otito 1.2.0",
+    "Release Repoctx 1.2",
+    "1.2.3",
+    "chore: Update schema snapshot after merge [skip ci]",
+  ]) {
+    assert.match(subject, RELEASE_SUBJECT, `tooling wrote "${subject}"`);
+  }
+  for (const subject of [
+    "release: issue (#277)",
+    "feat: Release advance update schema (#282)",
+    "chore(deps-dev): bump @eslint/js from 9.39.4 to 10.0.0",
+    "chore(ci): automate semantic versioning (#519)",
+    "docs: mention 1.2.0 in the guide",
+    "feat(bump): bump version",
+  ]) {
+    assert.doesNotMatch(subject, RELEASE_SUBJECT, `someone asked for "${subject}"`);
+  }
+
+  const { root, repaired, kept } = historyRepo("release");
+  // Old enough to grade, and touching the files a release touches.
+  const release = commit(
+    root,
+    { "package.json": JSON.stringify({ name: "fixture", version: "1.1.0", scripts: { test: "true" } }), "CHANGELOG.md": lines("# 1.1.0") },
+    "chore(release): 1.1.0 [skip ci]",
+    65,
+  );
+  const bump = commit(
+    root,
+    { "package.json": JSON.stringify({ name: "fixture", version: "1.2.0", scripts: { test: "true" } }) },
+    "chore: bump version to 1.2.0",
+    55,
+  );
+
+  const data = await generateRegret(root, { offline: true, minSample: 1 });
+  const shas = data.commits.map((row) => row.sha);
+  assert.ok(shas.includes(repaired) && shas.includes(kept), "requests are graded");
+  assert.ok(!shas.includes(release) && !shas.includes(bump), "release commits are not");
+  assert.equal(data.range.releaseCommits, 2);
+  assert.equal(data.range.replayed, data.commits.length);
+  assert.match(data.method.releaseCommitRule, /\[skip ci\]/);
+  assert.ok(data.caveats.some((caveat) => /Release and version-bump commits are not graded/.test(caveat)));
+  assert.match(formatRegretMarkdown(data), /2 release commits, not graded/);
+
+  // A run saved before the rule graded them. Rescoring it grades the corpus a
+  // fresh replay would, and says what left.
+  const before = JSON.parse(JSON.stringify(data));
+  const template = before.commits[0];
+  before.commits.push({ ...template, sha: "f".repeat(40), subject: "chore(release): 9.9.9 [skip ci]", repairedAfter: null });
+  before.range.releaseCommits = undefined;
+  before.caveats = before.caveats.filter((caveat) => !/Release and version-bump/.test(caveat));
+  delete before.method.releaseCommitRule;
+
+  const rescored = rescoreRegret(before);
+  assert.deepEqual(
+    rescored.commits.map((row) => row.sha),
+    data.commits.map((row) => row.sha),
+    "the release row is gone and nothing else moved",
+  );
+  assert.deepEqual(rescored.variants, data.variants);
+  assert.deepEqual(rescored.base, data.base);
+  assert.equal(rescored.range.releaseCommits, 1);
+  assert.equal(rescored.range.replayed, data.commits.length);
+  assert.equal(rescored.caveats.filter((caveat) => /Release and version-bump/.test(caveat)).length, 1);
+  assert.ok(rescored.caveats.some((caveat) => /^Dropped 1 release commit the saved run had graded/.test(caveat)));
+  assert.match(formatRegretMarkdown(rescored), /1 release commits, not graded/);
+
+  const twice = rescoreRegret(JSON.parse(JSON.stringify(rescored)));
+  assert.equal(twice.range.releaseCommits, 1, "a rescore of a rescore does not count the drop again");
+  assert.equal(twice.caveats.filter((caveat) => /^Dropped /.test(caveat)).length, 0);
+  assert.equal(twice.caveats.filter((caveat) => /Release and version-bump/.test(caveat)).length, 1);
+
+  const onlyReleases = { ...before, commits: before.commits.filter((row) => RELEASE_SUBJECT.test(row.subject)) };
+  assert.throws(() => rescoreRegret(onlyReleases), /every commit in this run is a release commit/);
 });
