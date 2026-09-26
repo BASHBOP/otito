@@ -9,12 +9,12 @@
     "source": "github",
     "id": "1242199320"
   },
-  "version": "3.1.0",
+  "version": "3.2.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@bashbop/otito",
-      "version": "3.1.0",
+      "version": "3.2.0",
       "transport": {
         "type": "stdio"
       },

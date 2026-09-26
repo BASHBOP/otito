@@ -327,7 +327,7 @@ The older names below still work through `tools/call`, although `tools/list` doe
 | `pr_review`                | `review_context` | Unchanged                                                    |
 | `review_pr`                | `review_verdict` | Unchanged                                                    |
 | `merge_readiness`          | `review_gate`    | `selector` is dropped, so it runs the local gate             |
-| `pr_merge_readiness`       | `review_gate`    | `selector` becomes `pr`, so it runs the GitHub PR gate       |
+| `pr_merge_readiness`       | `review_gate`    | `selector` becomes `pr`, so it runs the GitHub PR gate; with no selector, it gates the checked-out branch's PR |
 | `repo_catalog`             | `repo_search`    | `query` is dropped, so it returns the catalog listing        |
 | `repo_discover`            | `repo_index`     | Adds `discover: true, dryRun: true`: read-only discovery     |
 | `find_domain`              | `repo_map`       | `domain`, with `includeFiles: true`                          |

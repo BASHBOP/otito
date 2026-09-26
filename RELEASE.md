@@ -25,7 +25,7 @@ Preserve this discipline across the stable 3.x line. There is no Òtítọ́ 2.x
 13. Verify the published binary:
 
 ```bash
-npm install -g @bashbop/otito@3.1.0
+npm install -g @bashbop/otito@3.2.0
 otito doctor
 ```
 
