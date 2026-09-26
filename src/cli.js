@@ -655,12 +655,18 @@ async function handlePass(parsed) {
 /** @param {CliArgs} parsed */
 async function handlePassPr(parsed) {
   const { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } = await import("./lib/pass-pr.js");
-  const selector = parsed.positionals[0] ?? "";
+  // No selector gates the current branch's PR, as `gh pr view` does. A blank
+  // one is `otito pass-pr "$PR_NUMBER"` with the variable unset, not a request
+  // for that PR.
+  const selector = parsed.positionals[0];
+  if (selector !== undefined && !isPrSelector(selector)) {
+    throw new Error("pass-pr was given a blank PR selector; name the PR, e.g. `otito pass-pr 123 --path .`, or leave it out to gate the current branch's PR");
+  }
   const repoPath = parsed.flags.path ?? ".";
   const { policy, governance } = gatePolicy(repoPath, parsed.flags);
   // evaluatePR returns a loosely-typed record; it is a PassPrData at runtime.
   const data = /** @type {PassPrData} */ (
-    await evaluatePR(repoPath, selector, {
+    await evaluatePR(repoPath, selector ?? "", {
       policy,
       governance,
       request: parsed.flags.request,
@@ -800,9 +806,15 @@ async function handleRegret(parsed) {
 // `pass-pr` remain available as legacy aliases.
 /** @param {CliArgs} parsed */
 async function handleGate(parsed) {
-  const repoPath = gateRepoPath(parsed);
   const selector = parsed.flags.pr;
-  if (selector && selector !== true) {
+  // Refused before the repository is settled: `--pr "$PR_NUMBER"` with the
+  // variable unset leaves --pr bare and its empty string as a positional,
+  // which would otherwise be taken for the repository.
+  if (selector !== undefined && !isPrSelector(selector)) {
+    throw new Error("gate --pr needs a PR number or URL, e.g. `otito gate --pr 123 --path .`");
+  }
+  const repoPath = gateRepoPath(parsed);
+  if (selector !== undefined) {
     // pass-pr reads the selector from positionals[0] and the repo from --path.
     return handlePassPr({
       ...parsed,
@@ -812,6 +824,18 @@ async function handleGate(parsed) {
   }
   // pass reads the repo from positionals[0].
   return handlePass({ ...parsed, positionals: [repoPath] });
+}
+
+/**
+ * Whether a --pr value (or pass-pr's positional) names a PR. A bare `--pr`
+ * parses as `true` and `--pr=` as `""`; read as "no PR", either ran the local
+ * gate instead, and a blank selector that reached `gh pr view` gated whatever
+ * PR the checked-out branch has. The PR commands refuse both.
+ * @param {unknown} selector
+ * @returns {selector is string}
+ */
+function isPrSelector(selector) {
+  return typeof selector === "string" && selector.trim() !== "";
 }
 
 /**
@@ -849,6 +873,9 @@ function gateRepoPath(parsed) {
 /** @param {CliArgs} parsed */
 async function handleReview(parsed) {
   const { formatReviewMermaid, formatReviewTerminal, generateReview } = await import("./lib/review.js");
+  if (parsed.flags.pr !== undefined && !isPrSelector(parsed.flags.pr)) {
+    throw new Error("review --pr needs a PR number or URL, e.g. `otito review . --pr 123`");
+  }
   // Mirror `impact` and `ax` arg parsing: `review "<request>" --path <repo>` or
   // `review <repo> "<request>"`. Policy and governance come from the same repo.
   if (parsed.flags.path === true) {

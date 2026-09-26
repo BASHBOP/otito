@@ -406,7 +406,7 @@ test("pass evaluates merge readiness on a git fixture", async () => {
 
 test("pass-pr surfaces errors when gh is unavailable", async () => {
   const fixture = makeGitFixture("pr");
-  const json = await runCli(["pass-pr", "", "--path", fixture, "--json"]);
+  const json = await runCli(["pass-pr", "--path", fixture, "--json"]);
   const payload = parseJsonOutput(json.stdout);
   assert.ok(payload.verdict || payload.ok === false);
 });
@@ -429,6 +429,50 @@ test("gate --pr routes to the GitHub PR gate (delegates to pass-pr)", async () =
   const json = await runCli(["gate", "--pr", "123", "--path", fixture, "--json"]);
   const payload = parseJsonOutput(json.stdout);
   assert.ok(payload.verdict || payload.ok === false, "gate --pr produces a PR-gate result or a surfaced error");
+});
+
+test("gate --pr, review --pr and pass-pr refuse a PR selector that is there but blank", async (t) => {
+  withEmptyUserConfig(t);
+  const fixture = makeGitFixture("gate-pr-blank");
+  // gh answers every `pr view` with #42, so a blank selector that reached it
+  // would gate that PR, the one gh finds for the checked-out branch.
+  withFakeGh(t, pullRequest42(fixture));
+  // Run from another repository, so a refusal that came after the repository
+  // was settled would name two repositories instead.
+  withCwd(t, makeGitFixture("gate-pr-blank-cwd"));
+  const run = async (...argv) => {
+    const result = await runCli([...argv, "--json"]);
+    return { exitCode: result.exitCode, error: parseJsonOutput(result.stdout).error };
+  };
+  const gate = { exitCode: 1, error: "gate --pr needs a PR number or URL, e.g. `otito gate --pr 123 --path .`" };
+  const review = { exitCode: 1, error: "review --pr needs a PR number or URL, e.g. `otito review . --pr 123`" };
+  const passPr = {
+    exitCode: 1,
+    error: "pass-pr was given a blank PR selector; name the PR, e.g. `otito pass-pr 123 --path .`, or leave it out to gate the current branch's PR",
+  };
+
+  // `--pr "$PR_NUMBER"` with the variable unset reaches the parser as `--pr ""`:
+  // --pr bare, and the empty string left behind as a positional.
+  assert.deepEqual(await run("gate", "--pr", "", "--path", fixture), gate, "an unset $PR_NUMBER");
+  assert.deepEqual(await run("gate", "--path", fixture, "--base", "HEAD~1", "--pr"), gate, "a bare --pr");
+  assert.deepEqual(await run("gate", "--path", fixture, "--base", "HEAD~1", "--pr="), gate, "--pr=");
+  assert.deepEqual(await run("gate", "--pr", " ", "--path", fixture), gate, "a blank selector");
+  assert.deepEqual(await run("review", fixture, "--pr", ""), review, "an unset $PR_NUMBER after the repository");
+  assert.deepEqual(await run("review", "--pr", "", fixture), review, "an unset $PR_NUMBER before it");
+  assert.deepEqual(await run("review", "--pr", "", "--path", fixture), review, "an unset $PR_NUMBER with --path");
+  assert.deepEqual(await run("review", fixture, "--base", "HEAD~1", "--pr"), review, "a bare --pr");
+  assert.deepEqual(await run("review", fixture, "--base", "HEAD~1", "--pr="), review, "--pr=");
+  assert.deepEqual(await run("review", fixture, "--pr", " "), review, "a blank selector");
+  assert.deepEqual(await run("pass-pr", "", "--path", fixture), passPr, "an unset $PR_NUMBER");
+  assert.deepEqual(await run("pass-pr", " ", "--path", fixture), passPr, "a blank selector");
+
+  const text = await runCli(["gate", "--pr=", "--path", fixture]);
+  assert.equal(text.exitCode, 1);
+  assert.equal(text.stderr, `otito: ${gate.error}\n`);
+
+  // Leaving pass-pr's selector out still gates the current branch's PR.
+  const current = parseJsonOutput((await runCli(["pass-pr", "--path", fixture, "--json"])).stdout);
+  assert.equal(current.pr?.number, 42);
 });
 
 test("gate takes the repository from the positional or --path, and refuses two different ones", async (t) => {
