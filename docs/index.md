@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v3.1.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
+**v3.2.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
 
 ---
 
@@ -19,6 +19,16 @@
 
 ## What's New
 
+!!! tip "v3.2.0 published (2026-09-26)"
+    The gates gate what they are given. No command, field or schema was removed.
+
+    - `otito gate` and `otito review` take the repository from the positional or `--path`, in local and PR mode alike, and every gate, CLI or MCP, reads policy and governance from the `.otitorc.json` of the repository it gates, not the directory it runs in.
+    - The GitHub PR gate reads whether a PR is open, merged or closed and reports it as `pr.state` and `pr.mergedAt`, so a merged PR is no longer gated as if it were still open.
+    - A `--pr` or selector that names no PR is refused rather than gating the wrong thing. Over MCP a blank `pr` reads as no PR, and `pr_merge_readiness` with no selector gates the checked-out branch's PR again.
+    - Repair hints name the `@nugehs` packages that exist, and `otito help` no longer says the legacy MCP tool names stop working at 3.0; [docs/02](02-mcp-agent-workflows/README.md#legacy-tool-names) maps each one to its canonical tool.
+
+    [npm v3.2.0](https://www.npmjs.com/package/@bashbop/otito/v/3.2.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.2.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+
 !!! tip "v3.1.0 published (2026-09-26)"
     The router gets graded, and the answer so far is that nothing can grade it yet. Nothing was removed or renamed.
 
@@ -30,7 +40,7 @@
     [npm v3.1.0](https://www.npmjs.com/package/@bashbop/otito/v/3.1.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.1.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.0.0 published (2026-09-25)"
-    The first major since the Òtítọ́ cutover. It follows 1.15.0 directly; the `v2.x` tags belong to the earlier Repoctx releases.
+    The first major since the Òtítọ́ cutover. It follows 1.15.0 directly; the `v2.x` tags belong to earlier otito releases, from before the cutover.
 
     - **Breaking:** otito stops interpreting the request and leaves that to the model. `intent.hints`, `patterns` and `agentPrompt` leave the context pack, `implementationPlan` leaves impact, and `reviewPrompts` and `nextSteps` leave PR review. The ranked files, hotspots, risk flags and review targets they were derived from are unchanged. See [Migrating from 1.x](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md#migrating-from-1x).
     - `otito converge --head <ref>` and `otito gate --head <ref>` score exactly `base..head`, so a dirty checkout no longer counts as scope drift. A confirmed owner's own siblings and tests are in scope, not drift; on a 25-file commit that moved convergence from 55 to 84.
