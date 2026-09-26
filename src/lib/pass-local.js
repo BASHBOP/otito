@@ -689,8 +689,11 @@ function localReviewCheck(options) {
   };
 }
 
+/** The npm package tieline is published as; there is no @bashbop/tieline. */
+const TIELINE_PACKAGE = "@nugehs/tieline";
+
 // Optional FE↔BE contract-drift gate, powered by tieline
-// (https://github.com/BASHBOP/tieline). Runs only when a tieline config is
+// (https://github.com/nugehs/tieline). Runs only when a tieline config is
 // discoverable AND the binary resolves; otherwise it skips silently so the gate
 // never hard-depends on tieline being installed.
 /**
@@ -706,8 +709,8 @@ function contractDriftCheck(root) {
     return {
       name: "Contract drift",
       status: STATUS.warn,
-      summary: "tieline config found but the tieline binary could not be resolved — install @bashbop/tieline to enable this gate.",
-      details: [cfg, "Repair command: npm install --save-dev @bashbop/tieline"],
+      summary: `tieline config found but the tieline binary could not be resolved — install ${TIELINE_PACKAGE} to enable this gate.`,
+      details: [cfg, `Repair command: npm install --save-dev ${TIELINE_PACKAGE}`],
     };
   }
   const res = runCommand(bin, ["check", "--json", "--no-fail", "--config", cfg], { cwd, timeout: 60000 });

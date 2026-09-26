@@ -9,6 +9,7 @@ This project follows SemVer.
 ### Fixed
 
 - **The compliance-controls gate names the bouncer package that exists.** When a repository has `bouncer.config.json` and no bouncer binary resolves, the local gate told you to run `npm install --save-dev @bashbop/bouncer`, which npm answers with a 404: bouncer is published as `@nugehs/bouncer`. The hint and the README link now name it. A repository that runs bouncer in CI instead, through a workflow under `.github/workflows` that references `@nugehs/bouncer` (such as `npx -y @nugehs/bouncer@latest check`), now gets a warning that says so and names the workflow line, rather than one that reads as a broken install. It stays a warning: the gate reads the workflow file but never runs npx or installs anything, so it has no evidence that the controls pass for the change it is looking at.
+- **The contract-drift gate names the tieline package that exists.** When a repository has `tieline.config.json` and no tieline binary resolves, the local gate told you to run `npm install --save-dev @bashbop/tieline`, which npm answers with a 404: tieline is published as `@nugehs/tieline`. The hint and the README link now name it. The README's aiglare link had the same fault and now points at `@nugehs/aiglare`, where aiglare is published.
 
 ## [3.1.0] - 2026-09-26
 

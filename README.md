@@ -149,8 +149,8 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_
 **otito** is one of four tools that form a deterministic trust layer for AI-assisted development. Each uses static analysis to answer a question people keep handing to an LLM.
 
 - **otito** (this tool), for context: what does this change actually touch?
-- [tieline](https://www.npmjs.com/package/@bashbop/tieline), for contracts: did the front end and back end quietly stop agreeing?
+- [tieline](https://www.npmjs.com/package/@nugehs/tieline), for contracts: did the front end and back end quietly stop agreeing?
 - [bouncer](https://www.npmjs.com/package/@nugehs/bouncer), for compliance: could you defend this to Ofcom?
-- [aiglare](https://www.npmjs.com/package/@bashbop/aiglare), for governance: where can the model do something you can't undo?
+- [aiglare](https://www.npmjs.com/package/@nugehs/aiglare), for governance: where can the model do something you can't undo?
 
 More at [segunolumbe.com](https://segunolumbe.com). _static analysis, never the model._
