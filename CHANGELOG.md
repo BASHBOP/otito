@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [3.2.0] - 2026-09-26
+
+The gates gate what they are given. `otito gate` and `otito review` take the repository from the positional or `--path`, in local and PR mode alike, and every CLI gate, `otito pass-pr` included, reads policy and governance from the `.otitorc.json` of the repository it gates, as the MCP gate tools now do too. The GitHub PR gate reads whether a PR is open, merged or closed and reports it as `pr.state` and `pr.mergedAt`, new report fields that make this a minor release. A `--pr` or selector that names no PR is refused on the command line rather than gating the wrong thing; over MCP a blank `pr` reads as no PR, and `pr_merge_readiness` with no selector gates the checked-out branch's PR again. Repair hints name the `@nugehs` packages that exist, and `otito help` no longer promises the legacy MCP tool names go away at 3.0. No command, field or schema was removed.
+
 ### Fixed
 
 - **The compliance-controls gate names the bouncer package that exists.** When a repository has `bouncer.config.json` and no bouncer binary resolves, the local gate told you to run `npm install --save-dev @bashbop/bouncer`, which npm answers with a 404: bouncer is published as `@nugehs/bouncer`. The hint and the README link now name it. A repository that runs bouncer in CI instead, through a workflow under `.github/workflows` that references `@nugehs/bouncer` (such as `npx -y @nugehs/bouncer@latest check`), now gets a warning that says so and names the workflow line, rather than one that reads as a broken install. It stays a warning: the gate reads the workflow file but never runs npx or installs anything, so it has no evidence that the controls pass for the change it is looking at.
