@@ -81,7 +81,7 @@ Usage:
   otito regret <repo> [--window days] [--min-sample n] [--since date] [--max commits] [--offline] [--quiet] [--out file] [--json]   # grade route tiers against this repo's own history
   otito regret --rescore run.json [--out file] [--json]                                     # regrade a saved run with the current arithmetic; replays and calls nothing
   otito pass <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
-  otito gate <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
+  otito gate [repo | --path repo] [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
   otito pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json] [--no-emoji]
   otito review <repo> [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--min-convergence n] [--receipt hash|file] [--json] [--mermaid] [--no-emoji]
   otito install|i [--global|--link] [--json]
