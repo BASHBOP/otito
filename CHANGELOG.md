@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The compliance-controls gate names the bouncer package that exists.** When a repository has `bouncer.config.json` and no bouncer binary resolves, the local gate told you to run `npm install --save-dev @bashbop/bouncer`, which npm answers with a 404: bouncer is published as `@nugehs/bouncer`. The hint and the README link now name it. A repository that runs bouncer in CI instead, through a workflow under `.github/workflows` that references `@nugehs/bouncer` (such as `npx -y @nugehs/bouncer@latest check`), now gets a warning that says so and names the workflow line, rather than one that reads as a broken install. It stays a warning: the gate reads the workflow file but never runs npx or installs anything, so it has no evidence that the controls pass for the change it is looking at.
+
 ## [3.1.0] - 2026-09-26
 
 The router gets graded, and the answer so far is that nothing can grade it yet. `otito regret` replays a repository's history and grades the tier each half of the router would have given against the same `repaired` outcome `otito calibrate` uses; `--rescore` grades a new arithmetic on frozen model answers. On three repositories no variant orders outcomes, and an offline audit of the join and of a same-session outcome says why, so the route stays advisory. The route-prompt hook now keeps every decision it makes, so the router can be graded once enough real requests exist. Attestation moves into the CLI as `otito attest`, with versioned records and a reusable workflow. No command, field or schema was removed.

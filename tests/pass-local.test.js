@@ -581,7 +581,57 @@ test("evaluateLocal gives the bouncer installation command when its configured b
   const result = evaluateLocal(root, { base: "HEAD" });
   const compliance = result.checks.find((check) => check.name === "Compliance controls");
   assert.equal(compliance.status, "WARN");
-  assert.ok(compliance.details.includes("Repair command: npm install --save-dev @bashbop/bouncer"));
+  assert.match(compliance.summary, /install @nugehs\/bouncer to enable this gate/);
+  assert.ok(compliance.details.includes("Repair command: npm install --save-dev @nugehs/bouncer"));
+  // @bashbop/bouncer was never published: npm answers that install with a 404.
+  assert.doesNotMatch(JSON.stringify(compliance), /@bashbop\/bouncer/);
+});
+
+test("evaluateLocal names the CI workflow that runs bouncer through npx without running npx itself", () => {
+  const root = initRepo("bouncer-ci");
+  const workflow = [
+    "name: Compliance Controls (bouncer)",
+    "on: pull_request",
+    "jobs:",
+    "  bouncer:",
+    "    runs-on: ubuntu-latest",
+    "    steps:",
+    "      # A comment that names @nugehs/bouncer is not a run.",
+    "      - name: Run compliance-controls check",
+    "        run: npx -y @nugehs/bouncer@latest check",
+  ];
+  writeAndCommit(
+    root,
+    {
+      "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
+      "src/index.ts": "export const hi = 1;\n",
+      ".github/workflows/audit.yml": "on: push\njobs:\n  audit:\n    runs-on: ubuntu-latest\n    steps:\n      - run: npm audit\n",
+      ".github/workflows/bouncer.yml": `${workflow.join("\n")}\n`,
+    },
+    "init",
+  );
+  fs.writeFileSync(path.join(root, "bouncer.config.json"), JSON.stringify({ target: { adapter: "next", repo: "." }, packs: ["uk-osa"] }));
+  // Package runners that leave a mark if the gate ever shells out to one.
+  const shims = fs.mkdtempSync(path.join(os.tmpdir(), "pass-bouncer-ci-shims-"));
+  const ran = path.join(shims, "ran");
+  for (const runner of ["npx", "npm"]) {
+    fs.writeFileSync(path.join(shims, runner), `#!/bin/sh\necho ${runner} >> "${ran}"\nexit 1\n`);
+    fs.chmodSync(path.join(shims, runner), 0o755);
+  }
+  const previousPath = process.env.PATH;
+  process.env.PATH = `${shims}${path.delimiter}${previousPath}`;
+  try {
+    const result = evaluateLocal(root, { base: "HEAD" });
+    const compliance = result.checks.find((check) => check.name === "Compliance controls");
+    assert.equal(compliance.status, "WARN", "a workflow that runs bouncer is not evidence the controls pass for this change");
+    assert.match(compliance.summary, /^bouncer runs in CI \(\.github\/workflows\/bouncer\.yml\) but not locally/);
+    const runLine = workflow.indexOf("        run: npx -y @nugehs/bouncer@latest check") + 1;
+    assert.ok(compliance.details.includes(`CI workflow: .github/workflows/bouncer.yml:${runLine} · run: npx -y @nugehs/bouncer@latest check`));
+    assert.ok(compliance.details.includes("Repair command: npm install --save-dev @nugehs/bouncer"));
+    assert.equal(fs.existsSync(ran), false, "the gate must stay offline and never run a package runner");
+  } finally {
+    process.env.PATH = previousPath;
+  }
 });
 
 test("evaluateLocal includes opted-in aiglare governance evidence", () => {

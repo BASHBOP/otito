@@ -150,7 +150,7 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_
 
 - **otito** (this tool), for context: what does this change actually touch?
 - [tieline](https://www.npmjs.com/package/@bashbop/tieline), for contracts: did the front end and back end quietly stop agreeing?
-- [bouncer](https://www.npmjs.com/package/@bashbop/bouncer), for compliance: could you defend this to Ofcom?
+- [bouncer](https://www.npmjs.com/package/@nugehs/bouncer), for compliance: could you defend this to Ofcom?
 - [aiglare](https://www.npmjs.com/package/@bashbop/aiglare), for governance: where can the model do something you can't undo?
 
 More at [segunolumbe.com](https://segunolumbe.com). _static analysis, never the model._
