@@ -1,0 +1,1790 @@
+{
+  "generatedFrom": "tests/golden/generate-formatters.mjs on the formatters as they were at origin/develop 1209fa3 (2026-09-27), before the glyph migration",
+  "note": "Each case stores the formatter's input and its output per renderer mode. tests/formatters-golden.test.js re-renders the input and fails on any byte that differs.",
+  "modes": {
+    "emoji-plain": {
+      "emoji": true,
+      "color": false,
+      "width": 78
+    },
+    "ascii-plain": {
+      "emoji": false,
+      "color": false,
+      "width": 78
+    },
+    "emoji-color": {
+      "emoji": true,
+      "color": true,
+      "width": 78
+    }
+  },
+  "cases": [
+    {
+      "name": "context",
+      "formatter": "context",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "contextEngineVersion": 3,
+        "query": "add Stripe refunds to the payment webhook",
+        "intent": {
+          "action": "add",
+          "topics": ["stripe", "refunds", "payment", "webhook"]
+        },
+        "repos": [
+          {
+            "root": "<work>/fixtures/shop-api",
+            "name": "shop-api",
+            "package": {
+              "name": "shop-api",
+              "version": "0.0.0",
+              "private": true
+            },
+            "git": {
+              "available": false
+            },
+            "sourceFileCount": 4,
+            "summary": {
+              "routes": 0,
+              "apiRoutes": 0,
+              "controllers": 1,
+              "services": 1,
+              "modules": 0,
+              "components": 0,
+              "hooks": 0,
+              "apiClients": 0,
+              "dtos": 0,
+              "schemas": 0,
+              "tests": 0,
+              "symbols": 9,
+              "dataAccessFiles": 0,
+              "dataAccessHits": 0
+            },
+            "domains": [
+              {
+                "name": "payment",
+                "fileCount": 2,
+                "kinds": [
+                  {
+                    "kind": "service",
+                    "count": 1
+                  },
+                  {
+                    "kind": "source",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "name": "auth",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "source",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "name": "orders",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "controller",
+                    "count": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hotspots": [
+          {
+            "repo": "shop-api",
+            "path": "src/payment/stripe.webhook.ts",
+            "kind": "source",
+            "domain": "payment",
+            "symbol": "handleStripeWebhook",
+            "type": "function",
+            "line": 2,
+            "matchedTokens": ["stripe", "webhook"],
+            "score": 18
+          },
+          {
+            "repo": "shop-api",
+            "path": "src/payment/checkout.service.ts",
+            "kind": "service",
+            "domain": "payment",
+            "symbol": "refund",
+            "type": "method",
+            "line": 7,
+            "matchedTokens": ["refunds"],
+            "score": 9
+          }
+        ],
+        "primaryFiles": [
+          {
+            "repo": {
+              "name": "shop-api",
+              "root": "<work>/fixtures/shop-api"
+            },
+            "path": "src/payment/stripe.webhook.ts",
+            "kind": "source",
+            "domain": "payment",
+            "score": 110,
+            "reasons": ["path", "domain", "export", "symbol", "topic domain", "implementation surface", "multi-concept match"],
+            "httpMethods": []
+          },
+          {
+            "repo": {
+              "name": "shop-api",
+              "root": "<work>/fixtures/shop-api"
+            },
+            "path": "src/payment/checkout.service.ts",
+            "kind": "service",
+            "domain": "payment",
+            "score": 57,
+            "reasons": ["path", "domain", "symbol", "topic domain", "implementation surface"],
+            "httpMethods": []
+          }
+        ],
+        "relatedFiles": [],
+        "tests": [],
+        "commands": [
+          {
+            "repo": "shop-api",
+            "command": "otito context \"add Stripe refunds to the payment webhook\" --path \"<work>/fixtures/shop-api\" --json",
+            "reason": "refresh this context packet before planning or review"
+          }
+        ],
+        "conflicts": [],
+        "openQuestions": ["No validation script was detected; decide how the change should be verified."],
+        "sources": [
+          {
+            "type": "code-map",
+            "repo": "shop-api",
+            "path": "<tmpdir>/otito-index-cache/417a49ee/index.json",
+            "cacheHit": true,
+            "fingerprint": "1:1:1:00000000"
+          },
+          {
+            "type": "harness",
+            "repo": "shop-api",
+            "command": "otito harness <path> --json"
+          }
+        ],
+        "tokenEstimate": {
+          "estimated": true,
+          "method": "ceil(characters / 4)",
+          "total": 515,
+          "sections": [
+            {
+              "name": "intent",
+              "tokens": 17,
+              "characters": 66
+            },
+            {
+              "name": "repos",
+              "tokens": 171,
+              "characters": 684
+            },
+            {
+              "name": "hotspots",
+              "tokens": 95,
+              "characters": 379
+            },
+            {
+              "name": "primaryFiles",
+              "tokens": 163,
+              "characters": 652
+            },
+            {
+              "name": "relatedFiles",
+              "tokens": 1,
+              "characters": 2
+            },
+            {
+              "name": "tests",
+              "tokens": 1,
+              "characters": 2
+            },
+            {
+              "name": "commands",
+              "tokens": 67,
+              "characters": 267
+            }
+          ],
+          "fullJson": 774,
+          "markdown": 339
+        }
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🧭  otito context · repository guide                                        │\n│  💬  \"add Stripe refunds to the payment webhook\"                             │\n│  📂  1 repo · 4 source file(s)                                               │\n│  🎯  2 primary · 2 hotspots · 0 tests                                        │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n▾ 🔥 Start here\n  🥇 src/payment/stripe.webhook.ts:2  function handleStripeWebhook  matches stripe, webhook\n  🥈 src/payment/checkout.service.ts:7  method refund  matches refunds\n\n▾ 🥇 Primary files\n  🥇 src/payment/stripe.webhook.ts  source/payment · score 110\n    └─ path · domain · export · symbol · topic domain · implementation surface · multi-concept match\n  🥈 src/payment/checkout.service.ts  service/payment · score 57\n    └─ path · domain · symbol · topic domain · implementation surface\n\n▾ 🔗 Related files\n    • No related files selected.\n\n▾ 🧪 Tests\n    • No matching tests found.\n\n▾ ▶️ Commands\n  • otito context \"add Stripe refunds to the payment webhook\" --path \"<work>/fixtures/shop-api\" --json\n    refresh this context packet before planning or review\n\n▾ ❓ Check before changing\n    • No validation script was detected; decide how the change should be verified.\n\n  💡  Context engine v3 · 774 JSON tokens · 339 markdown tokens",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito context · repository guide                                            |\n|  \"add Stripe refunds to the payment webhook\"                                 |\n|  1 repo · 4 source file(s)                                                   |\n|  2 primary · 2 hotspots · 0 tests                                            |\n+----------------------------------------------------------------------------+\n\n> > Start here\n  1. src/payment/stripe.webhook.ts:2  function handleStripeWebhook  matches stripe, webhook\n  2. src/payment/checkout.service.ts:7  method refund  matches refunds\n\n> > Primary files\n  1. src/payment/stripe.webhook.ts  source/payment · score 110\n    |- path · domain · export · symbol · topic domain · implementation surface · multi-concept match\n  2. src/payment/checkout.service.ts  service/payment · score 57\n    |- path · domain · symbol · topic domain · implementation surface\n\n> > Related files\n    * No related files selected.\n\n> > Tests\n    * No matching tests found.\n\n> > Commands\n  - otito context \"add Stripe refunds to the payment webhook\" --path \"<work>/fixtures/shop-api\" --json\n    refresh this context packet before planning or review\n\n> > Check before changing\n    * No validation script was detected; decide how the change should be verified.\n\n  [i]  Context engine v3 · 774 JSON tokens · 339 markdown tokens",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🧭  otito context · repository guide                                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  \"add Stripe refunds to the payment webhook\"                             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📂  1 repo · 4 source file(s)                                               \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🎯  2 primary · 2 hotspots · 0 tests                                        \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n\u001b[1m▾ 🔥 Start here\u001b[0m\n  🥇 src/payment/stripe.webhook.ts:2  function handleStripeWebhook  matches stripe, webhook\n  🥈 src/payment/checkout.service.ts:7  method refund  matches refunds\n\n\u001b[1m▾ 🥇 Primary files\u001b[0m\n  🥇 src/payment/stripe.webhook.ts  source/payment · score 110\n    └─ path · domain · export · symbol · topic domain · implementation surface · multi-concept match\n  🥈 src/payment/checkout.service.ts  service/payment · score 57\n    └─ path · domain · symbol · topic domain · implementation surface\n\n\u001b[1m▾ 🔗 Related files\u001b[0m\n    • No related files selected.\n\n\u001b[1m▾ 🧪 Tests\u001b[0m\n    • No matching tests found.\n\n\u001b[1m▾ ▶️ Commands\u001b[0m\n  • otito context \"add Stripe refunds to the payment webhook\" --path \"<work>/fixtures/shop-api\" --json\n    refresh this context packet before planning or review\n\n\u001b[1m▾ ❓ Check before changing\u001b[0m\n    • No validation script was detected; decide how the change should be verified.\n\n\u001b[36m  💡  Context engine v3 · 774 JSON tokens · 339 markdown tokens\u001b[0m"
+      }
+    },
+    {
+      "name": "impact",
+      "formatter": "impact",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "impactEngineVersion": 3,
+        "query": "add Stripe refunds to the payment webhook",
+        "repo": {
+          "name": "shop-api",
+          "root": "<work>/fixtures/shop-api",
+          "sourceFileCount": 4
+        },
+        "concepts": ["money flow"],
+        "diffEvidence": null,
+        "topFiles": [
+          {
+            "path": "src/payment/stripe.webhook.ts",
+            "kind": "source",
+            "domain": "payment",
+            "score": 262,
+            "reasons": [
+              "path matches: payment, stripe, webhook",
+              "symbol matches: stripe, webhook",
+              "export matches: stripe, webhook",
+              "concept match: money flow (×1.4 + 6.0)",
+              "configuration/domain hint (+4.0)"
+            ],
+            "relatedFiles": [],
+            "role": "advisory",
+            "riskFlags": ["money flow"]
+          },
+          {
+            "path": "src/payment/checkout.service.ts",
+            "kind": "service",
+            "domain": "payment",
+            "score": 72.9,
+            "reasons": ["path matches: payment", "symbol matches: refund", "concept match: money flow (×1.4 + 6.0)", "owner kind service, slight boost"],
+            "relatedFiles": [],
+            "role": "required",
+            "riskFlags": ["money flow"]
+          }
+        ],
+        "testSuggestions": ["No matching test file found. Add focused coverage around the highest-ranked impacted file."],
+        "risks": ["Money-flow change: verify idempotency, webhook behavior, refunds, invoices, and provider edge cases."],
+        "classifications": {
+          "requiredOwners": ["src/payment/checkout.service.ts"],
+          "supportingFiles": [],
+          "advisoryFiles": ["src/payment/stripe.webhook.ts"]
+        },
+        "validation": null,
+        "tokenEstimate": {
+          "estimated": true,
+          "method": "ceil(characters / 4)",
+          "total": 216,
+          "sections": [
+            {
+              "name": "concepts",
+              "tokens": 4,
+              "characters": 14
+            },
+            {
+              "name": "diffEvidence",
+              "tokens": 1,
+              "characters": 2
+            },
+            {
+              "name": "topFiles",
+              "tokens": 161,
+              "characters": 641
+            },
+            {
+              "name": "testSuggestions",
+              "tokens": 24,
+              "characters": 94
+            },
+            {
+              "name": "risks",
+              "tokens": 26,
+              "characters": 104
+            }
+          ],
+          "fullJson": 341,
+          "markdown": 320
+        }
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🎯  otito impact · change blast radius                                      │\n│  💬  \"add Stripe refunds to the payment webhook\"                             │\n│  📂  <work>/fixtures/shop-api · 4 source file(s)                             │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  🧠  concepts: 💳 money flow\n\n  🥇  src/payment/stripe.webhook.ts    score 262\n       └─ role: advisory\n       └─ path matches: payment, stripe, webhook\n       └─ symbol matches: stripe, webhook\n       └─ export matches: stripe, webhook\n       └─ concept match: money flow (×1.4 + 6.0)\n       └─ risk: 💳 money flow\n\n  🥈  src/payment/checkout.service.ts    score 72.9\n       └─ role: required\n       └─ path matches: payment\n       └─ symbol matches: refund\n       └─ concept match: money flow (×1.4 + 6.0)\n       └─ owner kind service, slight boost\n       └─ risk: 💳 money flow\n\n▾ 🧪 Suggested tests\n  • No matching test file found. Add focused coverage around the highest-ranked impacted file.\n\n▾ 🚨 Risk hotspots\n  • Money-flow change: verify idempotency, webhook behavior, refunds, invoices, and provider edge cases.\n\n  📦 Token estimate: JSON 341 · markdown 320",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito impact · change blast radius                                          |\n|  \"add Stripe refunds to the payment webhook\"                                 |\n|  <work>/fixtures/shop-api · 4 source file(s)                                 |\n+----------------------------------------------------------------------------+\n\n  [?]  concepts: 💳 money flow\n\n   1.  src/payment/stripe.webhook.ts    score 262\n       |- role: advisory\n       |- path matches: payment, stripe, webhook\n       |- symbol matches: stripe, webhook\n       |- export matches: stripe, webhook\n       |- concept match: money flow (×1.4 + 6.0)\n       |- risk: 💳 money flow\n\n   2.  src/payment/checkout.service.ts    score 72.9\n       |- role: required\n       |- path matches: payment\n       |- symbol matches: refund\n       |- concept match: money flow (×1.4 + 6.0)\n       |- owner kind service, slight boost\n       |- risk: 💳 money flow\n\n> > Suggested tests\n  - No matching test file found. Add focused coverage around the highest-ranked impacted file.\n\n> > Risk hotspots\n  - Money-flow change: verify idempotency, webhook behavior, refunds, invoices, and provider edge cases.\n\n  [i] Token estimate: JSON 341 · markdown 320",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🎯  otito impact · change blast radius                                      \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  \"add Stripe refunds to the payment webhook\"                             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📂  <work>/fixtures/shop-api · 4 source file(s)                             \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  🧠  concepts: 💳 money flow\n\n  🥇  src/payment/stripe.webhook.ts    score 262\n       └─ role: advisory\n       └─ path matches: payment, stripe, webhook\n       └─ symbol matches: stripe, webhook\n       └─ export matches: stripe, webhook\n       └─ concept match: money flow (×1.4 + 6.0)\n       └─ risk: 💳 money flow\n\n  🥈  src/payment/checkout.service.ts    score 72.9\n       └─ role: required\n       └─ path matches: payment\n       └─ symbol matches: refund\n       └─ concept match: money flow (×1.4 + 6.0)\n       └─ owner kind service, slight boost\n       └─ risk: 💳 money flow\n\n\u001b[1m▾ 🧪 Suggested tests\u001b[0m\n  • No matching test file found. Add focused coverage around the highest-ranked impacted file.\n\n\u001b[1m▾ 🚨 Risk hotspots\u001b[0m\n  • Money-flow change: verify idempotency, webhook behavior, refunds, invoices, and provider edge cases.\n\n  📦 Token estimate: JSON 341 · markdown 320"
+      }
+    },
+    {
+      "name": "pass-warn",
+      "formatter": "pass",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "passEngineVersion": 2,
+        "verdict": "WARN",
+        "repo": {
+          "root": "<work>/git/gate-node-scope-drift",
+          "name": "gate-node-scope-drift"
+        },
+        "base": "HEAD~1",
+        "scope": "working-tree",
+        "request": "",
+        "policy": "standard",
+        "governance": "team",
+        "changedFiles": ["src/reporting/export.js"],
+        "contextEvidence": ["otito impact . \"review this change\" --json", "otito pr . --base HEAD~1 --out .otito/pr-review.md"],
+        "checks": [
+          {
+            "name": "Changed files",
+            "status": "PASS",
+            "summary": "1 changed file found.",
+            "details": ["src/reporting/export.js"]
+          },
+          {
+            "name": "Secret safety",
+            "status": "PASS",
+            "summary": "No secret file paths and no credential values found in the changed content."
+          },
+          {
+            "name": "Risk review",
+            "status": "PASS",
+            "summary": "No obvious risk-sensitive file paths changed."
+          },
+          {
+            "name": "Release discipline",
+            "status": "PASS",
+            "summary": "No version metadata changes found."
+          },
+          {
+            "name": "Validation commands",
+            "status": "PASS",
+            "summary": "Validation commands are available.",
+            "details": ["npm test"]
+          },
+          {
+            "name": "Dependency audit",
+            "status": "PASS",
+            "summary": "Dependency audit commands are available.",
+            "details": ["npm audit --omit=dev --audit-level=critical", "npm audit --omit=dev"]
+          },
+          {
+            "name": "Review state",
+            "status": "WARN",
+            "summary": "Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet."
+          },
+          {
+            "name": "Policy profile",
+            "status": "PASS",
+            "summary": "Standard policy profile active.",
+            "details": ["standard"]
+          }
+        ],
+        "tokenEstimate": {
+          "fullJson": 375
+        }
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  📋  otito pass · merge readiness                                            │\n│  📂  <work>/git/gate-node-scope-drift                                        │\n│  🔀  working-tree · HEAD~1 · 1 changed file · policy: standard               │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  ✅  Changed files          1 changed file found.\n     └─ src/reporting/export.js\n  ✅  Secret safety          No secret file paths and no credential values found in the changed content.\n  ✅  Risk review            No obvious risk-sensitive file paths changed.\n  ✅  Release discipline     No version metadata changes found.\n  ✅  Validation commands    Validation commands are available.\n     └─ npm test\n  ✅  Dependency audit       Dependency audit commands are available.\n     └─ npm audit --omit=dev --audit-level=critical\n     └─ npm audit --omit=dev\n  ⚠️   Review state           Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n  ✅  Policy profile         Standard policy profile active.\n     └─ standard\n\n╭────────────────────────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ⚠️   WARN                                                   │\n│  📝  next step   verify the missing review evidence                          │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  💡  Context evidence:\n     • otito impact . \"review this change\" --json\n     • otito pr . --base HEAD~1 --out .otito/pr-review.md",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito pass · merge readiness                                                |\n|  <work>/git/gate-node-scope-drift                                            |\n|  working-tree · HEAD~1 · 1 changed file · policy: standard                   |\n+----------------------------------------------------------------------------+\n\n  [OK]    Changed files          1 changed file found.\n     |- src/reporting/export.js\n  [OK]    Secret safety          No secret file paths and no credential values found in the changed content.\n  [OK]    Risk review            No obvious risk-sensitive file paths changed.\n  [OK]    Release discipline     No version metadata changes found.\n  [OK]    Validation commands    Validation commands are available.\n     |- npm test\n  [OK]    Dependency audit       Dependency audit commands are available.\n     |- npm audit --omit=dev --audit-level=critical\n     |- npm audit --omit=dev\n  [WARN]  Review state           Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n  [OK]    Policy profile         Standard policy profile active.\n     |- standard\n\n+----------------------------------------------------------------------------+\n|  [?]  VERDICT     [WARN]  WARN                                               |\n|  [>]  next step   verify the missing review evidence                         |\n+----------------------------------------------------------------------------+\n\n  [i]  Context evidence:\n     - otito impact . \"review this change\" --json\n     - otito pr . --base HEAD~1 --out .otito/pr-review.md",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  📋  otito pass · merge readiness                                            \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📂  <work>/git/gate-node-scope-drift                                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🔀  working-tree · HEAD~1 · 1 changed file · policy: standard               \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  \u001b[32m✅  Changed files         \u001b[0m 1 changed file found.\n     └─ src/reporting/export.js\n  \u001b[32m✅  Secret safety         \u001b[0m No secret file paths and no credential values found in the changed content.\n  \u001b[32m✅  Risk review           \u001b[0m No obvious risk-sensitive file paths changed.\n  \u001b[32m✅  Release discipline    \u001b[0m No version metadata changes found.\n  \u001b[32m✅  Validation commands   \u001b[0m Validation commands are available.\n     └─ npm test\n  \u001b[32m✅  Dependency audit      \u001b[0m Dependency audit commands are available.\n     └─ npm audit --omit=dev --audit-level=critical\n     └─ npm audit --omit=dev\n  \u001b[33m⚠️   Review state          \u001b[0m Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n  \u001b[32m✅  Policy profile        \u001b[0m Standard policy profile active.\n     └─ standard\n\n\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[33m🚦  VERDICT     ⚠️   WARN\u001b[0m                                                   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📝  next step   verify the missing review evidence                          \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  💡  Context evidence:\n     • otito impact . \"review this change\" --json\n     • otito pr . --base HEAD~1 --out .otito/pr-review.md"
+      }
+    },
+    {
+      "name": "pass-fail",
+      "formatter": "pass",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "passEngineVersion": 2,
+        "verdict": "FAIL",
+        "repo": {
+          "root": "<work>/git/gate-node-secret-content",
+          "name": "gate-node-secret-content"
+        },
+        "base": "HEAD~1",
+        "scope": "working-tree",
+        "request": "",
+        "policy": "standard",
+        "governance": "team",
+        "changedFiles": ["src/greeting.js"],
+        "contextEvidence": ["otito impact . \"review this change\" --json", "otito pr . --base HEAD~1 --out .otito/pr-review.md"],
+        "checks": [
+          {
+            "name": "Changed files",
+            "status": "PASS",
+            "summary": "1 changed file found.",
+            "details": ["src/greeting.js"]
+          },
+          {
+            "name": "Secret safety",
+            "status": "FAIL",
+            "summary": "Potential credential value found in changed content.",
+            "details": ["src/greeting.js:6 — AWS access key id"]
+          },
+          {
+            "name": "Risk review",
+            "status": "PASS",
+            "summary": "No obvious risk-sensitive file paths changed."
+          },
+          {
+            "name": "Release discipline",
+            "status": "PASS",
+            "summary": "No version metadata changes found."
+          },
+          {
+            "name": "Validation commands",
+            "status": "PASS",
+            "summary": "Validation commands are available.",
+            "details": ["npm test"]
+          },
+          {
+            "name": "Dependency audit",
+            "status": "PASS",
+            "summary": "Dependency audit commands are available.",
+            "details": ["npm audit --omit=dev --audit-level=critical", "npm audit --omit=dev"]
+          },
+          {
+            "name": "Review state",
+            "status": "WARN",
+            "summary": "Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet."
+          },
+          {
+            "name": "Policy profile",
+            "status": "PASS",
+            "summary": "Standard policy profile active.",
+            "details": ["standard"]
+          }
+        ],
+        "tokenEstimate": {
+          "fullJson": 379
+        }
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  📋  otito pass · merge readiness                                            │\n│  📂  <work>/git/gate-node-secret-content                                     │\n│  🔀  working-tree · HEAD~1 · 1 changed file · policy: standard               │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  ✅  Changed files          1 changed file found.\n     └─ src/greeting.js\n  ❌  Secret safety          Potential credential value found in changed content.\n     └─ src/greeting.js:6 — AWS access key id\n  ✅  Risk review            No obvious risk-sensitive file paths changed.\n  ✅  Release discipline     No version metadata changes found.\n  ✅  Validation commands    Validation commands are available.\n     └─ npm test\n  ✅  Dependency audit       Dependency audit commands are available.\n     └─ npm audit --omit=dev --audit-level=critical\n     └─ npm audit --omit=dev\n  ⚠️   Review state           Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n  ✅  Policy profile         Standard policy profile active.\n     └─ standard\n\n╭────────────────────────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ❌  FAIL                                                    │\n│  ⛔  blocked by  Secret safety                                               │\n│  📝  next step   remove or rotate the affected file before merge             │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  💡  Context evidence:\n     • otito impact . \"review this change\" --json\n     • otito pr . --base HEAD~1 --out .otito/pr-review.md",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito pass · merge readiness                                                |\n|  <work>/git/gate-node-secret-content                                         |\n|  working-tree · HEAD~1 · 1 changed file · policy: standard                   |\n+----------------------------------------------------------------------------+\n\n  [OK]    Changed files          1 changed file found.\n     |- src/greeting.js\n  [FAIL]  Secret safety          Potential credential value found in changed content.\n     |- src/greeting.js:6 — AWS access key id\n  [OK]    Risk review            No obvious risk-sensitive file paths changed.\n  [OK]    Release discipline     No version metadata changes found.\n  [OK]    Validation commands    Validation commands are available.\n     |- npm test\n  [OK]    Dependency audit       Dependency audit commands are available.\n     |- npm audit --omit=dev --audit-level=critical\n     |- npm audit --omit=dev\n  [WARN]  Review state           Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n  [OK]    Policy profile         Standard policy profile active.\n     |- standard\n\n+----------------------------------------------------------------------------+\n|  [?]  VERDICT     [FAIL]  FAIL                                               |\n|  [!]  blocked by  Secret safety                                              |\n|  [>]  next step   remove or rotate the affected file before merge            |\n+----------------------------------------------------------------------------+\n\n  [i]  Context evidence:\n     - otito impact . \"review this change\" --json\n     - otito pr . --base HEAD~1 --out .otito/pr-review.md",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  📋  otito pass · merge readiness                                            \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📂  <work>/git/gate-node-secret-content                                     \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🔀  working-tree · HEAD~1 · 1 changed file · policy: standard               \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  \u001b[32m✅  Changed files         \u001b[0m 1 changed file found.\n     └─ src/greeting.js\n  \u001b[31m❌  Secret safety         \u001b[0m Potential credential value found in changed content.\n     └─ src/greeting.js:6 — AWS access key id\n  \u001b[32m✅  Risk review           \u001b[0m No obvious risk-sensitive file paths changed.\n  \u001b[32m✅  Release discipline    \u001b[0m No version metadata changes found.\n  \u001b[32m✅  Validation commands   \u001b[0m Validation commands are available.\n     └─ npm test\n  \u001b[32m✅  Dependency audit      \u001b[0m Dependency audit commands are available.\n     └─ npm audit --omit=dev --audit-level=critical\n     └─ npm audit --omit=dev\n  \u001b[33m⚠️   Review state          \u001b[0m Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n  \u001b[32m✅  Policy profile        \u001b[0m Standard policy profile active.\n     └─ standard\n\n\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[31m🚦  VERDICT     ❌  FAIL\u001b[0m                                                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  ⛔  blocked by  Secret safety                                               \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📝  next step   remove or rotate the affected file before merge             \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  💡  Context evidence:\n     • otito impact . \"review this change\" --json\n     • otito pr . --base HEAD~1 --out .otito/pr-review.md"
+      }
+    },
+    {
+      "name": "pass-pr-open",
+      "formatter": "pass-pr",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "passPrEngineVersion": 2,
+        "verdict": "WARN",
+        "repo": {
+          "root": "<work>/git/shop-api",
+          "name": "shop-api"
+        },
+        "base": "GitHub PR",
+        "pr": {
+          "number": 42,
+          "title": "Add Stripe refunds to the payment webhook",
+          "url": "https://github.com/example/shop-api/pull/42",
+          "baseRefName": "main",
+          "baseSha": "0123456789abcdef0123456789abcdef01234567",
+          "headSha": "89abcdef0123456789abcdef0123456789abcdef",
+          "state": "OPEN",
+          "mergedAt": "",
+          "isDraft": false,
+          "mergeStateStatus": "CLEAN",
+          "mergeable": "MERGEABLE",
+          "reviewDecision": ""
+        },
+        "policy": "standard",
+        "governance": "team",
+        "request": "",
+        "contextEvidence": ["otito impact . \"review this change\" --json", "otito pr . --number 42 --out .otito/pr-review.md"],
+        "changedFiles": ["src/payment/refund.service.ts", "src/payment/stripe.webhook.ts"],
+        "checks": [
+          {
+            "name": "PR state",
+            "status": "PASS",
+            "summary": "Open and mergeable."
+          },
+          {
+            "name": "PR snapshot",
+            "status": "PASS",
+            "summary": "Base and head commits are pinned."
+          },
+          {
+            "name": "Changed files",
+            "status": "PASS",
+            "summary": "2 changed files found.",
+            "details": ["src/payment/refund.service.ts", "src/payment/stripe.webhook.ts"]
+          },
+          {
+            "name": "Secret safety",
+            "status": "PASS",
+            "summary": "No secret file paths and no credential values found in the changed content."
+          },
+          {
+            "name": "Risk review",
+            "status": "WARN",
+            "summary": "Risk-sensitive paths changed.",
+            "details": ["src/payment/stripe.webhook.ts (money flow)"]
+          },
+          {
+            "name": "Release discipline",
+            "status": "PASS",
+            "summary": "No version metadata changes found."
+          },
+          {
+            "name": "Review decision",
+            "status": "WARN",
+            "summary": "No approving review yet."
+          },
+          {
+            "name": "CODEOWNERS",
+            "status": "PASS",
+            "summary": "No CODEOWNERS file; nothing to enforce."
+          },
+          {
+            "name": "Unresolved conversations",
+            "status": "PASS",
+            "summary": "No unresolved review threads."
+          },
+          {
+            "name": "Branch protection",
+            "status": "WARN",
+            "summary": "Branch protection could not be read (404); the gate cannot confirm required checks."
+          },
+          {
+            "name": "Status checks",
+            "status": "PASS",
+            "summary": "All 3 checks passed."
+          },
+          {
+            "name": "Policy profile",
+            "status": "PASS",
+            "summary": "Standard policy profile active."
+          }
+        ]
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  📋  otito pass-pr · GitHub merge readiness                                  │\n│  🔖  #42 Add Stripe refunds to the payment webhook                           │\n│  🔗  https://github.com/example/shop-api/pull/42                             │\n│  ⚙️  base: main · policy: standard · governance: team                        │\n│  🧾  commits: 01234567..89abcdef                                             │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  ✅  PR state               Open and mergeable.\n  ✅  PR snapshot            Base and head commits are pinned.\n  ✅  Changed files          2 changed files found.\n     └─ src/payment/refund.service.ts\n     └─ src/payment/stripe.webhook.ts\n  ✅  Secret safety          No secret file paths and no credential values found in the changed content.\n  ⚠️   Risk review            Risk-sensitive paths changed.\n     └─ src/payment/stripe.webhook.ts (money flow)\n  ✅  Release discipline     No version metadata changes found.\n  ⚠️   Review decision        No approving review yet.\n  ✅  CODEOWNERS             No CODEOWNERS file; nothing to enforce.\n  ✅  Unresolved conversations No unresolved review threads.\n  ⚠️   Branch protection      Branch protection could not be read (404); the gate cannot confirm required checks.\n  ✅  Status checks          All 3 checks passed.\n  ✅  Policy profile         Standard policy profile active.\n\n╭────────────────────────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ⚠️   WARN                                                   │\n│  📝  next step   review the warning before merge                             │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  💡  Context evidence:\n     • otito impact . \"review this change\" --json\n     • otito pr . --number 42 --out .otito/pr-review.md",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito pass-pr · GitHub merge readiness                                      |\n|  #42 Add Stripe refunds to the payment webhook                               |\n|  https://github.com/example/shop-api/pull/42                                 |\n|  base: main · policy: standard · governance: team                            |\n|  commits: 01234567..89abcdef                                                 |\n+----------------------------------------------------------------------------+\n\n  [OK]    PR state               Open and mergeable.\n  [OK]    PR snapshot            Base and head commits are pinned.\n  [OK]    Changed files          2 changed files found.\n     |- src/payment/refund.service.ts\n     |- src/payment/stripe.webhook.ts\n  [OK]    Secret safety          No secret file paths and no credential values found in the changed content.\n  [WARN]  Risk review            Risk-sensitive paths changed.\n     |- src/payment/stripe.webhook.ts (money flow)\n  [OK]    Release discipline     No version metadata changes found.\n  [WARN]  Review decision        No approving review yet.\n  [OK]    CODEOWNERS             No CODEOWNERS file; nothing to enforce.\n  [OK]    Unresolved conversations No unresolved review threads.\n  [WARN]  Branch protection      Branch protection could not be read (404); the gate cannot confirm required checks.\n  [OK]    Status checks          All 3 checks passed.\n  [OK]    Policy profile         Standard policy profile active.\n\n+----------------------------------------------------------------------------+\n|  [?]  VERDICT     [WARN]  WARN                                               |\n|  [>]  next step   review the warning before merge                            |\n+----------------------------------------------------------------------------+\n\n  [i]  Context evidence:\n     - otito impact . \"review this change\" --json\n     - otito pr . --number 42 --out .otito/pr-review.md",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  📋  otito pass-pr · GitHub merge readiness                                  \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🔖  #42 Add Stripe refunds to the payment webhook                           \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🔗  https://github.com/example/shop-api/pull/42                             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  ⚙️  base: main · policy: standard · governance: team                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🧾  commits: 01234567..89abcdef                                             \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  \u001b[32m✅  PR state              \u001b[0m Open and mergeable.\n  \u001b[32m✅  PR snapshot           \u001b[0m Base and head commits are pinned.\n  \u001b[32m✅  Changed files         \u001b[0m 2 changed files found.\n     └─ src/payment/refund.service.ts\n     └─ src/payment/stripe.webhook.ts\n  \u001b[32m✅  Secret safety         \u001b[0m No secret file paths and no credential values found in the changed content.\n  \u001b[33m⚠️   Risk review           \u001b[0m Risk-sensitive paths changed.\n     └─ src/payment/stripe.webhook.ts (money flow)\n  \u001b[32m✅  Release discipline    \u001b[0m No version metadata changes found.\n  \u001b[33m⚠️   Review decision       \u001b[0m No approving review yet.\n  \u001b[32m✅  CODEOWNERS            \u001b[0m No CODEOWNERS file; nothing to enforce.\n  \u001b[32m✅  Unresolved conversations\u001b[0m No unresolved review threads.\n  \u001b[33m⚠️   Branch protection     \u001b[0m Branch protection could not be read (404); the gate cannot confirm required checks.\n  \u001b[32m✅  Status checks         \u001b[0m All 3 checks passed.\n  \u001b[32m✅  Policy profile        \u001b[0m Standard policy profile active.\n\n\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[33m🚦  VERDICT     ⚠️   WARN\u001b[0m                                                   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📝  next step   review the warning before merge                             \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  💡  Context evidence:\n     • otito impact . \"review this change\" --json\n     • otito pr . --number 42 --out .otito/pr-review.md"
+      }
+    },
+    {
+      "name": "pass-pr-merged",
+      "formatter": "pass-pr",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "passPrEngineVersion": 2,
+        "verdict": "FAIL",
+        "repo": {
+          "root": "<work>/git/shop-api",
+          "name": "shop-api"
+        },
+        "base": "GitHub PR",
+        "pr": {
+          "number": 43,
+          "title": "Rotate the webhook signing secret",
+          "url": "https://github.com/example/shop-api/pull/42",
+          "baseRefName": "main",
+          "baseSha": "0123456789abcdef0123456789abcdef01234567",
+          "headSha": "89abcdef0123456789abcdef0123456789abcdef",
+          "state": "MERGED",
+          "mergedAt": "2026-01-01T00:00:00.000Z",
+          "isDraft": false,
+          "mergeStateStatus": "CLEAN",
+          "mergeable": "MERGEABLE",
+          "reviewDecision": "APPROVED"
+        },
+        "policy": "standard",
+        "governance": "team",
+        "request": "",
+        "contextEvidence": ["otito impact . \"review this change\" --json", "otito pr . --number 42 --out .otito/pr-review.md"],
+        "changedFiles": ["src/payment/refund.service.ts", "src/payment/stripe.webhook.ts"],
+        "checks": [
+          {
+            "name": "PR state",
+            "status": "PASS",
+            "summary": "Open and mergeable."
+          },
+          {
+            "name": "PR snapshot",
+            "status": "PASS",
+            "summary": "Base and head commits are pinned."
+          },
+          {
+            "name": "Changed files",
+            "status": "PASS",
+            "summary": "2 changed files found.",
+            "details": ["src/payment/refund.service.ts", "src/payment/stripe.webhook.ts"]
+          },
+          {
+            "name": "Secret safety",
+            "status": "FAIL",
+            "summary": "A credential value was found in the changed content.",
+            "details": ["src/payment/stripe.webhook.ts:12 looks like a Stripe secret key"]
+          },
+          {
+            "name": "Risk review",
+            "status": "WARN",
+            "summary": "Risk-sensitive paths changed.",
+            "details": ["src/payment/stripe.webhook.ts (money flow)"]
+          },
+          {
+            "name": "Release discipline",
+            "status": "PASS",
+            "summary": "No version metadata changes found."
+          },
+          {
+            "name": "Review decision",
+            "status": "WARN",
+            "summary": "No approving review yet."
+          },
+          {
+            "name": "CODEOWNERS",
+            "status": "PASS",
+            "summary": "No CODEOWNERS file; nothing to enforce."
+          },
+          {
+            "name": "Unresolved conversations",
+            "status": "PASS",
+            "summary": "No unresolved review threads."
+          },
+          {
+            "name": "Branch protection",
+            "status": "WARN",
+            "summary": "Branch protection could not be read (404); the gate cannot confirm required checks."
+          },
+          {
+            "name": "Status checks",
+            "status": "PASS",
+            "summary": "All 3 checks passed."
+          },
+          {
+            "name": "Policy profile",
+            "status": "PASS",
+            "summary": "Standard policy profile active."
+          }
+        ]
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  📋  otito pass-pr · GitHub merge readiness                                  │\n│  🔖  #43 Rotate the webhook signing secret                                   │\n│  🔗  https://github.com/example/shop-api/pull/42                             │\n│  ⚙️  base: main · policy: standard · governance: team                        │\n│  🧾  commits: 01234567..89abcdef                                             │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  ✅  PR state               Open and mergeable.\n  ✅  PR snapshot            Base and head commits are pinned.\n  ✅  Changed files          2 changed files found.\n     └─ src/payment/refund.service.ts\n     └─ src/payment/stripe.webhook.ts\n  ❌  Secret safety          A credential value was found in the changed content.\n     └─ src/payment/stripe.webhook.ts:12 looks like a Stripe secret key\n  ⚠️   Risk review            Risk-sensitive paths changed.\n     └─ src/payment/stripe.webhook.ts (money flow)\n  ✅  Release discipline     No version metadata changes found.\n  ⚠️   Review decision        No approving review yet.\n  ✅  CODEOWNERS             No CODEOWNERS file; nothing to enforce.\n  ✅  Unresolved conversations No unresolved review threads.\n  ⚠️   Branch protection      Branch protection could not be read (404); the gate cannot confirm required checks.\n  ✅  Status checks          All 3 checks passed.\n  ✅  Policy profile         Standard policy profile active.\n\n╭────────────────────────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ❌  FAIL                                                    │\n│  📝  next step   already merged; the checks describe the merged change       │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  💡  Context evidence:\n     • otito impact . \"review this change\" --json\n     • otito pr . --number 42 --out .otito/pr-review.md",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito pass-pr · GitHub merge readiness                                      |\n|  #43 Rotate the webhook signing secret                                       |\n|  https://github.com/example/shop-api/pull/42                                 |\n|  base: main · policy: standard · governance: team                            |\n|  commits: 01234567..89abcdef                                                 |\n+----------------------------------------------------------------------------+\n\n  [OK]    PR state               Open and mergeable.\n  [OK]    PR snapshot            Base and head commits are pinned.\n  [OK]    Changed files          2 changed files found.\n     |- src/payment/refund.service.ts\n     |- src/payment/stripe.webhook.ts\n  [FAIL]  Secret safety          A credential value was found in the changed content.\n     |- src/payment/stripe.webhook.ts:12 looks like a Stripe secret key\n  [WARN]  Risk review            Risk-sensitive paths changed.\n     |- src/payment/stripe.webhook.ts (money flow)\n  [OK]    Release discipline     No version metadata changes found.\n  [WARN]  Review decision        No approving review yet.\n  [OK]    CODEOWNERS             No CODEOWNERS file; nothing to enforce.\n  [OK]    Unresolved conversations No unresolved review threads.\n  [WARN]  Branch protection      Branch protection could not be read (404); the gate cannot confirm required checks.\n  [OK]    Status checks          All 3 checks passed.\n  [OK]    Policy profile         Standard policy profile active.\n\n+----------------------------------------------------------------------------+\n|  [?]  VERDICT     [FAIL]  FAIL                                               |\n|  [>]  next step   already merged; the checks describe the merged change      |\n+----------------------------------------------------------------------------+\n\n  [i]  Context evidence:\n     - otito impact . \"review this change\" --json\n     - otito pr . --number 42 --out .otito/pr-review.md",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  📋  otito pass-pr · GitHub merge readiness                                  \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🔖  #43 Rotate the webhook signing secret                                   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🔗  https://github.com/example/shop-api/pull/42                             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  ⚙️  base: main · policy: standard · governance: team                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🧾  commits: 01234567..89abcdef                                             \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  \u001b[32m✅  PR state              \u001b[0m Open and mergeable.\n  \u001b[32m✅  PR snapshot           \u001b[0m Base and head commits are pinned.\n  \u001b[32m✅  Changed files         \u001b[0m 2 changed files found.\n     └─ src/payment/refund.service.ts\n     └─ src/payment/stripe.webhook.ts\n  \u001b[31m❌  Secret safety         \u001b[0m A credential value was found in the changed content.\n     └─ src/payment/stripe.webhook.ts:12 looks like a Stripe secret key\n  \u001b[33m⚠️   Risk review           \u001b[0m Risk-sensitive paths changed.\n     └─ src/payment/stripe.webhook.ts (money flow)\n  \u001b[32m✅  Release discipline    \u001b[0m No version metadata changes found.\n  \u001b[33m⚠️   Review decision       \u001b[0m No approving review yet.\n  \u001b[32m✅  CODEOWNERS            \u001b[0m No CODEOWNERS file; nothing to enforce.\n  \u001b[32m✅  Unresolved conversations\u001b[0m No unresolved review threads.\n  \u001b[33m⚠️   Branch protection     \u001b[0m Branch protection could not be read (404); the gate cannot confirm required checks.\n  \u001b[32m✅  Status checks         \u001b[0m All 3 checks passed.\n  \u001b[32m✅  Policy profile        \u001b[0m Standard policy profile active.\n\n\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[31m🚦  VERDICT     ❌  FAIL\u001b[0m                                                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📝  next step   already merged; the checks describe the merged change       \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  💡  Context evidence:\n     • otito impact . \"review this change\" --json\n     • otito pr . --number 42 --out .otito/pr-review.md"
+      }
+    },
+    {
+      "name": "review-warn",
+      "formatter": "review",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "schemaVersion": 1,
+        "reviewEngineVersion": 1,
+        "request": "add a reporting export",
+        "verdict": "WARN",
+        "confidence": 70,
+        "repo": {
+          "root": "<work>/git/gate-node-scope-drift",
+          "name": "gate-node-scope-drift"
+        },
+        "impactSummary": {
+          "concepts": [],
+          "topFiles": [
+            {
+              "path": "src/reporting/export.js",
+              "score": 90,
+              "riskFlags": []
+            }
+          ],
+          "risks": ["No obvious high-risk domain detected. Main risk is missing a caller or test outside the matched files."]
+        },
+        "prReviewSummary": {
+          "changedFiles": 1,
+          "additions": 3,
+          "deletions": 0,
+          "riskLevel": "low",
+          "riskFlags": ["no test files changed"],
+          "reviewTargetsCount": 0
+        },
+        "pass": {
+          "verdict": "WARN",
+          "policy": "standard",
+          "governance": "team",
+          "checks": [
+            {
+              "name": "Changed files",
+              "status": "PASS",
+              "summary": "1 changed file found."
+            },
+            {
+              "name": "Secret safety",
+              "status": "PASS",
+              "summary": "No secret file paths and no credential values found in the changed content."
+            },
+            {
+              "name": "Risk review",
+              "status": "PASS",
+              "summary": "No obvious risk-sensitive file paths changed."
+            },
+            {
+              "name": "Release discipline",
+              "status": "PASS",
+              "summary": "No version metadata changes found."
+            },
+            {
+              "name": "Validation commands",
+              "status": "PASS",
+              "summary": "Validation commands are available."
+            },
+            {
+              "name": "Dependency audit",
+              "status": "PASS",
+              "summary": "Dependency audit commands are available."
+            },
+            {
+              "name": "Review state",
+              "status": "WARN",
+              "summary": "Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet."
+            },
+            {
+              "name": "Policy profile",
+              "status": "PASS",
+              "summary": "Standard policy profile active."
+            }
+          ]
+        },
+        "tokenEstimate": {
+          "fullJson": 395
+        }
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🔬  otito review · composite verdict                                        │\n│  💬  \"add a reporting export\"                                                │\n│  📂  <work>/git/gate-node-scope-drift                                        │\n│  🚦  verdict WARN · confidence 70%                                           │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  🎯  Impact   ▰▱▱▱▱▱▱▱▱▱   1 owner file(s) · 0 concept(s)\n  📋  Context  ▰▱▱▱▱▱▱▱▱▱   1 changed file(s) · risk low\n  🚦  Pass     ⚠️   WARN        policy standard · governance team\n  🎓  Confidence  ▰▰▰▰▰▰▰▱▱▱   70%\n\n  🥇  Owner files\n     └─ src/reporting/export.js (score 90)\n\n  ⚠️  Warnings\n     └─ Review state: Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito review · composite verdict                                            |\n|  \"add a reporting export\"                                                    |\n|  <work>/git/gate-node-scope-drift                                            |\n|  verdict WARN · confidence 70%                                               |\n+----------------------------------------------------------------------------+\n\n  >  Impact   [#.........]   1 owner file(s) · 0 concept(s)\n  >  Context  [#.........]   1 changed file(s) · risk low\n  >  Pass     [WARN]  WARN        policy standard · governance team\n  >  Confidence  [#######...]   70%\n\n  >  Owner files\n     |- src/reporting/export.js (score 90)\n\n  [WARN] Warnings\n     |- Review state: Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🔬  otito review · composite verdict                                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  \"add a reporting export\"                                                \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📂  <work>/git/gate-node-scope-drift                                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🚦  verdict WARN · confidence 70%                                           \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  🎯  Impact   ▰▱▱▱▱▱▱▱▱▱   1 owner file(s) · 0 concept(s)\n  📋  Context  ▰▱▱▱▱▱▱▱▱▱   1 changed file(s) · risk low\n  🚦  Pass     ⚠️   WARN        policy standard · governance team\n  🎓  Confidence  ▰▰▰▰▰▰▰▱▱▱   70%\n\n  🥇  Owner files\n     └─ src/reporting/export.js (score 90)\n\n  ⚠️  Warnings\n     └─ Review state: Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n"
+      }
+    },
+    {
+      "name": "review-fail",
+      "formatter": "review",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "schemaVersion": 1,
+        "reviewEngineVersion": 1,
+        "request": "rotate the webhook secret",
+        "verdict": "FAIL",
+        "confidence": 40,
+        "repo": {
+          "root": "<work>/git/gate-node-secret-content",
+          "name": "gate-node-secret-content"
+        },
+        "impactSummary": {
+          "concepts": ["money flow"],
+          "topFiles": [
+            {
+              "path": "src/greeting.js",
+              "score": 0,
+              "riskFlags": []
+            }
+          ],
+          "risks": ["Money-flow change: verify idempotency, webhook behavior, refunds, invoices, and provider edge cases."]
+        },
+        "prReviewSummary": {
+          "changedFiles": 1,
+          "additions": 7,
+          "deletions": 3,
+          "riskLevel": "low",
+          "riskFlags": ["no test files changed"],
+          "reviewTargetsCount": 0
+        },
+        "pass": {
+          "verdict": "FAIL",
+          "policy": "standard",
+          "governance": "team",
+          "checks": [
+            {
+              "name": "Changed files",
+              "status": "PASS",
+              "summary": "1 changed file found."
+            },
+            {
+              "name": "Secret safety",
+              "status": "FAIL",
+              "summary": "Potential credential value found in changed content."
+            },
+            {
+              "name": "Risk review",
+              "status": "PASS",
+              "summary": "No obvious risk-sensitive file paths changed."
+            },
+            {
+              "name": "Release discipline",
+              "status": "PASS",
+              "summary": "No version metadata changes found."
+            },
+            {
+              "name": "Validation commands",
+              "status": "PASS",
+              "summary": "Validation commands are available."
+            },
+            {
+              "name": "Dependency audit",
+              "status": "PASS",
+              "summary": "Dependency audit commands are available."
+            },
+            {
+              "name": "Review state",
+              "status": "WARN",
+              "summary": "Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet."
+            },
+            {
+              "name": "Policy profile",
+              "status": "PASS",
+              "summary": "Standard policy profile active."
+            }
+          ]
+        },
+        "tokenEstimate": {
+          "fullJson": 392
+        }
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🔬  otito review · composite verdict                                        │\n│  💬  \"rotate the webhook secret\"                                             │\n│  📂  <work>/git/gate-node-secret-content                                     │\n│  🚦  verdict FAIL · confidence 40%                                           │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  🎯  Impact   ▰▱▱▱▱▱▱▱▱▱   1 owner file(s) · 1 concept(s)\n  📋  Context  ▰▱▱▱▱▱▱▱▱▱   1 changed file(s) · risk low\n  🚦  Pass     ❌  FAIL        policy standard · governance team\n  🎓  Confidence  ▰▰▰▰▱▱▱▱▱▱   40%\n\n  🥇  Owner files\n     └─ src/greeting.js (score 0)\n\n  ❌  Blocking checks\n     └─ Secret safety: Potential credential value found in changed content.\n\n  ⚠️  Warnings\n     └─ Review state: Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito review · composite verdict                                            |\n|  \"rotate the webhook secret\"                                                 |\n|  <work>/git/gate-node-secret-content                                         |\n|  verdict FAIL · confidence 40%                                               |\n+----------------------------------------------------------------------------+\n\n  >  Impact   [#.........]   1 owner file(s) · 1 concept(s)\n  >  Context  [#.........]   1 changed file(s) · risk low\n  >  Pass     [FAIL]  FAIL        policy standard · governance team\n  >  Confidence  [####......]   40%\n\n  >  Owner files\n     |- src/greeting.js (score 0)\n\n  [FAIL]  Blocking checks\n     |- Secret safety: Potential credential value found in changed content.\n\n  [WARN] Warnings\n     |- Review state: Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🔬  otito review · composite verdict                                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  \"rotate the webhook secret\"                                             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📂  <work>/git/gate-node-secret-content                                     \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🚦  verdict FAIL · confidence 40%                                           \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  🎯  Impact   ▰▱▱▱▱▱▱▱▱▱   1 owner file(s) · 1 concept(s)\n  📋  Context  ▰▱▱▱▱▱▱▱▱▱   1 changed file(s) · risk low\n  🚦  Pass     ❌  FAIL        policy standard · governance team\n  🎓  Confidence  ▰▰▰▰▱▱▱▱▱▱   40%\n\n  🥇  Owner files\n     └─ src/greeting.js (score 0)\n\n  ❌  Blocking checks\n     └─ Secret safety: Potential credential value found in changed content.\n\n  ⚠️  Warnings\n     └─ Review state: Local mode cannot verify approvals, CODEOWNERS, status checks, or unresolved conversations yet.\n"
+      }
+    },
+    {
+      "name": "route",
+      "formatter": "route",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "modelRouteEngineVersion": "0.1.0",
+        "request": "add Stripe refunds to the payment webhook",
+        "repo": {
+          "name": "shop-api",
+          "root": "<work>/fixtures/shop-api"
+        },
+        "tier": "premium",
+        "advisory": true,
+        "scoring": {
+          "steps": [
+            {
+              "label": "AX",
+              "detail": "otito, deterministic",
+              "delta": null,
+              "from": 0,
+              "to": 70
+            },
+            {
+              "label": "specificity",
+              "detail": "-25% x 0.30",
+              "delta": -5.25,
+              "from": 70,
+              "to": 64.75
+            },
+            {
+              "label": "blast radius",
+              "detail": "-20% x 0.00",
+              "delta": 0,
+              "from": 64.75,
+              "to": 64.75
+            },
+            {
+              "label": "novelty",
+              "detail": "-15% x 0.10",
+              "delta": -1.05,
+              "from": 64.75,
+              "to": 63.7
+            },
+            {
+              "label": "containment",
+              "detail": "+10% of AX when >= 40",
+              "delta": 7,
+              "from": 63.7,
+              "to": 70.7
+            }
+          ],
+          "raw": 70.7,
+          "route": 71,
+          "clamped": false,
+          "baseTier": "mid",
+          "tier": "premium",
+          "bumps": [
+            {
+              "name": "no evidence",
+              "fired": false,
+              "note": "2 candidate files matched"
+            },
+            {
+              "name": "risk path",
+              "fired": true,
+              "note": "money flow, one tier up"
+            }
+          ],
+          "confidence": null,
+          "evidence": {
+            "candidates": 2,
+            "sufficient": true
+          }
+        },
+        "deterministic": {
+          "tier": "mid",
+          "route": 77
+        },
+        "model": {
+          "source": "offline",
+          "model": "offline-heuristic",
+          "tokens": null,
+          "billableTokens": null,
+          "tokenKind": null,
+          "latencyMs": 0,
+          "read": null,
+          "answers": {
+            "specificity": {
+              "type": "score",
+              "score": 0.6,
+              "confidence": null,
+              "probabilities": {
+                "names the target": 0.4,
+                "names an area": 0.3,
+                "names a symptom": 0.3
+              }
+            },
+            "blast_radius": {
+              "type": "score",
+              "score": 0,
+              "confidence": null,
+              "probabilities": {
+                "one file": 0.943,
+                "one module": 0.028,
+                "cross-cutting": 0.028
+              }
+            },
+            "novelty": {
+              "type": "noul",
+              "noul": 0.1
+            }
+          }
+        },
+        "signals": {
+          "repoName": "shop-api",
+          "ax": 70,
+          "containment": 95,
+          "owners": 1,
+          "candidates": 2,
+          "moduleSpread": 1,
+          "riskPaths": ["money flow"],
+          "riskEvidence": {
+            "money flow": ["src/payment/checkout.service.ts", "src/payment/stripe.webhook.ts"]
+          },
+          "topFile": "src/payment/stripe.webhook.ts",
+          "evidence": [
+            {
+              "path": "src/payment/stripe.webhook.ts",
+              "kind": "source",
+              "why": ["path matches: payment, stripe, webhook", "symbol matches: stripe, webhook", "export matches: stripe, webhook"]
+            },
+            {
+              "path": "src/payment/checkout.service.ts",
+              "kind": "service",
+              "why": ["path matches: payment", "symbol matches: refund", "concept match: money flow (×1.4 + 6.0)"]
+            }
+          ]
+        },
+        "costUsd": null
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🚦  MODEL ROUTE   shop-api                                                  │\n│  \"add Stripe refunds to the payment webhook\"                                 │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  TIER  PREMIUM\n  route  71 / 100   bumped from mid\n  advisory: a recommendation, not a model selection\n\n▾ arithmetic\n  \n    AX              ██████████████████      70\n    specificity     ░░░░░░░░░░░░░░░░░█    -5.3\n    blast radius    ░░░░░░░░░░░░░░░░░█    -0.0\n    novelty         ░░░░░░░░░░░░░░░░░█    -1.1\n    containment     ░░░░░░░░░░░░░░░░░██    +7.0\n    route score     ██████████████████      71\n                                ^ 45    ^ 75\n\n▾ request signals  [offline estimate, not calibrated]\n  \n    specificity     ████░░░░░░░░  0.60  names the target 40%\n    blast_radius    ░░░░░░░░░░░░  0.00  one file 94%\n    novelty         █░░░░░░░░░░░  0.10\n    confidence      not measured\n\n▾ repository signals  (deterministic, local)\n  \n    AX 70   containment 95   owners 1   areas 1   risk money flow\n\n▾ fail-safe bumps\n  \n    . no evidence     2 candidate files matched\n    x risk path       money flow, one tier up",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  MODEL ROUTE   shop-api                                                      |\n|  \"add Stripe refunds to the payment webhook\"                                 |\n+----------------------------------------------------------------------------+\n\n  TIER  PREMIUM\n  route  71 / 100   bumped from mid\n  advisory: a recommendation, not a model selection\n\n> arithmetic\n  \n    AX              ##################      70\n    specificity     .................#    -5.3\n    blast radius    .................#    -0.0\n    novelty         .................#    -1.1\n    containment     .................##    +7.0\n    route score     ##################      71\n                                ^ 45    ^ 75\n\n> request signals  [offline estimate, not calibrated]\n  \n    specificity     ####........  0.60  names the target 40%\n    blast_radius    ............  0.00  one file 94%\n    novelty         #...........  0.10\n    confidence      not measured\n\n> repository signals  (deterministic, local)\n  \n    AX 70   containment 95   owners 1   areas 1   risk money flow\n\n> fail-safe bumps\n  \n    . no evidence     2 candidate files matched\n    x risk path       money flow, one tier up",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🚦  MODEL ROUTE   shop-api                                                  \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[2m\"add Stripe refunds to the payment webhook\"\u001b[0m                                 \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  \u001b[1mTIER\u001b[0m  \u001b[1;31mPREMIUM\u001b[0m\n  \u001b[2mroute\u001b[0m \u001b[1m 71\u001b[0m \u001b[2m/ 100\u001b[0m   \u001b[33mbumped from mid\u001b[0m\n  \u001b[2madvisory: a recommendation, not a model selection\u001b[0m\n\n\u001b[1m▾ arithmetic\u001b[0m\n  \n    \u001b[2mAX              \u001b[0m\u001b[2m\u001b[0m\u001b[36m██████████████████\u001b[0m      70\n    \u001b[2mspecificity     \u001b[0m\u001b[2m░░░░░░░░░░░░░░░░░\u001b[0m\u001b[31m█\u001b[0m    -5.3\n    \u001b[2mblast radius    \u001b[0m\u001b[2m░░░░░░░░░░░░░░░░░\u001b[0m\u001b[32m█\u001b[0m    -0.0\n    \u001b[2mnovelty         \u001b[0m\u001b[2m░░░░░░░░░░░░░░░░░\u001b[0m\u001b[31m█\u001b[0m    -1.1\n    \u001b[2mcontainment     \u001b[0m\u001b[2m░░░░░░░░░░░░░░░░░\u001b[0m\u001b[32m██\u001b[0m    +7.0\n    \u001b[1mroute score     \u001b[0m\u001b[2m\u001b[0m\u001b[31m██████████████████\u001b[0m  \u001b[1m    71\u001b[0m\n                                \u001b[2m^ 45\u001b[0m    \u001b[2m^ 75\u001b[0m\n\n\u001b[1m▾ request signals  \u001b[33m[offline estimate, not calibrated]\u001b[0m\u001b[0m\n  \n    \u001b[2mspecificity     \u001b[0m\u001b[36m████\u001b[0m\u001b[2m░░░░░░░░\u001b[0m  0.60  \u001b[2mnames the target 40%\u001b[0m\n    \u001b[2mblast_radius    \u001b[0m\u001b[36m\u001b[0m\u001b[2m░░░░░░░░░░░░\u001b[0m  0.00  \u001b[2mone file 94%\u001b[0m\n    \u001b[2mnovelty         \u001b[0m\u001b[36m█\u001b[0m\u001b[2m░░░░░░░░░░░\u001b[0m  0.10\n    \u001b[2mconfidence      \u001b[0m\u001b[2mnot measured\u001b[0m\n\n\u001b[1m▾ repository signals  (deterministic, local)\u001b[0m\n  \n    \u001b[2mAX\u001b[0m 70   \u001b[2mcontainment\u001b[0m 95   \u001b[2mowners\u001b[0m 1   \u001b[2mareas\u001b[0m 1   \u001b[2mrisk\u001b[0m \u001b[31mmoney flow\u001b[0m\n\n\u001b[1m▾ fail-safe bumps\u001b[0m\n  \n    \u001b[2m.\u001b[0m \u001b[2mno evidence     \u001b[0m\u001b[2m2 candidate files matched\u001b[0m\n    \u001b[31mx\u001b[0m \u001b[1mrisk path       \u001b[0m\u001b[2mmoney flow, one tier up\u001b[0m"
+      }
+    },
+    {
+      "name": "doctor",
+      "formatter": "doctor",
+      "data": {
+        "ok": false,
+        "tools": [
+          {
+            "name": "node",
+            "command": "node",
+            "available": true,
+            "path": "/usr/local/bin/node",
+            "version": "v22.12.0",
+            "installHint": "Install Node.js 18+."
+          },
+          {
+            "name": "git",
+            "command": "git",
+            "available": true,
+            "path": "/usr/bin/git",
+            "version": "git version 2.39.1",
+            "installHint": "Install git."
+          },
+          {
+            "name": "gh",
+            "command": "gh",
+            "available": false,
+            "installHint": "Install the GitHub CLI (https://cli.github.com); required by pr_merge_readiness and gh-enriched pr_review."
+          },
+          {
+            "name": "rg",
+            "command": "rg",
+            "available": true,
+            "path": "/opt/homebrew/bin/rg",
+            "version": "ripgrep 14.1.1",
+            "installHint": "Install ripgrep for faster source searching."
+          },
+          {
+            "name": "npx",
+            "command": "npx",
+            "available": true,
+            "path": "/usr/local/bin/npx",
+            "version": "10.9.0",
+            "installHint": "Install npm/npx, or install optional tools globally."
+          },
+          {
+            "name": "opensrc",
+            "command": "opensrc",
+            "available": false,
+            "installHint": "Install with: npm install -g opensrc"
+          },
+          {
+            "name": "code-structure",
+            "command": "code-structure",
+            "available": true,
+            "path": "/usr/local/bin/code-structure",
+            "version": "Version: 2.3.0",
+            "installHint": "Install with: npm install -g code-structure for faster runs; structure can fall back to npx."
+          }
+        ]
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  📋  otito doctor                                                            │\n│  🩺  local runtime + optional tools                                          │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n  ✅  node                   v22.12.0\n  ✅  git                    git version 2.39.1\n  ⚠️   gh                     not installed\n     └─ Install the GitHub CLI (https://cli.github.com); required by pr_merge_readiness and gh-enriched pr_review.\n  ✅  rg                     ripgrep 14.1.1\n  ✅  npx                    10.9.0\n  ⚠️   opensrc                not installed\n     └─ Install with: npm install -g opensrc\n  ✅  code-structure         Version: 2.3.0\n\n  💡  rg, opensrc, and code-structure are optional accelerators.",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito doctor                                                                |\n|  local runtime + optional tools                                              |\n+----------------------------------------------------------------------------+\n\n  [OK]    node                   v22.12.0\n  [OK]    git                    git version 2.39.1\n  [WARN]  gh                     not installed\n     |- Install the GitHub CLI (https://cli.github.com); required by pr_merge_readiness and gh-enriched pr_review.\n  [OK]    rg                     ripgrep 14.1.1\n  [OK]    npx                    10.9.0\n  [WARN]  opensrc                not installed\n     |- Install with: npm install -g opensrc\n  [OK]    code-structure         Version: 2.3.0\n\n  [i]  rg, opensrc, and code-structure are optional accelerators.",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  📋  otito doctor                                                            \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  🩺  local runtime + optional tools                                          \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n  \u001b[32m✅  node                  \u001b[0m v22.12.0\n  \u001b[32m✅  git                   \u001b[0m git version 2.39.1\n  \u001b[33m⚠️   gh                    \u001b[0m not installed\n     └─ Install the GitHub CLI (https://cli.github.com); required by pr_merge_readiness and gh-enriched pr_review.\n  \u001b[32m✅  rg                    \u001b[0m ripgrep 14.1.1\n  \u001b[32m✅  npx                   \u001b[0m 10.9.0\n  \u001b[33m⚠️   opensrc               \u001b[0m not installed\n     └─ Install with: npm install -g opensrc\n  \u001b[32m✅  code-structure        \u001b[0m Version: 2.3.0\n\n\u001b[36m  💡  rg, opensrc, and code-structure are optional accelerators.\u001b[0m"
+      }
+    },
+    {
+      "name": "report",
+      "formatter": "report",
+      "data": {
+        "ok": true,
+        "generatedAt": "2026-01-01T00:00:00.000Z",
+        "repo": {
+          "ok": true,
+          "root": "<work>/fixtures/shop-api",
+          "fileCount": 6,
+          "package": {
+            "name": "shop-api",
+            "version": "0.0.0",
+            "private": true
+          },
+          "languages": [
+            {
+              "language": "TypeScript",
+              "count": 4
+            },
+            {
+              "language": "JSON",
+              "count": 1
+            }
+          ],
+          "packageManagers": ["npm"],
+          "scripts": {},
+          "scriptNames": [],
+          "entrypoints": [],
+          "importantDirectories": ["src"],
+          "git": {
+            "available": false
+          },
+          "files": [
+            "package.json",
+            "prisma/schema.prisma",
+            "src/auth/roles.guard.ts",
+            "src/orders/orders.controller.ts",
+            "src/payment/checkout.service.ts",
+            "src/payment/stripe.webhook.ts"
+          ],
+          "filesTruncated": false
+        },
+        "doctor": {
+          "ok": false,
+          "tools": [
+            {
+              "name": "node",
+              "command": "node",
+              "available": true,
+              "path": "/usr/local/bin/node",
+              "version": "v22.12.0",
+              "installHint": "Install Node.js 18+."
+            },
+            {
+              "name": "git",
+              "command": "git",
+              "available": true,
+              "path": "/usr/bin/git",
+              "version": "git version 2.39.1",
+              "installHint": "Install git."
+            },
+            {
+              "name": "gh",
+              "command": "gh",
+              "available": false,
+              "installHint": "Install the GitHub CLI (https://cli.github.com); required by pr_merge_readiness and gh-enriched pr_review."
+            },
+            {
+              "name": "rg",
+              "command": "rg",
+              "available": true,
+              "path": "/opt/homebrew/bin/rg",
+              "version": "ripgrep 14.1.1",
+              "installHint": "Install ripgrep for faster source searching."
+            },
+            {
+              "name": "npx",
+              "command": "npx",
+              "available": true,
+              "path": "/usr/local/bin/npx",
+              "version": "10.9.0",
+              "installHint": "Install npm/npx, or install optional tools globally."
+            },
+            {
+              "name": "opensrc",
+              "command": "opensrc",
+              "available": false,
+              "installHint": "Install with: npm install -g opensrc"
+            },
+            {
+              "name": "code-structure",
+              "command": "code-structure",
+              "available": true,
+              "path": "/usr/local/bin/code-structure",
+              "version": "Version: 2.3.0",
+              "installHint": "Install with: npm install -g code-structure for faster runs; structure can fall back to npx."
+            }
+          ]
+        },
+        "matrix": {
+          "ok": true,
+          "tools": [
+            {
+              "name": "Greploop",
+              "role": "Problem pattern",
+              "pilotUse": "Frame the problem",
+              "notes": "Repeated search/read/retry behavior that wastes agent context."
+            },
+            {
+              "name": "code-structure",
+              "role": "TypeScript structure HTML generator",
+              "pilotUse": "Wrap as baseline",
+              "notes": "Useful for visual structure output, but old and narrow."
+            },
+            {
+              "name": "opensrc",
+              "role": "Dependency source lookup",
+              "pilotUse": "Integrate directly",
+              "notes": "Provides package source paths that can be searched by rg or fallback search."
+            },
+            {
+              "name": "Daytona",
+              "role": "Sandbox execution",
+              "pilotUse": "Phase 2 adapter",
+              "notes": "Use when generated code or tests need isolated execution."
+            },
+            {
+              "name": "Harnss",
+              "role": "Agent UI/control surface",
+              "pilotUse": "Future UI reference",
+              "notes": "Use as inspiration for multi-agent orchestration and tool-call visibility."
+            }
+          ]
+        },
+        "tokenEstimate": {
+          "estimated": true,
+          "method": "ceil(characters / 4)",
+          "total": 688,
+          "sections": [
+            {
+              "name": "repo",
+              "tokens": 149,
+              "characters": 595
+            },
+            {
+              "name": "doctor",
+              "tokens": 333,
+              "characters": 1330
+            },
+            {
+              "name": "matrix",
+              "tokens": 206,
+              "characters": 822
+            }
+          ],
+          "fullJson": 766,
+          "markdown": 422
+        }
+      },
+      "outputs": {
+        "emoji-plain": "otito Field Report\n==================\nGenerated: 2026-01-01T00:00:00.000Z\nStatus: git unavailable; 6 files scanned; 5 tools ready; 2 optional gap(s).\n\nAt a Glance\n-----------\n  Root              <work>/fixtures/shop-api\n  Files scanned     6\n  Git               not detected\n  Languages         TypeScript (4), JSON (1)\n  Package managers  npm\n  Entrypoints       none detected\n\nReady Tools\n-----------\n  node            v22.12.0\n  git             git version 2.39.1\n  rg              ripgrep 14.1.1\n  npx             10.9.0\n  code-structure  Version: 2.3.0\n\nOptional Gaps\n-------------\n  gh       Install the GitHub CLI (https://cli.github.com); required by\n           pr_merge_readiness and gh-enriched pr_review.\n  opensrc  Install with: npm install -g opensrc\n\nBest Fits\n---------\n  Greploop\n    Role   Problem pattern\n    Pilot  Frame the problem\n    Notes  Repeated search/read/retry behavior that wastes agent context.\n\n  code-structure\n    Role   TypeScript structure HTML generator\n    Pilot  Wrap as baseline\n    Notes  Useful for visual structure output, but old and narrow.\n\n  opensrc\n    Role   Dependency source lookup\n    Pilot  Integrate directly\n    Notes  Provides package source paths that can be searched by rg or\n           fallback search.\n\n  Daytona\n    Role   Sandbox execution\n    Pilot  Phase 2 adapter\n    Notes  Use when generated code or tests need isolated execution.\n\n  Harnss\n    Role   Agent UI/control surface\n    Pilot  Future UI reference\n    Notes  Use as inspiration for multi-agent orchestration and tool-call\n           visibility.\n\nNext Moves\n----------\n  1. Use this wrapper to standardize repo inspection and dependency lookup.\n  2. Install `opensrc` first if dependency-source inspection is important.\n  3. Install `code-structure` only for TypeScript structure HTML generation.\n  4. Add Daytona after execution isolation becomes a real workflow\n     requirement.\n  5. Add MCP/Harnss integration after CLI JSON output has stabilized.\n\nToken Use\n---------\n  Full JSON  766 estimated tokens\n  Markdown   422 estimated tokens\n\n  Breakdown\n    Repo    149 estimated tokens\n    Doctor  333 estimated tokens\n    Matrix  206 estimated tokens",
+        "ascii-plain": "otito Field Report\n==================\nGenerated: 2026-01-01T00:00:00.000Z\nStatus: git unavailable; 6 files scanned; 5 tools ready; 2 optional gap(s).\n\nAt a Glance\n-----------\n  Root              <work>/fixtures/shop-api\n  Files scanned     6\n  Git               not detected\n  Languages         TypeScript (4), JSON (1)\n  Package managers  npm\n  Entrypoints       none detected\n\nReady Tools\n-----------\n  node            v22.12.0\n  git             git version 2.39.1\n  rg              ripgrep 14.1.1\n  npx             10.9.0\n  code-structure  Version: 2.3.0\n\nOptional Gaps\n-------------\n  gh       Install the GitHub CLI (https://cli.github.com); required by\n           pr_merge_readiness and gh-enriched pr_review.\n  opensrc  Install with: npm install -g opensrc\n\nBest Fits\n---------\n  Greploop\n    Role   Problem pattern\n    Pilot  Frame the problem\n    Notes  Repeated search/read/retry behavior that wastes agent context.\n\n  code-structure\n    Role   TypeScript structure HTML generator\n    Pilot  Wrap as baseline\n    Notes  Useful for visual structure output, but old and narrow.\n\n  opensrc\n    Role   Dependency source lookup\n    Pilot  Integrate directly\n    Notes  Provides package source paths that can be searched by rg or\n           fallback search.\n\n  Daytona\n    Role   Sandbox execution\n    Pilot  Phase 2 adapter\n    Notes  Use when generated code or tests need isolated execution.\n\n  Harnss\n    Role   Agent UI/control surface\n    Pilot  Future UI reference\n    Notes  Use as inspiration for multi-agent orchestration and tool-call\n           visibility.\n\nNext Moves\n----------\n  1. Use this wrapper to standardize repo inspection and dependency lookup.\n  2. Install `opensrc` first if dependency-source inspection is important.\n  3. Install `code-structure` only for TypeScript structure HTML generation.\n  4. Add Daytona after execution isolation becomes a real workflow\n     requirement.\n  5. Add MCP/Harnss integration after CLI JSON output has stabilized.\n\nToken Use\n---------\n  Full JSON  766 estimated tokens\n  Markdown   422 estimated tokens\n\n  Breakdown\n    Repo    149 estimated tokens\n    Doctor  333 estimated tokens\n    Matrix  206 estimated tokens",
+        "emoji-color": "otito Field Report\n==================\nGenerated: 2026-01-01T00:00:00.000Z\nStatus: git unavailable; 6 files scanned; 5 tools ready; 2 optional gap(s).\n\nAt a Glance\n-----------\n  Root              <work>/fixtures/shop-api\n  Files scanned     6\n  Git               not detected\n  Languages         TypeScript (4), JSON (1)\n  Package managers  npm\n  Entrypoints       none detected\n\nReady Tools\n-----------\n  node            v22.12.0\n  git             git version 2.39.1\n  rg              ripgrep 14.1.1\n  npx             10.9.0\n  code-structure  Version: 2.3.0\n\nOptional Gaps\n-------------\n  gh       Install the GitHub CLI (https://cli.github.com); required by\n           pr_merge_readiness and gh-enriched pr_review.\n  opensrc  Install with: npm install -g opensrc\n\nBest Fits\n---------\n  Greploop\n    Role   Problem pattern\n    Pilot  Frame the problem\n    Notes  Repeated search/read/retry behavior that wastes agent context.\n\n  code-structure\n    Role   TypeScript structure HTML generator\n    Pilot  Wrap as baseline\n    Notes  Useful for visual structure output, but old and narrow.\n\n  opensrc\n    Role   Dependency source lookup\n    Pilot  Integrate directly\n    Notes  Provides package source paths that can be searched by rg or\n           fallback search.\n\n  Daytona\n    Role   Sandbox execution\n    Pilot  Phase 2 adapter\n    Notes  Use when generated code or tests need isolated execution.\n\n  Harnss\n    Role   Agent UI/control surface\n    Pilot  Future UI reference\n    Notes  Use as inspiration for multi-agent orchestration and tool-call\n           visibility.\n\nNext Moves\n----------\n  1. Use this wrapper to standardize repo inspection and dependency lookup.\n  2. Install `opensrc` first if dependency-source inspection is important.\n  3. Install `code-structure` only for TypeScript structure HTML generation.\n  4. Add Daytona after execution isolation becomes a real workflow\n     requirement.\n  5. Add MCP/Harnss integration after CLI JSON output has stabilized.\n\nToken Use\n---------\n  Full JSON  766 estimated tokens\n  Markdown   422 estimated tokens\n\n  Breakdown\n    Repo    149 estimated tokens\n    Doctor  333 estimated tokens\n    Matrix  206 estimated tokens"
+      }
+    },
+    {
+      "name": "summary",
+      "formatter": "summary",
+      "data": {
+        "title": "otito repo · repository overview",
+        "glyph": "📦",
+        "subtitle": "<work>/fixtures/shop-api",
+        "facts": [
+          ["Files scanned", 4],
+          ["Primary languages", "TypeScript (4), JSON (1)"],
+          ["Package managers", "npm"],
+          ["Entrypoints", "none detected"]
+        ],
+        "sections": [
+          {
+            "title": "Scripts",
+            "items": ["test: node --test", "lint: eslint ."],
+            "glyph": "⚙️"
+          },
+          {
+            "title": "Important directories",
+            "items": ["src/payment", "src/orders"],
+            "glyph": "📁"
+          },
+          {
+            "title": "Empty section",
+            "items": [],
+            "glyph": "📭"
+          }
+        ]
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  📦  otito repo · repository overview                                        │\n│  💬  <work>/fixtures/shop-api                                                │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n▾ 📌 At a glance\n  Files scanned: 4\n  Primary languages: TypeScript (4), JSON (1)\n  Package managers: npm\n  Entrypoints: none detected\n\n▾ ⚙️ Scripts\n  • test: node --test\n  • lint: eslint .\n\n▾ 📁 Important directories\n  • src/payment\n  • src/orders\n\n▾ 📭 Empty section\n  • none",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito repo · repository overview                                            |\n|  <work>/fixtures/shop-api                                                    |\n+----------------------------------------------------------------------------+\n\n> At a glance\n  Files scanned: 4\n  Primary languages: TypeScript (4), JSON (1)\n  Package managers: npm\n  Entrypoints: none detected\n\n> Scripts\n  - test: node --test\n  - lint: eslint .\n\n> Important directories\n  - src/payment\n  - src/orders\n\n> Empty section\n  - none",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  📦  otito repo · repository overview                                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  <work>/fixtures/shop-api                                                \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n\u001b[1m▾ 📌 At a glance\u001b[0m\n  Files scanned: 4\n  Primary languages: TypeScript (4), JSON (1)\n  Package managers: npm\n  Entrypoints: none detected\n\n\u001b[1m▾ ⚙️ Scripts\u001b[0m\n  • test: node --test\n  • lint: eslint .\n\n\u001b[1m▾ 📁 Important directories\u001b[0m\n  • src/payment\n  • src/orders\n\n\u001b[1m▾ 📭 Empty section\u001b[0m\n  • none"
+      }
+    },
+    {
+      "name": "discover",
+      "formatter": "discover",
+      "data": {
+        "ok": true,
+        "roots": ["<work>/fixtures"],
+        "maxDepth": 2,
+        "repositoryCount": 3,
+        "repositories": [
+          {
+            "root": "<work>/fixtures/harness-node",
+            "name": "otito-harness-node-fixture",
+            "marker": "package.json",
+            "package": {
+              "name": "otito-harness-node-fixture",
+              "type": "module",
+              "private": true
+            }
+          },
+          {
+            "root": "<work>/fixtures/sample-api",
+            "name": "sample-api",
+            "marker": "package.json",
+            "package": {
+              "name": "sample-api"
+            }
+          },
+          {
+            "root": "<work>/fixtures/shop-api",
+            "name": "shop-api",
+            "marker": "package.json",
+            "package": {
+              "name": "shop-api",
+              "version": "0.0.0",
+              "private": true
+            }
+          }
+        ]
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🔎  otito discover · repository finder                                      │\n│  💬  <work>/fixtures · depth 2                                               │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n▾ 📌 At a glance\n  Repositories discovered: 3\n\n▾ 📂 Repositories\n  • <work>/fixtures/harness-node (package.json)\n  • <work>/fixtures/sample-api (package.json)\n  • <work>/fixtures/shop-api (package.json)",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito discover · repository finder                                          |\n|  <work>/fixtures · depth 2                                                   |\n+----------------------------------------------------------------------------+\n\n> At a glance\n  Repositories discovered: 3\n\n> Repositories\n  - <work>/fixtures/harness-node (package.json)\n  - <work>/fixtures/sample-api (package.json)\n  - <work>/fixtures/shop-api (package.json)",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🔎  otito discover · repository finder                                      \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  <work>/fixtures · depth 2                                               \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n\u001b[1m▾ 📌 At a glance\u001b[0m\n  Repositories discovered: 3\n\n\u001b[1m▾ 📂 Repositories\u001b[0m\n  • <work>/fixtures/harness-node (package.json)\n  • <work>/fixtures/sample-api (package.json)\n  • <work>/fixtures/shop-api (package.json)"
+      }
+    },
+    {
+      "name": "index",
+      "formatter": "index",
+      "data": {
+        "ok": true,
+        "catalogPath": "<work>/home/catalog.json",
+        "indexedAt": "2026-01-01T00:00:00.000Z",
+        "repositoryCount": 2,
+        "indexedCount": 2,
+        "repositories": [
+          {
+            "root": "<work>/fixtures/shop-api",
+            "name": "shop-api",
+            "package": {
+              "name": "shop-api",
+              "version": "0.0.0",
+              "private": true
+            },
+            "git": {
+              "available": false
+            },
+            "languages": [
+              {
+                "language": "TypeScript",
+                "count": 4
+              },
+              {
+                "language": "JSON",
+                "count": 1
+              }
+            ],
+            "entrypoints": [],
+            "sourceFileCount": 4,
+            "summary": {
+              "routes": 0,
+              "apiRoutes": 0,
+              "controllers": 1,
+              "services": 1,
+              "modules": 0,
+              "components": 0,
+              "hooks": 0,
+              "apiClients": 0,
+              "dtos": 0,
+              "schemas": 0,
+              "tests": 0,
+              "symbols": 9,
+              "dataAccessFiles": 0,
+              "dataAccessHits": 0
+            },
+            "domains": [
+              {
+                "name": "payment",
+                "fileCount": 2,
+                "kinds": [
+                  {
+                    "kind": "service",
+                    "count": 1
+                  },
+                  {
+                    "kind": "source",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "name": "auth",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "source",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "name": "orders",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "controller",
+                    "count": 1
+                  }
+                ]
+              }
+            ],
+            "indexPath": "<tmpdir>/otito-index-cache/417a49ee/index.json",
+            "fingerprint": "1:1:1:00000000",
+            "generatedAt": "2026-01-01T00:00:00.000Z",
+            "indexedAt": "2026-01-01T00:00:00.000Z"
+          },
+          {
+            "root": "<work>/fixtures/sample-api",
+            "name": "sample-api",
+            "package": {
+              "name": "sample-api"
+            },
+            "git": {
+              "available": false
+            },
+            "languages": [
+              {
+                "language": "TypeScript",
+                "count": 2
+              },
+              {
+                "language": "JSON",
+                "count": 1
+              }
+            ],
+            "entrypoints": [],
+            "sourceFileCount": 2,
+            "summary": {
+              "routes": 0,
+              "apiRoutes": 0,
+              "controllers": 1,
+              "services": 0,
+              "modules": 0,
+              "components": 0,
+              "hooks": 0,
+              "apiClients": 0,
+              "dtos": 0,
+              "schemas": 0,
+              "tests": 1,
+              "symbols": 2,
+              "dataAccessFiles": 0,
+              "dataAccessHits": 0
+            },
+            "domains": [
+              {
+                "name": "events",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "controller",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "name": "tests",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "test",
+                    "count": 1
+                  }
+                ]
+              }
+            ],
+            "indexPath": "<tmpdir>/otito-index-cache/a236b76c/index.json",
+            "fingerprint": "1:1:1:00000000",
+            "generatedAt": "2026-01-01T00:00:00.000Z",
+            "indexedAt": "2026-01-01T00:00:00.000Z"
+          }
+        ],
+        "errors": []
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🗂️  otito index · repository catalog                                        │\n│  💬  <work>/home/catalog.json                                                │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n▾ 📌 At a glance\n  Indexed repositories: 2\n  Catalog repositories: 2\n\n▾ ✅ Indexed\n  • shop-api: <work>/fixtures/shop-api\n  • sample-api: <work>/fixtures/sample-api\n\n▾ ⚠️ Errors\n  • none",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito index · repository catalog                                            |\n|  <work>/home/catalog.json                                                    |\n+----------------------------------------------------------------------------+\n\n> At a glance\n  Indexed repositories: 2\n  Catalog repositories: 2\n\n> Indexed\n  - shop-api: <work>/fixtures/shop-api\n  - sample-api: <work>/fixtures/sample-api\n\n> Errors\n  - none",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🗂️  otito index · repository catalog                                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  <work>/home/catalog.json                                                \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n\u001b[1m▾ 📌 At a glance\u001b[0m\n  Indexed repositories: 2\n  Catalog repositories: 2\n\n\u001b[1m▾ ✅ Indexed\u001b[0m\n  • shop-api: <work>/fixtures/shop-api\n  • sample-api: <work>/fixtures/sample-api\n\n\u001b[1m▾ ⚠️ Errors\u001b[0m\n  • none"
+      }
+    },
+    {
+      "name": "catalog",
+      "formatter": "catalog",
+      "data": {
+        "ok": true,
+        "catalogPath": "<work>/home/catalog.json",
+        "version": 1,
+        "updatedAt": "2026-01-01T00:00:00.000Z",
+        "repositoryCount": 2,
+        "repositories": [
+          {
+            "root": "<work>/fixtures/sample-api",
+            "name": "sample-api",
+            "package": {
+              "name": "sample-api"
+            },
+            "git": {
+              "available": false
+            },
+            "languages": [
+              {
+                "language": "TypeScript",
+                "count": 2
+              },
+              {
+                "language": "JSON",
+                "count": 1
+              }
+            ],
+            "entrypoints": [],
+            "sourceFileCount": 2,
+            "summary": {
+              "routes": 0,
+              "apiRoutes": 0,
+              "controllers": 1,
+              "services": 0,
+              "modules": 0,
+              "components": 0,
+              "hooks": 0,
+              "apiClients": 0,
+              "dtos": 0,
+              "schemas": 0,
+              "tests": 1,
+              "symbols": 2,
+              "dataAccessFiles": 0,
+              "dataAccessHits": 0
+            },
+            "domains": [
+              {
+                "name": "events",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "controller",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "name": "tests",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "test",
+                    "count": 1
+                  }
+                ]
+              }
+            ],
+            "indexPath": "<tmpdir>/otito-index-cache/a236b76c/index.json",
+            "fingerprint": "1:1:1:00000000",
+            "generatedAt": "2026-01-01T00:00:00.000Z",
+            "indexedAt": "2026-01-01T00:00:00.000Z"
+          },
+          {
+            "root": "<work>/fixtures/shop-api",
+            "name": "shop-api",
+            "package": {
+              "name": "shop-api",
+              "version": "0.0.0",
+              "private": true
+            },
+            "git": {
+              "available": false
+            },
+            "languages": [
+              {
+                "language": "TypeScript",
+                "count": 4
+              },
+              {
+                "language": "JSON",
+                "count": 1
+              }
+            ],
+            "entrypoints": [],
+            "sourceFileCount": 4,
+            "summary": {
+              "routes": 0,
+              "apiRoutes": 0,
+              "controllers": 1,
+              "services": 1,
+              "modules": 0,
+              "components": 0,
+              "hooks": 0,
+              "apiClients": 0,
+              "dtos": 0,
+              "schemas": 0,
+              "tests": 0,
+              "symbols": 9,
+              "dataAccessFiles": 0,
+              "dataAccessHits": 0
+            },
+            "domains": [
+              {
+                "name": "payment",
+                "fileCount": 2,
+                "kinds": [
+                  {
+                    "kind": "service",
+                    "count": 1
+                  },
+                  {
+                    "kind": "source",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "name": "auth",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "source",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "name": "orders",
+                "fileCount": 1,
+                "kinds": [
+                  {
+                    "kind": "controller",
+                    "count": 1
+                  }
+                ]
+              }
+            ],
+            "indexPath": "<tmpdir>/otito-index-cache/417a49ee/index.json",
+            "fingerprint": "1:1:1:00000000",
+            "generatedAt": "2026-01-01T00:00:00.000Z",
+            "indexedAt": "2026-01-01T00:00:00.000Z"
+          }
+        ]
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  📚  otito catalog · indexed repositories                                    │\n│  💬  updated 2026-01-01T00:00:00.000Z                                        │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n▾ 📌 At a glance\n  Repositories: 2\n\n▾ 📂 Repositories\n  • sample-api: <work>/fixtures/sample-api (events, tests)\n  • shop-api: <work>/fixtures/shop-api (payment, auth, orders)",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito catalog · indexed repositories                                        |\n|  updated 2026-01-01T00:00:00.000Z                                            |\n+----------------------------------------------------------------------------+\n\n> At a glance\n  Repositories: 2\n\n> Repositories\n  - sample-api: <work>/fixtures/sample-api (events, tests)\n  - shop-api: <work>/fixtures/shop-api (payment, auth, orders)",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  📚  otito catalog · indexed repositories                                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  updated 2026-01-01T00:00:00.000Z                                        \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n\u001b[1m▾ 📌 At a glance\u001b[0m\n  Repositories: 2\n\n\u001b[1m▾ 📂 Repositories\u001b[0m\n  • sample-api: <work>/fixtures/sample-api (events, tests)\n  • shop-api: <work>/fixtures/shop-api (payment, auth, orders)"
+      }
+    },
+    {
+      "name": "search",
+      "formatter": "search",
+      "data": {
+        "ok": true,
+        "query": "payment webhook",
+        "tokens": ["payment", "webhook"],
+        "catalogPath": "<work>/home/catalog.json",
+        "repositoryCount": 2,
+        "matchCount": 2,
+        "matches": [
+          {
+            "score": 43,
+            "reasons": ["path", "domain", "export", "symbol"],
+            "repository": {
+              "name": "shop-api",
+              "root": "<work>/fixtures/shop-api"
+            },
+            "file": {
+              "path": "src/payment/stripe.webhook.ts",
+              "kind": "source",
+              "domain": "payment",
+              "domains": ["payment"],
+              "httpMethods": [],
+              "imports": [],
+              "exports": ["handleStripeWebhook"],
+              "symbols": [
+                {
+                  "type": "function",
+                  "name": "handleStripeWebhook",
+                  "line": 2
+                }
+              ]
+            }
+          },
+          {
+            "score": 18,
+            "reasons": ["path", "domain"],
+            "repository": {
+              "name": "shop-api",
+              "root": "<work>/fixtures/shop-api"
+            },
+            "file": {
+              "path": "src/payment/checkout.service.ts",
+              "kind": "service",
+              "domain": "payment",
+              "domains": ["payment"],
+              "httpMethods": [],
+              "imports": [],
+              "exports": ["CheckoutService"],
+              "symbols": [
+                {
+                  "type": "class",
+                  "name": "CheckoutService",
+                  "line": 2
+                },
+                {
+                  "type": "method",
+                  "name": "charge",
+                  "line": 3
+                },
+                {
+                  "type": "method",
+                  "name": "refund",
+                  "line": 7
+                }
+              ]
+            }
+          }
+        ],
+        "errors": [],
+        "tokenEstimate": {
+          "fullJson": 289,
+          "estimated": true,
+          "method": "ceil(characters / 4)"
+        }
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🧭  otito search · catalog matches                                          │\n│  💬  query: payment webhook                                                  │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n▾ 📌 At a glance\n  Matches: 2\n  Repositories searched: 2\n\n▾ 🎯 Matches\n  • shop-api: src/payment/stripe.webhook.ts [source/payment] · path, domain, export, symbol\n  • shop-api: src/payment/checkout.service.ts [service/payment] · path, domain\n\n▾ ⚠️ Errors\n  • none",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito search · catalog matches                                              |\n|  query: payment webhook                                                      |\n+----------------------------------------------------------------------------+\n\n> At a glance\n  Matches: 2\n  Repositories searched: 2\n\n> Matches\n  - shop-api: src/payment/stripe.webhook.ts [source/payment] · path, domain, export, symbol\n  - shop-api: src/payment/checkout.service.ts [service/payment] · path, domain\n\n> Errors\n  - none",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🧭  otito search · catalog matches                                          \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  query: payment webhook                                                  \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n\u001b[1m▾ 📌 At a glance\u001b[0m\n  Matches: 2\n  Repositories searched: 2\n\n\u001b[1m▾ 🎯 Matches\u001b[0m\n  • shop-api: src/payment/stripe.webhook.ts [source/payment] · path, domain, export, symbol\n  • shop-api: src/payment/checkout.service.ts [service/payment] · path, domain\n\n\u001b[1m▾ ⚠️ Errors\u001b[0m\n  • none"
+      }
+    },
+    {
+      "name": "init",
+      "formatter": "init",
+      "data": {
+        "ok": true,
+        "root": "<work>/fixtures/harness-node",
+        "force": false,
+        "toolRepo": "BASHBOP/otito",
+        "toolRef": "main",
+        "gatesApplied": true,
+        "gatesStatus": "applied",
+        "precommitApplied": true,
+        "precommitStatus": "applied",
+        "hooksConfigured": false,
+        "hooksPathRequested": false,
+        "created": [".otito/README.md", ".gitignore", ".github/workflows/otito-ci.yml", ".githooks/pre-commit"],
+        "updated": [],
+        "skipped": [],
+        "nextSteps": [
+          "Review the generated workflow before opening a PR.",
+          "Confirm the CI quality steps match how you run this project locally; edit the workflow if they drift.",
+          "Enable the pre-commit hook: `git config core.hooksPath .githooks` (re-run `init --hooks-path` to do it automatically).",
+          "If the otito tool repository is private, add a OTITO_REPO_TOKEN secret and enable the token line in the workflow.",
+          "Open or update a pull request to verify the PR comment and artifact."
+        ]
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🛠️  otito init · trust harness setup                                        │\n│  💬  <work>/fixtures/harness-node                                            │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n▾ 📌 At a glance\n  Gates: harness-driven quality job added to CI\n  Pre-commit: hook scaffolded (run `git config core.hooksPath .githooks` to enable)\n\n▾ ✅ Created\n  • .otito/README.md\n  • .gitignore\n  • .github/workflows/otito-ci.yml\n  • .githooks/pre-commit\n\n▾ 🔄 Updated\n  • none\n\n▾ ⏭️ Skipped\n  • none\n\n▾ 📝 Next steps\n  • Review the generated workflow before opening a PR.\n  • Confirm the CI quality steps match how you run this project locally; edit the workflow if they drift.\n  • Enable the pre-commit hook: `git config core.hooksPath .githooks` (re-run `init --hooks-path` to do it automatically).\n  • If the otito tool repository is private, add a OTITO_REPO_TOKEN secret and enable the token line in the workflow.\n  • Open or update a pull request to verify the PR comment and artifact.",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  otito init · trust harness setup                                            |\n|  <work>/fixtures/harness-node                                                |\n+----------------------------------------------------------------------------+\n\n> At a glance\n  Gates: harness-driven quality job added to CI\n  Pre-commit: hook scaffolded (run `git config core.hooksPath .githooks` to enable)\n\n> Created\n  - .otito/README.md\n  - .gitignore\n  - .github/workflows/otito-ci.yml\n  - .githooks/pre-commit\n\n> Updated\n  - none\n\n> Skipped\n  - none\n\n> Next steps\n  - Review the generated workflow before opening a PR.\n  - Confirm the CI quality steps match how you run this project locally; edit the workflow if they drift.\n  - Enable the pre-commit hook: `git config core.hooksPath .githooks` (re-run `init --hooks-path` to do it automatically).\n  - If the otito tool repository is private, add a OTITO_REPO_TOKEN secret and enable the token line in the workflow.\n  - Open or update a pull request to verify the PR comment and artifact.",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🛠️  otito init · trust harness setup                                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  <work>/fixtures/harness-node                                            \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n\u001b[1m▾ 📌 At a glance\u001b[0m\n  Gates: harness-driven quality job added to CI\n  Pre-commit: hook scaffolded (run `git config core.hooksPath .githooks` to enable)\n\n\u001b[1m▾ ✅ Created\u001b[0m\n  • .otito/README.md\n  • .gitignore\n  • .github/workflows/otito-ci.yml\n  • .githooks/pre-commit\n\n\u001b[1m▾ 🔄 Updated\u001b[0m\n  • none\n\n\u001b[1m▾ ⏭️ Skipped\u001b[0m\n  • none\n\n\u001b[1m▾ 📝 Next steps\u001b[0m\n  • Review the generated workflow before opening a PR.\n  • Confirm the CI quality steps match how you run this project locally; edit the workflow if they drift.\n  • Enable the pre-commit hook: `git config core.hooksPath .githooks` (re-run `init --hooks-path` to do it automatically).\n  • If the otito tool repository is private, add a OTITO_REPO_TOKEN secret and enable the token line in the workflow.\n  • Open or update a pull request to verify the PR comment and artifact."
+      }
+    },
+    {
+      "name": "install",
+      "formatter": "install",
+      "data": {
+        "ok": true,
+        "productName": "Òtítọ́",
+        "binaryName": "otito",
+        "packageRoot": "<root>",
+        "repository": "https://github.com/BASHBOP/otito",
+        "installed": true,
+        "binaryPath": "/usr/local/bin/otito",
+        "commands": {
+          "fromNpm": "npm install -g @bashbop/otito",
+          "fromCheckout": "npm install -g .",
+          "developmentLink": "npm link",
+          "verify": "otito doctor"
+        },
+        "nextSteps": [
+          "Run `otito doctor` to verify the install.",
+          "Run `otito index ~/projects --discover` to build a local catalog.",
+          "Run `otito search \"auth\"` to search indexed repositories."
+        ]
+      },
+      "outputs": {
+        "emoji-plain": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🚀  Òtítọ́ · installer                                                       │\n│  💬  installed at /usr/local/bin/otito                                       │\n╰────────────────────────────────────────────────────────────────────────────╯\n\n▾ 📌 At a glance\n  Binary: otito\n  Repository: https://github.com/BASHBOP/otito\n  Current checkout: <root>\n\n▾ 📦 Install commands\n  • From npm: npm install -g @bashbop/otito\n  • From this checkout: npm install -g .\n  • Development link: npm link\n  • Verify: otito doctor\n\n▾ 📝 Next steps\n  • Run `otito doctor` to verify the install.\n  • Run `otito index ~/projects --discover` to build a local catalog.\n  • Run `otito search \"auth\"` to search indexed repositories.",
+        "ascii-plain": "+----------------------------------------------------------------------------+\n|  Òtítọ́ · installer                                                           |\n|  installed at /usr/local/bin/otito                                           |\n+----------------------------------------------------------------------------+\n\n> At a glance\n  Binary: otito\n  Repository: https://github.com/BASHBOP/otito\n  Current checkout: <root>\n\n> Install commands\n  - From npm: npm install -g @bashbop/otito\n  - From this checkout: npm install -g .\n  - Development link: npm link\n  - Verify: otito doctor\n\n> Next steps\n  - Run `otito doctor` to verify the install.\n  - Run `otito index ~/projects --discover` to build a local catalog.\n  - Run `otito search \"auth\"` to search indexed repositories.",
+        "emoji-color": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🚀  Òtítọ́ · installer                                                       \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  installed at /usr/local/bin/otito                                       \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m\n\n\u001b[1m▾ 📌 At a glance\u001b[0m\n  Binary: otito\n  Repository: https://github.com/BASHBOP/otito\n  Current checkout: <root>\n\n\u001b[1m▾ 📦 Install commands\u001b[0m\n  • From npm: npm install -g @bashbop/otito\n  • From this checkout: npm install -g .\n  • Development link: npm link\n  • Verify: otito doctor\n\n\u001b[1m▾ 📝 Next steps\u001b[0m\n  • Run `otito doctor` to verify the install.\n  • Run `otito index ~/projects --discover` to build a local catalog.\n  • Run `otito search \"auth\"` to search indexed repositories."
+      }
+    }
+  ]
+}

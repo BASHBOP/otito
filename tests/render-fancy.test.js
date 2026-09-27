@@ -598,3 +598,45 @@ test("wrapBoxed leaves fitting content untouched and never drops a character", (
   assert.ok(lines.every((line) => visualWidth(line) <= 30));
   assert.ok(lines.length >= 2);
 });
+
+test("pick returns the mark for the resolved glyph mode and falls back to ascii", () => {
+  const marks = { emoji: "🔥", ascii: ">", unicode: "" };
+  assert.equal(createRenderer({ glyphs: "emoji" }).pick(marks), "🔥");
+  assert.equal(createRenderer({ glyphs: "ascii" }).pick(marks), ">");
+  assert.equal(createRenderer({ glyphs: "unicode" }).pick(marks), "");
+  // A mode without its own mark takes the ascii one; nothing prints undefined.
+  assert.equal(createRenderer({ glyphs: "unicode" }).pick({ emoji: "🔥", ascii: ">" }), ">");
+  assert.equal(createRenderer({ glyphs: "emoji" }).pick({ ascii: ">" }), ">");
+  assert.equal(createRenderer({ glyphs: "emoji" }).pick({}), "");
+});
+
+test("glyphs.item is the marker formatters put in front of their own list items", () => {
+  assert.equal(createRenderer({ glyphs: "emoji" }).glyphs.item, "•");
+  assert.equal(createRenderer({ glyphs: "ascii" }).glyphs.item, "-");
+  assert.equal(createRenderer({ glyphs: "unicode" }).glyphs.item, "•");
+});
+
+test("no formatter reads renderer.emoji any more; marks come from glyphs and pick", () => {
+  // O7: the box, status and verdict sets are chosen by glyph mode, and every
+  // formatter takes its marks from renderer.glyphs or renderer.pick, so the
+  // unicode default can flip without a formatter falling back to emoji.
+  const root = new URL("../src/lib/", import.meta.url);
+  const offenders = [];
+  const walk = (/** @type {URL} */ dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = new URL(entry.name + (entry.isDirectory() ? "/" : ""), dir);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!entry.name.endsWith(".js") || full.pathname.endsWith("/render/fancy.js")) continue;
+      fs.readFileSync(full, "utf8")
+        .split("\n")
+        .forEach((line, index) => {
+          if (/\brenderer\.emoji\b/.test(line)) offenders.push(`${full.pathname.slice(root.pathname.length)}:${index + 1}`);
+        });
+    }
+  };
+  walk(root);
+  assert.deepEqual(offenders, []);
+});

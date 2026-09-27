@@ -1126,7 +1126,7 @@ export function formatPassTerminal(data, rendererFactory) {
 
   for (const check of data.checks) {
     const status = STATUS_TO_RENDER[check.status] ?? "info";
-    const details = (check.details ?? []).slice(0, 10).map((detail) => decorateDetail(detail, renderer.emoji));
+    const details = (check.details ?? []).slice(0, 10).map((detail) => decorateDetail(detail, renderer));
     lines.push(renderer.statusLine(status, check.name, check.summary, details));
   }
 
@@ -1142,22 +1142,22 @@ export function formatPassTerminal(data, rendererFactory) {
   );
 
   lines.push("");
-  lines.push(`  ${renderer.emoji ? "💡" : "[i]"}  Context evidence:`);
-  for (const command of data.contextEvidence) lines.push(`     ${renderer.emoji ? "•" : "-"} ${command}`);
+  lines.push(`  ${renderer.glyphs.tip}  Context evidence:`);
+  for (const command of data.contextEvidence) lines.push(`     ${renderer.glyphs.item} ${command}`);
 
   return lines.join("\n");
 }
 
 /**
+ * Prefix a changed path with its risk emoji; only the emoji set shows it.
  * @param {string} detail
- * @param {boolean} emoji
+ * @param {ReturnType<typeof import("./render/fancy.js").createRenderer>} renderer
  * @returns {string}
  */
-function decorateDetail(detail, emoji) {
-  if (!emoji) return detail;
+function decorateDetail(detail, renderer) {
   const flags = classifyPath(detail);
   const glyph = flags.length ? glyphFor(flags[0]) : "";
-  return glyph ? `${glyph}  ${detail}` : detail;
+  return renderer.pick({ emoji: glyph ? `${glyph}  ${detail}` : detail, ascii: detail });
 }
 
 /**
