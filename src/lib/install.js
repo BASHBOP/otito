@@ -48,6 +48,25 @@ export function installOtito(options = {}) {
   };
 }
 
+/**
+ * A short, personalized pitch shown once, right before the interactive
+ * install prompt. Reads the local git identity only (no network, no
+ * telemetry) so it stays deterministic and offline.
+ * @returns {{ greeting: string, pitch: string[] }}
+ */
+export function getWelcomeMessage() {
+  const name = runCommand("git", ["config", "user.name"]).stdout.trim();
+  const firstName = name.split(" ")[0];
+  return {
+    greeting: firstName ? `Hey ${firstName},` : "Hey,",
+    pitch: [
+      `${productName} gives your agents (Claude, Codex, Cursor, ...) a grounded, deterministic map of this repo — real files, real hotspots, real test commands — instead of guessing from memory.`,
+      "It runs locally against your own checkout: no source leaves your machine unless you opt into an online read.",
+      "Same query against the same repo state returns the same answer every time, so context, reviews, and this install plan stay reproducible run to run.",
+    ],
+  };
+}
+
 export function getInstallPlan() {
   const status = commandExists(binaryName);
   return {
@@ -65,7 +84,6 @@ export function getInstallPlan() {
       verify: `${binaryName} doctor`,
     },
     nextSteps: [
-      `Run \`${binaryName} doctor\` to verify the install.`,
       `Run \`${binaryName} index ~/projects --discover\` to build a local catalog.`,
       `Run \`${binaryName} search "auth"\` to search indexed repositories.`,
     ],

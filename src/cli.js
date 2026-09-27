@@ -992,11 +992,29 @@ async function handleReview(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleInstall(parsed) {
-  const { formatInstallSummary, getInstallPlan, installOtito } = await import("./lib/install.js");
-  const result = installOtito({
-    global: parsed.flags.global,
-    link: parsed.flags.link,
-  });
+  const { formatInstallSummary, getInstallPlan, getWelcomeMessage, installOtito } = await import("./lib/install.js");
+
+  let global = Boolean(parsed.flags.global);
+  let link = Boolean(parsed.flags.link);
+
+  // Prompting lives only here, and only for a human at a TTY with no explicit
+  // mode flag. MCP, agents, CI, and --json/--yes callers (or anyone who already
+  // passed --global/--link) run fully non-interactively off the flags above, so
+  // install stays deterministic and never blocks an unattended caller.
+  const interactive = Boolean(process.stdin.isTTY) && !parsed.flags.yes && !parsed.flags.json && !global && !link;
+  if (interactive) {
+    const { greeting, pitch } = getWelcomeMessage();
+    printText([greeting, ...pitch].join("\n"));
+    const mode = await promptChoice("How do you want to install?", [
+      { value: "plan", label: "Just show me the plan (no changes)" },
+      { value: "global", label: "Install globally (npm install -g .)" },
+      { value: "link", label: "Link for development (npm link)" },
+    ]);
+    global = mode === "global";
+    link = mode === "link";
+  }
+
+  const result = installOtito({ global, link });
 
   if (parsed.flags.json) {
     printJson(result);
@@ -1222,6 +1240,26 @@ async function promptYesNo(question, defaultValue) {
       return defaultValue;
     }
     return answer === "y" || answer === "yes";
+  } finally {
+    rl.close();
+  }
+}
+
+/**
+ * Ask a single-choice question at an interactive TTY. Used only by `install`;
+ * never reached for non-interactive callers (guarded by process.stdin.isTTY).
+ * @param {string} question
+ * @param {{ value: string, label: string }[]} choices
+ * @returns {Promise<string>}
+ */
+async function promptChoice(question, choices) {
+  const readline = await import("node:readline/promises");
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const lines = choices.map((choice, index) => `  ${index + 1}) ${choice.label}`);
+    const answer = (await rl.question(`${question}\n${lines.join("\n")}\nEnter a number [1]: `)).trim();
+    const index = answer === "" ? 0 : Number.parseInt(answer, 10) - 1;
+    return choices[index]?.value ?? choices[0].value;
   } finally {
     rl.close();
   }
