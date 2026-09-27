@@ -101,7 +101,7 @@ test("renderer width clamps to a sensible terminal size", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Glyph modes, display width and the Vibe primitives.
+// Glyph modes, display width and the string-building primitives.
 
 const ESC = String.fromCharCode(27);
 // eslint-disable-next-line no-control-regex

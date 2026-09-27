@@ -347,7 +347,7 @@ export function createRenderer(options = {}) {
   function bullet(text, glyph) {
     // A caller-supplied glyph is an emoji; the other sets fall back to their own bullet.
     const marker = glyph && emoji ? glyph : glyphs.bullet;
-    return `  ${marker} ${text}`;
+    return `  ${c(marker, palette.dim)} ${text}`;
   }
 
   /**

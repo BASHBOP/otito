@@ -36,11 +36,12 @@ export function formatTerminalSummary(input) {
   for (const section of input.sections ?? []) {
     lines.push("");
     const title = `${renderer.pick({ emoji: section.glyph ? `${section.glyph} ` : "", ascii: "" })}${section.title}`;
+    const item = renderer.paint(renderer.glyphs.item, "dim");
     const body = !section.items.length
-      ? [`${renderer.glyphs.item} none`]
+      ? [`${item} none`]
       : section.kind === "tree"
         ? renderer.tree(section.items).split("\n")
-        : section.items.map((item) => `${renderer.glyphs.item} ${item}`);
+        : section.items.map((line) => `${item} ${line}`);
     lines.push(renderer.section(title, body));
   }
 

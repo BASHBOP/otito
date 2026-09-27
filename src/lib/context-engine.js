@@ -379,7 +379,9 @@ export function formatContextPackTerminal(data, rendererFactory) {
     renderer.section(
       `${decor("▶️")}Commands`,
       data.commands.length
-        ? data.commands.map((/** @type {EngineCommand} */ command) => `${renderer.glyphs.item} ${command.command}\n    ${command.reason}`)
+        ? data.commands.map(
+            (/** @type {EngineCommand} */ command) => `${renderer.paint(renderer.glyphs.item, "dim")} ${command.command}\n    ${command.reason}`,
+          )
         : [renderer.bullet("none inferred")],
     ),
   );
