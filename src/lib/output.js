@@ -23,7 +23,7 @@ export function formatTerminalSummary(input) {
     lines.push("");
     lines.push(
       renderer.section(
-        renderer.emoji ? "📌 At a glance" : "At a glance",
+        `${renderer.pick({ emoji: "📌 ", ascii: "" })}At a glance`,
         input.facts.map(([label, value]) => `${label}: ${value}`),
       ),
     );
@@ -33,8 +33,8 @@ export function formatTerminalSummary(input) {
     lines.push("");
     lines.push(
       renderer.section(
-        `${section.glyph && renderer.emoji ? `${section.glyph} ` : ""}${section.title}`,
-        section.items.length ? section.items.map((item) => `${renderer.emoji ? "•" : "-"} ${item}`) : [renderer.emoji ? "• none" : "- none"],
+        `${renderer.pick({ emoji: section.glyph ? `${section.glyph} ` : "", ascii: "" })}${section.title}`,
+        section.items.length ? section.items.map((item) => `${renderer.glyphs.item} ${item}`) : [`${renderer.glyphs.item} none`],
       ),
     );
   }

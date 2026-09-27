@@ -297,6 +297,8 @@ function formatModelRead(read) {
  */
 export function formatContextPackTerminal(data, rendererFactory) {
   const renderer = rendererFactory({});
+  // A section's own emoji, shown only by the emoji set; ascii keeps its ">".
+  const decor = (/** @type {string} */ emoji) => renderer.pick({ emoji: `${emoji} `, ascii: "> ", unicode: "" });
   /** @type {string[]} */
   const lines = [];
   const repoCount = data.repos.length;
@@ -315,7 +317,7 @@ export function formatContextPackTerminal(data, rendererFactory) {
   if (modelRead.length) {
     lines.push(
       renderer.section(
-        `${renderer.emoji ? "🤖" : ">"} Model read`,
+        `${decor("🤖")}Model read`,
         modelRead.map((line) => renderer.bullet(line.slice(2))),
       ),
     );
@@ -325,10 +327,10 @@ export function formatContextPackTerminal(data, rendererFactory) {
   if (data.hotspots.length) {
     lines.push(
       renderer.section(
-        `${renderer.emoji ? "🔥" : ">"} Start here`,
+        `${decor("🔥")}Start here`,
         data.hotspots.slice(0, 8).map((/** @type {any} */ hotspot, /** @type {number} */ index) => {
           const location = `${hotspot.path}${hotspot.line ? `:${hotspot.line}` : ""}`;
-          return `${rankLabel(index, renderer.emoji)} ${location}  ${hotspot.type} ${hotspot.symbol}  ${formatMatch(hotspot.matchedTokens)}`;
+          return `${rankLabel(index, renderer)} ${location}  ${hotspot.type} ${hotspot.symbol}  ${formatMatch(hotspot.matchedTokens)}`;
         }),
       ),
     );
@@ -336,16 +338,16 @@ export function formatContextPackTerminal(data, rendererFactory) {
     lines.push(renderer.tip("No precise symbol hotspots yet. Start with the primary files, then refine the query with a route or method name."));
   }
 
-  appendFileSection(lines, renderer, `${renderer.emoji ? "🥇" : ">"} Primary files`, data.primaryFiles, "No primary files matched the query.", true);
-  appendFileSection(lines, renderer, `${renderer.emoji ? "🔗" : ">"} Related files`, data.relatedFiles, "No related files selected.", false);
-  appendFileSection(lines, renderer, `${renderer.emoji ? "🧪" : ">"} Tests`, data.tests, "No matching tests found.", false);
+  appendFileSection(lines, renderer, `${decor("🥇")}Primary files`, data.primaryFiles, "No primary files matched the query.", true);
+  appendFileSection(lines, renderer, `${decor("🔗")}Related files`, data.relatedFiles, "No related files selected.", false);
+  appendFileSection(lines, renderer, `${decor("🧪")}Tests`, data.tests, "No matching tests found.", false);
 
   lines.push("");
   lines.push(
     renderer.section(
-      `${renderer.emoji ? "▶️" : ">"} Commands`,
+      `${decor("▶️")}Commands`,
       data.commands.length
-        ? data.commands.map((/** @type {EngineCommand} */ command) => `${renderer.emoji ? "•" : "-"} ${command.command}\n    ${command.reason}`)
+        ? data.commands.map((/** @type {EngineCommand} */ command) => `${renderer.glyphs.item} ${command.command}\n    ${command.reason}`)
         : [renderer.bullet("none inferred")],
     ),
   );
@@ -358,7 +360,7 @@ export function formatContextPackTerminal(data, rendererFactory) {
     lines.push("");
     lines.push(
       renderer.section(
-        `${renderer.emoji ? "❓" : ">"} Check before changing`,
+        `${decor("❓")}Check before changing`,
         data.openQuestions.map((/** @type {string} */ question) => renderer.bullet(question)),
       ),
     );
@@ -386,10 +388,10 @@ function appendFileSection(lines, renderer, title, files, fallback, ranked = fal
       title,
       files.length
         ? files.map((file, index) => {
-            const rank = ranked ? `${rankLabel(index, renderer.emoji)} ` : "";
+            const rank = ranked ? `${rankLabel(index, renderer)} ` : "";
             const method = file.httpMethods?.[0];
             const route = method ? ` · ${method.method} ${method.path}` : "";
-            const reasons = file.reasons.length ? `\n    ${renderer.emoji ? "└─" : "|-"} ${file.reasons.join(" · ")}` : "";
+            const reasons = file.reasons.length ? `\n    ${renderer.glyphs.box.arrow} ${file.reasons.join(" · ")}` : "";
             return `${rank}${file.path}  ${file.kind}/${file.domain} · score ${file.score}${route}${reasons}`;
           })
         : [renderer.bullet(fallback)],
@@ -398,12 +400,12 @@ function appendFileSection(lines, renderer, title, files, fallback, ranked = fal
 }
 
 /**
+ * A medal in the emoji set, a number everywhere else.
  * @param {number} index
- * @param {boolean} emoji
+ * @param {ReturnType<import("./render/fancy.js").createRenderer>} renderer
  */
-function rankLabel(index, emoji) {
-  if (!emoji) return `${index + 1}.`;
-  return ["🥇", "🥈", "🥉"][index] ?? "🏅";
+function rankLabel(index, renderer) {
+  return renderer.pick({ emoji: ["🥇", "🥈", "🥉"][index] ?? "🏅", ascii: `${index + 1}.` });
 }
 
 /**

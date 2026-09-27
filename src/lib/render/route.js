@@ -27,8 +27,8 @@ export function formatRouteTerminal(data, renderer) {
   const dim = (/** @type {string} */ text) => paint(text, "2");
   const bold = (/** @type {string} */ text) => paint(text, "1");
 
-  const cell = renderer.emoji ? "█" : "#";
-  const empty = renderer.emoji ? "░" : ".";
+  const cell = renderer.pick({ emoji: "█", ascii: "#", unicode: "█" });
+  const empty = renderer.pick({ emoji: "░", ascii: ".", unicode: "░" });
 
   const bar = (/** @type {number} */ from, /** @type {number} */ to, /** @type {string} */ code) => {
     const lo = Math.max(0, Math.min(from, to));

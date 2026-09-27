@@ -1215,6 +1215,8 @@ export function formatImpactTerminal(data, rendererFactory) {
   /** @type {string[]} */
   const lines = [];
   const renderer = rendererFactory({});
+  // A section's own emoji, shown only by the emoji set; ascii keeps its ">".
+  const decor = (/** @type {string} */ emoji) => renderer.pick({ emoji: `${emoji} `, ascii: "> ", unicode: "" });
   const headlines = [
     { text: `"${data.query}"`, glyph: "💬" },
     { text: `${data.repo.root} · ${data.repo.sourceFileCount} source file(s)`, glyph: "📂" },
@@ -1223,35 +1225,35 @@ export function formatImpactTerminal(data, rendererFactory) {
   lines.push("");
   if (data.concepts.length) {
     lines.push(
-      `  ${renderer.emoji ? "🧠" : "[?]"}  concepts: ${data.concepts.map((/** @type {string} */ c) => `${glyphFor(c) || ""} ${c}`.trim()).join(" · ")}`,
+      `  ${renderer.pick({ emoji: "🧠", ascii: "[?]" })}  concepts: ${data.concepts.map((/** @type {string} */ c) => `${glyphFor(c) || ""} ${c}`.trim()).join(" · ")}`,
     );
     lines.push("");
   }
   for (const [index, file] of data.topFiles.entries()) {
-    const rank = renderer.emoji ? (RANK_GLYPHS[index] ?? "  ") : `${(index + 1).toString().padStart(2, " ")}.`;
+    const rank = renderer.pick({ emoji: RANK_GLYPHS[index] ?? "  ", ascii: `${(index + 1).toString().padStart(2, " ")}.` });
     lines.push(`  ${rank}  ${file.path}    score ${file.score}`);
-    lines.push(`       ${renderer.emoji ? "└─" : "|-"} role: ${file.role}`);
+    lines.push(`       ${renderer.glyphs.box.arrow} role: ${file.role}`);
     for (const reason of file.reasons.slice(0, 4)) {
-      lines.push(`       ${renderer.emoji ? "└─" : "|-"} ${reason}`);
+      lines.push(`       ${renderer.glyphs.box.arrow} ${reason}`);
     }
     if (file.riskFlags.length) {
       lines.push(
-        `       ${renderer.emoji ? "└─" : "|-"} risk: ${file.riskFlags.map((/** @type {string} */ flag) => `${glyphFor(flag) || ""} ${flag}`.trim()).join(" · ")}`,
+        `       ${renderer.glyphs.box.arrow} risk: ${file.riskFlags.map((/** @type {string} */ flag) => `${glyphFor(flag) || ""} ${flag}`.trim()).join(" · ")}`,
       );
     }
     lines.push("");
   }
   lines.push(
     renderer.section(
-      `${renderer.emoji ? "🧪" : ">"} Suggested tests`,
-      data.testSuggestions.slice(0, 8).map((/** @type {string} */ t) => `${renderer.emoji ? "•" : "-"} ${t}`),
+      `${decor("🧪")}Suggested tests`,
+      data.testSuggestions.slice(0, 8).map((/** @type {string} */ t) => `${renderer.glyphs.item} ${t}`),
     ),
   );
   lines.push("");
   lines.push(
     renderer.section(
-      `${renderer.emoji ? "🚨" : ">"} Risk hotspots`,
-      data.risks.slice(0, 6).map((/** @type {string} */ r) => `${renderer.emoji ? "•" : "-"} ${r}`),
+      `${decor("🚨")}Risk hotspots`,
+      data.risks.slice(0, 6).map((/** @type {string} */ r) => `${renderer.glyphs.item} ${r}`),
     ),
   );
   if (data.validation) {
@@ -1259,7 +1261,7 @@ export function formatImpactTerminal(data, rendererFactory) {
     const v = data.validation;
     lines.push(
       renderer.section(
-        `${renderer.emoji ? "🔍" : ">"} Diff validation (base ${v.base})`,
+        `${decor("🔍")}Diff validation (base ${v.base})`,
         v.ok
           ? [
               `verdict: ${v.verdict}`,
@@ -1273,7 +1275,7 @@ export function formatImpactTerminal(data, rendererFactory) {
     );
   }
   lines.push("");
-  lines.push(`  ${renderer.emoji ? "📦" : "[i]"} Token estimate: JSON ${data.tokenEstimate.fullJson} · markdown ${data.tokenEstimate.markdown}`);
+  lines.push(`  ${renderer.pick({ emoji: "📦", ascii: "[i]" })} Token estimate: JSON ${data.tokenEstimate.fullJson} · markdown ${data.tokenEstimate.markdown}`);
   return lines.join("\n");
 }
 

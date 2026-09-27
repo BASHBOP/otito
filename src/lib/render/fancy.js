@@ -28,6 +28,7 @@
  * @property {string} tip      tip line marker
  * @property {string} dash     em dash for prose ("Not verified — ...")
  * @property {string} listDash en dash between a command and what it does
+ * @property {string} item     marker in front of an item a formatter lists itself
  */
 
 /** @type {Record<GlyphMode, GlyphSet>} */
@@ -44,6 +45,7 @@ const GLYPH_SETS = {
     tip: "💡",
     dash: "—",
     listDash: "–",
+    item: "•",
   },
   ascii: {
     status: { pass: "[OK]  ", warn: "[WARN]", fail: "[FAIL]", info: "[INFO]" },
@@ -57,6 +59,7 @@ const GLYPH_SETS = {
     tip: "[i]",
     dash: "-",
     listDash: "-",
+    item: "-",
   },
   unicode: {
     status: { pass: "✓", warn: "!", fail: "✗", info: "·" },
@@ -70,6 +73,7 @@ const GLYPH_SETS = {
     tip: "›",
     dash: "—",
     listDash: "–",
+    item: "•",
   },
 };
 
@@ -230,6 +234,17 @@ export function createRenderer(options = {}) {
    */
   function paint(text, ...names) {
     return c(text, ...names.map((name) => palette[name]));
+  }
+
+  /**
+   * The mark for the current glyph mode, for a decoration only one formatter
+   * uses (a section's emoji, a bar cell). A mode without its own mark falls
+   * back to the ascii one, so nothing can print undefined.
+   * @param {{ emoji?: string, ascii?: string, unicode?: string }} marks
+   * @returns {string}
+   */
+  function pick(marks) {
+    return marks[glyphMode] ?? marks.ascii ?? "";
   }
 
   /**
@@ -516,6 +531,7 @@ export function createRenderer(options = {}) {
     phase,
     close,
     paint,
+    pick,
     glyphs,
     glyphMode,
     emoji,

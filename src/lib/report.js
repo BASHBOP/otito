@@ -1,5 +1,6 @@
 import { getDoctorReport } from "./doctor.js";
 import { getToolMatrix } from "./matrix.js";
+import { createRenderer } from "./render/fancy.js";
 import { inspectRepo } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
@@ -151,12 +152,21 @@ function formatReportMarkdown(data) {
 }
 
 /**
+ * @typedef {{ width: number, renderer: ReturnType<typeof createRenderer> }} Layout
+ */
+
+/**
+ * The report has no glyphs of its own yet, so the renderer changes nothing it
+ * prints today; it is created here, from the same preferences every other
+ * command honours, so `--no-emoji`, `--color` and `--theme` reach the report
+ * and its blocks can use it when they take otito's shared shape.
  * @param {ReportData} data
- * @param {{ columns?: number }} [options]
+ * @param {{ columns?: number, emoji?: boolean, color?: boolean, theme?: string }} [options]
  * @returns {string}
  */
 export function formatReportTerminal(data, options = {}) {
-  const width = normalizeColumns(options.columns);
+  /** @type {Layout} */
+  const layout = { width: normalizeColumns(options.columns), renderer: createRenderer({ emoji: options.emoji, color: options.color, theme: options.theme }) };
   const repo = data.repo;
   const missing = data.doctor.tools.filter((tool) => !tool.available);
   const present = data.doctor.tools.filter((tool) => tool.available);
@@ -164,7 +174,7 @@ export function formatReportTerminal(data, options = {}) {
     "otito Field Report",
     "=".repeat("otito Field Report".length),
     `Generated: ${data.generatedAt}`,
-    ...formatLabeledParagraph("Status", formatStatusLine(data), { width }),
+    ...formatLabeledParagraph("Status", formatStatusLine(data), layout),
   ];
 
   addSection(lines, "At a Glance");
@@ -178,15 +188,15 @@ export function formatReportTerminal(data, options = {}) {
         ["Package managers", repo.packageManagers.join(", ") || "none detected"],
         ["Entrypoints", repo.entrypoints.join(", ") || "none detected"],
       ],
-      { width },
+      layout,
     ),
   );
 
   addSection(lines, "Ready Tools");
-  lines.push(...formatToolRows(present, { width, fallback: "none" }));
+  lines.push(...formatToolRows(present, { ...layout, fallback: "none" }));
 
   addSection(lines, "Optional Gaps");
-  lines.push(...formatToolRows(missing, { width, fallback: "none", includeHint: true }));
+  lines.push(...formatToolRows(missing, { ...layout, fallback: "none", includeHint: true }));
 
   addSection(lines, "Best Fits");
   if (data.matrix.tools.length) {
@@ -202,7 +212,7 @@ export function formatReportTerminal(data, options = {}) {
             ["Pilot", tool.pilotUse],
             ["Notes", tool.notes],
           ],
-          { width, indent: "    " },
+          { ...layout, indent: "    " },
         ),
       );
     });
@@ -220,12 +230,12 @@ export function formatReportTerminal(data, options = {}) {
         "Add Daytona after execution isolation becomes a real workflow requirement.",
         "Add MCP/Harnss integration after CLI JSON output has stabilized.",
       ],
-      { width },
+      layout,
     ),
   );
 
   addSection(lines, "Token Use");
-  lines.push(...formatTokenSummary(data, { width }));
+  lines.push(...formatTokenSummary(data, layout));
 
   return lines.join("\n");
 }

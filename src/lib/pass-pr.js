@@ -971,8 +971,8 @@ export function formatPassPrTerminal(data, rendererFactory) {
   );
 
   lines.push("");
-  lines.push(`  ${renderer.emoji ? "💡" : "[i]"}  Context evidence:`);
-  for (const command of data.contextEvidence) lines.push(`     ${renderer.emoji ? "•" : "-"} ${command}`);
+  lines.push(`  ${renderer.glyphs.tip}  Context evidence:`);
+  for (const command of data.contextEvidence) lines.push(`     ${renderer.glyphs.item} ${command}`);
   return lines.join("\n");
 }
 

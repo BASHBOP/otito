@@ -1190,11 +1190,20 @@ async function handleReport(parsed) {
     return;
   }
 
-  await printDocument(parsed, formatReportTerminal(result.data, { columns: process.stdout.columns }), {
-    // report's RepoInfo carries a root path, not a name.
-    title: `REPORT   ${basename(result.data?.repo?.root ?? "")}`,
-    glyph: "\u{1F4C4}",
-  });
+  await printDocument(
+    parsed,
+    formatReportTerminal(result.data, {
+      columns: process.stdout.columns,
+      emoji: emojiPreference(parsed),
+      color: colorPreference(parsed),
+      theme: themePreference(parsed),
+    }),
+    {
+      // report's RepoInfo carries a root path, not a name.
+      title: `REPORT   ${basename(result.data?.repo?.root ?? "")}`,
+      glyph: "\u{1F4C4}",
+    },
+  );
 }
 
 /** @param {CliArgs} parsed */

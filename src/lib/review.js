@@ -156,62 +156,61 @@ export function formatReviewTerminal(data, rendererFactory) {
   lines.push("");
 
   lines.push(
-    `  ${renderer.emoji ? "🎯" : ">"}  Impact   ${bar(data.impactSummary.topFiles.length, 8, renderer.emoji)}   ${data.impactSummary.topFiles.length} owner file(s) · ${data.impactSummary.concepts.length} concept(s)`,
+    `  ${renderer.pick({ emoji: "🎯", ascii: ">" })}  Impact   ${bar(data.impactSummary.topFiles.length, 8, renderer)}   ${data.impactSummary.topFiles.length} owner file(s) · ${data.impactSummary.concepts.length} concept(s)`,
   );
   lines.push(
-    `  ${renderer.emoji ? "📋" : ">"}  Context  ${bar(data.prReviewSummary.changedFiles, 20, renderer.emoji)}   ${data.prReviewSummary.changedFiles} changed file(s) · risk ${data.prReviewSummary.riskLevel ?? "?"}`,
+    `  ${renderer.pick({ emoji: "📋", ascii: ">" })}  Context  ${bar(data.prReviewSummary.changedFiles, 20, renderer)}   ${data.prReviewSummary.changedFiles} changed file(s) · risk ${data.prReviewSummary.riskLevel ?? "?"}`,
   );
   lines.push(
-    `  ${renderer.emoji ? "🚦" : ">"}  Pass     ${statusGlyph(renderer.emoji, data.verdict)}  ${data.verdict}        policy ${data.pass.policy} · governance ${data.pass.governance}`,
+    `  ${renderer.pick({ emoji: "🚦", ascii: ">" })}  Pass     ${statusGlyph(renderer, data.verdict)}  ${data.verdict}        policy ${data.pass.policy} · governance ${data.pass.governance}`,
   );
-  lines.push(`  ${renderer.emoji ? "🎓" : ">"}  Confidence  ${bar(data.confidence, 100, renderer.emoji)}   ${data.confidence}%`);
+  lines.push(`  ${renderer.pick({ emoji: "🎓", ascii: ">" })}  Confidence  ${bar(data.confidence, 100, renderer)}   ${data.confidence}%`);
   lines.push("");
 
   if (data.impactSummary.topFiles.length) {
-    lines.push(`  ${renderer.emoji ? "🥇" : ">"}  Owner files`);
+    lines.push(`  ${renderer.pick({ emoji: "🥇", ascii: ">" })}  Owner files`);
     for (const file of data.impactSummary.topFiles) {
-      lines.push(`     ${renderer.emoji ? "└─" : "|-"} ${file.path} (score ${file.score})`);
+      lines.push(`     ${renderer.glyphs.box.arrow} ${file.path} (score ${file.score})`);
     }
     lines.push("");
   }
   const failing = data.pass.checks.filter((c) => c.status === "FAIL");
   const warning = data.pass.checks.filter((c) => c.status === "WARN");
   if (failing.length) {
-    lines.push(`  ${renderer.emoji ? "❌" : "[FAIL]"}  Blocking checks`);
-    for (const check of failing) lines.push(`     ${renderer.emoji ? "└─" : "|-"} ${check.name}: ${check.summary}`);
+    lines.push(`  ${renderer.glyphs.status.fail}  Blocking checks`);
+    for (const check of failing) lines.push(`     ${renderer.glyphs.box.arrow} ${check.name}: ${check.summary}`);
     lines.push("");
   }
   if (warning.length) {
-    lines.push(`  ${renderer.emoji ? "⚠️ " : "[WARN]"} Warnings`);
-    for (const check of warning) lines.push(`     ${renderer.emoji ? "└─" : "|-"} ${check.name}: ${check.summary}`);
+    lines.push(`  ${renderer.glyphs.status.warn} Warnings`);
+    for (const check of warning) lines.push(`     ${renderer.glyphs.box.arrow} ${check.name}: ${check.summary}`);
     lines.push("");
   }
   return lines.join("\n");
 }
 
+/** @typedef {ReturnType<typeof import("./render/fancy.js").createRenderer>} Renderer */
+
 /**
  * @param {number} value
  * @param {number} max
- * @param {boolean} emoji
+ * @param {Renderer} renderer
  * @returns {string}
  */
-function bar(value, max, emoji) {
+function bar(value, max, renderer) {
   const cells = 10;
   const filled = Math.max(0, Math.min(cells, Math.round((value / max) * cells)));
-  if (emoji) return `${"▰".repeat(filled)}${"▱".repeat(cells - filled)}`;
-  return `[${"#".repeat(filled)}${".".repeat(cells - filled)}]`;
+  const track = `${renderer.pick({ emoji: "▰", ascii: "#", unicode: "▰" }).repeat(filled)}${renderer.pick({ emoji: "▱", ascii: ".", unicode: "▱" }).repeat(cells - filled)}`;
+  return renderer.pick({ emoji: track, ascii: `[${track}]`, unicode: track });
 }
 
 /**
- * @param {boolean} emoji
+ * @param {Renderer} renderer
  * @param {string} verdict
  * @returns {string}
  */
-function statusGlyph(emoji, verdict) {
-  if (!emoji) return `[${verdict}]`;
-  if (verdict === "PASS") return "✅";
-  if (verdict === "WARN") return "⚠️ ";
-  return "❌";
+function statusGlyph(renderer, verdict) {
+  return renderer.glyphs.verdict[verdict] ?? `[${verdict}]`;
 }
 
 /**
