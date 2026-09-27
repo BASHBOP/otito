@@ -463,3 +463,77 @@ test("generateImpact ranks a docs page as the owner of a documentation request",
   assert.equal(top[0], "docs/18-model-routing/README.md", `expected the docs page at #1, got: ${top.join(", ")}`);
   assert.deepEqual(result.data.classifications.requiredOwners, ["docs/18-model-routing/README.md"]);
 });
+
+// Regressions from the bashbop-event-web review (2026-09-27). The fixture
+// mirrors that repository: five locales of one catalog, `utils/create-event.ts`
+// defining the `combineDateAndTime` that `services/event-service.ts` imports,
+// an unused duplicate in `utils/combineDateAndTime.ts`, and a local copy in
+// `aiEventSchema.ts`.
+const multiLocaleFixture = path.resolve("evals/fixtures/multi-locale-web");
+const overnightRequest =
+  "fix overnight event bug: combineDateAndTime doesn't roll over to next day; event-service.ts basic time validation only compares getHours; EditableDate.tsx inline edit blocks overnight ranges";
+
+test("generateImpact pins files the request names as required owners, ahead of every unnamed file", () => {
+  const result = generateImpact(overnightRequest, { path: multiLocaleFixture, top: 12 });
+  const top = result.data.topFiles.map((file) => file.path);
+
+  assert.deepEqual(top.slice(0, 2), ["services/event-service.ts", "components/inline-edit/EditableDate.tsx"], `named files must lead, got ${top.join(", ")}`);
+  for (const file of ["services/event-service.ts", "components/inline-edit/EditableDate.tsx"]) {
+    assert.ok(result.data.classifications.requiredOwners.includes(file), `${file} is named, so it must be a required owner`);
+  }
+  assert.match(result.data.topFiles[0].reasons.join(" | "), /named in the request as `event-service\.ts`/);
+});
+
+test("generateImpact ranks the imported definition of a named symbol above an unused duplicate that shares its name", () => {
+  const result = generateImpact(overnightRequest, { path: multiLocaleFixture, top: 12 });
+  const top = result.data.topFiles.map((file) => file.path);
+  const used = top.indexOf("utils/create-event.ts");
+  const duplicate = top.indexOf("utils/combineDateAndTime.ts");
+
+  assert.ok(
+    used >= 0 && used < duplicate,
+    `the definition event-service.ts imports (#${used}) must beat the unused duplicate (#${duplicate}): ${top.join(", ")}`,
+  );
+  assert.ok(result.data.classifications.requiredOwners.includes("utils/create-event.ts"));
+  assert.match(result.data.topFiles[used].reasons.join(" | "), /defines `combineDateAndTime` \(line 1\).*imported by 1 file/);
+  assert.ok(top.includes("components/conversational/utils/aiEventSchema.ts"), "a local definition of the named symbol must surface too");
+});
+
+test("generateImpact does not score the extension of a named file", () => {
+  const result = generateImpact(overnightRequest, { path: multiLocaleFixture, top: 12 });
+  for (const file of result.data.topFiles) {
+    for (const reason of file.reasons) assert.doesNotMatch(reason, /matches: .*\b(ts|tsx)\b/, `${file.path}: ${reason}`);
+  }
+});
+
+test("generateImpact demotes a translation catalog for a code request and folds its locales into one entry", () => {
+  const result = generateImpact("validate that an overnight event end time is not before the start date", { path: multiLocaleFixture, top: 12 });
+  const catalogs = result.data.topFiles.filter((file) => file.kind === "translation");
+
+  assert.ok(catalogs.length <= 1, `one entry per catalog, got ${catalogs.map((file) => file.path).join(", ")}`);
+  if (catalogs.length) {
+    assert.deepEqual(catalogs[0].siblings, ["messages/en-NG.json", "messages/en-US.json", "messages/fr.json", "messages/pcm-NG.json"]);
+    assert.ok(catalogs[0].reasons.some((reason) => reason.startsWith("translation catalog, demoted")));
+    const top = result.data.topFiles.map((file) => file.path);
+    assert.ok(top.indexOf(catalogs[0].path) > top.indexOf("services/event-service.ts"), "the catalog must rank below the code that owns the rule");
+    // Folded locales keep the catalog's role, so changing one is not drift.
+    for (const sibling of catalogs[0].siblings) assert.ok(!result.data.classifications.requiredOwners.includes(sibling));
+    assert.ok(catalogs[0].siblings.every((sibling) => result.data.classifications.advisoryFiles.includes(sibling)));
+  }
+});
+
+test("generateImpact keeps a translation catalog at full weight for a copy request, still as one entry", () => {
+  const result = generateImpact("fix the wording and translation of the overnight event end time warning", { path: multiLocaleFixture, top: 12 });
+  const catalogs = result.data.topFiles.filter((file) => file.kind === "translation");
+
+  assert.equal(catalogs.length, 1, `expected one catalog entry, got ${catalogs.map((file) => file.path).join(", ")}`);
+  assert.ok(!catalogs[0].reasons.some((reason) => reason.includes("demoted")), catalogs[0].reasons.join(" | "));
+  assert.equal(catalogs[0].siblings?.length, 4);
+});
+
+test("generateImpact suggests only tests a runner executes", () => {
+  const result = generateImpact("fix the event service date and time validation tests", { path: multiLocaleFixture, top: 12 });
+  const suggested = result.data.testSuggestions.filter((line) => line.startsWith("Inspect or run related test"));
+  assert.ok(suggested.length > 0, "expected related test suggestions");
+  for (const line of suggested) assert.match(line, /\.(test|spec)\.[jt]sx?`$/, line);
+});

@@ -159,7 +159,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@3.2.0
+    npm install -g @bashbop/otito@3.3.0
     otito doctor
     otito context "review this change" --path .
     ```
@@ -167,7 +167,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@3.2.0 doctor
+    npx -y @bashbop/otito@3.3.0 doctor
     ```
 
 === "Source Checkout"

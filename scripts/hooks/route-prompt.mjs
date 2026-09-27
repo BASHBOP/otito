@@ -143,6 +143,48 @@ const CONVERSATIONAL =
   /^(y|n|ok(ay)?|yes|no|yep|yeah|nope|sure|thanks|thank you|ta|cheers|go|go on|go ahead|continue|carry on|keep going|do it|please|stop|wait|hold on|nvm|never mind|undo|same|agreed|sounds good|lgtm|ship it)\b[\s.!?]*$/i;
 
 /**
+ * What the harness submits through `UserPromptSubmit` on its own: a background
+ * task finishing, the desktop app's CI monitor reporting, and the record of a
+ * `!` shell command with its output. None of them is a request, and whatever
+ * work follows belongs to one that was already routed.
+ *
+ * The list is what was measured, not what might exist. On 2026-09-27 each
+ * wrapper was matched by prompt hash to decisions this hook had logged (75, 1
+ * and 3 of 146), so each demonstrably reaches the hook. `<command-name>` and
+ * `<local-command-stdout>` fill the transcripts and never reached it.
+ * `<create-pr-command>`, `<cross-session-message>` and `<pasted_content>` did,
+ * and still route, because each carries a request.
+ */
+const HARNESS_PROMPT = /^<(task-notification|ci-monitor-event|bash-input)[\s>]/;
+
+/** A reminder the harness puts in front of what the user typed. */
+const LEADING_REMINDER = /^<system-reminder>[\s\S]*?<\/system-reminder>\s*/;
+
+/**
+ * The prompt without the reminders the harness put in front of it. Every
+ * logged prompt that opened with a reminder had a request behind it, so the
+ * reminder is looked past, never taken as a reason to skip.
+ * @param {string} prompt
+ * @returns {string}
+ */
+function withoutReminders(prompt) {
+  let text = String(prompt ?? "").trim();
+  while (LEADING_REMINDER.test(text)) text = text.replace(LEADING_REMINDER, "");
+  return text;
+}
+
+/**
+ * Whether the harness wrote this prompt, rather than a person asking for
+ * something. `route-outcomes` reads the same rule, so what the hook skips is
+ * what the grader leaves out.
+ * @param {string} prompt
+ * @returns {boolean}
+ */
+export function isHarnessPrompt(prompt) {
+  return HARNESS_PROMPT.test(withoutReminders(prompt));
+}
+
+/**
  * Whether a prompt is worth a routing call.
  *
  * Deliberately permissive: a request that is skipped costs nothing but a
@@ -153,8 +195,10 @@ const CONVERSATIONAL =
  * @returns {boolean}
  */
 export function isRoutable(prompt) {
-  const trimmed = (prompt ?? "").trim();
+  const trimmed = withoutReminders(prompt);
   if (!trimmed) return false;
+  // The harness wrote it: there is no request to score.
+  if (HARNESS_PROMPT.test(trimmed)) return false;
   // A slash command is handled by its own skill and is not a coding request.
   if (trimmed.startsWith("/")) return false;
   if (CONVERSATIONAL.test(trimmed)) return false;

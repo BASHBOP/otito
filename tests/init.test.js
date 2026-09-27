@@ -3,8 +3,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
-import { initProject } from "../src/lib/init.js";
+import { execFileSync, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { WORKFLOW_ACTION_VERSIONS, initProject } from "../src/lib/init.js";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const hookGateLine = /otito gate \. --staged --policy standard --out \.otito\/gate\.md/;
 
 test("initProject scaffolds otito files without overwriting by default", () => {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-"));
@@ -112,7 +116,7 @@ test("initProject injects a harness-driven quality job and pre-commit hook from 
   const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
   const qualitySection = workflow.split("  review:")[0];
   assert.match(workflow, /^ {2}quality:$/m);
-  assert.match(workflow, /actions\/setup-node@v4/);
+  assert.match(workflow, /actions\/setup-node@v7/);
   assert.match(qualitySection, /install Node dependencies\n {8}run: npm install/);
   assert.doesNotMatch(qualitySection, /install Node dependencies\n {8}run: npm ci/);
   assert.match(workflow, /run: npm run lint/);
@@ -126,7 +130,7 @@ test("initProject injects a harness-driven quality job and pre-commit hook from 
   assert.match(hook, /^#!\/bin\/sh/);
   assert.match(hook, /npm run lint/);
   assert.match(hook, /npm run typecheck/);
-  assert.match(hook, /otito gate \. --staged --out \.otito\/gate\.md/);
+  assert.match(hook, hookGateLine);
   // slow gates (test/build/audit) never run in the pre-commit hook
   assert.doesNotMatch(hook, /npm test/);
   // the hook must be executable
@@ -159,7 +163,7 @@ test("initProject installs the staged safety hook even when no static scripts ar
   assert.equal(result.precommitApplied, true);
   assert.equal(result.precommitStatus, "applied");
   const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
-  assert.match(hook, /otito gate \. --staged --out \.otito\/gate\.md/);
+  assert.match(hook, hookGateLine);
 });
 
 test("initProject uses npm ci when package-lock.json is present", () => {
@@ -185,9 +189,43 @@ test("initProject excludes non-static script names from the pre-commit hook", ()
 
   assert.equal(result.precommitApplied, true);
   const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
-  assert.match(hook, /otito gate \. --staged --out \.otito\/gate\.md/);
+  assert.match(hook, hookGateLine);
   assert.match(hook, /npm run lint/);
   assert.doesNotMatch(hook, /prototype/);
+  assert.doesNotMatch(hook, /npm test/);
+});
+
+test("initProject runs a type check named with a tsc segment in the quality job and the pre-commit hook", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-tsc-"));
+  fs.writeFileSync(
+    path.join(fixture, "package.json"),
+    JSON.stringify(
+      {
+        name: "sample",
+        scripts: {
+          lint: "eslint .",
+          "tsc:check": "tsc --noEmit",
+          "tsc:watch": "tsc --noEmit --watch",
+          "tsconfig:sync": "node scripts/sync-tsconfig.js",
+          test: "node --test",
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  initProject(fixture);
+
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
+  assert.match(workflow, /type contract checks\n {8}run: npm run tsc:check/);
+  assert.doesNotMatch(workflow, /tsc:watch|tsconfig:sync/);
+
+  const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
+  assert.match(hook, hookGateLine);
+  assert.match(hook, /npm run lint/);
+  assert.match(hook, /npm run tsc:check/);
+  assert.doesNotMatch(hook, /tsc:watch|tsconfig:sync/);
   assert.doesNotMatch(hook, /npm test/);
 });
 
@@ -213,4 +251,79 @@ test("initProject skips hooks path when no pre-commit hook was scaffolded", () =
   assert.equal(result.hooksPathRequested, true);
   assert.equal(result.hooksConfigured, false);
   assert.ok(result.nextSteps.some((step) => step.includes("core.hooksPath was not set")));
+});
+
+test("the pre-commit hook gates under --policy standard so a strict repository policy cannot fail every local commit", () => {
+  // A repository that sets `policy: company` in .otitorc.json means it for
+  // merge time: the company policy requires an approving review, which a
+  // commit that has not been pushed yet can never have. Without the flag the
+  // hook would inherit that policy and refuse every local commit.
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-policy-"));
+  fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint ." } }, null, 2));
+  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ policy: "company", governance: "team" }, null, 2));
+  fs.writeFileSync(path.join(fixture, "index.js"), "export const value = 1;\n");
+  const git = (/** @type {string[]} */ args) =>
+    execFileSync("git", ["-c", "user.name=otito", "-c", "user.email=otito@example.com", "-c", "commit.gpgsign=false", ...args], {
+      cwd: fixture,
+      stdio: "ignore",
+    });
+  git(["init", "--quiet"]);
+  git(["add", "--all"]);
+  git(["commit", "--quiet", "-m", "baseline"]);
+  fs.writeFileSync(path.join(fixture, "index.js"), "export const value = 2;\n");
+  git(["add", "--all"]);
+
+  const hook = fs.readFileSync(path.join(initProject(fixture).root, ".githooks", "pre-commit"), "utf8");
+  assert.match(hook, hookGateLine);
+
+  // The exact gate the hook runs, minus --out, in JSON so the verdict can be read.
+  const gate = (/** @type {string[]} */ extra) => {
+    const result = spawnSync(process.execPath, [path.join(repoRoot, "src", "cli.js"), "gate", ".", "--staged", ...extra, "--json"], {
+      cwd: fixture,
+      encoding: "utf8",
+      env: { ...process.env, OTITO_TELEMETRY: "0", OTITO_TELEMETRY_SHARE: "0" },
+    });
+    return { exitCode: result.status, data: JSON.parse(result.stdout) };
+  };
+  const inherited = gate([]);
+  assert.equal(inherited.data.policy, "company");
+  assert.equal(inherited.data.verdict, "FAIL", "the repository's own policy fails the staged gate");
+  assert.equal(inherited.exitCode, 1);
+
+  const hooked = gate(["--policy", "standard"]);
+  assert.equal(hooked.data.policy, "standard");
+  assert.notEqual(hooked.data.verdict, "FAIL", "the hook's gate must not fail on review state alone");
+  assert.equal(hooked.exitCode, 0);
+});
+
+test("the generated workflow pins the same action majors as this repository's own CI", () => {
+  // The template is shipped in the package and cannot read otito-ci.yml at
+  // run time, so the majors are constants. This test is what keeps them from
+  // drifting behind the workflow the project itself runs on.
+  const usesOf = (/** @type {string} */ yaml) => {
+    /** @type {Map<string, string>} */
+    const majors = new Map();
+    for (const match of yaml.matchAll(/^\s*-?\s*uses:\s*([^@\s]+)@(v\d+)\s*$/gm)) {
+      const [, action, major] = match;
+      const seen = majors.get(action);
+      assert.ok(seen === undefined || seen === major, `${action} is pinned to both ${seen} and ${major}`);
+      majors.set(action, major);
+    }
+    return majors;
+  };
+
+  const own = usesOf(fs.readFileSync(path.join(repoRoot, ".github", "workflows", "otito-ci.yml"), "utf8"));
+  for (const [action, major] of Object.entries(WORKFLOW_ACTION_VERSIONS)) {
+    assert.equal(own.get(action), major, `${action}: template pins ${major}, otito-ci.yml uses ${own.get(action) ?? "nothing"}`);
+  }
+
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-majors-"));
+  fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint .", test: "node --test" } }, null, 2));
+  initProject(fixture);
+  const generated = usesOf(fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8"));
+  assert.ok(generated.size >= 3, "the generated workflow should use checkout, setup-node and upload-artifact");
+  for (const [action, major] of generated) {
+    if (!own.has(action)) continue;
+    assert.equal(major, own.get(action), `${action}: generated workflow pins ${major}, otito-ci.yml uses ${own.get(action)}`);
+  }
 });

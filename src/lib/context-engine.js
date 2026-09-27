@@ -1,7 +1,9 @@
 /// <reference types="node" />
 import path from "node:path";
+import { isRunnableTestPath } from "./code-map/classify.js";
 import { generateHarness } from "./harness.js";
 import { getCachedCodeMap } from "./index-cache.js";
+import { collapseLocaleSiblings, formatLocales, isCopyRequest, resolveNamedFiles, stripFileExtensions, TRANSLATION_DEMOTION } from "./ranking-rules.js";
 import { getGitInfo } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
@@ -37,6 +39,19 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @property {CodeMapSymbol[]} [symbols]
  * @property {Array<{ type: string, name: string, line?: number, matchedTokens: string[], score: number }>} [matchedSymbols]
  * @property {boolean} [hasPhraseMatch] - true when an exact multi-word query phrase (e.g. "date of birth") was found in this file's own text.
+ * @property {string[]} [siblings] - locale files of the same translation catalog this entry stands for.
+ */
+
+/**
+ * What the request says outright, keyed by `${repo.root}:${path}`: the files
+ * it names (`pinned`), the other definitions of a symbol it names
+ * (`definers`), the identifier-shaped words themselves (`symbols`), and
+ * whether it is about copy, the one request a translation catalog can own.
+ * @typedef {object} RequestRules
+ * @property {boolean} wantsCopy
+ * @property {Map<string, import('./ranking-rules.js').NamedFile & { order: number }>} pinned
+ * @property {Map<string, import('./ranking-rules.js').NamedFile>} definers
+ * @property {Set<string>} symbols
  */
 
 /**
@@ -64,8 +79,20 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @property {string} [path]
  */
 
-const contextEngineVersion = 3;
+// 4: a file the request names leads Primary Files, a translation catalog is
+// demoted unless the request is about copy and its locale files share one
+// entry (`siblings`), a named file's extension no longer scores, and Tests
+// lists only files a test runner executes.
+const contextEngineVersion = 4;
 const defaultLimit = 8;
+// A definition of a symbol the request names that is not the one the code
+// imports (that one is pinned): a local copy, an export nothing uses.
+const NAMED_DEFINER_BONUS = 60;
+// How far a named file sits above the best candidate the request did not name.
+const PIN_MARGIN = { path: 20, symbol: 10 };
+// Enough to put the definition of a named symbol ahead of every hotspot that
+// only shares words with the request.
+const NAMED_HOTSPOT_BONUS = 200;
 const stopWords = new Set([
   "a",
   "an",
@@ -129,17 +156,22 @@ export function generateContextPack(query, options = {}) {
     return { ...map, repo: { ...map.repo, git: getGitInfo(map.repo.root) } };
   });
   const graphs = new Map(maps.map((map) => [map.repo.root, buildImportGraph(map.files)]));
-  const tokens = tokenize(normalizedQuery);
-  const phrases = extractPhrases(normalizedQuery);
+  // The words of a named file score; its extension, shared by every file of
+  // that language, does not.
+  const termsQuery = stripFileExtensions(normalizedQuery);
+  const tokens = tokenize(termsQuery);
+  const phrases = extractPhrases(termsQuery);
   const intent = inferIntent(tokens);
   const tokenStats = computeTokenDocFrequency(maps, tokens);
-  const scoredFiles = scoreMaps(maps, tokens, intent, phrases, tokenStats);
-  const matchedPrimaryFiles = selectPrimaryFiles(scoredFiles, limit);
+  const rules = requestRules(maps, normalizedQuery, tokens, limit);
+  const scoredFiles = scoreMaps(maps, tokens, intent, phrases, tokenStats, rules);
+  const matchedPrimaryFiles = selectPrimaryFiles(scoredFiles, limit, rules);
   const usedFallback = matchedPrimaryFiles.length === 0;
   const primaryFiles = stripEvidence(usedFallback ? selectFallbackPrimaryFiles(maps, limit) : matchedPrimaryFiles, includeEvidence);
   const relatedFiles = stripEvidence(selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, limit), includeEvidence);
+  noteLocaleSiblings([...primaryFiles, ...relatedFiles]);
   const tests = stripEvidence(selectTests(maps, graphs, scoredFiles, primaryFiles, limit), includeEvidence);
-  const hotspots = buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens, tokenStats);
+  const hotspots = buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens, tokenStats, rules);
   const commands = inferCommands(repoPaths, normalizedQuery);
   const conflicts = inferConflicts(maps);
   const openQuestions = inferOpenQuestions(primaryFiles, commands, intent, usedFallback, hotspots);
@@ -297,6 +329,8 @@ function formatModelRead(read) {
  */
 export function formatContextPackTerminal(data, rendererFactory) {
   const renderer = rendererFactory({});
+  // A section's own emoji, shown only by the emoji set; ascii keeps its ">".
+  const decor = (/** @type {string} */ emoji) => renderer.pick({ emoji: `${emoji} `, ascii: "> ", unicode: "" });
   /** @type {string[]} */
   const lines = [];
   const repoCount = data.repos.length;
@@ -315,7 +349,7 @@ export function formatContextPackTerminal(data, rendererFactory) {
   if (modelRead.length) {
     lines.push(
       renderer.section(
-        `${renderer.emoji ? "🤖" : ">"} Model read`,
+        `${decor("🤖")}Model read`,
         modelRead.map((line) => renderer.bullet(line.slice(2))),
       ),
     );
@@ -325,10 +359,10 @@ export function formatContextPackTerminal(data, rendererFactory) {
   if (data.hotspots.length) {
     lines.push(
       renderer.section(
-        `${renderer.emoji ? "🔥" : ">"} Start here`,
+        `${decor("🔥")}Start here`,
         data.hotspots.slice(0, 8).map((/** @type {any} */ hotspot, /** @type {number} */ index) => {
           const location = `${hotspot.path}${hotspot.line ? `:${hotspot.line}` : ""}`;
-          return `${rankLabel(index, renderer.emoji)} ${location}  ${hotspot.type} ${hotspot.symbol}  ${formatMatch(hotspot.matchedTokens)}`;
+          return `${rankLabel(index, renderer)} ${location}  ${hotspot.type} ${hotspot.symbol}  ${formatMatch(hotspot.matchedTokens)}`;
         }),
       ),
     );
@@ -336,16 +370,18 @@ export function formatContextPackTerminal(data, rendererFactory) {
     lines.push(renderer.tip("No precise symbol hotspots yet. Start with the primary files, then refine the query with a route or method name."));
   }
 
-  appendFileSection(lines, renderer, `${renderer.emoji ? "🥇" : ">"} Primary files`, data.primaryFiles, "No primary files matched the query.", true);
-  appendFileSection(lines, renderer, `${renderer.emoji ? "🔗" : ">"} Related files`, data.relatedFiles, "No related files selected.", false);
-  appendFileSection(lines, renderer, `${renderer.emoji ? "🧪" : ">"} Tests`, data.tests, "No matching tests found.", false);
+  appendFileSection(lines, renderer, `${decor("🥇")}Primary files`, data.primaryFiles, "No primary files matched the query.", true);
+  appendFileSection(lines, renderer, `${decor("🔗")}Related files`, data.relatedFiles, "No related files selected.", false);
+  appendFileSection(lines, renderer, `${decor("🧪")}Tests`, data.tests, "No matching tests found.", false);
 
   lines.push("");
   lines.push(
     renderer.section(
-      `${renderer.emoji ? "▶️" : ">"} Commands`,
+      `${decor("▶️")}Commands`,
       data.commands.length
-        ? data.commands.map((/** @type {EngineCommand} */ command) => `${renderer.emoji ? "•" : "-"} ${command.command}\n    ${command.reason}`)
+        ? data.commands.map(
+            (/** @type {EngineCommand} */ command) => `${renderer.paint(renderer.glyphs.item, "dim")} ${command.command}\n    ${command.reason}`,
+          )
         : [renderer.bullet("none inferred")],
     ),
   );
@@ -358,7 +394,7 @@ export function formatContextPackTerminal(data, rendererFactory) {
     lines.push("");
     lines.push(
       renderer.section(
-        `${renderer.emoji ? "❓" : ">"} Check before changing`,
+        `${decor("❓")}Check before changing`,
         data.openQuestions.map((/** @type {string} */ question) => renderer.bullet(question)),
       ),
     );
@@ -386,10 +422,10 @@ function appendFileSection(lines, renderer, title, files, fallback, ranked = fal
       title,
       files.length
         ? files.map((file, index) => {
-            const rank = ranked ? `${rankLabel(index, renderer.emoji)} ` : "";
+            const rank = ranked ? `${rankLabel(index, renderer)} ` : "";
             const method = file.httpMethods?.[0];
             const route = method ? ` · ${method.method} ${method.path}` : "";
-            const reasons = file.reasons.length ? `\n    ${renderer.emoji ? "└─" : "|-"} ${file.reasons.join(" · ")}` : "";
+            const reasons = file.reasons.length ? `\n    ${renderer.glyphs.box.arrow} ${file.reasons.join(" · ")}` : "";
             return `${rank}${file.path}  ${file.kind}/${file.domain} · score ${file.score}${route}${reasons}`;
           })
         : [renderer.bullet(fallback)],
@@ -398,12 +434,12 @@ function appendFileSection(lines, renderer, title, files, fallback, ranked = fal
 }
 
 /**
+ * A medal in the emoji set, a number everywhere else.
  * @param {number} index
- * @param {boolean} emoji
+ * @param {ReturnType<import("./render/fancy.js").createRenderer>} renderer
  */
-function rankLabel(index, emoji) {
-  if (!emoji) return `${index + 1}.`;
-  return ["🥇", "🥈", "🥉"][index] ?? "🏅";
+function rankLabel(index, renderer) {
+  return renderer.pick({ emoji: ["🥇", "🥈", "🥉"][index] ?? "🏅", ascii: `${index + 1}.` });
 }
 
 /**
@@ -415,26 +451,88 @@ function formatMatch(tokens) {
 
 /**
  * @param {CodeMap[]} maps
+ * @param {string} query
+ * @param {string[]} tokens
+ * @param {number} limit
+ * @returns {RequestRules}
+ */
+function requestRules(maps, query, tokens, limit) {
+  /** @type {RequestRules} */
+  const rules = { wantsCopy: isCopyRequest(tokens), pinned: new Map(), definers: new Map(), symbols: new Set() };
+  for (const map of maps) {
+    const named = resolveNamedFiles(map.files ?? [], query, { limit });
+    for (const entry of named.pinned) rules.pinned.set(`${map.repo.root}:${entry.path}`, { ...entry, order: rules.pinned.size });
+    for (const entry of named.definers) rules.definers.set(`${map.repo.root}:${entry.path}`, entry);
+    for (const symbol of named.symbols) rules.symbols.add(symbol);
+  }
+  return rules;
+}
+
+/** @type {RequestRules} */
+const noRequestRules = { wantsCopy: false, pinned: new Map(), definers: new Map(), symbols: new Set() };
+
+/**
+ * @param {CodeMap[]} maps
  * @param {string[]} tokens
  * @param {Intent} intent
  * @param {PhraseCandidate[]} [phrases]
  * @param {TokenStats} [tokenStats]
+ * @param {RequestRules} [rules]
  * @returns {ScoredFile[]}
  */
-function scoreMaps(maps, tokens, intent, phrases = [], tokenStats) {
+function scoreMaps(maps, tokens, intent, phrases = [], tokenStats, rules = noRequestRules) {
   /** @type {ScoredFile[]} */
   const scored = [];
   const stats = tokenStats ?? computeTokenDocFrequency(maps, tokens);
   for (const map of maps) {
     for (const file of map.files ?? []) {
-      const candidate = scoreFile(map, file, tokens, intent, phrases, stats);
-      if (candidate.score > 0) {
+      const candidate = scoreFile(map, file, tokens, intent, phrases, stats, rules);
+      if (candidate.score > 0 || rules.pinned.has(fileKey(candidate))) {
         scored.push(candidate);
       }
     }
   }
 
-  return scored.sort((a, b) => b.score - a.score || a.repo.name.localeCompare(b.repo.name) || a.path.localeCompare(b.path));
+  liftPinnedFiles(scored, rules.pinned);
+  const pinOrder = (/** @type {ScoredFile} */ file) => rules.pinned.get(fileKey(file))?.order ?? Number.MAX_SAFE_INTEGER;
+  scored.sort((a, b) => b.score - a.score || pinOrder(a) - pinOrder(b) || a.repo.name.localeCompare(b.repo.name) || a.path.localeCompare(b.path));
+  return collapseLocaleSiblings(scored, describeScoredFile, (file) => rules.pinned.has(fileKey(file)));
+}
+
+/**
+ * Put each named file above every candidate the request did not name, keeping
+ * the named files in order among themselves. The recorded request named
+ * `event-service.ts` and got 21 files back without it.
+ * @param {ScoredFile[]} scored
+ * @param {RequestRules["pinned"]} pinned
+ */
+function liftPinnedFiles(scored, pinned) {
+  if (pinned.size === 0) return;
+  let ceiling = 0;
+  for (const file of scored) {
+    if (!pinned.has(fileKey(file))) ceiling = Math.max(ceiling, file.score);
+  }
+  for (const file of scored) {
+    const pin = pinned.get(fileKey(file));
+    if (!pin) continue;
+    file.score = Math.max(file.score, ceiling) + PIN_MARGIN[pin.rule];
+    file.reasons.push(pin.rule === "path" ? "named in request" : `defines ${pin.literal}, named in request`);
+  }
+}
+
+/** @param {ScoredFile} file */
+function describeScoredFile(file) {
+  return { path: file.path, kind: file.kind, scope: file.repo.root };
+}
+
+/**
+ * Say which locale files an entry stands for, once the lists are final.
+ * @param {ScoredFile[]} files
+ */
+function noteLocaleSiblings(files) {
+  for (const file of files) {
+    if (file.siblings?.length) file.reasons = [...file.reasons, `locale catalog, also ${formatLocales(file.siblings)}`];
+  }
 }
 
 /**
@@ -444,9 +542,10 @@ function scoreMaps(maps, tokens, intent, phrases = [], tokenStats) {
  * @param {Intent} intent
  * @param {PhraseCandidate[]} phrases
  * @param {TokenStats} tokenStats
+ * @param {RequestRules} [rules]
  * @returns {ScoredFile}
  */
-function scoreFile(map, file, tokens, intent, phrases = [], tokenStats) {
+function scoreFile(map, file, tokens, intent, phrases = [], tokenStats, rules = noRequestRules) {
   /** @type {string[]} */
   const reasons = [];
   let score = 0;
@@ -499,10 +598,45 @@ function scoreFile(map, file, tokens, intent, phrases = [], tokenStats) {
     reasons.push("test");
   }
 
+  // Every JSON key is a symbol, so a catalog of a few thousand keys reaches the
+  // symbol cap on almost any request: two locales of one catalog were Primary
+  // Files in all four recorded packs, one of them for "sync local main branch".
+  // Both lead the reasons, which the packet trims to eight.
+  if (file.kind === "translation" && !rules.wantsCopy && score > 0) {
+    score = Math.max(1, Math.floor(score * TRANSLATION_DEMOTION));
+    reasons.unshift("translation catalog, demoted");
+  }
+
+  const definer = rules.definers.get(`${map.repo.root}:${file.path}`);
+  if (definer) {
+    score += NAMED_DEFINER_BONUS;
+    reasons.unshift(`defines ${definer.literal}`);
+  }
+
   const summarized = summarizeFile(map, file, score, reasons);
-  summarized.matchedSymbols = symbolMatch.matches;
+  summarized.matchedSymbols = withNamedSymbols(symbolMatch.matches, file.symbols ?? [], tokens, rules.symbols);
   summarized.hasPhraseMatch = phraseScore > 0;
   return summarized;
+}
+
+/**
+ * The matched symbols, plus any symbol the request names outright that word
+ * overlap did not already rank, so its definition can lead the hotspots.
+ * @param {NonNullable<ScoredFile["matchedSymbols"]>} matches
+ * @param {CodeMapSymbol[]} symbols
+ * @param {string[]} tokens
+ * @param {Set<string>} named
+ * @returns {NonNullable<ScoredFile["matchedSymbols"]>}
+ */
+function withNamedSymbols(matches, symbols, tokens, named) {
+  if (named.size === 0) return matches;
+  const missing = symbols
+    .filter((symbol) => named.has(symbol.name) && !matches.some((match) => match.name === symbol.name && match.line === symbol.line))
+    .map((symbol) => {
+      const nameTokens = new Set(tokenize(symbol.name));
+      return { type: symbol.type, name: symbol.name, line: symbol.line, matchedTokens: tokens.filter((token) => nameTokens.has(token)), score: 0 };
+    });
+  return missing.length ? [...missing, ...matches] : matches;
 }
 
 /**
@@ -887,8 +1021,9 @@ function diversifyByDomain(files, limit, maxPerDomain = 3) {
  * @param {ScoredFile[]} relatedFiles
  * @param {string[]} tokens
  * @param {TokenStats} [tokenStats]
+ * @param {RequestRules} [rules]
  */
-function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens, tokenStats) {
+function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens, tokenStats, rules = noRequestRules) {
   const focusKeys = new Set([...primaryFiles, ...relatedFiles].map(fileKey));
   /** @type {Array<{ repo: string, path: string, kind: string, domain: string, symbol: string, type: string, line?: number, matchedTokens: string[], score: number, rank: number }>} */
   const hotspots = [];
@@ -897,14 +1032,22 @@ function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens, tokenSta
     if (!focusKeys.has(fileKey(file)) || !file.matchedSymbols?.length) {
       continue;
     }
+    const catalog = file.kind === "translation" && !rules.wantsCopy;
     for (const match of file.matchedSymbols) {
+      const named = rules.symbols.has(match.name);
+      // A catalog key sharing one word with the request is how ten `main*`
+      // keys became every hotspot for "sync local main branch". Distinct
+      // words: that request says `main` twice.
+      if (catalog && !named && new Set(match.matchedTokens).size < 2) {
+        continue;
+      }
       const topPrimary = primaryFiles.slice(0, 2).some((primary) => fileKey(primary) === fileKey(file));
       // Require the matched tokens to carry real specificity (rare across the
       // repo), not just a raw count of 2+ - two generic domain nouns (e.g.
       // "date" and "booking" both hitting `formatBookingDate`) shouldn't
       // qualify a symbol as a hotspot on their own.
       const specificity = match.matchedTokens.reduce((sum, token) => sum + tokenWeightFactor(token, tokenStats), 0);
-      if (specificity < 1.15 && !tokens.some((token) => token === normalizeText(file.domain)) && !topPrimary && !file.hasPhraseMatch) {
+      if (!named && specificity < 1.15 && !tokens.some((token) => token === normalizeText(file.domain)) && !topPrimary && !file.hasPhraseMatch) {
         continue;
       }
       hotspots.push({
@@ -917,7 +1060,11 @@ function buildHotspots(scoredFiles, primaryFiles, relatedFiles, tokens, tokenSta
         line: match.line,
         matchedTokens: match.matchedTokens,
         score: match.score,
-        rank: match.score + (topPrimary ? 12 : 0),
+        // The pinned definition of a named symbol (the one the code imports)
+        // leads its local copies and unused duplicates.
+        rank:
+          (match.score + (topPrimary ? 12 : 0)) * (catalog ? TRANSLATION_DEMOTION : 1) +
+          (named ? NAMED_HOTSPOT_BONUS * (rules.pinned.has(fileKey(file)) ? 2 : 1) : 0),
       });
     }
   }
@@ -944,15 +1091,20 @@ function formatHotspots(hotspots) {
 }
 
 /**
+ * Named files lead, ahead of the per-domain spread the rest of the list gets.
+ * A named test that a runner executes leads Tests instead.
  * @param {ScoredFile[]} scoredFiles
  * @param {number} limit
+ * @param {RequestRules} [rules]
  * @returns {ScoredFile[]}
  */
-function selectPrimaryFiles(scoredFiles, limit) {
-  const files = uniqueFiles(scoredFiles.filter((file) => file.kind !== "test"));
+function selectPrimaryFiles(scoredFiles, limit, rules = noRequestRules) {
+  const named = uniqueFiles(scoredFiles.filter((file) => rules.pinned.has(fileKey(file)) && !isRunnableTestPath(file.path))).slice(0, limit);
+  const files = uniqueFiles(scoredFiles.filter((file) => file.kind !== "test" && !rules.pinned.has(fileKey(file))));
   const strong = files.filter((file) => file.score >= 25);
   const pool = strong.length ? strong : files.slice(0, Math.min(limit, 3));
-  return diversifyByDomain(pool, limit, 2);
+  const remaining = limit - named.length;
+  return remaining > 0 ? [...named, ...diversifyByDomain(pool, remaining, 2)] : named;
 }
 
 const fallbackEntryStems = new Map([
@@ -1056,8 +1208,13 @@ function selectRelatedFiles(maps, graphs, scoredFiles, primaryFiles, limit) {
     }
   }
 
-  return uniqueFiles([...related, ...scoredFiles.filter((file) => file.kind !== "test" && !primaryKeys.has(fileKey(file)))])
-    .sort((a, b) => b.score - a.score || a.repo.name.localeCompare(b.repo.name) || a.path.localeCompare(b.path))
+  const candidates = uniqueFiles([...related, ...scoredFiles.filter((file) => file.kind !== "test" && !primaryKeys.has(fileKey(file)))]).sort(
+    (a, b) => b.score - a.score || a.repo.name.localeCompare(b.repo.name) || a.path.localeCompare(b.path),
+  );
+  // A primary catalog's other locales come back as its same-kind siblings;
+  // they fold into the entry that already stands for them.
+  return collapseLocaleSiblings([...primaryFiles, ...candidates], describeScoredFile)
+    .filter((file) => !primaryKeys.has(fileKey(file)))
     .slice(0, limit);
 }
 
@@ -1076,14 +1233,16 @@ function selectTests(maps, graphs, scoredFiles, primaryFiles, limit) {
   const contextKeys = new Set(contextFiles.map(fileKey));
   const contextDomains = new Set(contextFiles.map((file) => file.domain).filter(Boolean));
 
-  for (const file of scoredFiles.filter((item) => item.kind === "test")) {
+  // Only what a test runner executes: a README or a suite summary under
+  // __tests__/ is a note about the tests, and a `.snap` is their output.
+  for (const file of scoredFiles.filter((item) => item.kind === "test" && isRunnableTestPath(item.path))) {
     selected.push(file);
   }
 
   for (const map of maps) {
     // See selectRelatedFiles: graphs always contains this repo.root.
     const graph = /** @type {ImportGraph} */ (graphs.get(map.repo.root));
-    for (const file of map.files?.filter((entry) => entry.kind === "test") ?? []) {
+    for (const file of map.files?.filter((entry) => entry.kind === "test" && isRunnableTestPath(entry.path)) ?? []) {
       const imports = graph.importsByPath.get(file.path) ?? new Set();
       const importsContext = [...imports].some((target) => contextKeys.has(`${map.repo.root}:${target}`));
       const matchesDomain =

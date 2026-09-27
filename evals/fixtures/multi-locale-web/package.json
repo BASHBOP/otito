@@ -1,0 +1,9 @@
+{
+  "name": "multi-locale-web",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint .",
+    "tsc:check": "tsc --noEmit"
+  }
+}

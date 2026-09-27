@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync, realpathSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 import { parseArgv } from "./lib/args.js";
@@ -24,7 +24,7 @@ import { parseArgv } from "./lib/args.js";
 /** @typedef {import('./lib/review.js').ReviewData} ReviewData */
 /** @typedef {import('./lib/eval.js').EvalOptions} EvalOptions */
 import { createRenderer } from "./lib/render/fancy.js";
-import { formatTerminalSummary, printHelp, printText, printJson, writeArtifact } from "./lib/output.js";
+import { formatTerminalSummary, printHelp, printText, printJson, verifyWrittenFiles, writeArtifact } from "./lib/output.js";
 import { CONFIG_KEYS, gatePolicy, getConfigPath, listConfigSources, loadConfig, writeConfig } from "./lib/config.js";
 import { appendEvent, clearTelemetryLog, noteResult, redactError, shareEvent, takePendingSignals, telemetryStatus } from "./lib/telemetry.js";
 
@@ -202,6 +202,50 @@ function themePreference(parsed) {
   return typeof t === "string" ? t : undefined;
 }
 
+/** @typedef {import('./lib/output.js').ClosingLine} ClosingLine */
+
+/**
+ * The renderer a plain handler prints with, from the same flags every formatter honours.
+ * @param {CliArgs} parsed
+ */
+function rendererFor(parsed) {
+  return createRenderer({ emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) });
+}
+
+/**
+ * Every human-facing command ends with exactly one closing line.
+ * @param {CliArgs} parsed
+ * @param {ClosingLine} close
+ */
+function printClose(parsed, close) {
+  printText(`\n${rendererFor(parsed).close(close)}`);
+}
+
+/**
+ * A gate is verified when it passed (tests pass when validation ran too);
+ * otherwise the check that blocked, or the first warning, needs a look.
+ * @param {{ verdict?: string, checks?: { name: string, status: string }[] }} data
+ * @param {boolean} [validated]
+ * @returns {ClosingLine}
+ */
+function gateClose(data, validated = false) {
+  if (data.verdict === "PASS") return { status: validated ? "tests-pass" : "verified" };
+  const checks = data.checks ?? [];
+  const check = checks.find((entry) => entry.status === "FAIL") ?? checks.find((entry) => entry.status === "WARN");
+  return { status: "not-verified", detail: check ? check.name : `verdict ${data.verdict ?? "unknown"}` };
+}
+
+/**
+ * An eval that enforces thresholds is verified when they hold.
+ * @param {{ passed?: boolean, checks?: { name?: string, pass?: boolean }[], cases?: { name?: string, pass?: boolean }[] }} data
+ * @returns {ClosingLine}
+ */
+function evalClose(data) {
+  if (data.passed) return { status: "verified" };
+  const failing = data.checks?.find((entry) => !entry.pass)?.name ?? data.cases?.find((entry) => !entry.pass)?.name;
+  return { status: "not-verified", detail: failing ?? "the eval thresholds" };
+}
+
 /** @param {CliArgs} parsed */
 async function handleRepo(parsed) {
   const { inspectRepo } = await import("./lib/repo.js");
@@ -349,7 +393,7 @@ async function printRouteFooter(parsed, query, impact, ax) {
  * `--json` / `--out` never reach this path.
  * @param {CliArgs} parsed
  * @param {string} markdown
- * @param {{ title: string, glyph?: string, subtitle?: string }} meta
+ * @param {{ title: string, glyph?: string, subtitle?: string, close?: ClosingLine }} meta
  */
 async function printDocument(parsed, markdown, meta) {
   const { renderDocument } = await import("./lib/render/document.js");
@@ -431,6 +475,9 @@ async function handleObsidian(parsed) {
   }
 
   printText(`Obsidian vault written: ${manifest.vaultPath} (${manifest.noteCount} note(s))`);
+  // writeObsidianVault returns a loosely-typed record; the manifest names its vault and notes.
+  const { vaultPath: writtenVault, notes } = /** @type {{ vaultPath: string, notes?: string[] }} */ (manifest);
+  printClose(parsed, verifyWrittenFiles(writtenVault, notes ?? []));
 }
 
 /** @param {CliArgs} parsed */
@@ -471,6 +518,8 @@ async function handleAx(parsed) {
 
   const { generateImpact } = await import("./lib/impact.js");
   await printRouteFooter(parsed, query, generateImpact(query, { path: repoPath, top: parsed.flags.top }).data, data);
+  // The route footer is part of the answer, so the closing line comes after it.
+  printClose(parsed, { status: "runs" });
 }
 
 /** @param {CliArgs} parsed */
@@ -558,6 +607,7 @@ async function handleCalibrate(parsed) {
   await printDocument(parsed, formatCalibrationMarkdown(data), {
     title: `CALIBRATION   ${data.repo?.name ?? ""}`,
     glyph: "\u{1F4CF}",
+    close: { status: "runs" },
   });
 }
 
@@ -607,6 +657,7 @@ async function handleConverge(parsed) {
   await printDocument(parsed, formatConvergenceMarkdown(data), {
     title: `CONVERGENCE   ${data.repo?.name ?? ""}`,
     glyph: "\u{1F3AF}",
+    close: { status: "runs" },
   });
 }
 
@@ -716,6 +767,13 @@ async function handleAttest(parsed) {
       return;
     }
     printText(formatVerify(result));
+    const broken = result.chain.find((row) => !row.valid);
+    printClose(
+      parsed,
+      result.ok
+        ? { status: "verified" }
+        : { status: "not-verified", detail: broken ? `record #${broken.seq} does not match its hash` : "the ledger chain is broken" },
+    );
     return;
   }
 
@@ -737,6 +795,13 @@ async function handleAttest(parsed) {
     return;
   }
   printText(formatAttested(record));
+  const reread = verifyLedger(ledgerPath);
+  printClose(
+    parsed,
+    reread.ok && reread.tip === record.recordHash
+      ? { status: "verified" }
+      : { status: "not-verified", detail: `${ledgerPath} did not re-read with the new record at its tip` },
+  );
 }
 
 /**
@@ -797,6 +862,7 @@ async function handleRegret(parsed) {
   await printDocument(parsed, formatRegretMarkdown(data), {
     title: `ROUTE REGRET   ${data.repo?.name ?? ""}`,
     glyph: "\u{1F4C9}",
+    close: { status: "runs" },
   });
 }
 
@@ -926,11 +992,29 @@ async function handleReview(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleInstall(parsed) {
-  const { formatInstallSummary, installOtito } = await import("./lib/install.js");
-  const result = installOtito({
-    global: parsed.flags.global,
-    link: parsed.flags.link,
-  });
+  const { formatInstallSummary, getInstallPlan, getWelcomeMessage, installOtito } = await import("./lib/install.js");
+
+  let global = Boolean(parsed.flags.global);
+  let link = Boolean(parsed.flags.link);
+
+  // Prompting lives only here, and only for a human at a TTY with no explicit
+  // mode flag. MCP, agents, CI, and --json/--yes callers (or anyone who already
+  // passed --global/--link) run fully non-interactively off the flags above, so
+  // install stays deterministic and never blocks an unattended caller.
+  const interactive = Boolean(process.stdin.isTTY) && !parsed.flags.yes && !parsed.flags.json && !global && !link;
+  if (interactive) {
+    const { greeting, pitch } = getWelcomeMessage();
+    printText([greeting, ...pitch].join("\n"));
+    const mode = await promptChoice("How do you want to install?", [
+      { value: "plan", label: "Just show me the plan (no changes)" },
+      { value: "global", label: "Install globally (npm install -g .)" },
+      { value: "link", label: "Link for development (npm link)" },
+    ]);
+    global = mode === "global";
+    link = mode === "link";
+  }
+
+  const result = installOtito({ global, link });
 
   if (parsed.flags.json) {
     printJson(result);
@@ -940,7 +1024,15 @@ async function handleInstall(parsed) {
     return;
   }
 
-  printText(formatInstallSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
+  // Printing the plan is advisory; an applied install is verified by finding the binary again.
+  /** @type {ClosingLine} */
+  const close =
+    result.applied === undefined
+      ? { status: "runs" }
+      : result.applied && getInstallPlan().installed
+        ? { status: "verified" }
+        : { status: "not-verified", detail: `${result.command ?? "the install command"} did not leave ${result.binaryName} on the PATH` };
+  printText(formatInstallSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }, close));
   if (result.applied === false) {
     process.exitCode = 1;
   }
@@ -972,6 +1064,7 @@ async function handleMap(parsed) {
   await printDocument(parsed, formatCodeMapMarkdown(result), {
     title: `CODE MAP   ${result.repo?.name ?? ""}`,
     glyph: "\u{1F5FA}",
+    close: { status: "runs" },
   });
 }
 
@@ -1001,11 +1094,13 @@ async function handleStructure(parsed) {
       Boolean,
     );
     printText(details.join("\n"));
+    printClose(parsed, { status: "not-verified", detail: result.installHint ?? result.error ?? "structure generation" });
     process.exitCode = 1;
     return;
   }
 
   printText(`Structure generated: ${result.outputPath}`);
+  printClose(parsed, { status: "runs" });
 }
 
 /** @param {CliArgs} parsed */
@@ -1036,20 +1131,32 @@ async function handleDeps(parsed) {
 
   if (!result.ok) {
     printText(`Dependency lookup failed: ${result.error}\n${result.installHint}`);
+    printClose(parsed, { status: "not-verified", detail: result.installHint ?? result.error ?? "dependency lookup" });
     process.exitCode = 1;
     return;
   }
 
-  const lines = [`# Dependency Source: ${result.packageName}`, "", `Path: ${result.sourcePath}`];
+  const renderer = rendererFor(parsed);
+  const lines = [renderer.header({ text: "otito deps · dependency source", glyph: "\u{1F4E6}" }, [renderer.code(result.packageName)]), ""];
+  lines.push(
+    renderer.table([
+      ["Package", result.packageName],
+      ["Source", result.sourcePath ?? ""],
+    ]),
+  );
   if (result.matches?.length) {
-    lines.push("", `Matches for "${result.query}":`);
-    for (const match of result.matches) {
-      lines.push(`- ${match.file}:${match.line}: ${match.text}`);
-    }
+    lines.push(
+      "",
+      renderer.section(
+        `Matches for "${result.query}"`,
+        result.matches.map((match) => `${renderer.ref(match.file, match.line)} ${match.text}`),
+      ),
+    );
   } else if (result.query) {
     lines.push("", `No matches found for "${result.query}".`);
   }
   printText(lines.join("\n"));
+  printClose(parsed, { status: "runs" });
 }
 
 /** @param {CliArgs} parsed */
@@ -1069,6 +1176,7 @@ async function handleMatrix(parsed) {
   await printDocument(parsed, ["# Tool Evaluation Matrix", "", ...rows].join("\n"), {
     title: "TOOL MATRIX",
     glyph: "\u{1F4CA}",
+    close: { status: "runs" },
   });
 }
 
@@ -1110,7 +1218,9 @@ async function handleInit(parsed) {
     return;
   }
 
-  printText(formatInitSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }));
+  // A writer is verified once what it wrote re-reads from disk.
+  const close = verifyWrittenFiles(result.root, [...result.created, ...result.updated]);
+  printText(formatInitSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }, close));
 }
 
 /**
@@ -1130,6 +1240,26 @@ async function promptYesNo(question, defaultValue) {
       return defaultValue;
     }
     return answer === "y" || answer === "yes";
+  } finally {
+    rl.close();
+  }
+}
+
+/**
+ * Ask a single-choice question at an interactive TTY. Used only by `install`;
+ * never reached for non-interactive callers (guarded by process.stdin.isTTY).
+ * @param {string} question
+ * @param {{ value: string, label: string }[]} choices
+ * @returns {Promise<string>}
+ */
+async function promptChoice(question, choices) {
+  const readline = await import("node:readline/promises");
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const lines = choices.map((choice, index) => `  ${index + 1}) ${choice.label}`);
+    const answer = (await rl.question(`${question}\n${lines.join("\n")}\nEnter a number [1]: `)).trim();
+    const index = answer === "" ? 0 : Number.parseInt(answer, 10) - 1;
+    return choices[index]?.value ?? choices[0].value;
   } finally {
     rl.close();
   }
@@ -1163,9 +1293,16 @@ async function handlePr(parsed) {
     return;
   }
 
-  await printDocument(parsed, [result.markdown, formatCommentResult(result.data.comment)].filter(Boolean).join("\n"), {
+  // Review context is advisory; posting the comment makes it a writer, verified once GitHub returned it.
+  const comment = result.data.comment;
+  await printDocument(parsed, [result.markdown, formatCommentResult(comment)].filter(Boolean).join("\n"), {
     title: `PULL REQUEST   ${result.data?.repo?.name ?? ""}`,
     glyph: "\u{1F500}",
+    close: !comment
+      ? { status: "runs" }
+      : comment.ok
+        ? { status: "verified" }
+        : { status: "not-verified", detail: `PR comment skipped: ${comment.error ?? "unknown error"}` },
   });
 }
 
@@ -1190,11 +1327,21 @@ async function handleReport(parsed) {
     return;
   }
 
-  await printDocument(parsed, formatReportTerminal(result.data, { columns: process.stdout.columns }), {
-    // report's RepoInfo carries a root path, not a name.
-    title: `REPORT   ${basename(result.data?.repo?.root ?? "")}`,
-    glyph: "\u{1F4C4}",
-  });
+  await printDocument(
+    parsed,
+    formatReportTerminal(result.data, {
+      columns: process.stdout.columns,
+      emoji: emojiPreference(parsed),
+      color: colorPreference(parsed),
+      theme: themePreference(parsed),
+    }),
+    {
+      // report's RepoInfo carries a root path, not a name.
+      title: `REPORT   ${basename(result.data?.repo?.root ?? "")}`,
+      glyph: "\u{1F4C4}",
+      close: { status: "runs" },
+    },
+  );
 }
 
 /** @param {CliArgs} parsed */
@@ -1224,6 +1371,7 @@ async function handleWorkspace(parsed) {
   await printDocument(parsed, result.markdown, {
     title: "WORKSPACE",
     glyph: "\u{1F5C2}",
+    close: { status: "runs" },
   });
 }
 
@@ -1250,6 +1398,10 @@ async function handleWorkspaceGate(parsed) {
     await printDocument(parsed, formatWorkspaceGateMarkdown(data), {
       title: "WORKSPACE GATE",
       glyph: "\u{1F6A6}",
+      close: gateClose(
+        { verdict: data.verdict, checks: (data.repositories ?? []).flatMap((/** @type {any} */ entry) => entry.gate?.checks ?? entry.checks ?? []) },
+        parsed.flags.run_validation === true,
+      ),
     });
   }
   if (data.verdict === "FAIL") process.exitCode = 1;
@@ -1299,6 +1451,7 @@ async function handleHarness(parsed) {
   await printDocument(parsed, result.markdown, {
     title: `HARNESS   ${result.data?.repo?.name ?? ""}`,
     glyph: "\u{1F6E0}",
+    close: { status: "runs" },
   });
 }
 
@@ -1317,7 +1470,7 @@ async function handleEval(parsed) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Accuracy eval written: ${artifact.path}`);
     } else {
-      await printDocument(parsed, result.markdown, { title: "ACCURACY EVAL", glyph: "\\u{1F9EA}" });
+      await printDocument(parsed, result.markdown, { title: "ACCURACY EVAL", glyph: "\u{1F9EA}", close: evalClose(result.data) });
     }
     if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
@@ -1337,7 +1490,7 @@ async function handleEval(parsed) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Harness execution eval written: ${artifact.path}`);
     } else {
-      await printDocument(parsed, result.markdown, { title: "HARNESS EVAL", glyph: "\\u{1F9EA}" });
+      await printDocument(parsed, result.markdown, { title: "HARNESS EVAL", glyph: "\u{1F9EA}", close: evalClose(result.data) });
     }
     if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
@@ -1357,7 +1510,7 @@ async function handleEval(parsed) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Gate effectiveness eval written: ${artifact.path}`);
     } else {
-      await printDocument(parsed, result.markdown, { title: "GATE EFFECTIVENESS", glyph: "\\u{1F9EA}" });
+      await printDocument(parsed, result.markdown, { title: "GATE EFFECTIVENESS", glyph: "\u{1F9EA}", close: evalClose(result.data) });
     }
     if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
@@ -1382,7 +1535,7 @@ async function handleEval(parsed) {
     printText(`Eval written: ${artifact.path}`);
     return;
   }
-  await printDocument(parsed, result.markdown, { title: "EVAL", glyph: "\u{1F9EA}" });
+  await printDocument(parsed, result.markdown, { title: "EVAL", glyph: "\u{1F9EA}", close: { status: "runs" } });
 }
 
 /** @param {CliArgs} parsed */
@@ -1393,6 +1546,7 @@ async function handleDashboard(parsed) {
   if (parsed.flags.clear) {
     const { removed, path: logPath } = clearTelemetryLog();
     printText(removed.length ? `Usage log cleared: ${removed.join(", ")}` : `No usage log to clear at ${logPath}`);
+    printClose(parsed, existsSync(logPath) ? { status: "not-verified", detail: `${logPath} still exists` } : { status: "verified" });
     return;
   }
 
@@ -1413,6 +1567,7 @@ async function handleDashboard(parsed) {
   if (!data.totals.events) {
     printText("No usage events recorded yet. Enable capture with `otito config set telemetry true`, then run some commands.");
   }
+  printClose(parsed, verifyWrittenFiles(dirname(artifact.path), [basename(artifact.path)]));
 }
 
 /** @param {CliArgs} parsed */
@@ -1429,6 +1584,7 @@ async function handleTelemetry(parsed) {
           ? `Anonymous usage sharing on (${getConfigPath(scope)}). Local capture is also on.`
           : `Anonymous usage sharing off (${getConfigPath(scope)}). Local capture is unchanged.`,
       );
+      printClose(parsed, verifyConfigValue(scope, "telemetryShare", action === "on"));
       return;
     }
     if (action !== "status") throw new Error("Usage: otito telemetry share [status|on|off]");
@@ -1442,12 +1598,14 @@ async function handleTelemetry(parsed) {
         ? `Local telemetry on (${getConfigPath(scope)}). Nothing is shared unless you run \`otito telemetry share on\`.`
         : `Telemetry off (${getConfigPath(scope)}). Local capture and anonymous sharing are both disabled.`,
     );
+    printClose(parsed, verifyConfigValue(scope, "telemetry", sub === "on"));
     return;
   }
 
   if (sub === "clear") {
     const { removed, path: logPath } = clearTelemetryLog();
     printText(removed.length ? `Usage log cleared: ${removed.join(", ")}` : `No usage log to clear at ${logPath}`);
+    printClose(parsed, existsSync(logPath) ? { status: "not-verified", detail: `${logPath} still exists` } : { status: "verified" });
     return;
   }
 
@@ -1457,20 +1615,44 @@ async function handleTelemetry(parsed) {
     printJson(status);
     return;
   }
+  const renderer = rendererFor(parsed);
   printText(
     [
-      `Telemetry:   ${status.enabled ? "on" : "off"}`,
-      `Sharing:     ${status.sharing ? "on (anonymous, opt-in)" : "off"}`,
-      `Log:         ${status.path}`,
-      `Exists:      ${status.exists ? "yes" : "no"}`,
-      `Size:        ${status.sizeBytes} bytes`,
-      `Events:      ${status.events}`,
+      renderer.table([
+        ["Telemetry", status.enabled ? "on" : "off"],
+        ["Sharing", status.sharing ? "on (anonymous, opt-in)" : "off"],
+        ["Log", status.path],
+        ["Exists", status.exists ? "yes" : "no"],
+        ["Size", `${status.sizeBytes} bytes`],
+        ["Events", String(status.events)],
+      ]),
       "",
-      status.enabled ? "Disable all telemetry with `otito telemetry off`." : "Enable local capture with `otito telemetry on`.",
-      status.sharing ? "Disable sharing with `otito telemetry share off`." : "Share anonymous usage with `otito telemetry share on`.",
-      "Clear the log with `otito telemetry clear`.",
+      renderer.list([
+        status.enabled ? ["otito telemetry off", "disable all telemetry"] : ["otito telemetry on", "enable local capture"],
+        status.sharing ? ["otito telemetry share off", "disable sharing"] : ["otito telemetry share on", "share anonymous usage"],
+        ["otito telemetry clear", "clear the log"],
+      ]),
     ].join("\n"),
   );
+  printClose(parsed, { status: "runs" });
+}
+
+/**
+ * A config write is verified by reading the file back.
+ * @param {"user" | "local"} scope
+ * @param {string} key
+ * @param {unknown} expected
+ * @returns {ClosingLine}
+ */
+function verifyConfigValue(scope, key, expected) {
+  const target = getConfigPath(scope);
+  try {
+    const stored = /** @type {Record<string, unknown>} */ (JSON.parse(readFileSync(target, "utf8")))[key];
+    if (stored === expected) return { status: "verified" };
+    return { status: "not-verified", detail: `${target} re-read ${key} as ${JSON.stringify(stored)}` };
+  } catch (error) {
+    return { status: "not-verified", detail: `${target} could not be re-read (${error instanceof Error ? error.message : String(error)})` };
+  }
 }
 
 /** @param {CliArgs} parsed */
@@ -1493,6 +1675,7 @@ async function handleDataAccess(parsed) {
   await printDocument(parsed, result.markdown, {
     title: "DATA ACCESS",
     glyph: "\u{1F5C4}",
+    close: { status: "runs" },
   });
 }
 
@@ -1533,6 +1716,7 @@ async function handleConfig(parsed) {
     writeConfig({ [key]: value }, scope);
     const target = getConfigPath(scope);
     printText(`Set ${key} = ${String(value)} in ${target}`);
+    printClose(parsed, verifyConfigValue(scope, key, value));
     return;
   }
 
@@ -1547,12 +1731,18 @@ async function handleConfig(parsed) {
       if (!CONFIG_KEYS.includes(key)) {
         throw new Error(`config get: unknown key "${key}". Valid keys: ${CONFIG_KEYS.join(", ")}`);
       }
+      // One bare value, like --version: scripts read it, so no closing line.
       printText(String(/** @type {Record<string,unknown>} */ (cfg)[key] ?? ""));
       return;
     }
-    for (const k of CONFIG_KEYS) {
-      printText(`${k.padEnd(14)} ${String(/** @type {Record<string,unknown>} */ (cfg)[k] ?? "")}`);
-    }
+    const renderer = rendererFor(parsed);
+    printText(
+      renderer.table(
+        CONFIG_KEYS.map((k) => [k, String(/** @type {Record<string,unknown>} */ (cfg)[k] ?? "")]),
+        { head: ["Key", "Value"] },
+      ),
+    );
+    printClose(parsed, { status: "runs" });
     return;
   }
 
@@ -1562,15 +1752,23 @@ async function handleConfig(parsed) {
     printJson(sources);
     return;
   }
-  printText("otito config");
-  printText("");
-  for (const { key, value, source } of sources) {
-    const annotation = source === "default" ? "" : `  [${source}]`;
-    printText(`  ${key.padEnd(14)} ${String(value ?? "").padEnd(16)}${annotation}`);
-  }
-  printText("");
-  printText(`User config:  ${getConfigPath("user")}`);
-  printText(`Local config: ${getConfigPath("local")}`);
+  const renderer = rendererFor(parsed);
+  printText(
+    [
+      renderer.header({ text: "otito config", glyph: "\u{2699}\u{FE0F}" }),
+      "",
+      renderer.table(
+        sources.map(({ key, value, source }) => [key, String(value ?? ""), source]),
+        { head: ["Key", "Value", "Source"] },
+      ),
+      "",
+      renderer.table([
+        ["User config", renderer.code(getConfigPath("user"))],
+        ["Local config", renderer.code(getConfigPath("local"))],
+      ]),
+    ].join("\n"),
+  );
+  printClose(parsed, { status: "runs" });
 }
 
 /**
@@ -1656,6 +1854,7 @@ function formatRepoSummary(result, options = {}) {
       { title: "Scripts", items: Object.entries(result.scripts).map(([name, value]) => `${name}: ${value}`), glyph: "⚙️" },
       { title: "Important directories", items: result.importantDirectories, glyph: "📁" },
     ],
+    close: { status: "runs" },
     options,
   });
 }

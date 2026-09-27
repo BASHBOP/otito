@@ -206,7 +206,7 @@ test("repo command renders json and text summary", async () => {
   const textResult = await runCli(["repo", fixture]);
   assert.match(textResult.stdout, /otito repo · repository overview/);
   assert.match(textResult.stdout, /At a glance/);
-  assert.match(textResult.stdout, /Files scanned:/);
+  assert.match(textResult.stdout, /Files scanned\s+\d/);
 });
 
 test("discover command lists discovered repositories", async () => {
@@ -992,4 +992,268 @@ test("eval --gate-effectiveness runs committed staged changes through the real g
   assert.equal(payload.passed, true);
   assert.equal(payload.counts.cases, 9);
   assert.equal(payload.counts.blockedAsExpected, 7);
+});
+
+test("the eval headers print the flask glyph, not its escaped source text", async () => {
+  // The three eval headers passed "\\u{1F9EA}" (a backslash, a u and braces)
+  // as the glyph, so in emoji mode the box read `\u{1F9EA}  ACCURACY EVAL`.
+  const result = await runCli(["eval", "--accuracy", "--emoji", "--no-color"]);
+  assert.equal(result.exitCode, 0);
+  assert.ok(result.stdout.includes("\u{1F9EA}  ACCURACY EVAL"), "the header should carry the flask glyph");
+  assert.ok(!result.stdout.includes("\\u{1F9EA}"), "the header must not print the escape sequence");
+});
+
+test("no source string spells a code point with a doubled backslash", () => {
+  // A `"\\u{1F9EA}"` in source is a literal backslash followed by `u{1F9EA}`,
+  // which is how the eval headers came to print their own escape sequence.
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "src");
+  /** @type {string[]} */
+  const offenders = [];
+  const walk = (/** @type {string} */ dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!entry.name.endsWith(".js")) continue;
+      fs.readFileSync(full, "utf8")
+        .split("\n")
+        .forEach((line, index) => {
+          if (/\\\\u\{[0-9A-Fa-f]{1,6}\}/.test(line)) offenders.push(`${path.relative(root, full)}:${index + 1}`);
+        });
+    }
+  };
+  walk(root);
+  assert.deepEqual(offenders, []);
+});
+
+// --- Closing lines: every human-facing command ends with exactly one ---
+
+const lastLine = (stdout) => stdout.trimEnd().split("\n").at(-1);
+
+// Keep the user's real config and usage log out of commands that read or write them.
+function withIsolatedUser(t) {
+  withEmptyUserConfig(t);
+  const saved = { path: process.env.OTITO_TELEMETRY_PATH, id: process.env.OTITO_TELEMETRY_ID_PATH };
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-user-"));
+  process.env.OTITO_TELEMETRY_PATH = path.join(dir, "usage.jsonl");
+  process.env.OTITO_TELEMETRY_ID_PATH = path.join(dir, "anonymous-id");
+  t.after(() => {
+    for (const [key, value] of [
+      ["OTITO_TELEMETRY_PATH", saved.path],
+      ["OTITO_TELEMETRY_ID_PATH", saved.id],
+    ]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+  return dir;
+}
+
+test("advisory commands end with `Runs without errors.`", async (t) => {
+  withIsolatedUser(t);
+  const fixture = makeRepoFixture();
+  const gitFixture = makeGitFixture("closing-advisory");
+  withCwd(t, fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-closing-")));
+  for (const argv of [
+    ["repo", fixture],
+    ["discover", path.dirname(fixture), "--depth", "1", "--limit", "5"],
+    ["matrix"],
+    ["harness", fixture],
+    ["map", fixture],
+    ["data-access", fixture],
+    ["report", fixture],
+    ["eval", fixture],
+    ["ax", fixture, "add a greeting"],
+    ["pr", gitFixture, "--base", "HEAD~1"],
+    ["config"],
+    ["config", "list"],
+    ["config", "get"],
+    ["telemetry"],
+    ["telemetry", "status"],
+    ["install"],
+  ]) {
+    const result = await runCli([...argv, "--no-emoji", "--no-color"]);
+    assert.equal(result.exitCode, 0, argv.join(" "));
+    assert.equal(lastLine(result.stdout), "Runs without errors.", argv.join(" "));
+    assert.equal(result.stdout.split("Runs without errors.").length - 1, 1, `${argv.join(" ")} printed the closing line more than once`);
+  }
+});
+
+test("writers end with `Verified.` once what they wrote re-reads", async (t) => {
+  const userDir = withIsolatedUser(t);
+  const fixture = makeRepoFixture();
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-writers-"));
+  withCwd(t, work);
+  const initTarget = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-init-"));
+  const ledger = path.join(work, "ledger.jsonl");
+  const verdict = path.join(work, "verdict.json");
+  fs.writeFileSync(
+    verdict,
+    JSON.stringify({ verdict: "PASS", confidence: 85, generatedAt: "2026-01-01T00:00:00.000Z", pass: { policy: "standard", governance: "solo", checks: [] } }),
+  );
+  for (const argv of [
+    ["init", initTarget, "--yes"],
+    ["config", "set", "color", "false"],
+    ["config", "set", "theme", "minimal", "--local"],
+    ["telemetry", "on"],
+    ["telemetry", "share", "on"],
+    ["telemetry", "share", "off"],
+    ["telemetry", "off"],
+    ["telemetry", "clear"],
+    ["dashboard", fixture, "--out", path.join(work, "dashboard.html"), "--no-git"],
+    ["dashboard", "--clear"],
+    ["obsidian", fixture, "--out", path.join(work, "vault")],
+    ["attest", fixture, "--verdict", verdict, "--merge", "0123456789abcdef0123456789abcdef01234567", "--ledger", ledger],
+  ]) {
+    const result = await runCli([...argv, "--no-emoji", "--no-color"]);
+    assert.equal(result.exitCode, 0, `${argv.join(" ")}\n${result.stdout}${result.stderr}`);
+    assert.equal(lastLine(result.stdout), "Verified.", `${argv.join(" ")}\n${result.stdout}`);
+  }
+  // The writes landed where the closing line says they did.
+  assert.equal(JSON.parse(fs.readFileSync(path.join(work, ".otitorc.json"), "utf8")).theme, "minimal");
+  assert.ok(fs.existsSync(path.join(work, "vault", "Home.md")));
+  assert.equal(fs.existsSync(path.join(userDir, "usage.jsonl")), false);
+});
+
+test("health checks end with `Verified.` or name what failed", async (t) => {
+  withIsolatedUser(t);
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-health-"));
+  const ledger = path.join(work, "ledger.jsonl");
+  const verdict = path.join(work, "verdict.json");
+  fs.writeFileSync(
+    verdict,
+    JSON.stringify({ verdict: "WARN", confidence: 70, generatedAt: "2026-01-01T00:00:00.000Z", pass: { policy: "standard", governance: "solo", checks: [] } }),
+  );
+  await runCli(["attest", work, "--verdict", verdict, "--merge", "a".repeat(40), "--ledger", ledger]);
+  await runCli(["attest", work, "--verdict", verdict, "--merge", "b".repeat(40), "--prev", "a".repeat(40), "--ledger", ledger]);
+
+  const intact = await runCli(["attest", "--verify", "--ledger", ledger, "--no-emoji"]);
+  assert.equal(intact.exitCode, 0);
+  assert.equal(lastLine(intact.stdout), "Verified.");
+
+  // Alter the first record: the chain breaks and the closing line names it.
+  const rows = fs.readFileSync(ledger, "utf8").trim().split("\n");
+  fs.writeFileSync(ledger, `${[rows[0].replace('"verdict":"WARN"', '"verdict":"PASS"'), rows[1]].join("\n")}\n`);
+  const broken = await runCli(["attest", "--verify", "--ledger", ledger, "--no-emoji"]);
+  assert.equal(broken.exitCode, 1);
+  assert.equal(lastLine(broken.stdout), "Not verified - manual check needed: record #1 does not match its hash.");
+
+  const accuracy = await runCli(["eval", "--accuracy", "--no-emoji", "--no-color"]);
+  assert.equal(accuracy.exitCode, 0);
+  assert.equal(lastLine(accuracy.stdout), "Verified.");
+});
+
+test("a gate that did not pass ends by naming the check to look at", async (t) => {
+  withIsolatedUser(t);
+  const stage = (repo) => {
+    fs.writeFileSync(path.join(repo, "src", "index.ts"), "export const greet = () => 'staged';\n");
+    git(repo, "add", "src/index.ts");
+    return repo;
+  };
+  const web = stage(makeGitFixture("closing-web"));
+  const api = stage(makeGitFixture("closing-api"));
+  withCwd(t, fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-gate-")));
+  const json = parseJsonOutput((await runCli(["workspace-gate", web, api, "--base", "HEAD", "--governance", "team", "--json"])).stdout);
+  const text = await runCli(["workspace-gate", web, api, "--base", "HEAD", "--governance", "team", "--no-emoji", "--no-color"]);
+  if (json.verdict === "PASS") {
+    assert.equal(lastLine(text.stdout), "Verified.");
+  } else {
+    assert.match(lastLine(text.stdout), /^Not verified - manual check needed: .+\.$/);
+  }
+  // The em dash belongs to the unicode and emoji sets.
+  const fancy = await runCli(["workspace-gate", web, api, "--base", "HEAD", "--governance", "team", "--emoji", "--no-color"]);
+  if (json.verdict !== "PASS") assert.match(lastLine(fancy.stdout), /^Not verified — manual check needed: .+\.$/);
+});
+
+test("machine formats and bare values carry no closing line", async (t) => {
+  withIsolatedUser(t);
+  const fixture = makeRepoFixture();
+  const closing = /Verified\.|Tests pass\.|Runs without errors\.|Not verified/;
+  for (const argv of [
+    ["repo", fixture, "--json"],
+    ["matrix", "--json"],
+    ["config", "--json"],
+    ["telemetry", "--json"],
+    ["agent-tools", "--markdown"],
+    ["map", fixture, "--mermaid"],
+    ["config", "get", "color"],
+    ["--version"],
+    ["help"],
+  ]) {
+    const result = await runCli(argv);
+    assert.doesNotMatch(result.stdout, closing, argv.join(" "));
+  }
+  const out = path.join(os.tmpdir(), `otito-cli-closing-${Date.now()}.md`);
+  const written = await runCli(["map", fixture, "--out", out]);
+  assert.match(written.stdout, /^Code map written: /);
+  assert.doesNotMatch(written.stdout, closing);
+  assert.doesNotMatch(fs.readFileSync(out, "utf8"), closing);
+  fs.unlinkSync(out);
+});
+
+test("config list is a key, value and source table; telemetry status is a table and a command list", async (t) => {
+  withIsolatedUser(t);
+  withCwd(t, makeConfiguredDir("config-table", { theme: "minimal" }));
+  const config = await runCli(["config", "list", "--no-color"]);
+  const lines = config.stdout.split("\n");
+  const head = lines.findIndex((line) => /^Key\s+Value\s+Source$/.test(line));
+  assert.ok(head > 0, config.stdout);
+  assert.match(lines[head + 1], /^[-─]+\s+[-─]+\s+[-─]+$/);
+  assert.ok(
+    lines.some((line) => /^theme\s+minimal\s+local$/.test(line)),
+    config.stdout,
+  );
+  assert.ok(
+    lines.some((line) => /^emoji\s+default$/.test(line.replace(/\s+/g, " ").replace("emoji ", "emoji  "))) ||
+      lines.some((line) => /^emoji\s+.*default$/.test(line)),
+    config.stdout,
+  );
+
+  const telemetry = await runCli(["telemetry", "--no-emoji", "--no-color"]);
+  assert.match(telemetry.stdout, /^Telemetry\s+off$/m);
+  assert.match(telemetry.stdout, /^Events\s+0$/m);
+  assert.match(telemetry.stdout, /^- `otito telemetry on` - enable local capture$/m);
+  assert.match(telemetry.stdout, /^- `otito telemetry clear` - clear the log$/m);
+});
+
+test("help documents the presentation flags once, as global flags", async () => {
+  const result = await runCli(["help"]);
+  assert.match(result.stdout, /^Global flags/m);
+  assert.match(result.stdout, /--emoji \| --no-emoji/);
+  assert.match(result.stdout, /--color \| --no-color/);
+  assert.match(result.stdout, /--theme name\s+default \| color \| minimal \| high-contrast/);
+  const usage = result.stdout.split("Global flags")[0];
+  assert.doesNotMatch(usage, /\[--no-emoji\]|\[--color\|--no-color\]|\[--theme name\]/, "per-command copies of the global flags should be gone");
+});
+
+test("TERM=dumb gets ASCII glyphs without any flag", async (t) => {
+  withIsolatedUser(t);
+  const saved = { term: process.env.TERM, ci: process.env.CI, noEmoji: process.env.NO_EMOJI };
+  process.env.TERM = "dumb";
+  delete process.env.CI;
+  delete process.env.NO_EMOJI;
+  t.after(() => {
+    for (const [key, value] of [
+      ["TERM", saved.term],
+      ["CI", saved.ci],
+      ["NO_EMOJI", saved.noEmoji],
+    ]) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+  const dumb = await runCli(["doctor"]);
+  // eslint-disable-next-line no-control-regex
+  assert.match(dumb.stdout, /^[\x00-\x7f]*$/, "a dumb terminal must get pure ASCII");
+  assert.match(dumb.stdout, /^\+-+\+$/m);
+
+  process.env.TERM = "xterm-256color";
+  const unicode = await runCli(["doctor"]);
+  assert.match(unicode.stdout, /^╭─+╮$/m);
+  assert.doesNotMatch(unicode.stdout, /\p{Extended_Pictographic}/u, "the default look carries no emoji");
+
+  const emoji = await runCli(["doctor", "--emoji"]);
+  assert.match(emoji.stdout, /📋/);
 });

@@ -3,16 +3,36 @@ import path from "node:path";
 import { formatTerminalSummary } from "./output.js";
 import { execFileSync } from "node:child_process";
 import { generateHarness } from "./harness.js";
+import { isTypeCheckScript } from "./package-scripts.js";
 
 const defaultToolRepo = "BASHBOP/otito";
 const defaultToolRef = "main";
 const workflowPath = ".github/workflows/otito-ci.yml";
 const hookPath = ".githooks/pre-commit";
 
+// GitHub Actions majors the generated workflow pins. tests/init.test.js checks
+// these against this repository's own .github/workflows/otito-ci.yml, so the
+// template cannot fall behind the actions otito itself runs on.
+/** @type {Record<string, string>} */
+export const WORKFLOW_ACTION_VERSIONS = {
+  "actions/checkout": "v7",
+  "actions/setup-node": "v7",
+  "actions/upload-artifact": "v7",
+};
+
+/**
+ * @param {string} action
+ * @returns {string}
+ */
+function uses(action) {
+  return `${action}@${WORKFLOW_ACTION_VERSIONS[action]}`;
+}
+
 // Pre-commit runs the staged Òtítọ́ gate plus fast static checks — never the
 // slow (test/build/audit/smoke) gates, which belong in CI. A harness validate
-// command qualifies when its npm script name is a known static check.
-const staticPrecommitScripts = new Set(["lint", "format:check", "typecheck", "type-check", "tsc", "check:type"]);
+// command qualifies when its npm script name is a known static check or a type
+// check.
+const staticPrecommitScripts = new Set(["lint", "format:check"]);
 
 /**
  * @typedef {object} InitOptions
@@ -135,9 +155,10 @@ export function initProject(targetPath = ".", options = {}) {
 /**
  * @param {InitResult} result
  * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
+ * @param {import("./output.js").ClosingLine} [close] the caller's verdict on what was written
  * @returns {string}
  */
-export function formatInitSummary(result, options = {}) {
+export function formatInitSummary(result, options = {}, close) {
   return formatTerminalSummary({
     title: "otito init · trust harness setup",
     glyph: "🛠️",
@@ -148,11 +169,12 @@ export function formatInitSummary(result, options = {}) {
       ...(result.hooksPathRequested && !result.precommitApplied ? [["Hooks path", "skipped (no pre-commit hook was scaffolded)"]] : []),
     ]),
     sections: [
-      { title: "Created", glyph: "✅", items: result.created },
-      { title: "Updated", glyph: "🔄", items: result.updated },
-      { title: "Skipped", glyph: "⏭️", items: result.skipped },
+      { title: "Created", glyph: "✅", items: result.created, kind: "tree" },
+      { title: "Updated", glyph: "🔄", items: result.updated, kind: "tree" },
+      { title: "Skipped", glyph: "⏭️", items: result.skipped, kind: "tree" },
       { title: "Next steps", glyph: "📝", items: result.nextSteps },
     ],
+    close,
     options,
   });
 }
@@ -294,10 +316,11 @@ function selectPrecommitCommands(validate) {
  * @returns {boolean}
  */
 function isStaticPrecommitScript(script) {
-  if (staticPrecommitScripts.has(script)) {
+  if (staticPrecommitScripts.has(script) || isTypeCheckScript(script)) {
     return true;
   }
-  // Match harness lint naming without broad "type" substring hits (e.g. "prototype").
+  // Match harness lint naming. Type checks are matched by segment, so a name
+  // that only contains the letters (e.g. "prototype") is not one.
   return script.includes("lint");
 }
 
@@ -387,20 +410,20 @@ ${qualityJob}  review:
     steps:
       - name: Checkout PR head
         if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
+        uses: ${uses("actions/checkout")}
         with:
           ref: \${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Checkout pushed commit
         if: github.event_name == 'push'
-        uses: actions/checkout@v4
+        uses: ${uses("actions/checkout")}
         with:
           ref: \${{ github.sha }}
           fetch-depth: 0
 
       - name: Checkout otito
-        uses: actions/checkout@v4
+        uses: ${uses("actions/checkout")}
         with:
           repository: ${toolRepo}
           ref: ${toolRef}
@@ -410,7 +433,7 @@ ${qualityJob}  review:
           # token: \${{ secrets.OTITO_REPO_TOKEN }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: ${uses("actions/setup-node")}
         with:
           node-version: 22
 
@@ -452,7 +475,7 @@ ${qualityJob}  review:
             --out .otito/pr-review.md
 
       - name: Upload PR review artifact
-        uses: actions/upload-artifact@v4
+        uses: ${uses("actions/upload-artifact")}
         with:
           name: otito-pr-review
           path: .otito/pr-review.md
@@ -477,7 +500,7 @@ function buildQualityJob({ root, setup, validate, packageManagers }) {
     "",
     "    steps:",
     "      - name: Checkout",
-    "        uses: actions/checkout@v4",
+    `        uses: ${uses("actions/checkout")}`,
   ];
 
   for (const step of runtimeSetupSteps(packageManagers)) {
@@ -504,14 +527,18 @@ function runtimeSetupSteps(packageManagers) {
   if (packageManagers.includes("pnpm")) {
     return [
       ["      - name: Set up pnpm", "        uses: pnpm/action-setup@v4"],
-      ["      - name: Set up Node.js", "        uses: actions/setup-node@v4", "        with:", "          node-version: 22", "          cache: pnpm"],
+      ["      - name: Set up Node.js", `        uses: ${uses("actions/setup-node")}`, "        with:", "          node-version: 22", "          cache: pnpm"],
     ];
   }
   if (packageManagers.includes("yarn")) {
-    return [["      - name: Set up Node.js", "        uses: actions/setup-node@v4", "        with:", "          node-version: 22", "          cache: yarn"]];
+    return [
+      ["      - name: Set up Node.js", `        uses: ${uses("actions/setup-node")}`, "        with:", "          node-version: 22", "          cache: yarn"],
+    ];
   }
   if (packageManagers.includes("npm")) {
-    return [["      - name: Set up Node.js", "        uses: actions/setup-node@v4", "        with:", "          node-version: 22", "          cache: npm"]];
+    return [
+      ["      - name: Set up Node.js", `        uses: ${uses("actions/setup-node")}`, "        with:", "          node-version: 22", "          cache: npm"],
+    ];
   }
   if (packageManagers.includes("bun")) {
     return [["      - name: Set up Bun", "        uses: oven-sh/setup-bun@v2"]];
@@ -578,7 +605,9 @@ if ! command -v otito >/dev/null 2>&1; then
 fi
 
 echo "otito pre-commit: checking staged changes"
-otito gate . --staged --out .otito/gate.md
+# --policy standard: a stricter policy in .otitorc.json (company, high-risk) is
+# for merge time and would fail every local commit on review state alone.
+otito gate . --staged --policy standard --out .otito/gate.md
 
 echo "otito pre-commit: running static checks"
 ${body}
