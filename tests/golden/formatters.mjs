@@ -18,9 +18,11 @@ import { formatReviewTerminal } from "../../src/lib/review.js";
 /**
  * The renderer options every snapshot is taken with. Width is pinned so the
  * terminal size never leaks into a golden file.
- * @type {Record<string, { emoji: boolean, color: boolean, width: number }>}
+ * The glyph set is always explicit: the default depends on CI and TERM.
+ * @type {Record<string, { emoji?: boolean, glyphs?: "unicode", color: boolean, width: number }>}
  */
 export const MODES = {
+  "unicode-plain": { glyphs: "unicode", color: false, width: 78 },
   "emoji-plain": { emoji: true, color: false, width: 78 },
   "ascii-plain": { emoji: false, color: false, width: 78 },
   "emoji-color": { emoji: true, color: true, width: 78 },
@@ -30,7 +32,7 @@ export const MODES = {
  * Render one formatter's data under one mode.
  * @param {string} formatter
  * @param {any} data
- * @param {{ emoji: boolean, color: boolean, width: number }} mode
+ * @param {{ emoji?: boolean, glyphs?: "unicode", color: boolean, width: number }} mode
  * @returns {string}
  */
 export function render(formatter, data, mode) {
@@ -63,9 +65,9 @@ export function render(formatter, data, mode) {
     case "search":
       return formatSearchResults(data, mode);
     case "init":
-      return formatInitSummary(data, mode);
+      return formatInitSummary(data, mode, { status: "verified" });
     case "install":
-      return formatInstallSummary(data, mode);
+      return formatInstallSummary(data, mode, { status: "runs" });
     default:
       throw new Error(`no golden renderer for ${formatter}`);
   }

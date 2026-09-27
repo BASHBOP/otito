@@ -315,8 +315,8 @@ await add("init", "init", () => initProject(initTarget));
 await add("install", "install", () => ({ ...getInstallPlan(), installed: true, binaryPath: "/usr/local/bin/otito" }));
 
 const out = {
-  generatedFrom: "tests/golden/generate-formatters.mjs on the formatters as they were at origin/develop 1209fa3 (2026-09-27), before the glyph migration",
-  note: "Each case stores the formatter's input and its output per renderer mode. tests/formatters-golden.test.js re-renders the input and fails on any byte that differs.",
+  generatedFrom: "tests/golden/generate-formatters.mjs",
+  note: "Each case stores the formatter input and its output per renderer mode; tests/formatters-golden.test.js re-renders the input and fails on any byte that differs. First recorded before the glyph migration (phase 2, which left it byte-identical); regenerated in phase 3 for the box width fix (O13) and the shared summary taking the table, tree and closing-line shape.",
   modes: MODES,
   cases,
 };

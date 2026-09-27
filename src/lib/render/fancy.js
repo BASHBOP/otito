@@ -7,9 +7,9 @@
 //   - `ascii`   bracketed tokens and ASCII box drawing, so CI logs stay legible.
 //   - `unicode` plain Unicode marks (✓ ! ✗, box drawing, arrows) and no emoji
 //               at all; nothing in it matches \p{Extended_Pictographic}.
-// `emoji` is still the interactive default and `ascii` still follows
-// `emoji: false`, NO_EMOJI and CI; `unicode` is reached only through the
-// explicit `glyphs: "unicode"` renderer option.
+// `unicode` is the interactive default. `ascii` follows `emoji: false`,
+// NO_EMOJI, CI and TERM=dumb; `emoji` is an opt-in through `emoji: true`
+// (`--emoji`, `emoji: true` in config, OTITO_EMOJI=1).
 
 /**
  * @typedef {"unicode" | "ascii" | "emoji"} GlyphMode
@@ -73,7 +73,7 @@ const GLYPH_SETS = {
     tip: "›",
     dash: "—",
     listDash: "–",
-    item: "•",
+    item: "-",
   },
 };
 
@@ -119,7 +119,7 @@ const THEMES = {
   default: {},
   color: { color: true },
   minimal: { emoji: false, color: false },
-  "high-contrast": { emoji: true, color: true, bright: true },
+  "high-contrast": { color: true, bright: true },
 };
 
 /**
@@ -129,7 +129,7 @@ const THEMES = {
  * @property {string}  [theme] Named theme: "default" | "color" | "minimal" | "high-contrast".
  * @property {boolean} [bright] Use bright ANSI palette (set automatically by the high-contrast theme).
  * @property {number}  [width] Box width in columns; clamped to 60..120.
- * @property {GlyphMode} [glyphs] Glyph set to use. When unset, `emoji` resolves it to "emoji" or "ascii".
+ * @property {GlyphMode} [glyphs] Glyph set to use. When unset, `emoji` and the environment resolve it.
  */
 
 /**
@@ -178,16 +178,22 @@ export function shouldUseColor(env = process.env, options = {}) {
 }
 
 /**
- * Which glyph set a renderer prints with. An explicit `glyphs` option wins;
- * otherwise the emoji decision (option, theme, NO_EMOJI, CI) picks "emoji" or
- * "ascii", exactly as it did before "unicode" existed.
+ * Which glyph set a renderer prints with. An explicit `glyphs` option wins.
+ * Then `emoji: true` opts into the emoji set and `emoji: false` into ascii;
+ * with neither, CI logs, NO_EMOJI and a dumb terminal get ascii and every
+ * other terminal gets unicode.
  * @param {NodeJS.ProcessEnv} [env]
  * @param {RendererOptions} [options] theme defaults already merged in
  * @returns {GlyphMode}
  */
 export function resolveGlyphMode(env = process.env, options = {}) {
   if (options.glyphs && options.glyphs in GLYPH_SETS) return options.glyphs;
-  return (options.emoji ?? shouldUseEmoji(env, options)) ? "emoji" : "ascii";
+  if (options.emoji === true) return "emoji";
+  if (options.emoji === false) return "ascii";
+  if (env.NO_EMOJI === "1" || env.NO_EMOJI === "true") return "ascii";
+  if (env.CI === "true" || env.CI === "1") return "ascii";
+  if (env.TERM === "dumb") return "ascii";
+  return "unicode";
 }
 
 /**
@@ -253,7 +259,7 @@ export function createRenderer(options = {}) {
    * @returns {string}
    */
   function header(title, lines = []) {
-    const innerWidth = width - 4;
+    const innerWidth = width - 6;
     const rendered = [title, ...lines]
       .flatMap((value) => wrapBoxed(renderHeadline(value), innerWidth, headlineIndent(value)))
       .map((line) => padRight(line, innerWidth));
@@ -309,7 +315,7 @@ export function createRenderer(options = {}) {
    * @returns {string}
    */
   function verdict({ verdict: result, blockedBy, nextStep } = {}) {
-    const innerWidth = width - 4;
+    const innerWidth = width - 6;
     const glyph = verdictGlyphs[/** @type {string} */ (result)] ?? "";
     const verdictPrefix = `${glyphs.marks.verdict}  VERDICT     ${glyph}  `;
     const verdictColor = palette[VERDICT_PALETTE[/** @type {string} */ (result)] ?? ""];
@@ -372,10 +378,10 @@ export function createRenderer(options = {}) {
    * rule under the head row. The last column wraps to the renderer width so
    * a long "what it does" cell never pushes past the terminal edge.
    * @param {(string | number | null | undefined)[][]} rows
-   * @param {{ head?: string[] }} [options]
+   * @param {{ head?: string[], width?: number }} [options] `width` is the room the table may fill; the renderer width by default
    * @returns {string}
    */
-  function table(rows, { head } = {}) {
+  function table(rows, { head, width: room = width } = {}) {
     const gap = "  ";
     /** @param {(string | number | null | undefined)[]} cells */
     const cellsOf = (cells) => cells.map((cell) => String(cell ?? ""));
@@ -393,7 +399,7 @@ export function createRenderer(options = {}) {
       }
     }
     const lead = widths.slice(0, -1).reduce((total, columnWidth) => total + columnWidth + gap.length, 0);
-    const lastWidth = Math.max(width - lead, 20);
+    const lastWidth = Math.max(room - lead, 20);
 
     /** @param {string[]} cells */
     const wrapLast = (cells) => wrap(cells[columns - 1] ?? "", lastWidth);
