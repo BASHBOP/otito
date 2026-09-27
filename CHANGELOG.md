@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-09-27
+
+The terminal output gets colour and shape it didn't have before. `otito` resolves one glyph set per run (plain Unicode by default, ASCII in CI, emoji opt-in) and builds tables, trees and coloured lists from shared string-building primitives instead of ad-hoc strings; every bullet and list item now dims its marker the way a box border is dimmed, matching the headers, boxes and closing line that already had colour. `otito install` prompts a human at a TTY for how to install, with a short personalized pitch first, while every non-interactive caller (`--yes`, `--json`, CI, agents) is unaffected. No command, field or schema was removed.
+
 ### Added
 
 - **List and bullet items pick up the renderer's colour, not just headers, boxes and the closing line.** `bullet()` in `src/lib/render/fancy.js` and every formatter that built a line as `` `${renderer.glyphs.item} ${text}` `` by hand (the shared summary behind `install`/`init`/`discover`/`index`/`catalog`/`search`/`repo` in `src/lib/output.js`, `context_pack`'s Commands section, `change_impact`'s suggested tests and risk hotspots, and the Context evidence lines in `pass`/`pass-pr`) now dim the marker the same way a box border is dimmed, when colour is on. Colour off (piped output, `NO_COLOR`, CI) is unaffected. `tests/fixtures/render-fancy-golden.json` and `tests/fixtures/formatters-golden.json` were regenerated on purpose; every changed line is a bullet or list-item marker gaining `\x1b[2m...\x1b[0m`, nothing else moved.
