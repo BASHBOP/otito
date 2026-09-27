@@ -7,10 +7,25 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { appendDecision, decisionRecord, formatContext, isRoutable, routeLogPath, shouldRoute } from "../scripts/hooks/route-prompt.mjs";
+import { appendDecision, decisionRecord, formatContext, isHarnessPrompt, isRoutable, routeLogPath, shouldRoute } from "../scripts/hooks/route-prompt.mjs";
 
 const HOOK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "scripts", "hooks", "route-prompt.mjs");
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+// What the harness submits through UserPromptSubmit on its own, in the shapes
+// the transcripts hold.
+const TASK_NOTIFICATION = [
+  "<task-notification>",
+  "<task-id>bg1f88yix</task-id>",
+  "<tool-use-id>toolu_01</tool-use-id>",
+  "<output-file>/private/tmp/claude-501/tasks/bg1f88yix.output</output-file>",
+  "<status>completed</status>",
+  '<summary>Background command "yarn test 2&gt;&amp;1 | tail -15" completed (exit code 0)</summary>',
+  "</task-notification>",
+].join("\n");
+const CI_MONITOR_EVENT = '<ci-monitor-event>"Auto-fix pull requests" was just enabled for this session. No action needed right now.</ci-monitor-event>';
+const SHELL_RECORD = "<bash-input>git push origin v3.2.0</bash-input><bash-stdout>Everything up-to-date</bash-stdout><bash-stderr></bash-stderr>";
+const REMINDER = "<system-reminder>\nYou are operating in a git worktree.\nWorktree name: frosty-lederberg-90e4d2\n</system-reminder>";
 
 /**
  * Run the hook as the harness runs it: JSON on stdin, JSON or nothing on
@@ -59,6 +74,42 @@ test("anything that could be work is routed, because a miss costs less than a fa
 test("a slash command belongs to its own skill, not to the router", () => {
   assert.equal(isRoutable("/code-review high"), false);
   assert.equal(isRoutable("/loop check the deploy"), false);
+});
+
+test("what the harness submits on its own is not a request, so it routes nothing", () => {
+  for (const prompt of [TASK_NOTIFICATION, CI_MONITOR_EVENT, SHELL_RECORD, `\n  ${TASK_NOTIFICATION}\n`, `${REMINDER}\n\n${TASK_NOTIFICATION}`]) {
+    assert.equal(isHarnessPrompt(prompt), true, `${JSON.stringify(prompt.slice(0, 40))} is the harness's`);
+    assert.equal(isRoutable(prompt), false, `${JSON.stringify(prompt.slice(0, 40))} should be skipped`);
+  }
+  assert.equal(shouldRoute({ hook_event_name: "UserPromptSubmit", cwd: "/repo", prompt: TASK_NOTIFICATION }), false);
+});
+
+test("a reminder in front of a prompt is looked past, not taken as the prompt", () => {
+  // Every logged prompt that opened with a reminder had a request behind it.
+  const request = `${REMINDER}\n\nIn the otito repo, the local gate gives a wrong repair hint`;
+  assert.equal(isRoutable(request), true);
+  assert.equal(isHarnessPrompt(request), false);
+  assert.equal(isRoutable(`${REMINDER}\n${REMINDER}\n\nopen prs if needed let me know when to merge`), true, "two reminders, one request");
+  // Behind the reminder the usual rules apply.
+  assert.equal(isRoutable(`${REMINDER}\n\nyes`), false);
+  assert.equal(isRoutable(`${REMINDER}\n\n/code-review high`), false);
+  assert.equal(isRoutable(REMINDER), false, "a reminder with nothing behind it is not a prompt");
+  // An unclosed reminder is not one the harness wrote, so it routes.
+  assert.equal(isRoutable("<system-reminder> is showing up in my transcripts, why?"), true);
+});
+
+test("a wrapper that carries a request still routes", () => {
+  for (const prompt of [
+    '\n\n<pasted_content id="f8cb">\nthe review said the gate ignores --path\n</pasted_content id="f8cb">\n',
+    "<create-pr-command>\n## Overview\n\nCreate a pull request for the changes in this session.\n</create-pr-command>",
+    '<cross-session-message from="local_63035a58" name="Setup">\nThe plan was amended. Re-read it before Phase 1.\n</cross-session-message>',
+    // Naming a wrapper is not being one.
+    "why does <task-notification> reach the route hook?",
+    "<task-notifications> are noisy, filter them in the grader",
+  ]) {
+    assert.equal(isRoutable(prompt), true, `${JSON.stringify(prompt.slice(0, 40))} should route`);
+    assert.equal(isHarnessPrompt(prompt), false);
+  }
 });
 
 test("a subagent never routes, so a routed agent cannot launch another", () => {
@@ -204,5 +255,13 @@ test("a routed prompt leaves one line in the decision log, and a skipped one lea
 
   await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt: "ok" }, { env: { OTITO_ROUTE_LOG: log } });
   assert.equal(fs.readFileSync(log, "utf8").trim().split("\n").length, 1, "a skipped prompt is not a decision");
+
+  // The harness delivers a finished background task through the same event.
+  for (const prompt of [TASK_NOTIFICATION, CI_MONITOR_EVENT, SHELL_RECORD]) {
+    const harness = await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt }, { env: { OTITO_ROUTE_LOG: log } });
+    assert.equal(harness.code, 0);
+    assert.equal(harness.out, "", "no routing hint is injected for a prompt nobody wrote");
+  }
+  assert.equal(fs.readFileSync(log, "utf8").trim().split("\n").length, 1, "a harness prompt is not a decision");
   fs.rmSync(dir, { recursive: true, force: true });
 });
