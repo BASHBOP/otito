@@ -1143,7 +1143,7 @@ export function formatPassTerminal(data, rendererFactory) {
 
   lines.push("");
   lines.push(`  ${renderer.glyphs.tip}  Context evidence:`);
-  for (const command of data.contextEvidence) lines.push(`     ${renderer.glyphs.item} ${command}`);
+  for (const command of data.contextEvidence) lines.push(`     ${renderer.paint(renderer.glyphs.item, "dim")} ${command}`);
 
   return lines.join("\n");
 }

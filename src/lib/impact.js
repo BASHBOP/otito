@@ -1399,14 +1399,14 @@ export function formatImpactTerminal(data, rendererFactory) {
   lines.push(
     renderer.section(
       `${decor("🧪")}Suggested tests`,
-      data.testSuggestions.slice(0, 8).map((/** @type {string} */ t) => `${renderer.glyphs.item} ${t}`),
+      data.testSuggestions.slice(0, 8).map((/** @type {string} */ t) => `${renderer.paint(renderer.glyphs.item, "dim")} ${t}`),
     ),
   );
   lines.push("");
   lines.push(
     renderer.section(
       `${decor("🚨")}Risk hotspots`,
-      data.risks.slice(0, 6).map((/** @type {string} */ r) => `${renderer.glyphs.item} ${r}`),
+      data.risks.slice(0, 6).map((/** @type {string} */ r) => `${renderer.paint(renderer.glyphs.item, "dim")} ${r}`),
     ),
   );
   if (data.validation) {
