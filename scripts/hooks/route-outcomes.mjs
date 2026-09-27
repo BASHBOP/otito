@@ -19,6 +19,12 @@
 // with the same minimum-sample rule and intervals as regret, so an
 // under-powered lane says so instead of publishing a rate.
 //
+// What the harness submitted itself (a task notification, a CI monitor event,
+// the record of a `!` shell command) is not a request. The hook skips those
+// now, but it routed them until 2026-09-27 and the log keeps the rows. They
+// are left out of the grade and counted, and in the transcript they are
+// neither a prompt nor anybody's follow-up.
+//
 //   node scripts/hooks/route-outcomes.mjs [--log <file>] [--transcripts <dir>]
 //        [--window-min 60] [--min-sample 30] [--json]
 
@@ -29,7 +35,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { wilson } from "../../src/lib/regret.js";
-import { routeLogPath } from "./route-prompt.mjs";
+import { isHarnessPrompt, routeLogPath } from "./route-prompt.mjs";
 
 export const EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit", "str_replace_based_edit_tool"]);
 const TIERS = ["cheap", "mid", "premium"];
@@ -68,8 +74,14 @@ function promptText(record) {
 /**
  * Every session in a transcripts directory: prompts, interruptions and the
  * assistant's file edits, in time order.
+ *
+ * A harness prompt is kept as a `harness` event holding only its hash, which
+ * is all the decision log holds of it. It is read from the user record and
+ * from the queue, because a notification that arrives in the middle of a turn
+ * is filed as an attachment and never becomes a user record, while the queue
+ * holds every one as the hook hashed it.
  * @param {string} dir `~/.claude/projects` or a directory shaped like it
- * @returns {Map<string, { ts: number, kind: "prompt"|"interrupt"|"edit", text?: string, file?: string, uuid?: string }[]>}
+ * @returns {Map<string, { ts: number, kind: "prompt"|"interrupt"|"edit"|"harness", text?: string, file?: string, uuid?: string, hash?: string }[]>}
  */
 export function readSessions(dir) {
   /** @type {Map<string, any[]>} */
@@ -88,7 +100,7 @@ export function readSessions(dir) {
       continue;
     }
     for (const line of raw.split("\n")) {
-      if (!line.includes('"type":"user"') && !line.includes('"type":"assistant"')) continue;
+      if (!line.includes('"type":"user"') && !line.includes('"type":"assistant"') && !line.includes('"type":"queue-operation"')) continue;
       let record;
       try {
         record = JSON.parse(line);
@@ -105,10 +117,14 @@ export function readSessions(dir) {
           const file = block.input?.file_path ?? block.input?.path;
           if (file) events.push({ ts, kind: "edit", file: String(file) });
         }
+      } else if (record.type === "queue-operation") {
+        if (record.operation !== "enqueue" || typeof record.content !== "string" || !isHarnessPrompt(record.content)) continue;
+        events.push({ ts, kind: "harness", hash: promptHash(record.content) });
       } else {
         const text = promptText(record);
         if (!text) continue;
-        events.push({ ts, kind: INTERRUPT.test(text) ? "interrupt" : "prompt", text, uuid: record.uuid });
+        if (isHarnessPrompt(text)) events.push({ ts, kind: "harness", hash: promptHash(text) });
+        else events.push({ ts, kind: INTERRUPT.test(text) ? "interrupt" : "prompt", text, uuid: record.uuid });
       }
       sessions.set(sessionId, events);
     }
@@ -185,8 +201,15 @@ export function gradeDecisions(records, sessions, options = {}) {
   const minSample = options.minSample ?? 30;
   const rows = [];
   let unjoined = 0;
+  let excluded = 0;
   for (const record of records) {
     const events = record?.sessionId ? sessions.get(record.sessionId) : null;
+    // Routed before the hook skipped them. The log holds only a hash, so the
+    // row is known by the hash of a harness prompt in its own session.
+    if (events?.some((e) => e.kind === "harness" && e.hash === record.promptHash)) {
+      excluded += 1;
+      continue;
+    }
     const recordTs = Date.parse(record?.ts ?? "");
     const index = events
       ? events.findIndex((e) => e.kind === "prompt" && promptHash(e.text) === record.promptHash && Math.abs(e.ts - recordTs) < 10 * 60000)
@@ -219,6 +242,7 @@ export function gradeDecisions(records, sessions, options = {}) {
   }
   return {
     records: records.length,
+    excluded,
     joined: rows.length,
     unjoined,
     graded: graded.length,
@@ -263,7 +287,7 @@ export function formatOutcomes(data) {
   const lines = [
     "# Route outcomes, same session",
     "",
-    `Decisions: ${data.records} logged, ${data.joined} joined to a transcript prompt (${data.unjoined} not found), ${data.graded} with a follow-up inside ${data.windowMin} minutes. Minimum sample: ${data.minSample}.`,
+    `Decisions: ${data.records} logged, ${data.excluded} excluded as harness prompts (task notifications, CI monitor events, shell records), ${data.joined} joined to a transcript prompt (${data.unjoined} not found), ${data.graded} with a follow-up inside ${data.windowMin} minutes. Minimum sample: ${data.minSample}.`,
     "",
   ];
   for (const [variant, grade] of Object.entries(data.variants)) {

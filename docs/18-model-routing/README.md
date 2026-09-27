@@ -306,9 +306,17 @@ repository costs the hint, not the turn.
 
 **It skips what is not work.** Turn-taking prompts (`ok`, `thanks`, `ship it`)
 and slash commands route nothing, because spending seconds of latency to score
-the word "ok" is a cost with no answer attached. The filter is deliberately
-permissive in the other direction: a skipped request loses a hint, while a
-spurious one loses seconds, so anything ambiguous routes.
+the word "ok" is a cost with no answer attached. Neither does what the harness
+submits through `UserPromptSubmit` on its own: a finished background task
+(`<task-notification>`), the desktop app's CI monitor (`<ci-monitor-event>`)
+and the record of a `!` shell command with its output (`<bash-input>`). None
+of them is a request, and the work that follows belongs to one that was
+already routed. A `<system-reminder>` the harness puts in front of a prompt is
+looked past, and what is behind it is judged like any other prompt. The filter
+is deliberately permissive in the other direction: a skipped request loses a
+hint, while a spurious one loses seconds, so anything ambiguous routes. That
+includes the wrappers that carry a request: pasted content, the desktop app's
+Create PR command, and a message from another session.
 
 **A subagent never routes.** It was launched on a tier its caller already chose,
 so re-routing would second-guess that, and a subagent that routes could launch a
@@ -342,6 +350,58 @@ is an interruption or opens by pushing back) and `reworked` (the assistant's
 next turn edits a file this turn edited). Both were audited before they were
 written, on twenty days of this machine's transcripts, and the audit is the
 reason they carry the caveats they print; it is in the next section.
+
+The log is one line per routed request, and for its first day it was not.
+Claude Code delivers a finished background task through `UserPromptSubmit`,
+and the hook routed it like a prompt. On 2026-09-27, 22 hours after the log
+began, 79 of its 146 decisions were prompts the harness wrote: 75 task
+notifications, 3 shell records and 1 CI monitor event, each matched by hash to
+the queue record the harness keeps in the session transcript. A notice that
+`yarn test` had finished was routed premium, with `data model` and
+`auth/security` as its risk paths. Each one cost a hook run and put a routing
+hint in front of a prompt nobody wrote.
+
+| Prompt opened with | logged | harness prompt | now |
+| --- | --: | --- | --- |
+| `<task-notification>` | 75 | yes | skipped |
+| `<bash-input>` | 3 | yes | skipped |
+| `<ci-monitor-event>` | 1 | yes | skipped |
+| `<system-reminder>`, then the prompt | 22 | no | routes on what is behind the reminder; 3 of the 22 were `yes` or a typo of `merged` and are now skipped as turn-taking |
+| `<pasted_content>` | 5 | no | routes |
+| `<create-pr-command>` | 2 | no | routes |
+| `<cross-session-message>` | 1 | no | routes |
+| no wrapper | 37 | no | routes |
+
+`<command-name>`, `<command-message>`, `<local-command-stdout>` and
+`<local-command-caveat>` fill the same transcripts and matched no decision:
+they are how the transcript files a slash command, not what the hook is
+handed, so the hook has no rule for them.
+
+The hook skips harness prompts now. The rows it already wrote stay where they
+are, because the log is append-only, and `route-outcomes` leaves them out. The
+log holds a hash and never the prompt, so the grader hashes every harness
+prompt it finds in a session's transcript, in the user records and in the
+queue records, and a decision from that session with one of those hashes is
+excluded and counted in the first line of the output (`excluded` under
+`--json`). The queue matters: a harness prompt that arrives in the middle of a
+turn is filed as an attachment and never becomes a user record, which was 33
+of the 79, and the queue held all 79. In the transcript a harness prompt is no
+longer a prompt or a follow-up either, so a finished background task does not
+read as the user moving on without complaint.
+
+On the same 146 rows the grader had joined 100 decisions and graded 78, and 36
+of the 78 were harness prompts. It published two rates: deterministic cheap,
+1.8% corrected on 55 requests, 21 of them harness prompts, and offline mid,
+0.0% on 58, 36 of them harness prompts. Another 7 requests were graded only
+because a harness prompt was read as their follow-up. With harness prompts
+left out, 54 decisions join, 35 have a follow-up and every lane is under the
+minimum sample, so nothing is published. Two limits remain. A decision whose
+transcript is gone cannot be told from a prompt that was never recorded and
+counts as not found, as it did before. And 13 routed requests do not join: 8
+were typed in the middle of a turn, which the transcript files as an
+attachment, 4 opened with a blank line that the hook hashed and the join
+trims, and 1 came from another session. Evidence, hashes and counts only, in
+`.otito/runs/2026-09-27/route-harness-prompts/`, local only.
 
 ## Dogfood, bashbop-event-web, 2026-09-19
 

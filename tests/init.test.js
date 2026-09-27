@@ -195,6 +195,40 @@ test("initProject excludes non-static script names from the pre-commit hook", ()
   assert.doesNotMatch(hook, /npm test/);
 });
 
+test("initProject runs a type check named with a tsc segment in the quality job and the pre-commit hook", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-tsc-"));
+  fs.writeFileSync(
+    path.join(fixture, "package.json"),
+    JSON.stringify(
+      {
+        name: "sample",
+        scripts: {
+          lint: "eslint .",
+          "tsc:check": "tsc --noEmit",
+          "tsc:watch": "tsc --noEmit --watch",
+          "tsconfig:sync": "node scripts/sync-tsconfig.js",
+          test: "node --test",
+        },
+      },
+      null,
+      2,
+    ),
+  );
+
+  initProject(fixture);
+
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
+  assert.match(workflow, /type contract checks\n {8}run: npm run tsc:check/);
+  assert.doesNotMatch(workflow, /tsc:watch|tsconfig:sync/);
+
+  const hook = fs.readFileSync(path.join(fixture, ".githooks", "pre-commit"), "utf8");
+  assert.match(hook, hookGateLine);
+  assert.match(hook, /npm run lint/);
+  assert.match(hook, /npm run tsc:check/);
+  assert.doesNotMatch(hook, /tsc:watch|tsconfig:sync/);
+  assert.doesNotMatch(hook, /npm test/);
+});
+
 test("initProject sets core.hooksPath only when requested, inside a git repo", () => {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-hooks-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint ." } }, null, 2));

@@ -305,6 +305,7 @@ export function formatDiscoverSummary(result, options = {}) {
         items: result.repositories.map((repository) => `${repository.root} (${repository.marker})`),
       },
     ],
+    close: { status: "runs" },
     options,
   });
 }
@@ -326,6 +327,7 @@ export function formatIndexSummary(result, options = {}) {
       { title: "Indexed", glyph: "✅", items: result.repositories.map((repo) => `${repo.name}: ${repo.root}`) },
       { title: "Errors", glyph: "⚠️", items: result.errors.map((error) => `${error.path}: ${error.error}`) },
     ],
+    close: result.errors.length ? { status: "not-verified", detail: `${result.errors[0].path} did not index` } : { status: "runs" },
     options,
   });
 }
@@ -353,6 +355,7 @@ export function formatCatalogSummary(result, options = {}) {
         }),
       },
     ],
+    close: { status: "runs" },
     options,
   });
 }
@@ -381,6 +384,7 @@ export function formatSearchResults(result, options = {}) {
       },
       { title: "Errors", glyph: "⚠️", items: result.errors.map((error) => `${error.root}: ${error.error}`) },
     ],
+    close: result.errors.length ? { status: "not-verified", detail: `${result.errors[0].root} could not be searched` } : { status: "runs" },
     options,
   });
 }

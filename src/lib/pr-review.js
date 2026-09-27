@@ -2,6 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { generateCodeMap } from "./code-map.js";
+import { isTypeCheckScript, selectScripts } from "./package-scripts.js";
 import { inspectRepo } from "./repo.js";
 import { classifyPath, RISK_SCORE_WEIGHTS } from "./risk-paths.js";
 import { runCommand } from "./tools.js";
@@ -1186,10 +1187,7 @@ function inferTestHints(repo, files, risk) {
   /** @type {TestHint[]} */
   const hints = [];
 
-  for (const name of preferredScripts) {
-    if (!scripts[name]) {
-      continue;
-    }
+  for (const name of selectScripts(scripts, preferredScripts)) {
     const reason = reasonForScript(name, files, risk);
     if (!reason) {
       continue;
@@ -1260,8 +1258,8 @@ function reasonForScript(name, files, risk) {
   const hasRuntimeSource =
     hasTypedSource ||
     files.some((file) => ["route", "apiRoute", "controller", "service", "module", "component", "hook", "apiClient", "dto", "schema"].includes(file.kind));
+  if (isTypeCheckScript(name)) return hasTypedSource ? "TypeScript contracts changed" : undefined;
   if (name.includes("lint")) return hasRuntimeSource ? "changed source files should pass style/static checks" : undefined;
-  if (name.includes("type") || name === "tsc") return hasTypedSource ? "TypeScript contracts changed" : undefined;
   if (name === "build")
     return hasRuntimeSource && (changedKinds.has("route") || changedKinds.has("component") || risk.level !== "low")
       ? "build catches integration and bundling issues"
