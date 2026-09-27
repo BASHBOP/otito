@@ -26,6 +26,35 @@ test("generatePrReview summarizes branch diff with risk and test hints", () => {
   assert.match(comment, /Risky Files/);
 });
 
+test("generatePrReview hints a type check named with a tsc segment", () => {
+  for (const name of ["tsc:check", "tsc", "check:tsc", "tsc-check"]) {
+    const fixture = createPrFixture({ lint: "eslint .", [name]: "tsc --noEmit", "tsconfig:sync": "node sync.js", test: "node --test" });
+
+    const result = generatePrReview(fixture, { base: "main" });
+    assert.deepEqual(
+      result.data.testHints.map((hint) => [hint.command, hint.reason]),
+      [
+        ["npm run lint", "changed source files should pass style/static checks"],
+        [`npm run ${name}`, "TypeScript contracts changed"],
+        ["npm test", "verify behavior around changed domains"],
+      ],
+    );
+  }
+});
+
+test("generatePrReview hints the headless end-to-end script when the package has one", () => {
+  const fixture = createPrFixture({ test: "node --test", "test:e2e": "playwright test --headed", "test:e2e:headless": "playwright test --reporter=line" });
+
+  const result = generatePrReview(fixture, { base: "main" });
+  assert.deepEqual(
+    result.data.testHints.map((hint) => [hint.command, hint.reason]),
+    [
+      ["npm test", "verify behavior around changed domains"],
+      ["npm run test:e2e:headless", "request/user-flow surface changed"],
+    ],
+  );
+});
+
 test("generatePrReview can create a sticky PR comment through gh", () => {
   const fixture = createPrFixture();
   const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gh-"));
@@ -232,18 +261,10 @@ function createAuthRiskFixture() {
   return fixture;
 }
 
-function createPrFixture() {
+function createPrFixture(scripts = { lint: "eslint .", test: "node --test" }) {
   const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-"));
   fs.mkdirSync(path.join(fixture, "src", "booking"), { recursive: true });
-  fs.writeFileSync(
-    path.join(fixture, "package.json"),
-    JSON.stringify({
-      scripts: {
-        lint: "eslint .",
-        test: "node --test",
-      },
-    }),
-  );
+  fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts }));
   fs.writeFileSync(
     path.join(fixture, "src", "booking", "booking.controller.ts"),
     [
