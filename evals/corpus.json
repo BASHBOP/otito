@@ -3,7 +3,7 @@
   "description": "Labeled evaluation corpus for otito retrieval, risk classification, fixture-backed harness command execution, and gate effectiveness. Gate cases initialize an isolated Git repository from a committed base, apply one committed change-set, and assert both the verdict and deterministic check reason. See docs/EVALS.md for how to add a case and how thresholds work.",
   "k": 5,
   "thresholds": {
-    "comment": "Floors set to current-baseline-minus-slack so the suite is green today but a regression trips it. Baseline (2026-09-25): retrieval p@5=0.867 r@5=1.0 mrr=0.975; risk accuracy=1.0 (22/22). Aggregate metrics must be >= these floors for exit code 0. The risk floor is 0.96 so that a single failing case (21/22 = 0.955) still trips the gate. Re-record both baseline and floors in docs/EVALS.md after any intentional behavior change.",
+    "comment": "Floors set to current-baseline-minus-slack so the suite is green today but a regression trips it. Baseline (2026-09-27): retrieval p@5=0.873 r@5=1.0 mrr=0.976 (22/22); risk accuracy=1.0 (22/22). Aggregate metrics must be >= these floors for exit code 0. The risk floor is 0.96 so that a single failing case (21/22 = 0.955) still trips the gate. Re-record both baseline and floors in docs/EVALS.md after any intentional behavior change.",
     "retrieval": {
       "precisionAtK": 0.85,
       "recallAtK": 0.9,
@@ -27,7 +27,8 @@
     "rsvp-configuration-web": "evals/fixtures/rsvp-configuration-web",
     "mobile-host-rsvp": "evals/fixtures/mobile-host-rsvp",
     "campaign-email": "evals/fixtures/campaign-email",
-    "gate-node": "evals/fixtures/gate-node"
+    "gate-node": "evals/fixtures/gate-node",
+    "multi-locale-web": "evals/fixtures/multi-locale-web"
   },
   "retrieval": [
     {
@@ -171,6 +172,19 @@
         "src/email/template/campaign-message-responsive.hbs",
         "src/audience/campaign.service.ts",
         "src/email/template/layouts/responsive-base.hbs"
+      ]
+    },
+    {
+      "name": "multi-locale-named-files-and-symbol",
+      "comment": "The bashbop-event-web overnight-event request (PR #588). It names two files and a symbol; the labels are the five source files that PR changed. Before named-file pinning, catalog demotion and extension stripping, five locale catalogs and every .ts/.tsx file competed for these slots.",
+      "query": "fix overnight event bug: combineDateAndTime does not roll over to the next day; event-service.ts only compares getHours; EditableDate.tsx blocks overnight ranges",
+      "repoFixture": "multi-locale-web",
+      "expectedPrimary": [
+        "services/event-service.ts",
+        "components/inline-edit/EditableDate.tsx",
+        "utils/create-event.ts",
+        "utils/combineDateAndTime.ts",
+        "components/conversational/utils/aiEventSchema.ts"
       ]
     }
   ],

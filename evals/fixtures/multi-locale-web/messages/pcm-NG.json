@@ -1,0 +1,28 @@
+{
+  "event": {
+    "title": "Event (pcm)",
+    "startDate": "Start date (pcm)",
+    "endDate": "End date (pcm)",
+    "startTime": "Start time (pcm)",
+    "endTime": "End time (pcm)",
+    "endTimeBeforeStart": "End time is before the start time (pcm)",
+    "overnightEvent": "Ends the next day (pcm)",
+    "editDate": "Edit date (pcm)",
+    "timezone": "Time zone (pcm)"
+  },
+  "main": {
+    "mainBanner": "Main banner (pcm)",
+    "mainImageLabel": "Main image (pcm)",
+    "setAsMainHost": "Set as main host (pcm)",
+    "addMainImage": "Add main image (pcm)"
+  },
+  "validation": {
+    "invalidDate": "Invalid date (pcm)",
+    "invalidTime": "Invalid time (pcm)",
+    "requiredField": "Required (pcm)"
+  },
+  "branch": {
+    "mergeState": "Merge state (pcm)",
+    "syncStatus": "Sync status (pcm)"
+  }
+}

@@ -8,7 +8,8 @@
 import path from "node:path";
 import { getCachedCodeMap } from "./index-cache.js";
 import { conceptsFromQuery, classifyPath, CONCEPT_SYNONYMS, RISK_FLAGS, glyphFor, isDocPath, singularizeToken } from "./risk-paths.js";
-import { isTestFilePath } from "./code-map/classify.js";
+import { isRunnableTestPath, isTestFilePath } from "./code-map/classify.js";
+import { collapseLocaleSiblings, formatLocales, isCopyRequest, resolveNamedFiles, stripFileExtensions, TRANSLATION_DEMOTION } from "./ranking-rules.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 import { runCommand } from "./tools.js";
 
@@ -37,6 +38,12 @@ export const DIFF_RENAME_LIMIT = 1000;
  * @property {number} score
  * @property {string[]} reasons
  * @property {string[]} relatedFiles
+ * @property {string[]} [siblings] locale files of the same catalog this entry stands for
+ */
+
+/**
+ * A file the request names, with its position among the pins.
+ * @typedef {import('./ranking-rules.js').NamedFile & { order: number }} PinnedFile
  */
 
 /**
@@ -46,7 +53,10 @@ export const DIFF_RENAME_LIMIT = 1000;
  * @property {string[]} reasons
  */
 
-const impactEngineVersion = 3;
+// 4: a file the request names is pinned as a required owner, a translation
+// catalog is demoted unless the request is about copy and its locale files
+// share one entry (`siblings`), and a named file's extension no longer scores.
+const impactEngineVersion = 4;
 const defaultTop = 10;
 
 const STOP_WORDS = new Set([
@@ -156,6 +166,12 @@ const W_EXPORT = 4.0;
 const W_IMPORT = 2.5;
 const W_CONCEPT = 6.0;
 const W_CONFIG_HINT = 4.0;
+// A definition of a symbol the request names, when it is not the definition
+// the code imports (that one is pinned): a local copy, an export nothing uses.
+const W_NAMED_DEFINER = 30.0;
+// How far a named file sits above the best candidate the request did not
+// name. A named path outranks a named symbol's definition.
+const PIN_MARGIN = { path: 20.0, symbol: 10.0 };
 
 const CONFIG_HINTS = {
   docker: ["dockerfile", "docker-compose"],
@@ -220,22 +236,40 @@ export function generateImpact(query, options = {}) {
   const top = clampInt(options.top, defaultTop, 1, 50);
   const repoPath = options.path ?? ".";
   const map = options.codeMap ?? getCachedCodeMap(repoPath);
-  const weightedQuery = weightedQueryTerms(normalized);
+  // The words of a named file score; its extension, shared by every file of
+  // that language, does not.
+  const termsQuery = stripFileExtensions(normalized);
+  const weightedQuery = weightedQueryTerms(termsQuery);
   const concepts = conceptsFromQuery(normalized);
   const wantsTests = queryMentions(weightedQuery, ["test", "tests", "spec", "coverage", "qa"]);
   const wantsDocs = queryMentions(weightedQuery, ["doc", "docs", "documentation", "readme", "changelog"]);
+  const wantsCopy = isCopyRequest(weightedQuery.keys());
+  const named = resolveNamedFiles(map.files, normalized, { limit: top });
+  /** @type {Map<string, PinnedFile>} */
+  const pinned = new Map(named.pinned.map((entry, order) => [entry.path, { ...entry, order }]));
 
-  const scored = scoreFiles(map.files, weightedQuery, concepts, { wantsTests, wantsDocs });
-  const withBoosts = applyDependencyBoosts(map.files, scored);
-  const heuristicRanked = [...withBoosts.values()].sort((a, b) => b.score - a.score).slice(0, top);
-  const roles = classifyImpactRoles(heuristicRanked, map.files, normalized);
+  const scored = scoreFiles(map.files, weightedQuery, concepts, { wantsTests, wantsDocs, wantsCopy });
+  addNamedFiles(scored, map.files, pinned, named.definers);
+  const withBoosts = applyDependencyBoosts(map.files, scored, pinned);
+  liftPinnedFiles(withBoosts, pinned);
+  const pinOrder = (/** @type {ScoredEntry} */ entry) => pinned.get(entry.file.path)?.order ?? Number.MAX_SAFE_INTEGER;
+  const byScore = [...withBoosts.values()].sort((a, b) => b.score - a.score || pinOrder(a) - pinOrder(b));
+  const heuristicRanked = collapseLocaleSiblings(byScore, describeEntry, (entry) => pinned.has(entry.file.path)).slice(0, top);
+  const roles = classifyImpactRoles(heuristicRanked, map.files, termsQuery, pinned);
   const diffSnapshot = captureDiffSnapshot(map.repo.root, options.diffBase, options.diffFiles, options.includeUntracked ?? true);
   const exactDiffFiles = diffSnapshot?.ok ? (diffSnapshot.files ?? []) : [];
   const diffEvidence = diffSnapshot?.ok ? buildDiffEvidence(exactDiffFiles, map.files, withBoosts, diffSnapshot.base) : null;
+  const changedPaths = new Set(diffEvidence ? diffEvidence.entries.map((entry) => entry.file.path) : []);
   // A requested Git diff is evidence, not another fuzzy ranking signal. Put every
   // mapped changed file ahead of heuristic candidates and label it as such, so an
   // agent cannot silently overlook the source files that actually changed.
-  const ranked = addPredictableSupportFiles(diffEvidence ? mergeDiffEvidence(diffEvidence.entries, heuristicRanked) : heuristicRanked, map.files, roles);
+  const ranked = addPredictableSupportFiles(
+    diffEvidence ? mergeDiffEvidence(diffEvidence.entries, heuristicRanked) : heuristicRanked,
+    map.files,
+    roles,
+    (entry) => pinned.has(entry.file.path) || changedPaths.has(entry.file.path),
+  );
+  noteLocaleSiblings(ranked);
 
   const testSuggestions = suggestTests(map.files, ranked, map.repo);
   const risks = identifyRisks(normalized, ranked, concepts);
@@ -269,6 +303,7 @@ export function generateImpact(query, options = {}) {
       relatedFiles: entry.relatedFiles.slice(0, 8),
       role: roles.byPath.get(entry.file.path) ?? "advisory",
       riskFlags: classifyPath(entry.file.path, { kind: entry.file.kind }),
+      ...(entry.siblings?.length ? { siblings: entry.siblings } : {}),
     })),
     testSuggestions,
     risks,
@@ -298,17 +333,21 @@ export function generateImpact(query, options = {}) {
 }
 
 /**
+ * @typedef {{ wantsTests: boolean, wantsDocs: boolean, wantsCopy: boolean }} ScoreFlags
+ */
+
+/**
  * @param {CodeMapFile[]} files
  * @param {Map<string, number>} weightedQuery
  * @param {string[]} concepts
- * @param {{ wantsTests: boolean, wantsDocs: boolean }} flags
+ * @param {ScoreFlags} flags
  * @returns {Map<string, ScoredEntry>}
  */
-function scoreFiles(files, weightedQuery, concepts, { wantsTests, wantsDocs }) {
+function scoreFiles(files, weightedQuery, concepts, flags) {
   /** @type {Map<string, ScoredEntry>} */
   const scored = new Map();
   for (const file of files) {
-    const result = scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs });
+    const result = scoreFile(file, weightedQuery, concepts, flags);
     if (result.score > 0) {
       scored.set(file.path, { file, score: result.score, reasons: result.reasons, relatedFiles: [] });
     }
@@ -320,10 +359,10 @@ function scoreFiles(files, weightedQuery, concepts, { wantsTests, wantsDocs }) {
  * @param {CodeMapFile} file
  * @param {Map<string, number>} weightedQuery
  * @param {string[]} concepts
- * @param {{ wantsTests: boolean, wantsDocs: boolean }} flags
+ * @param {ScoreFlags} flags
  * @returns {ScoreResult}
  */
-function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs }) {
+function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs, wantsCopy }) {
   const pathTokens = tokenize(file.path);
   const pathCounts = countTokens(pathTokens);
   const symbolTokens = tokenize(file.symbols.map((symbol) => symbol.name ?? "").join(" "));
@@ -425,6 +464,14 @@ function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs }) {
     }
   }
 
+  // Every JSON key is a symbol, so a catalog of a few thousand keys matches
+  // most requests on several words at once: five locales of one catalog held
+  // ranks 8 to 12 of a request about date rollover logic, all at 140.
+  if (file.kind === "translation" && !wantsCopy) {
+    score *= TRANSLATION_DEMOTION;
+    reasons.push(`translation catalog, demoted unless the request is about copy or translation (×${TRANSLATION_DEMOTION})`);
+  }
+
   if (OWNER_KINDS.has(file.kind)) {
     score *= 1.15;
     reasons.push(`owner kind ${file.kind}, slight boost`);
@@ -484,18 +531,97 @@ function fileImpliesConcepts(file, concepts) {
 }
 
 /**
+ * Make sure every named file has an entry, whatever its word overlap, and add
+ * the bonus for a named symbol's other definitions.
+ * @param {Map<string, ScoredEntry>} scored
+ * @param {CodeMapFile[]} files
+ * @param {Map<string, PinnedFile>} pinned
+ * @param {import('./ranking-rules.js').NamedFile[]} definers
+ */
+function addNamedFiles(scored, files, pinned, definers) {
+  if (pinned.size === 0 && definers.length === 0) return;
+  const byPath = new Map(files.map((file) => [file.path, file]));
+  /** @param {string} filePath @returns {ScoredEntry | undefined} */
+  const entryFor = (filePath) => {
+    const file = byPath.get(filePath);
+    if (!file) return undefined;
+    const entry = scored.get(filePath) ?? { file, score: 0, reasons: [], relatedFiles: [] };
+    scored.set(filePath, entry);
+    return entry;
+  };
+  for (const filePath of pinned.keys()) entryFor(filePath);
+  for (const definer of definers) {
+    const entry = entryFor(definer.path);
+    if (!entry) continue;
+    entry.score += W_NAMED_DEFINER;
+    const where = definer.line ? ` (line ${definer.line})` : "";
+    const use = definer.exported ? "exported, imported by no other file" : "a local definition";
+    entry.reasons.push(`defines \`${definer.literal}\`${where}, named in the request; ${use} (+${W_NAMED_DEFINER.toFixed(1)})`);
+  }
+}
+
+/**
+ * Put each named file above every candidate the request did not name, keeping
+ * the named files in order among themselves. A literal reference is the one
+ * signal no amount of word overlap should outrank: the recorded request named
+ * `event-service.ts` and the file ranked 40th.
+ * @param {Map<string, ScoredEntry>} scored
+ * @param {Map<string, PinnedFile>} pinned
+ */
+function liftPinnedFiles(scored, pinned) {
+  if (pinned.size === 0) return;
+  let ceiling = 0;
+  for (const entry of scored.values()) {
+    if (!pinned.has(entry.file.path)) ceiling = Math.max(ceiling, entry.score);
+  }
+  for (const [filePath, pin] of pinned) {
+    const entry = scored.get(filePath);
+    if (!entry) continue;
+    const lifted = Math.max(entry.score, ceiling) + PIN_MARGIN[pin.rule];
+    const lift = `pinned above unnamed candidates (+${(lifted - entry.score).toFixed(1)})`;
+    entry.reasons.push(
+      pin.rule === "path"
+        ? `named in the request as \`${pin.literal}\`, ${lift}`
+        : `defines \`${pin.literal}\`${pin.line ? ` (line ${pin.line})` : ""}, named in the request; exported and imported by ${pin.importers} file(s), ${lift}`,
+    );
+    entry.score = lifted;
+  }
+}
+
+/** @param {ScoredEntry} entry */
+function describeEntry(entry) {
+  return { path: entry.file.path, kind: entry.file.kind };
+}
+
+/**
+ * Say which locale files an entry stands for, once the list is final.
+ * @param {ScoredEntry[]} ranked
+ */
+function noteLocaleSiblings(ranked) {
+  const visible = new Set(ranked.map((entry) => entry.file.path));
+  for (const entry of ranked) {
+    if (!entry.siblings) continue;
+    entry.siblings = entry.siblings.filter((sibling) => !visible.has(sibling)).sort();
+    if (entry.siblings.length)
+      entry.reasons.push(`locale catalog, also stands for ${formatLocales(entry.siblings)} (${entry.siblings.length} sibling file(s))`);
+  }
+}
+
+/**
  * @param {CodeMapFile[]} allFiles
  * @param {Map<string, ScoredEntry>} scored
+ * @param {Map<string, PinnedFile>} [pinned] named files seed their imports at full weight, whatever their own score
  * @returns {Map<string, ScoredEntry>}
  */
-function applyDependencyBoosts(allFiles, scored) {
+function applyDependencyBoosts(allFiles, scored, pinned = new Map()) {
   if (scored.size === 0) return scored;
   const byPath = new Map(allFiles.map((file) => [file.path, file]));
-  const seeds = [...scored.values()].sort((a, b) => b.score - a.score).slice(0, 15);
+  const ranked = [...scored.values()].sort((a, b) => b.score - a.score);
+  const seeds = [...new Set([...ranked.slice(0, 15), ...ranked.filter((entry) => pinned.has(entry.file.path))])];
   const resolve = makeImportResolver(allFiles);
 
   for (const seed of seeds) {
-    const base = Math.min(seed.score * 0.16, 8.0);
+    const base = pinned.has(seed.file.path) ? 8.0 : Math.min(seed.score * 0.16, 8.0);
     /** @type {Set<string>} */
     const neighbors = new Set();
     for (const importPath of seed.file.imports ?? []) {
@@ -593,7 +719,8 @@ function suggestTests(files, ranked, repo) {
   }
   const meaningfulTerms = new Set([...topTerms].filter((term) => term.length > 2 && !TEST_MATCH_STOP_TERMS.has(term)));
 
-  const testFiles = files.filter((file) => file.kind === "test");
+  // A README or a snapshot under __tests__/ is not something to run.
+  const testFiles = files.filter((file) => file.kind === "test" && isRunnableTestPath(file.path));
   /** @type {{ overlap: number, path: string }[]} */
   const matches = [];
   for (const testFile of testFiles) {
@@ -782,7 +909,12 @@ function buildDiffEvidence(files, allFiles, scored, base) {
  * @returns {ScoredEntry[]}
  */
 function mergeDiffEvidence(evidence, heuristic) {
-  const changed = new Set(evidence.map((entry) => entry.file.path));
+  const changed = new Map(evidence.map((entry) => [entry.file.path, entry]));
+  for (const entry of heuristic) {
+    // A changed catalog keeps the locale siblings its ranked entry stood for.
+    const exact = changed.get(entry.file.path);
+    if (exact && entry.siblings?.length) exact.siblings = [...entry.siblings];
+  }
   return [...evidence, ...heuristic.filter((entry) => !changed.has(entry.file.path))];
 }
 
@@ -794,8 +926,9 @@ function mergeDiffEvidence(evidence, heuristic) {
  * @param {ScoredEntry[]} heuristicRanked
  * @param {CodeMapFile[]} allFiles
  * @param {string} query
+ * @param {Map<string, PinnedFile>} [pinned] files the request names; each is a required owner, whatever its kind
  */
-function classifyImpactRoles(heuristicRanked, allFiles, query) {
+function classifyImpactRoles(heuristicRanked, allFiles, query, pinned = new Map()) {
   /** @type {Map<string, "required" | "supporting" | "advisory">} */
   const byPath = new Map();
   const terms = new Set([...tokenize(query), ...weightedQueryTerms(query).keys()]);
@@ -804,7 +937,11 @@ function classifyImpactRoles(heuristicRanked, allFiles, query) {
   const docsChange = ["doc", "docs", "documentation", "readme", "guide", "changelog"].some((term) => terms.has(term));
   /** @param {string} kind */
   const intentGatedOwnerAllowed = (kind) => (kind === "skill" ? skillChange : docsChange);
-  const directCandidates = heuristicRanked
+  // The owners the ranking infers are chosen among the files the request did
+  // not name, on their own scores: a pinned file's lifted score would
+  // otherwise raise the bar every inferred owner has to clear.
+  const unnamed = heuristicRanked.filter((entry) => !pinned.has(entry.file.path));
+  const directCandidates = unnamed
     .filter((entry) => OWNER_KINDS.has(entry.file.kind) && hasDirectIntentMatch(entry))
     .filter((entry) => requestBoundaryChange || !REQUEST_BOUNDARY_KINDS.has(entry.file.kind))
     .filter((entry) => !INTENT_GATED_OWNER_KINDS.has(entry.file.kind) || intentGatedOwnerAllowed(entry.file.kind));
@@ -814,12 +951,15 @@ function classifyImpactRoles(heuristicRanked, allFiles, query) {
   // named layout a coverage obligation.
   const nonTemplateCandidates = directCandidates.filter((entry) => entry.file.kind !== "template");
   const conventionalPool = nonTemplateCandidates.length ? nonTemplateCandidates : directCandidates;
-  const ownerPool = conventionalPool.length ? conventionalPool : genericOwnerFallback(heuristicRanked);
+  const ownerPool = conventionalPool.length ? conventionalPool : genericOwnerFallback(unnamed);
   const strongestScore = ownerPool[0]?.score ?? 0;
-  const directOwners = ownerPool
-    .filter((entry) => entry.score >= strongestScore * REQUIRED_OWNER_SCORE_RATIO)
-    .slice(0, 3)
-    .map((entry) => entry.file.path);
+  const directOwners = [
+    ...heuristicRanked.filter((entry) => pinned.has(entry.file.path)).map((entry) => entry.file.path),
+    ...ownerPool
+      .filter((entry) => entry.score >= strongestScore * REQUIRED_OWNER_SCORE_RATIO)
+      .slice(0, 3)
+      .map((entry) => entry.file.path),
+  ];
   for (const file of directOwners) byPath.set(file, "required");
 
   // `weightedQueryTerms` carries singular forms, so a request for
@@ -849,6 +989,15 @@ function classifyImpactRoles(heuristicRanked, allFiles, query) {
 
   for (const entry of heuristicRanked) {
     if (!byPath.has(entry.file.path)) byPath.set(entry.file.path, "advisory");
+  }
+  // A locale folded into its catalog's entry takes that entry's role, so a
+  // change to it is read against the prediction and not as drift. The other
+  // locales of a required catalog are its expected fan-out.
+  for (const entry of heuristicRanked) {
+    const role = byPath.get(entry.file.path);
+    for (const sibling of entry.siblings ?? []) {
+      if (!byPath.has(sibling)) byPath.set(sibling, role === "required" ? "supporting" : (role ?? "advisory"));
+    }
   }
   const requiredOwners = [...byPath.entries()]
     .filter(([, role]) => role === "required")
@@ -919,20 +1068,24 @@ function matchesIntentTerms(filePath, terms) {
  * @param {ScoredEntry[]} ranked
  * @param {CodeMapFile[]} allFiles
  * @param {{ byPath: Map<string, string> }} roles
+ * @param {(entry: ScoredEntry) => boolean} isPinned entries a locale catalog must not fold away
  */
-function addPredictableSupportFiles(ranked, allFiles, roles) {
-  const existing = new Set(ranked.map((entry) => entry.file.path));
+function addPredictableSupportFiles(ranked, allFiles, roles, isPinned) {
+  const existing = new Set(ranked.flatMap((entry) => [entry.file.path, ...(entry.siblings ?? [])]));
   const baseline = ranked[0]?.score ?? 1;
   const additions = allFiles
     .filter((file) => !existing.has(file.path) && roles.byPath.get(file.path) && roles.byPath.get(file.path) !== "advisory")
-    .slice(0, 12)
     .map((file) => ({
       file,
       score: Math.max(1, baseline * 0.2),
       reasons: [`predictable ${roles.byPath.get(file.path)} fan-out`],
       relatedFiles: [],
     }));
-  return [...ranked, ...additions];
+  // One pass over the whole list: an exact changed catalog, a ranked one and
+  // the locales added as fan-out all fold into one entry per catalog.
+  const kept = new Set(ranked);
+  let added = 0;
+  return collapseLocaleSiblings([...ranked, ...additions], describeEntry, isPinned).filter((entry) => kept.has(entry) || added++ < 12);
 }
 
 /**

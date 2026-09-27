@@ -1,0 +1,28 @@
+{
+  "event": {
+    "title": "Event",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "endTimeBeforeStart": "End time is before the start time",
+    "overnightEvent": "Ends the next day",
+    "editDate": "Edit date",
+    "timezone": "Time zone"
+  },
+  "main": {
+    "mainBanner": "Main banner",
+    "mainImageLabel": "Main image",
+    "setAsMainHost": "Set as main host",
+    "addMainImage": "Add main image"
+  },
+  "validation": {
+    "invalidDate": "Invalid date",
+    "invalidTime": "Invalid time",
+    "requiredField": "Required"
+  },
+  "branch": {
+    "mergeState": "Merge state",
+    "syncStatus": "Sync status"
+  }
+}
