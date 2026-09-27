@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { generateCodeMap } from "./code-map.js";
+import { isTypeCheckScript, selectScripts } from "./package-scripts.js";
 import { inspectRepo } from "./repo.js";
 import { estimateTokens, estimateTokenSections } from "./tokens.js";
 
@@ -204,13 +205,11 @@ function inferSetupCommands(repo) {
  * @returns {HarnessCommand[]}
  */
 function inferScriptCommands(scripts = {}, runner, names) {
-  return names
-    .filter((name) => scripts[name])
-    .map((name) => ({
-      script: name,
-      command: commandForScript(runner, name),
-      reason: scriptReason(name),
-    }));
+  return selectScripts(scripts, names).map((name) => ({
+    script: name,
+    command: commandForScript(runner, name),
+    reason: scriptReason(name),
+  }));
 }
 
 /**
@@ -287,8 +286,8 @@ function scriptReason(name) {
   if (name === "ci" || name === "quality") return "full quality gate";
   if (name === "audit") return "production dependency security audit";
   if (name === "smoke") return "smoke verification";
+  if (isTypeCheckScript(name)) return "type contract checks";
   if (name.includes("lint")) return "static checks";
-  if (name.includes("type") || name === "tsc") return "type contract checks";
   if (name.includes("coverage")) return "coverage threshold verification";
   if (name.includes("test")) return "behavior verification";
   if (name === "build") return "integration and bundling verification";

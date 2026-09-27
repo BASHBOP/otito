@@ -3,6 +3,7 @@ import path from "node:path";
 import { formatTerminalSummary } from "./output.js";
 import { execFileSync } from "node:child_process";
 import { generateHarness } from "./harness.js";
+import { isTypeCheckScript } from "./package-scripts.js";
 
 const defaultToolRepo = "BASHBOP/otito";
 const defaultToolRef = "main";
@@ -29,8 +30,9 @@ function uses(action) {
 
 // Pre-commit runs the staged Òtítọ́ gate plus fast static checks — never the
 // slow (test/build/audit/smoke) gates, which belong in CI. A harness validate
-// command qualifies when its npm script name is a known static check.
-const staticPrecommitScripts = new Set(["lint", "format:check", "typecheck", "type-check", "tsc", "check:type"]);
+// command qualifies when its npm script name is a known static check or a type
+// check.
+const staticPrecommitScripts = new Set(["lint", "format:check"]);
 
 /**
  * @typedef {object} InitOptions
@@ -314,10 +316,11 @@ function selectPrecommitCommands(validate) {
  * @returns {boolean}
  */
 function isStaticPrecommitScript(script) {
-  if (staticPrecommitScripts.has(script)) {
+  if (staticPrecommitScripts.has(script) || isTypeCheckScript(script)) {
     return true;
   }
-  // Match harness lint naming without broad "type" substring hits (e.g. "prototype").
+  // Match harness lint naming. Type checks are matched by segment, so a name
+  // that only contains the letters (e.g. "prototype") is not one.
   return script.includes("lint");
 }
 
