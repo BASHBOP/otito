@@ -1317,7 +1317,7 @@ async function handleEval(parsed) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Accuracy eval written: ${artifact.path}`);
     } else {
-      await printDocument(parsed, result.markdown, { title: "ACCURACY EVAL", glyph: "\\u{1F9EA}" });
+      await printDocument(parsed, result.markdown, { title: "ACCURACY EVAL", glyph: "\u{1F9EA}" });
     }
     if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
@@ -1337,7 +1337,7 @@ async function handleEval(parsed) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Harness execution eval written: ${artifact.path}`);
     } else {
-      await printDocument(parsed, result.markdown, { title: "HARNESS EVAL", glyph: "\\u{1F9EA}" });
+      await printDocument(parsed, result.markdown, { title: "HARNESS EVAL", glyph: "\u{1F9EA}" });
     }
     if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
@@ -1357,7 +1357,7 @@ async function handleEval(parsed) {
       const artifact = writeArtifact(parsed.flags.out, result.markdown);
       printText(`Gate effectiveness eval written: ${artifact.path}`);
     } else {
-      await printDocument(parsed, result.markdown, { title: "GATE EFFECTIVENESS", glyph: "\\u{1F9EA}" });
+      await printDocument(parsed, result.markdown, { title: "GATE EFFECTIVENESS", glyph: "\u{1F9EA}" });
     }
     if (!(/** @type {{ passed?: boolean }} */ (result.data).passed)) {
       process.exitCode = 1;
