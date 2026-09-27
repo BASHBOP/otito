@@ -1,0 +1,230 @@
+{
+  "generatedFrom": "src/lib/render/fancy.js at origin/develop 1ac7087 (2026-09-27), before the glyph-mode refactor",
+  "note": "Every emoji-mode and ascii-mode string here is today's exact output. tests/render-fancy.test.js fails if the renderer changes any of them.",
+  "cases": [
+    {
+      "id": "emoji-plain-60",
+      "options": {
+        "emoji": true,
+        "color": false,
+        "width": 60
+      },
+      "outputs": {
+        "header:string": "╭──────────────────────────────────────────────────────────╮\n│  otito doctor                                              │\n╰──────────────────────────────────────────────────────────╯",
+        "header:glyph": "╭──────────────────────────────────────────────────────────╮\n│  📦  otito repo · repository overview                      │\n│  💬  /tmp/repo                                             │\n│  plain line                                                │\n╰──────────────────────────────────────────────────────────╯",
+        "header:dim-subtitle": "╭──────────────────────────────────────────────────────────╮\n│  🗺  CODE MAP   fixture                                    │\n│  \u001b[2mreason for the report\u001b[0m                                     │\n╰──────────────────────────────────────────────────────────╯",
+        "verdict:PASS": "╭──────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ✅  PASS                                  │\n╰──────────────────────────────────────────────────────────╯",
+        "verdict:WARN": "╭──────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ⚠️   WARN                                 │\n│  📝  next step   run the validation plan                   │\n╰──────────────────────────────────────────────────────────╯",
+        "verdict:FAIL": "╭──────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ❌  FAIL                                  │\n│  ⛔  blocked by  Review state                              │\n│  📝  next step   request review                            │\n╰──────────────────────────────────────────────────────────╯",
+        "verdict:UNKNOWN": "╭──────────────────────────────────────────────────────────╮\n│  🚦  VERDICT       UNKNOWN                                 │\n╰──────────────────────────────────────────────────────────╯",
+        "statusLine:pass": "  ✅  node                   v22.12.0",
+        "statusLine:warn": "  ⚠️   rg                     not installed\n     └─ Install ripgrep for faster searches.",
+        "statusLine:fail": "  ❌  git                    missing",
+        "statusLine:info": "  ℹ️   note                   fyi\n     └─ a\n     └─ b",
+        "statusLine:unknown": "  ℹ️   x                      y",
+        "bullet": "  • first item",
+        "bullet:glyph": "  🔥 hot",
+        "tip": "  💡  optional accelerators",
+        "section": "▾ Section\n  one\n  two",
+        "section:string": "▾ S\n  body",
+        "rule": "────────────────────────────────────────────────────────────"
+      }
+    },
+    {
+      "id": "emoji-plain-78",
+      "options": {
+        "emoji": true,
+        "color": false,
+        "width": 78
+      },
+      "outputs": {
+        "header:string": "╭────────────────────────────────────────────────────────────────────────────╮\n│  otito doctor                                                                │\n╰────────────────────────────────────────────────────────────────────────────╯",
+        "header:glyph": "╭────────────────────────────────────────────────────────────────────────────╮\n│  📦  otito repo · repository overview                                        │\n│  💬  /tmp/repo                                                               │\n│  plain line                                                                  │\n╰────────────────────────────────────────────────────────────────────────────╯",
+        "header:dim-subtitle": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🗺  CODE MAP   fixture                                                      │\n│  \u001b[2mreason for the report\u001b[0m                                                       │\n╰────────────────────────────────────────────────────────────────────────────╯",
+        "verdict:PASS": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ✅  PASS                                                    │\n╰────────────────────────────────────────────────────────────────────────────╯",
+        "verdict:WARN": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ⚠️   WARN                                                   │\n│  📝  next step   run the validation plan                                     │\n╰────────────────────────────────────────────────────────────────────────────╯",
+        "verdict:FAIL": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🚦  VERDICT     ❌  FAIL                                                    │\n│  ⛔  blocked by  Review state                                                │\n│  📝  next step   request review                                              │\n╰────────────────────────────────────────────────────────────────────────────╯",
+        "verdict:UNKNOWN": "╭────────────────────────────────────────────────────────────────────────────╮\n│  🚦  VERDICT       UNKNOWN                                                   │\n╰────────────────────────────────────────────────────────────────────────────╯",
+        "statusLine:pass": "  ✅  node                   v22.12.0",
+        "statusLine:warn": "  ⚠️   rg                     not installed\n     └─ Install ripgrep for faster searches.",
+        "statusLine:fail": "  ❌  git                    missing",
+        "statusLine:info": "  ℹ️   note                   fyi\n     └─ a\n     └─ b",
+        "statusLine:unknown": "  ℹ️   x                      y",
+        "bullet": "  • first item",
+        "bullet:glyph": "  🔥 hot",
+        "tip": "  💡  optional accelerators",
+        "section": "▾ Section\n  one\n  two",
+        "section:string": "▾ S\n  body",
+        "rule": "──────────────────────────────────────────────────────────────────────────────"
+      }
+    },
+    {
+      "id": "emoji-color-60",
+      "options": {
+        "emoji": true,
+        "color": true,
+        "width": 60
+      },
+      "outputs": {
+        "header:string": "\u001b[2m╭──────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  otito doctor                                              \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────╯\u001b[0m",
+        "header:glyph": "\u001b[2m╭──────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  📦  otito repo · repository overview                      \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  /tmp/repo                                             \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  plain line                                                \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────╯\u001b[0m",
+        "header:dim-subtitle": "\u001b[2m╭──────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🗺  CODE MAP   fixture                                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[2mreason for the report\u001b[0m                                     \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────╯\u001b[0m",
+        "verdict:PASS": "\u001b[2m╭──────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[32m🚦  VERDICT     ✅  PASS\u001b[0m                                  \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────╯\u001b[0m",
+        "verdict:WARN": "\u001b[2m╭──────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[33m🚦  VERDICT     ⚠️   WARN\u001b[0m                                 \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📝  next step   run the validation plan                   \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────╯\u001b[0m",
+        "verdict:FAIL": "\u001b[2m╭──────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[31m🚦  VERDICT     ❌  FAIL\u001b[0m                                  \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  ⛔  blocked by  Review state                              \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📝  next step   request review                            \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────╯\u001b[0m",
+        "verdict:UNKNOWN": "\u001b[2m╭──────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m🚦  VERDICT       UNKNOWN\u001b[0m                                 \u001b[2m│\u001b[0m\n\u001b[2m╰──────────────────────────────────────────────────────────╯\u001b[0m",
+        "statusLine:pass": "  \u001b[32m✅  node                  \u001b[0m v22.12.0",
+        "statusLine:warn": "  \u001b[33m⚠️   rg                    \u001b[0m not installed\n     └─ Install ripgrep for faster searches.",
+        "statusLine:fail": "  \u001b[31m❌  git                   \u001b[0m missing",
+        "statusLine:info": "  \u001b[36mℹ️   note                  \u001b[0m fyi\n     └─ a\n     └─ b",
+        "statusLine:unknown": "  \u001b[36mℹ️   x                     \u001b[0m y",
+        "bullet": "  • first item",
+        "bullet:glyph": "  🔥 hot",
+        "tip": "\u001b[36m  💡  optional accelerators\u001b[0m",
+        "section": "\u001b[1m▾ Section\u001b[0m\n  one\n  two",
+        "section:string": "\u001b[1m▾ S\u001b[0m\n  body",
+        "rule": "\u001b[2m────────────────────────────────────────────────────────────\u001b[0m"
+      }
+    },
+    {
+      "id": "emoji-color-78",
+      "options": {
+        "emoji": true,
+        "color": true,
+        "width": 78
+      },
+      "outputs": {
+        "header:string": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  otito doctor                                                                \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
+        "header:glyph": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  📦  otito repo · repository overview                                        \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  💬  /tmp/repo                                                               \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  plain line                                                                  \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
+        "header:dim-subtitle": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  🗺  CODE MAP   fixture                                                      \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[2mreason for the report\u001b[0m                                                       \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
+        "verdict:PASS": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[32m🚦  VERDICT     ✅  PASS\u001b[0m                                                    \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
+        "verdict:WARN": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[33m🚦  VERDICT     ⚠️   WARN\u001b[0m                                                   \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📝  next step   run the validation plan                                     \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
+        "verdict:FAIL": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m\u001b[31m🚦  VERDICT     ❌  FAIL\u001b[0m                                                    \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  ⛔  blocked by  Review state                                                \u001b[2m│\u001b[0m\n\u001b[2m│\u001b[0m  📝  next step   request review                                              \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
+        "verdict:UNKNOWN": "\u001b[2m╭────────────────────────────────────────────────────────────────────────────╮\u001b[0m\n\u001b[2m│\u001b[0m  \u001b[1m🚦  VERDICT       UNKNOWN\u001b[0m                                                   \u001b[2m│\u001b[0m\n\u001b[2m╰────────────────────────────────────────────────────────────────────────────╯\u001b[0m",
+        "statusLine:pass": "  \u001b[32m✅  node                  \u001b[0m v22.12.0",
+        "statusLine:warn": "  \u001b[33m⚠️   rg                    \u001b[0m not installed\n     └─ Install ripgrep for faster searches.",
+        "statusLine:fail": "  \u001b[31m❌  git                   \u001b[0m missing",
+        "statusLine:info": "  \u001b[36mℹ️   note                  \u001b[0m fyi\n     └─ a\n     └─ b",
+        "statusLine:unknown": "  \u001b[36mℹ️   x                     \u001b[0m y",
+        "bullet": "  • first item",
+        "bullet:glyph": "  🔥 hot",
+        "tip": "\u001b[36m  💡  optional accelerators\u001b[0m",
+        "section": "\u001b[1m▾ Section\u001b[0m\n  one\n  two",
+        "section:string": "\u001b[1m▾ S\u001b[0m\n  body",
+        "rule": "\u001b[2m──────────────────────────────────────────────────────────────────────────────\u001b[0m"
+      }
+    },
+    {
+      "id": "ascii-plain-60",
+      "options": {
+        "emoji": false,
+        "color": false,
+        "width": 60
+      },
+      "outputs": {
+        "header:string": "+----------------------------------------------------------+\n|  otito doctor                                              |\n+----------------------------------------------------------+",
+        "header:glyph": "+----------------------------------------------------------+\n|  otito repo · repository overview                          |\n|  /tmp/repo                                                 |\n|  plain line                                                |\n+----------------------------------------------------------+",
+        "header:dim-subtitle": "+----------------------------------------------------------+\n|  CODE MAP   fixture                                        |\n|  \u001b[2mreason for the report\u001b[0m                                     |\n+----------------------------------------------------------+",
+        "verdict:PASS": "+----------------------------------------------------------+\n|  [?]  VERDICT     [PASS]  PASS                             |\n+----------------------------------------------------------+",
+        "verdict:WARN": "+----------------------------------------------------------+\n|  [?]  VERDICT     [WARN]  WARN                             |\n|  [>]  next step   run the validation plan                  |\n+----------------------------------------------------------+",
+        "verdict:FAIL": "+----------------------------------------------------------+\n|  [?]  VERDICT     [FAIL]  FAIL                             |\n|  [!]  blocked by  Review state                             |\n|  [>]  next step   request review                           |\n+----------------------------------------------------------+",
+        "verdict:UNKNOWN": "+----------------------------------------------------------+\n|  [?]  VERDICT       UNKNOWN                                |\n+----------------------------------------------------------+",
+        "statusLine:pass": "  [OK]    node                   v22.12.0",
+        "statusLine:warn": "  [WARN]  rg                     not installed\n     |- Install ripgrep for faster searches.",
+        "statusLine:fail": "  [FAIL]  git                    missing",
+        "statusLine:info": "  [INFO]  note                   fyi\n     |- a\n     |- b",
+        "statusLine:unknown": "  [INFO]  x                      y",
+        "bullet": "  * first item",
+        "bullet:glyph": "  * hot",
+        "tip": "  [i]  optional accelerators",
+        "section": "> Section\n  one\n  two",
+        "section:string": "> S\n  body",
+        "rule": "------------------------------------------------------------"
+      }
+    },
+    {
+      "id": "ascii-plain-78",
+      "options": {
+        "emoji": false,
+        "color": false,
+        "width": 78
+      },
+      "outputs": {
+        "header:string": "+----------------------------------------------------------------------------+\n|  otito doctor                                                                |\n+----------------------------------------------------------------------------+",
+        "header:glyph": "+----------------------------------------------------------------------------+\n|  otito repo · repository overview                                            |\n|  /tmp/repo                                                                   |\n|  plain line                                                                  |\n+----------------------------------------------------------------------------+",
+        "header:dim-subtitle": "+----------------------------------------------------------------------------+\n|  CODE MAP   fixture                                                          |\n|  \u001b[2mreason for the report\u001b[0m                                                       |\n+----------------------------------------------------------------------------+",
+        "verdict:PASS": "+----------------------------------------------------------------------------+\n|  [?]  VERDICT     [PASS]  PASS                                               |\n+----------------------------------------------------------------------------+",
+        "verdict:WARN": "+----------------------------------------------------------------------------+\n|  [?]  VERDICT     [WARN]  WARN                                               |\n|  [>]  next step   run the validation plan                                    |\n+----------------------------------------------------------------------------+",
+        "verdict:FAIL": "+----------------------------------------------------------------------------+\n|  [?]  VERDICT     [FAIL]  FAIL                                               |\n|  [!]  blocked by  Review state                                               |\n|  [>]  next step   request review                                             |\n+----------------------------------------------------------------------------+",
+        "verdict:UNKNOWN": "+----------------------------------------------------------------------------+\n|  [?]  VERDICT       UNKNOWN                                                  |\n+----------------------------------------------------------------------------+",
+        "statusLine:pass": "  [OK]    node                   v22.12.0",
+        "statusLine:warn": "  [WARN]  rg                     not installed\n     |- Install ripgrep for faster searches.",
+        "statusLine:fail": "  [FAIL]  git                    missing",
+        "statusLine:info": "  [INFO]  note                   fyi\n     |- a\n     |- b",
+        "statusLine:unknown": "  [INFO]  x                      y",
+        "bullet": "  * first item",
+        "bullet:glyph": "  * hot",
+        "tip": "  [i]  optional accelerators",
+        "section": "> Section\n  one\n  two",
+        "section:string": "> S\n  body",
+        "rule": "------------------------------------------------------------------------------"
+      }
+    },
+    {
+      "id": "ascii-color-60",
+      "options": {
+        "emoji": false,
+        "color": true,
+        "width": 60
+      },
+      "outputs": {
+        "header:string": "\u001b[2m+----------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  otito doctor                                              \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------+\u001b[0m",
+        "header:glyph": "\u001b[2m+----------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  otito repo · repository overview                          \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  /tmp/repo                                                 \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  plain line                                                \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------+\u001b[0m",
+        "header:dim-subtitle": "\u001b[2m+----------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  CODE MAP   fixture                                        \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[2mreason for the report\u001b[0m                                     \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------+\u001b[0m",
+        "verdict:PASS": "\u001b[2m+----------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[1m\u001b[32m[?]  VERDICT     [PASS]  PASS\u001b[0m                             \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------+\u001b[0m",
+        "verdict:WARN": "\u001b[2m+----------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[1m\u001b[33m[?]  VERDICT     [WARN]  WARN\u001b[0m                             \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  [>]  next step   run the validation plan                  \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------+\u001b[0m",
+        "verdict:FAIL": "\u001b[2m+----------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[1m\u001b[31m[?]  VERDICT     [FAIL]  FAIL\u001b[0m                             \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  [!]  blocked by  Review state                             \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  [>]  next step   request review                           \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------+\u001b[0m",
+        "verdict:UNKNOWN": "\u001b[2m+----------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[1m[?]  VERDICT       UNKNOWN\u001b[0m                                \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------+\u001b[0m",
+        "statusLine:pass": "  \u001b[32m[OK]    node                  \u001b[0m v22.12.0",
+        "statusLine:warn": "  \u001b[33m[WARN]  rg                    \u001b[0m not installed\n     |- Install ripgrep for faster searches.",
+        "statusLine:fail": "  \u001b[31m[FAIL]  git                   \u001b[0m missing",
+        "statusLine:info": "  \u001b[36m[INFO]  note                  \u001b[0m fyi\n     |- a\n     |- b",
+        "statusLine:unknown": "  \u001b[36m[INFO]  x                     \u001b[0m y",
+        "bullet": "  * first item",
+        "bullet:glyph": "  * hot",
+        "tip": "\u001b[36m  [i]  optional accelerators\u001b[0m",
+        "section": "\u001b[1m> Section\u001b[0m\n  one\n  two",
+        "section:string": "\u001b[1m> S\u001b[0m\n  body",
+        "rule": "\u001b[2m------------------------------------------------------------\u001b[0m"
+      }
+    },
+    {
+      "id": "ascii-color-78",
+      "options": {
+        "emoji": false,
+        "color": true,
+        "width": 78
+      },
+      "outputs": {
+        "header:string": "\u001b[2m+----------------------------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  otito doctor                                                                \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------------------------+\u001b[0m",
+        "header:glyph": "\u001b[2m+----------------------------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  otito repo · repository overview                                            \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  /tmp/repo                                                                   \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  plain line                                                                  \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------------------------+\u001b[0m",
+        "header:dim-subtitle": "\u001b[2m+----------------------------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  CODE MAP   fixture                                                          \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[2mreason for the report\u001b[0m                                                       \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------------------------+\u001b[0m",
+        "verdict:PASS": "\u001b[2m+----------------------------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[1m\u001b[32m[?]  VERDICT     [PASS]  PASS\u001b[0m                                               \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------------------------+\u001b[0m",
+        "verdict:WARN": "\u001b[2m+----------------------------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[1m\u001b[33m[?]  VERDICT     [WARN]  WARN\u001b[0m                                               \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  [>]  next step   run the validation plan                                    \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------------------------+\u001b[0m",
+        "verdict:FAIL": "\u001b[2m+----------------------------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[1m\u001b[31m[?]  VERDICT     [FAIL]  FAIL\u001b[0m                                               \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  [!]  blocked by  Review state                                               \u001b[2m|\u001b[0m\n\u001b[2m|\u001b[0m  [>]  next step   request review                                             \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------------------------+\u001b[0m",
+        "verdict:UNKNOWN": "\u001b[2m+----------------------------------------------------------------------------+\u001b[0m\n\u001b[2m|\u001b[0m  \u001b[1m[?]  VERDICT       UNKNOWN\u001b[0m                                                  \u001b[2m|\u001b[0m\n\u001b[2m+----------------------------------------------------------------------------+\u001b[0m",
+        "statusLine:pass": "  \u001b[32m[OK]    node                  \u001b[0m v22.12.0",
+        "statusLine:warn": "  \u001b[33m[WARN]  rg                    \u001b[0m not installed\n     |- Install ripgrep for faster searches.",
+        "statusLine:fail": "  \u001b[31m[FAIL]  git                   \u001b[0m missing",
+        "statusLine:info": "  \u001b[36m[INFO]  note                  \u001b[0m fyi\n     |- a\n     |- b",
+        "statusLine:unknown": "  \u001b[36m[INFO]  x                     \u001b[0m y",
+        "bullet": "  * first item",
+        "bullet:glyph": "  * hot",
+        "tip": "\u001b[36m  [i]  optional accelerators\u001b[0m",
+        "section": "\u001b[1m> Section\u001b[0m\n  one\n  two",
+        "section:string": "\u001b[1m> S\u001b[0m\n  body",
+        "rule": "\u001b[2m------------------------------------------------------------------------------\u001b[0m"
+      }
+    }
+  ]
+}

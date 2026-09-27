@@ -993,3 +993,37 @@ test("eval --gate-effectiveness runs committed staged changes through the real g
   assert.equal(payload.counts.cases, 9);
   assert.equal(payload.counts.blockedAsExpected, 7);
 });
+
+test("the eval headers print the flask glyph, not its escaped source text", async () => {
+  // The three eval headers passed "\\u{1F9EA}" (a backslash, a u and braces)
+  // as the glyph, so in emoji mode the box read `\u{1F9EA}  ACCURACY EVAL`.
+  const result = await runCli(["eval", "--accuracy", "--emoji", "--no-color"]);
+  assert.equal(result.exitCode, 0);
+  assert.ok(result.stdout.includes("\u{1F9EA}  ACCURACY EVAL"), "the header should carry the flask glyph");
+  assert.ok(!result.stdout.includes("\\u{1F9EA}"), "the header must not print the escape sequence");
+});
+
+test("no source string spells a code point with a doubled backslash", () => {
+  // A `"\\u{1F9EA}"` in source is a literal backslash followed by `u{1F9EA}`,
+  // which is how the eval headers came to print their own escape sequence.
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "src");
+  /** @type {string[]} */
+  const offenders = [];
+  const walk = (/** @type {string} */ dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!entry.name.endsWith(".js")) continue;
+      fs.readFileSync(full, "utf8")
+        .split("\n")
+        .forEach((line, index) => {
+          if (/\\\\u\{[0-9A-Fa-f]{1,6}\}/.test(line)) offenders.push(`${path.relative(root, full)}:${index + 1}`);
+        });
+    }
+  };
+  walk(root);
+  assert.deepEqual(offenders, []);
+});
