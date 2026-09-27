@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { cases as goldenCases, renderAll } from "./golden/render-fancy.mjs";
 import { createRenderer, padRight, resolveGlyphMode, shouldUseColor, shouldUseEmoji, visualWidth, wrap, wrapBoxed } from "../src/lib/render/fancy.js";
 
 test("shouldUseEmoji respects explicit options first", () => {
@@ -82,7 +83,8 @@ test("named themes survive the CLI's always-present undefined emoji/color option
   assert.equal(colorTheme.color, true);
 
   const hc = createRenderer({ emoji: undefined, color: undefined, theme: "high-contrast" });
-  assert.equal(hc.emoji, true);
+  // high-contrast keeps its bright palette and no longer forces emoji.
+  assert.equal(hc.emoji, false);
   assert.equal(hc.color, true);
 });
 
@@ -130,52 +132,62 @@ function withEnv(patch, fn) {
 
 const quietEnv = { CI: undefined, NO_EMOJI: undefined, NO_COLOR: undefined, FORCE_COLOR: undefined, CLICOLOR: undefined };
 
-test("glyph mode resolves from env and flags exactly as the emoji decision did", () => {
-  // Nothing set: today's interactive default.
-  assert.equal(resolveGlyphMode({}, {}), "emoji");
-  // Environment opt-outs.
+test("glyph mode resolves from env and flags: unicode by default, ascii for logs, emoji on request", () => {
+  // Nothing set: the interactive default.
+  assert.equal(resolveGlyphMode({}, {}), "unicode");
+  assert.equal(resolveGlyphMode({ TERM: "xterm-256color" }, {}), "unicode");
+  // Logs and terminals that cannot draw get ascii.
   assert.equal(resolveGlyphMode({ CI: "1" }, {}), "ascii");
   assert.equal(resolveGlyphMode({ CI: "true" }, {}), "ascii");
   assert.equal(resolveGlyphMode({ NO_EMOJI: "1" }, {}), "ascii");
   assert.equal(resolveGlyphMode({ NO_EMOJI: "true" }, {}), "ascii");
+  assert.equal(resolveGlyphMode({ TERM: "dumb" }, {}), "ascii");
   // Explicit flags beat the environment both ways.
   assert.equal(resolveGlyphMode({}, { emoji: false }), "ascii");
+  assert.equal(resolveGlyphMode({}, { emoji: true }), "emoji");
   assert.equal(resolveGlyphMode({ CI: "1" }, { emoji: true }), "emoji");
-  // unicode is reachable only by asking for it, and then it wins over everything.
-  assert.equal(resolveGlyphMode({}, { glyphs: "unicode" }), "unicode");
-  assert.equal(resolveGlyphMode({ CI: "1", NO_EMOJI: "1" }, { glyphs: "unicode" }), "unicode");
+  assert.equal(resolveGlyphMode({ TERM: "dumb", NO_EMOJI: "1" }, { emoji: true }), "emoji");
+  // An explicit glyph set wins over everything.
+  assert.equal(resolveGlyphMode({ CI: "1", NO_EMOJI: "1", TERM: "dumb" }, { glyphs: "unicode" }), "unicode");
   assert.equal(resolveGlyphMode({}, { glyphs: "unicode", emoji: true }), "unicode");
   assert.equal(resolveGlyphMode({}, { glyphs: "ascii", emoji: true }), "ascii");
   assert.equal(resolveGlyphMode({}, { glyphs: "emoji", emoji: false }), "emoji");
-  // An unknown glyph set falls back to the emoji decision.
+  // An unknown glyph set falls back to the environment.
   assert.equal(resolveGlyphMode({ CI: "1" }, { glyphs: /** @type {any} */ ("neon") }), "ascii");
+  assert.equal(resolveGlyphMode({}, { glyphs: /** @type {any} */ ("neon") }), "unicode");
 });
 
 test("createRenderer resolves the glyph mode across env, flags and themes", () => {
-  withEnv(quietEnv, () => {
-    assert.equal(createRenderer({}).glyphMode, "emoji");
-    assert.equal(createRenderer({ theme: "default" }).glyphMode, "emoji");
-    assert.equal(createRenderer({ theme: "color" }).glyphMode, "emoji");
+  const quiet = { ...quietEnv, TERM: undefined };
+  withEnv(quiet, () => {
+    assert.equal(createRenderer({}).glyphMode, "unicode");
+    assert.equal(createRenderer({ theme: "default" }).glyphMode, "unicode");
+    assert.equal(createRenderer({ theme: "color" }).glyphMode, "unicode");
     assert.equal(createRenderer({ theme: "minimal" }).glyphMode, "ascii");
-    assert.equal(createRenderer({ theme: "high-contrast" }).glyphMode, "emoji");
+    assert.equal(createRenderer({ theme: "high-contrast" }).glyphMode, "unicode");
     // The CLI's always-present undefined keys must not disturb the theme.
     assert.equal(createRenderer({ emoji: undefined, color: undefined, theme: "minimal" }).glyphMode, "ascii");
     // Explicit options beat the theme.
     assert.equal(createRenderer({ theme: "minimal", emoji: true }).glyphMode, "emoji");
+    assert.equal(createRenderer({ theme: "high-contrast", emoji: true }).glyphMode, "emoji");
     assert.equal(createRenderer({ theme: "high-contrast", emoji: false }).glyphMode, "ascii");
-    assert.equal(createRenderer({ theme: "high-contrast", glyphs: "unicode" }).glyphMode, "unicode");
     assert.equal(createRenderer({ theme: "minimal", glyphs: "unicode" }).glyphMode, "unicode");
   });
-  withEnv({ ...quietEnv, CI: "1" }, () => {
-    assert.equal(createRenderer({}).glyphMode, "ascii");
-    assert.equal(createRenderer({ theme: "high-contrast" }).glyphMode, "emoji", "the theme's emoji: true is an explicit choice");
-    assert.equal(createRenderer({ emoji: true }).glyphMode, "emoji");
-    assert.equal(createRenderer({ glyphs: "unicode" }).glyphMode, "unicode");
-  });
-  withEnv({ ...quietEnv, NO_EMOJI: "1" }, () => {
-    assert.equal(createRenderer({}).glyphMode, "ascii");
-    assert.equal(createRenderer({ glyphs: "unicode" }).glyphMode, "unicode");
-  });
+  for (const patchEnv of [{ CI: "1" }, { NO_EMOJI: "1" }, { TERM: "dumb" }]) {
+    withEnv({ ...quiet, ...patchEnv }, () => {
+      const label = JSON.stringify(patchEnv);
+      assert.equal(createRenderer({}).glyphMode, "ascii", label);
+      assert.equal(createRenderer({ theme: "high-contrast" }).glyphMode, "ascii", `${label}: the theme no longer forces emoji`);
+      assert.equal(createRenderer({ emoji: true }).glyphMode, "emoji", label);
+      assert.equal(createRenderer({ glyphs: "unicode" }).glyphMode, "unicode", label);
+    });
+  }
+});
+
+test("the high-contrast theme keeps its bright palette in every glyph mode", () => {
+  const hc = createRenderer({ theme: "high-contrast", glyphs: "unicode" });
+  assert.equal(hc.color, true);
+  assert.equal(hc.paint("x", "green"), `${ESC}[92mx${ESC}[0m`);
 });
 
 test("renderer.emoji and renderer.glyphs follow the resolved mode", () => {
@@ -242,18 +254,26 @@ test("padRight pads to the display width, so lines with box drawing line up", ()
   assert.equal(padRight("too wide", 3), "too wide");
 });
 
-test("header lines stay aligned when a headline holds arrows, ticks or CJK", () => {
-  // Before the width fix a line with `→` or `✓` was padded one cell short per
-  // mark, so its right border sat left of the others. Every padded line must
-  // now end in the same cell as a plain ASCII line.
+test("every line of a box has the same display width", () => {
+  // O13: content lines used to be padded to width - 4 inside a six-cell frame,
+  // so they came out two cells wider than the borders. Arrows, ticks and CJK
+  // were also mis-measured (O1), which moved the right border again.
+  const long = "a reason that keeps going well past the box so the line has to wrap onto another line";
   for (const mode of /** @type {const} */ (["unicode", "ascii", "emoji"])) {
-    const r = createRenderer({ glyphs: mode, color: false, width: 60 });
-    const [top, ...rest] = r.header("Scan → Questions ✓", ["日本語 subtitle", "plain ascii line"]).split("\n");
-    const bottom = rest.pop();
-    assert.equal(visualWidth(top), 60);
-    assert.equal(visualWidth(/** @type {string} */ (bottom)), 60);
-    const middle = new Set(rest.map(visualWidth));
-    assert.equal(middle.size, 1, `${mode}: padded lines differ in width: ${JSON.stringify(rest)}`);
+    for (const width of [60, 78, 120]) {
+      const r = createRenderer({ glyphs: mode, color: false, width });
+      const boxes = [
+        r.header("Scan → Questions ✓", ["日本語 subtitle", "plain ascii line"]),
+        r.header({ text: "otito repo · repository overview", glyph: "📦" }, [{ text: long, glyph: "💬" }]),
+        r.verdict({ verdict: "PASS" }),
+        r.verdict({ verdict: "WARN", nextStep: "run the validation plan" }),
+        r.verdict({ verdict: "FAIL", blockedBy: long, nextStep: "/a/path/with/no/spaces/that/is/longer/than/the/box/is/wide/by/quite/a/lot/really/it/is.ts" }),
+      ];
+      for (const box of boxes) {
+        const widths = new Set(box.split("\n").map(visualWidth));
+        assert.deepEqual([...widths], [width], `${mode}@${width}: ${JSON.stringify(box.split("\n"))}`);
+      }
+    }
   }
 });
 
@@ -491,34 +511,18 @@ test("paint names palette colours, including the new magenta and blue", () => {
 // ---------------------------------------------------------------------------
 // Today's output, byte for byte, and wrapping for content that does not fit.
 
-test("emoji and ascii output of header, verdict and statusLine is byte-identical to today's", () => {
-  // tests/fixtures/render-fancy-golden.json was generated from the renderer
-  // as it was before glyph modes existed (origin/develop 1ac7087). The glyph
-  // refactor and the wrapping are only allowed to change what did not fit.
+test("header, verdict, statusLine and the small marks match the golden fixture in every mode", () => {
+  // tests/fixtures/render-fancy-golden.json pins the renderer's output per glyph
+  // mode, colour and width. It was first recorded from the renderer as it was
+  // before glyph modes existed, and regenerated in phase 3 for the box width
+  // fix; tests/golden/generate-render-fancy.mjs regenerates it on purpose.
   const golden = JSON.parse(fs.readFileSync(new URL("./fixtures/render-fancy-golden.json", import.meta.url), "utf8"));
-  assert.ok(golden.cases.length >= 8);
+  assert.deepEqual(
+    golden.cases.map((/** @type {{ id: string }} */ entry) => entry.id),
+    goldenCases().map((entry) => entry.id),
+  );
   for (const { id, options, outputs } of golden.cases) {
-    const r = createRenderer(options);
-    const actual = {
-      "header:string": r.header("otito doctor"),
-      "header:glyph": r.header({ text: "otito repo · repository overview", glyph: "📦" }, [{ text: "/tmp/repo", glyph: "💬" }, "plain line"]),
-      "header:dim-subtitle": r.header({ text: "CODE MAP   fixture", glyph: "\u{1F5FA}" }, [`${ESC}[2mreason for the report${ESC}[0m`]),
-      "verdict:PASS": r.verdict({ verdict: "PASS" }),
-      "verdict:WARN": r.verdict({ verdict: "WARN", nextStep: "run the validation plan" }),
-      "verdict:FAIL": r.verdict({ verdict: "FAIL", blockedBy: "Review state", nextStep: "request review" }),
-      "verdict:UNKNOWN": r.verdict({}),
-      "statusLine:pass": r.statusLine("pass", "node", "v22.12.0"),
-      "statusLine:warn": r.statusLine("warn", "rg", "not installed", ["Install ripgrep for faster searches."]),
-      "statusLine:fail": r.statusLine("fail", "git", "missing"),
-      "statusLine:info": r.statusLine("info", "note", "fyi", ["a", "b"]),
-      "statusLine:unknown": r.statusLine("other", "x", "y"),
-      bullet: r.bullet("first item"),
-      "bullet:glyph": r.bullet("hot", "🔥"),
-      tip: r.tip("optional accelerators"),
-      section: r.section("Section", ["one", "two"]),
-      "section:string": r.section("S", "body"),
-      rule: r.rule(),
-    };
+    const actual = renderAll(options);
     assert.deepEqual(Object.keys(actual).sort(), Object.keys(outputs).sort(), `${id}: the golden file covers a different set of calls`);
     for (const [key, expected] of Object.entries(outputs)) {
       assert.equal(actual[key], expected, `${id} ${key} changed`);
@@ -613,7 +617,7 @@ test("pick returns the mark for the resolved glyph mode and falls back to ascii"
 test("glyphs.item is the marker formatters put in front of their own list items", () => {
   assert.equal(createRenderer({ glyphs: "emoji" }).glyphs.item, "•");
   assert.equal(createRenderer({ glyphs: "ascii" }).glyphs.item, "-");
-  assert.equal(createRenderer({ glyphs: "unicode" }).glyphs.item, "•");
+  assert.equal(createRenderer({ glyphs: "unicode" }).glyphs.item, "-");
 });
 
 test("no formatter reads renderer.emoji any more; marks come from glyphs and pick", () => {

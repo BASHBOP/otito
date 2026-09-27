@@ -153,9 +153,10 @@ export function initProject(targetPath = ".", options = {}) {
 /**
  * @param {InitResult} result
  * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
+ * @param {import("./output.js").ClosingLine} [close] the caller's verdict on what was written
  * @returns {string}
  */
-export function formatInitSummary(result, options = {}) {
+export function formatInitSummary(result, options = {}, close) {
   return formatTerminalSummary({
     title: "otito init · trust harness setup",
     glyph: "🛠️",
@@ -166,11 +167,12 @@ export function formatInitSummary(result, options = {}) {
       ...(result.hooksPathRequested && !result.precommitApplied ? [["Hooks path", "skipped (no pre-commit hook was scaffolded)"]] : []),
     ]),
     sections: [
-      { title: "Created", glyph: "✅", items: result.created },
-      { title: "Updated", glyph: "🔄", items: result.updated },
-      { title: "Skipped", glyph: "⏭️", items: result.skipped },
+      { title: "Created", glyph: "✅", items: result.created, kind: "tree" },
+      { title: "Updated", glyph: "🔄", items: result.updated, kind: "tree" },
+      { title: "Skipped", glyph: "⏭️", items: result.skipped, kind: "tree" },
       { title: "Next steps", glyph: "📝", items: result.nextSteps },
     ],
+    close,
     options,
   });
 }

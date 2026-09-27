@@ -75,9 +75,10 @@ export function getInstallPlan() {
 /**
  * @param {ReturnType<typeof installOtito>} result
  * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
+ * @param {import("./output.js").ClosingLine} [close] the caller's verdict on the install
  * @returns {string}
  */
-export function formatInstallSummary(result, options = {}) {
+export function formatInstallSummary(result, options = {}, close) {
   const applied = result.mode && result.mode !== "plan";
   return formatTerminalSummary({
     title: `${result.productName} · installer`,
@@ -108,6 +109,7 @@ export function formatInstallSummary(result, options = {}) {
       ...(result.stderr ? [{ title: "stderr", glyph: "⚠️", items: [result.stderr] }] : []),
       { title: "Next steps", glyph: "📝", items: result.nextSteps },
     ],
+    close,
     options,
   });
 }
