@@ -1,0 +1,9 @@
+name: main-branch-checks
+on:
+  push:
+    branches: [main]
+jobs:
+  merge-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4

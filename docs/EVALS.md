@@ -151,21 +151,29 @@ the older floor.)
 
 ## Current baseline
 
-Recorded **2026-09-25** by running `runRetrievalEval()` against the committed
-corpus (21 retrieval + 22 risk cases):
+Recorded **2026-09-27** by running `runRetrievalEval()` against the committed
+corpus (22 retrieval + 22 risk cases):
 
 ```
 | Group     | Metric       | Value | Threshold | Pass |
 |-----------|--------------|------:|----------:|:----:|
-| retrieval | precisionAtK | 0.867 |      0.85 | yes  |
+| retrieval | precisionAtK | 0.873 |      0.85 | yes  |
 | retrieval | recallAtK    | 1.0   |      0.9  | yes  |
-| retrieval | mrr          | 0.975 |      0.9  | yes  |
+| retrieval | mrr          | 0.976 |      0.9  | yes  |
 | risk      | accuracy     | 1.0   |      0.96 | yes  |
 
-Retrieval: p@5=0.867, r@5=1.0, mrr=0.975 (21/21 cases pass)
+Retrieval: p@5=0.873, r@5=1.0, mrr=0.976 (22/22 cases pass)
 Risk:      accuracy=1.0 (22/22 cases pass)
 Overall:   PASS (exit 0)
 ```
+
+The 2026-09-27 change (named-file pinning, translation-catalog demotion and
+locale folding, extension tokens dropped, runnable tests only) left all 21
+earlier cases byte-identical; the aggregate moved from p@5=0.867, mrr=0.975
+only because it added `multi-locale-named-files-and-symbol`, which scores 1.0.
+The engine before that change fails the same case (p@5=0.6: two
+`.ts`/`.tsx` files matched on their extension took the slots of
+`utils/create-event.ts` and `aiEventSchema.ts`).
 
 precision@5 is below 1.0 because some pairing queries (e.g. `fix the rsvp
 button`) legitimately return two primary files when only one is labeled

@@ -177,7 +177,7 @@ test("generateContextPack ranks email service methods as hotspots over booking c
 
   const result = generateContextPack("extend organisation branding to RSVP confirmation booking cancellation abandonment recovery emails", { path: root });
 
-  assert.equal(result.data.contextEngineVersion, 3);
+  assert.equal(result.data.contextEngineVersion, 4);
   assert.ok(result.data.primaryFiles.some((file) => file.path === "src/email/email.service.ts"));
   assert.ok(result.data.hotspots.some((item) => item.path === "src/email/email.service.ts" && item.symbol === "resolveEventEmailBranding"));
   assert.ok(result.data.hotspots.some((item) => item.symbol === "sendRsvpConfirmationEmail"));
@@ -264,7 +264,7 @@ test("generateContextPack keeps an explicit Handlebars message template beside i
   const root = path.resolve("evals/fixtures/campaign-email");
   const result = generateContextPack("where is the branded campaign email Handlebars template rendered?", { path: root });
 
-  assert.equal(result.data.contextEngineVersion, 3);
+  assert.equal(result.data.contextEngineVersion, 4);
   const primaryPaths = result.data.primaryFiles.slice(0, 3).map((file) => file.path);
   assert.ok(primaryPaths.includes("src/email/template/campaign-message-responsive.hbs"));
   assert.ok(primaryPaths.includes("src/audience/campaign.service.ts"));
@@ -401,4 +401,64 @@ test("generateContextPack reports the live working tree, not the one the cached 
   const clean = generateContextPack("charge card billing", { path: root });
   assert.deepEqual(clean.data.conflicts, []);
   assert.equal(clean.data.repos[0].git.clean, true);
+});
+
+// Regressions from the bashbop-event-web review (2026-09-27); see the
+// multi-locale-web fixture in tests/impact.test.js.
+const multiLocaleFixture = path.resolve("evals/fixtures/multi-locale-web");
+
+test("generateContextPack keeps translation keys out of the hotspots and the catalog to one slot for a git request", () => {
+  const result = generateContextPack("PR 588 merged - verify merge state, sync local main branch, check CI on main after merge", {
+    path: multiLocaleFixture,
+    limit: 6,
+  });
+  const listed = [...result.data.primaryFiles, ...result.data.relatedFiles];
+
+  assert.ok(listed.filter((file) => file.kind === "translation").length <= 1, listed.map((file) => file.path).join(", "));
+  assert.equal(result.data.primaryFiles[0].path, ".github/workflows/main-branch-checks.yml");
+  // `mainBanner`, `addMainImage` and the rest share one word, `main`, with the request.
+  const catalogHotspots = result.data.hotspots.filter((hotspot) => hotspot.kind === "translation");
+  assert.ok(
+    catalogHotspots.every((hotspot) => new Set(hotspot.matchedTokens).size >= 2),
+    catalogHotspots.map((hotspot) => hotspot.symbol).join(", "),
+  );
+  assert.ok(result.data.hotspots[0]?.kind !== "translation", "a catalog key must not lead the hotspots");
+});
+
+test("generateContextPack folds a catalog's locales into one entry that names them", () => {
+  const result = generateContextPack("fix the wording of the overnight event end time copy", { path: multiLocaleFixture, limit: 6 });
+  const catalogs = [...result.data.primaryFiles, ...result.data.relatedFiles].filter((file) => file.kind === "translation");
+
+  assert.equal(catalogs.length, 1, catalogs.map((file) => file.path).join(", "));
+  assert.deepEqual(catalogs[0].siblings, ["messages/en-NG.json", "messages/en-US.json", "messages/fr.json", "messages/pcm-NG.json"]);
+  assert.ok(catalogs[0].reasons.includes("locale catalog, also en-NG, en-US, fr, pcm-NG"), catalogs[0].reasons.join(", "));
+  assert.ok(!catalogs[0].reasons.includes("translation catalog, demoted"), "a copy request must not demote the catalog");
+});
+
+test("generateContextPack leads with named files and the named symbol's imported definition", () => {
+  const result = generateContextPack(
+    "fix overnight event bug: combineDateAndTime doesn't roll over; event-service.ts only compares getHours; EditableDate.tsx blocks overnight ranges",
+    { path: multiLocaleFixture },
+  );
+  const primary = result.data.primaryFiles.map((file) => file.path);
+
+  assert.deepEqual(primary.slice(0, 3), ["services/event-service.ts", "components/inline-edit/EditableDate.tsx", "utils/create-event.ts"], primary.join(", "));
+  assert.ok(primary.indexOf("utils/create-event.ts") < primary.indexOf("utils/combineDateAndTime.ts") || !primary.includes("utils/combineDateAndTime.ts"));
+  assert.equal(result.data.hotspots[0]?.symbol, "combineDateAndTime");
+  assert.equal(result.data.hotspots[0]?.path, "utils/create-event.ts");
+  assert.ok(!result.data.intent.topics.includes("ts") && !result.data.intent.topics.includes("tsx"), result.data.intent.topics.join(", "));
+});
+
+test("generateContextPack lists only runnable tests, never notes or snapshots under __tests__", () => {
+  const result = generateContextPack("review event date and time validation tests for overnight events", { path: multiLocaleFixture });
+  const tests = result.data.tests.map((file) => file.path);
+
+  assert.ok(tests.length > 0, "expected tests");
+  for (const file of tests) assert.match(file, /\.(test|spec)\.[jt]sx?$/, file);
+});
+
+test("generateContextPack puts a named test note in Primary Files rather than dropping it", () => {
+  const result = generateContextPack("update __tests__/TEST_SUITE_SUMMARY.md for the overnight tests", { path: multiLocaleFixture });
+  assert.equal(result.data.primaryFiles[0]?.path, "__tests__/TEST_SUITE_SUMMARY.md");
+  assert.ok(!result.data.tests.some((file) => file.path.endsWith(".md")));
 });

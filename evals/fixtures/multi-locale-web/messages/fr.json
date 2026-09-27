@@ -1,0 +1,28 @@
+{
+  "event": {
+    "title": "Event (fr)",
+    "startDate": "Start date (fr)",
+    "endDate": "End date (fr)",
+    "startTime": "Start time (fr)",
+    "endTime": "End time (fr)",
+    "endTimeBeforeStart": "End time is before the start time (fr)",
+    "overnightEvent": "Ends the next day (fr)",
+    "editDate": "Edit date (fr)",
+    "timezone": "Time zone (fr)"
+  },
+  "main": {
+    "mainBanner": "Main banner (fr)",
+    "mainImageLabel": "Main image (fr)",
+    "setAsMainHost": "Set as main host (fr)",
+    "addMainImage": "Add main image (fr)"
+  },
+  "validation": {
+    "invalidDate": "Invalid date (fr)",
+    "invalidTime": "Invalid time (fr)",
+    "requiredField": "Required (fr)"
+  },
+  "branch": {
+    "mergeState": "Merge state (fr)",
+    "syncStatus": "Sync status (fr)"
+  }
+}
