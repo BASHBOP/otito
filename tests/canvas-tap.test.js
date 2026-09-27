@@ -96,8 +96,8 @@ test("an MCP tool call reaches a live canvas without waiting on it", async (t) =
   const held = new Promise((resolve) => {
     release = resolve;
   });
-  // A canvas that records the event and then hangs: the JSON-RPC response
-  // must not wait for it.
+  // A canvas that records the event and holds its reply until release(): the
+  // JSON-RPC response must not wait for it.
   const canvas = http.createServer((req, res) => {
     let body = "";
     req.on("data", (chunk) => {
@@ -110,13 +110,40 @@ test("an MCP tool call reaches a live canvas without waiting on it", async (t) =
   });
   await new Promise((resolve) => canvas.listen(0, "127.0.0.1", resolve));
   const { port } = /** @type {import('node:net').AddressInfo} */ (canvas.address());
+  const canvasUrl = `http://127.0.0.1:${port}`;
+
+  // Watch the tap's send from the client side. With the reply held, the send
+  // settles only after release() or when the tap's own timeout aborts it, and
+  // these handlers are attached before the tap's, so a response that waited on
+  // the send is always written after sendState changes. That checks the order
+  // of the two, not how fast the dispatch ran.
+  const savedFetch = globalThis.fetch;
+  /** @type {Promise<Response>[]} */
+  const sends = [];
+  let sendState = "pending";
+  globalThis.fetch = (url, init) => {
+    const send = savedFetch(url, init);
+    if (String(url).startsWith(canvasUrl)) {
+      sends.push(send);
+      send.then(
+        () => {
+          sendState = "answered";
+        },
+        (error) => {
+          sendState = `failed: ${error?.name ?? error}`;
+        },
+      );
+    }
+    return send;
+  };
 
   const saved = { url: process.env.OTITO_CANVAS_URL, host: process.env.OTITO_HOST };
-  process.env.OTITO_CANVAS_URL = `http://127.0.0.1:${port}`;
+  process.env.OTITO_CANVAS_URL = canvasUrl;
   process.env.OTITO_HOST = "cursor";
   t.after(() => {
     release();
     canvas.close();
+    globalThis.fetch = savedFetch;
     for (const [key, value] of [
       ["OTITO_CANVAS_URL", saved.url],
       ["OTITO_HOST", saved.host],
@@ -138,21 +165,22 @@ test("an MCP tool call reaches a live canvas without waiting on it", async (t) =
   output.on("data", (chunk) => {
     text += chunk;
   });
-  const started = Date.now();
   const done = startMcpServer({ input, output });
   input.write(
     `${JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "context_pack", arguments: { query: "add a quiet flag", path: fixture } } })}\n`,
   );
   input.end();
   await done;
-  const elapsed = Date.now() - started;
 
   const response = JSON.parse(text.trim());
   assert.equal(response.result.isError, false, "the tool answered normally");
-  assert.ok(elapsed < 900, `the response waited on the canvas (${elapsed}ms)`);
+  assert.equal(sends.length, 1, "the tap sent one event");
+  assert.equal(sendState, "pending", `the response waited on the canvas (send ${sendState})`);
 
-  // The send was started before dispatch; give the loopback round trip a moment.
-  for (let i = 0; i < 50 && received.length === 0; i += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+  // Only now may the canvas reply. It records the event before replying, so
+  // once the send completes the event has arrived.
+  release();
+  assert.equal((await sends[0]).ok, true, "the held send completes once the canvas replies");
   assert.equal(received.length, 1);
   assert.equal(received[0].path, "/ingest");
   assert.deepEqual(received[0].body, { request: "add a quiet flag", source: "cursor", tool: "context_pack" });
