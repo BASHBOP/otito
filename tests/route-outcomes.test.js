@@ -67,6 +67,129 @@ function fixture() {
   return { dir, transcripts: path.join(dir, "projects"), log, records };
 }
 
+/** A finished background task, as the harness words it. */
+function notification(taskId, command) {
+  return [
+    "<task-notification>",
+    `<task-id>${taskId}</task-id>`,
+    "<status>completed</status>",
+    `<summary>Background command "${command}" completed (exit code 0)</summary>`,
+    "</task-notification>",
+  ].join("\n");
+}
+/** The queue record the harness writes when it submits a prompt. */
+function enqueue(sessionId, minutes, content) {
+  return { type: "queue-operation", operation: "enqueue", sessionId, timestamp: at(minutes), content };
+}
+
+/**
+ * A session the hook routed before it skipped harness prompts: two finished
+ * background tasks, a CI monitor event and a shell record sit between a
+ * request and the prompt that pushes back on it, and each left a decision.
+ */
+function harnessFixture() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "route-outcomes-harness-"));
+  const project = path.join(dir, "projects", "-Users-me-repo");
+  fs.mkdirSync(project, { recursive: true });
+  const s = "sess-h";
+  const delivered = notification("bg1", "yarn test");
+  const midTurn = notification("bg2", "yarn lint");
+  const monitor = "<ci-monitor-event>CI failed on the pull request this session opened.</ci-monitor-event>";
+  const shell = "<bash-input>git push origin v3.2.0</bash-input><bash-stdout>Everything up-to-date</bash-stdout><bash-stderr></bash-stderr>";
+  const reminded = "<system-reminder>\nYou are operating in a git worktree.\n</system-reminder>\n\nrun the suite in the background and fix what fails";
+  const lines = [
+    enqueue(s, 0, reminded),
+    user(s, 0, reminded, { origin: { kind: "human" } }),
+    edit(s, 1, "src/cli.js"),
+    // Delivered between turns: a queue record and a user record.
+    enqueue(s, 2, delivered),
+    user(s, 2.1, delivered, { origin: { kind: "task-notification" } }),
+    edit(s, 3, "src/cli.js"),
+    // Absorbed mid-turn: filed as an attachment, so only the queue holds it.
+    enqueue(s, 4, midTurn),
+    { type: "attachment", sessionId: s, timestamp: at(4), attachment: { type: "queued_command", prompt: midTurn, commandMode: "task-notification" } },
+    { type: "queue-operation", operation: "remove", sessionId: s, timestamp: at(4.1), content: midTurn, reason: "absorbed_mid_turn" },
+    enqueue(s, 5, monitor),
+    user(s, 5, monitor),
+    enqueue(s, 6, shell),
+    user(s, 6, shell, { origin: { kind: "human" } }),
+    enqueue(s, 9, "no, the footer is still printed"),
+    user(s, 9, "no, the footer is still printed", { origin: { kind: "human" } }),
+    edit(s, 10, "src/cli.js"),
+  ];
+  fs.writeFileSync(path.join(project, `${s}.jsonl`), lines.map((line) => JSON.stringify(line)).join("\n") + "\n");
+  const log = path.join(dir, "route-decisions.jsonl");
+  const records = [
+    decision(s, 0, reminded, { deterministic: "cheap", offline: "mid" }),
+    decision(s, 2, delivered, { deterministic: "cheap", offline: "mid" }),
+    decision(s, 4, midTurn, { deterministic: "cheap", offline: "premium" }),
+    decision(s, 5, monitor, { deterministic: "cheap", offline: "mid" }),
+    decision(s, 6, shell, { deterministic: "cheap", offline: "mid" }),
+    decision(s, 9, "no, the footer is still printed", { deterministic: "cheap", offline: "cheap" }),
+    // The same notification text, logged for a session with no transcript: nothing says what it was.
+    decision("sess-gone", 2, delivered, { deterministic: "cheap", offline: "mid" }),
+  ];
+  fs.writeFileSync(log, records.map((r) => JSON.stringify(r)).join("\n") + "\n");
+  return { dir, transcripts: path.join(dir, "projects"), log, records, delivered, midTurn };
+}
+
+test("a harness prompt in a transcript is neither a prompt nor anybody's follow-up", () => {
+  const { dir, transcripts, delivered, midTurn } = harnessFixture();
+  const events = readSessions(transcripts).get("sess-h");
+  assert.ok(events);
+  assert.deepEqual(
+    events.filter((e) => e.kind !== "harness").map((e) => e.kind),
+    ["prompt", "edit", "edit", "prompt", "edit"],
+  );
+  const harness = events.filter((e) => e.kind === "harness");
+  assert.ok(harness.some((e) => e.hash === promptHash(delivered)));
+  assert.ok(
+    harness.some((e) => e.hash === promptHash(midTurn)),
+    "a notification absorbed mid-turn is known from the queue",
+  );
+  assert.ok(
+    harness.every((e) => e.text === undefined),
+    "only the hash is kept, as in the log",
+  );
+  // The request's follow-up is the user's pushback nine minutes later, not the
+  // notification at minute two, and the edits made on the way are its own.
+  assert.deepEqual(outcomesFor(events, 0, 60 * 60000), { followUp: true, corrected: true, reworked: true });
+  assert.deepEqual(
+    outcomesFor(events, 0, 5 * 60000),
+    { followUp: false, corrected: null, reworked: null },
+    "a notification does not bring the follow-up closer",
+  );
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("decisions logged for harness prompts are left out of the grade and counted", () => {
+  const { dir, transcripts, log, records } = harnessFixture();
+  const data = gradeDecisions(records, readSessions(transcripts), { minSample: 1 });
+  assert.equal(data.records, 7);
+  assert.equal(data.excluded, 4, "two notifications, a CI monitor event and a shell record");
+  assert.equal(data.joined, 2);
+  assert.equal(data.unjoined, 1, "without its transcript a row cannot be told from a prompt that was never recorded");
+  assert.equal(data.graded, 1, "the last prompt has nothing after it");
+  assert.equal(data.excluded + data.joined + data.unjoined, data.records);
+  const offline = data.variants.offline.tiers;
+  assert.deepEqual(
+    offline.map((t) => t.corrected.n),
+    [0, 1, 0],
+    "the premium notification and the four mid ones grade nothing",
+  );
+  assert.deepEqual([offline[1].corrected.hits, offline[1].reworked.n, offline[1].reworked.hits], [1, 1, 1]);
+  assert.match(formatOutcomes(data), /7 logged, 4 excluded as harness prompts \(task notifications, CI monitor events, shell records\), 2 joined/);
+
+  const run = spawnSync(process.execPath, [SCRIPT, "--log", log, "--transcripts", transcripts, "--min-sample", "1", "--json"], { encoding: "utf8" });
+  assert.equal(run.status, 0, run.stderr);
+  const parsed = JSON.parse(run.stdout);
+  assert.equal(parsed.excluded, 4);
+  assert.equal(parsed.joined, 2);
+  const text = spawnSync(process.execPath, [SCRIPT, "--log", log, "--transcripts", transcripts], { encoding: "utf8" });
+  assert.match(text.stdout, /4 excluded as harness prompts/);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 test("pushback is read from how the next prompt opens", () => {
   for (const text of [
     "no that is wrong",
@@ -106,6 +229,7 @@ test("decisions join to their prompt by session and hash, and grade per tier wit
   const { dir, transcripts, log, records } = fixture();
   const data = gradeDecisions(records, readSessions(transcripts), { minSample: 1 });
   assert.equal(data.records, 4);
+  assert.equal(data.excluded, 0);
   assert.equal(data.joined, 2);
   assert.equal(data.unjoined, 2);
   assert.equal(data.graded, 2);
