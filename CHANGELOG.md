@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`version:check` catches a stale docs site.** `docs/index.md` opens with a `**vX.Y.Z** is published` banner, which replaced the `**Status:** v` line the release sync and drift check looked for, so neither saw it: 3.3.0 was released on 2026-09-27 with `version:check` green while bashbop.github.io/otito still announced v3.2.0 and had no 3.3.0 entry under What's New. `syncPinnedDocVersion` now rewrites the banner, `findPinnedDocVersionDrift` reports it, and a new `findWhatsNewDrift` fails `version:check` when What's New has no `vX.Y.Z published` entry for the `package.json` version (it is written by hand, so the sync cannot add it). The site gets its v3.3.0 banner and entry.
+
 ## [3.3.0] - 2026-09-27
 
 The terminal output gets colour and shape it didn't have before. `otito` resolves one glyph set per run (plain Unicode by default, ASCII in CI, emoji opt-in) and builds tables, trees and coloured lists from shared string-building primitives instead of ad-hoc strings; every bullet and list item now dims its marker the way a box border is dimmed, matching the headers, boxes and closing line that already had colour. `otito install` prompts a human at a TTY for how to install, with a short personalized pitch first, while every non-interactive caller (`--yes`, `--json`, CI, agents) is unaffected. No command, field or schema was removed.

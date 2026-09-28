@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v3.2.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
+**v3.3.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
 
 ---
 
@@ -18,6 +18,16 @@
 ---
 
 ## What's New
+
+!!! tip "v3.3.0 published (2026-09-27)"
+    The terminal output gets colour and shape it didn't have before. No command, field or schema was removed.
+
+    - The default terminal look is plain Unicode (`✓ ! ✗`, box drawing, arrows) with no emoji; CI, `NO_EMOJI`, `--no-emoji` and `TERM=dumb` keep ASCII, and `--emoji` opts back in. Tables, trees and lists come from shared primitives, and every command that prints for a person ends with one closing line such as `Verified.` or `Runs without errors.`
+    - `otito install` asks a person at a terminal how to install, while `--yes`, `--json`, CI and agents get the same output as before.
+    - `context_pack` and `change_impact` stop ranking translation catalogs, file extensions and test notes ahead of the code a request names; a path or symbol named in the request is pinned as a required owner.
+    - A version bump that reaches `main` is tagged and released by the new `Tag release` workflow, without a hand-pushed tag.
+
+    [npm v3.3.0](https://www.npmjs.com/package/@bashbop/otito/v/3.3.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.3.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.2.0 published (2026-09-26)"
     The gates gate what they are given. No command, field or schema was removed.

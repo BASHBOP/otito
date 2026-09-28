@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { findPinnedDocVersionDrift } from "../src/lib/version-docs.js";
+import { findPinnedDocVersionDrift, findWhatsNewDrift } from "../src/lib/version-docs.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packageJson = readJson(path.join(root, "package.json"));
@@ -51,6 +51,10 @@ function checkPinnedDocVersions(filePath, expectedVersion) {
 
   for (const issue of findPinnedDocVersionDrift(content, expectedVersion)) {
     fail(`${relativePath} ${issue} (run \`node scripts/sync-server-version.mjs\` to resync)`);
+  }
+
+  for (const issue of findWhatsNewDrift(content, expectedVersion)) {
+    fail(`${relativePath} ${issue} (add it by hand from CHANGELOG.md)`);
   }
 }
 
