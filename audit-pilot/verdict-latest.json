@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-27T17:01:37.219Z",
+  "generatedAt": "2026-09-28T08:09:30.179Z",
   "schemaVersion": 1,
   "reviewEngineVersion": 1,
   "request": "review this change",
@@ -14,28 +14,28 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "CHANGELOG.md",
+        "path": "src/lib/context-engine.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "RELEASE.md",
+        "path": "src/lib/impact.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "docs/18-model-routing/README.md",
+        "path": "tests/context-engine.test.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "docs/EVALS.md",
+        "path": "tests/impact.test.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "docs/index.md",
-        "score": 0,
+        "path": "src/lib/review.js",
+        "score": 22.6,
         "riskFlags": []
       }
     ],
@@ -44,15 +44,11 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 73,
-    "additions": 6880,
-    "deletions": 362,
+    "changedFiles": 4,
+    "additions": 405,
+    "deletions": 19,
     "riskLevel": "low",
-    "riskFlags": [
-      "dependency",
-      "large PR",
-      "large file diff"
-    ],
+    "riskFlags": [],
     "reviewTargetsCount": 0
   },
   "pass": {
@@ -63,7 +59,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "74 changed files found."
+        "summary": "5 changed files found."
       },
       {
         "name": "Secret safety",
@@ -78,7 +74,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "Version metadata is SemVer and changelog was updated."
+        "summary": "No version metadata changes found."
       },
       {
         "name": "Validation commands",
@@ -103,6 +99,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 433
+    "fullJson": 425
   }
 }
