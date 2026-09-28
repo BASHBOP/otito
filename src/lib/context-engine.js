@@ -52,6 +52,7 @@ import { estimateTokens, estimateTokenSections } from "./tokens.js";
  * @property {Map<string, import('./ranking-rules.js').NamedFile & { order: number }>} pinned
  * @property {Map<string, import('./ranking-rules.js').NamedFile>} definers
  * @property {Set<string>} symbols
+ * @property {Set<string>} repoHints - repo.root values the request names directly (only populated across 2+ repos).
  */
 
 /**
@@ -134,6 +135,13 @@ const stopWords = new Set([
 export const AMBIGUOUS_ACTION_QUESTION = "The requested action is ambiguous; clarify whether this is implementation, review, debugging, or exploration.";
 
 const actionWords = new Set(["add", "build", "change", "create", "debug", "fix", "implement", "refactor", "review", "test", "update"]);
+// A request framed around symptoms ("scanning and date bugs", "the app is
+// broken", "crashes on submit") names no verb from actionWords at all, but it
+// is unmistakably a debugging task. Recorded gap: "ticket scanning (QR
+// check-in) and date/time display formatting bugs in the mobile app" came
+// back with intent "unknown" and the ambiguous-action open question even
+// though "bugs" is as clear a signal as "debug".
+const debugSynonyms = new Set(["bug", "bugs", "bugfix", "broken", "crash", "crashes", "crashing", "regression", "regressions"]);
 const importExtensions = ["", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", "/index.ts", "/index.tsx", "/index.js", "/index.jsx"];
 
 /**
@@ -458,7 +466,7 @@ function formatMatch(tokens) {
  */
 function requestRules(maps, query, tokens, limit) {
   /** @type {RequestRules} */
-  const rules = { wantsCopy: isCopyRequest(tokens), pinned: new Map(), definers: new Map(), symbols: new Set() };
+  const rules = { wantsCopy: isCopyRequest(tokens), pinned: new Map(), definers: new Map(), symbols: new Set(), repoHints: computeRepoHints(maps, query) };
   for (const map of maps) {
     const named = resolveNamedFiles(map.files ?? [], query, { limit });
     for (const entry of named.pinned) rules.pinned.set(`${map.repo.root}:${entry.path}`, { ...entry, order: rules.pinned.size });
@@ -469,7 +477,71 @@ function requestRules(maps, query, tokens, limit) {
 }
 
 /** @type {RequestRules} */
-const noRequestRules = { wantsCopy: false, pinned: new Map(), definers: new Map(), symbols: new Set() };
+const noRequestRules = { wantsCopy: false, pinned: new Map(), definers: new Map(), symbols: new Set(), repoHints: new Set() };
+
+// Bonus/penalty applied when a multi-repo request names one repo by a word
+// from its own folder name (e.g. "in the mobile app" naming
+// bashbop-mobile-app) that does not name every queried repo. "mobile" and
+// "app" are ordinary stopWords for content scoring — too generic to match
+// file text with — but here they are matched against repo folder names
+// directly, on the raw query, so the one clear repo-scoping signal a
+// multi-repo request gives isn't silently discarded. Recorded gap: a query
+// mentioning "the mobile app" against `paths: [mobile, api]` came back with
+// primary files almost entirely from the (larger) API repo.
+const REPO_HINT_BONUS = 40;
+const REPO_UNHINTED_FACTOR = 0.6;
+const minRepoSegmentLength = 3;
+
+/**
+ * Repo folder-name segments the raw query names directly, restricted to
+ * segments that do not name every queried repo (a segment every repo shares,
+ * e.g. a shared "bashbop-" prefix, carries no scoping information).
+ * Meaningless (and left empty) for a single-repo request.
+ * @param {CodeMap[]} maps
+ * @param {string} query
+ * @returns {Set<string>} repo.root values the query names
+ */
+function computeRepoHints(maps, query) {
+  /** @type {Set<string>} */
+  const hinted = new Set();
+  if (maps.length < 2) return hinted;
+
+  const rawWords = new Set(
+    String(query)
+      .toLowerCase()
+      .match(/[a-z0-9]+/g) ?? [],
+  );
+  const perRepoSegments = maps.map((map) => ({
+    root: map.repo.root,
+    segments: new Set(
+      path.posix
+        .basename(normalizeRepoPath(map.repo.root))
+        .toLowerCase()
+        .split(/[^a-z0-9]+/)
+        .filter(Boolean),
+    ),
+  }));
+  /** @type {Set<string>} */
+  const commonSegments = new Set(perRepoSegments[0]?.segments ?? []);
+  for (const entry of perRepoSegments.slice(1)) {
+    for (const segment of [...commonSegments]) {
+      if (!entry.segments.has(segment)) commonSegments.delete(segment);
+    }
+  }
+
+  for (const entry of perRepoSegments) {
+    for (const segment of entry.segments) {
+      if (segment.length < minRepoSegmentLength || commonSegments.has(segment)) continue;
+      if (rawWords.has(segment)) {
+        hinted.add(entry.root);
+        break;
+      }
+    }
+  }
+  // A hint naming every repo is not discriminating (nothing to prefer over
+  // anything else).
+  return hinted.size < maps.length ? hinted : new Set();
+}
 
 /**
  * @param {CodeMap[]} maps
@@ -611,6 +683,16 @@ function scoreFile(map, file, tokens, intent, phrases = [], tokenStats, rules = 
   if (definer) {
     score += NAMED_DEFINER_BONUS;
     reasons.unshift(`defines ${definer.literal}`);
+  }
+
+  if (rules.repoHints.size > 0 && score > 0) {
+    if (rules.repoHints.has(map.repo.root)) {
+      score += REPO_HINT_BONUS;
+      reasons.unshift("repo named in request");
+    } else {
+      score = Math.floor(score * REPO_UNHINTED_FACTOR);
+      reasons.push("a different repo than the one named in the request");
+    }
   }
 
   const summarized = summarizeFile(map, file, score, reasons);
@@ -1398,8 +1480,10 @@ function inferSources(maps, commands) {
  * @returns {Intent}
  */
 function inferIntent(tokens) {
+  const named = tokens.find((token) => actionWords.has(token));
+  const action = named ?? (tokens.some((token) => debugSynonyms.has(token)) ? "debug" : "unknown");
   return {
-    action: tokens.find((token) => actionWords.has(token)) ?? "unknown",
+    action,
     topics: tokens.filter((token) => !actionWords.has(token)).slice(0, 8),
   };
 }
