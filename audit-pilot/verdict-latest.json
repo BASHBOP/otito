@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-28T08:09:30.179Z",
+  "generatedAt": "2026-09-28T10:19:51.393Z",
   "schemaVersion": 1,
   "reviewEngineVersion": 1,
   "request": "review this change",
@@ -14,28 +14,28 @@
     "concepts": [],
     "topFiles": [
       {
-        "path": "src/lib/context-engine.js",
+        "path": "CHANGELOG.md",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/impact.js",
+        "path": "docs/index.md",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "tests/context-engine.test.js",
+        "path": "scripts/check-version.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "tests/impact.test.js",
+        "path": "src/lib/version-docs.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "src/lib/review.js",
-        "score": 22.6,
+        "path": "tests/version-docs.test.js",
+        "score": 0,
         "riskFlags": []
       }
     ],
@@ -44,9 +44,9 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 4,
-    "additions": 405,
-    "deletions": 19,
+    "changedFiles": 5,
+    "additions": 95,
+    "deletions": 9,
     "riskLevel": "low",
     "riskFlags": [],
     "reviewTargetsCount": 0
@@ -59,7 +59,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "5 changed files found."
+        "summary": "6 changed files found."
       },
       {
         "name": "Secret safety",
@@ -99,6 +99,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 425
+    "fullJson": 421
   }
 }
