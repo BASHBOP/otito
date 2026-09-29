@@ -1,6 +1,6 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-28T10:19:51.393Z",
+  "generatedAt": "2026-09-29T18:53:30.288Z",
   "schemaVersion": 1,
   "reviewEngineVersion": 1,
   "request": "review this change",
@@ -29,12 +29,12 @@
         "riskFlags": []
       },
       {
-        "path": "src/lib/version-docs.js",
+        "path": "src/lib/context-engine.js",
         "score": 0,
         "riskFlags": []
       },
       {
-        "path": "tests/version-docs.test.js",
+        "path": "src/lib/impact.js",
         "score": 0,
         "riskFlags": []
       }
@@ -44,9 +44,9 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 5,
-    "additions": 95,
-    "deletions": 9,
+    "changedFiles": 9,
+    "additions": 496,
+    "deletions": 31,
     "riskLevel": "low",
     "riskFlags": [],
     "reviewTargetsCount": 0
@@ -59,7 +59,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "6 changed files found."
+        "summary": "10 changed files found."
       },
       {
         "name": "Secret safety",
@@ -99,6 +99,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 421
+    "fullJson": 420
   }
 }
