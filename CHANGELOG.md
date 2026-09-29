@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-09-29
+
+One context pack can now span a web app and its API, change risk stops counting files that are only loose leads, and `otito route` shows each question's own confidence and says plainly when it has no recommendation. No command, field or schema was removed.
+
 ### Added
 
 - `context_pack` and `otito context` read a repository's `companions` too: list sibling repositories in its `.otitorc.json` (`"companions": ["../api"]`, resolved against that file) and one pack covers them all, so a web bug whose cause is in the API response no longer gets a web-only pack. Explicit `paths` still win; a companion that is not checked out is skipped.

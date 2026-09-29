@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v3.2.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
+**v3.4.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
 
 ---
 
@@ -18,6 +18,23 @@
 ---
 
 ## What's New
+
+!!! tip "v3.4.0 (2026-09-29)"
+    One context pack can span a web app and its API, and the router says when it has nothing to go on. No command, field or schema was removed.
+
+    - `context_pack` and `otito context` read `companions` from a repository's `.otitorc.json` (`"companions": ["../api"]`), so a web bug whose cause is in the API gets one pack covering both. Explicit `paths` still win; a companion that is not checked out is skipped.
+    - `change_impact` raises risk only from required and supporting files, plus any changed file, not from a domain that only an advisory lead touches.
+    - `otito route` shows each Score question's own confidence next to its score, display only, and says **no recommendation** when otito matched no files, while still naming the fail-safe tier. [docs/18](18-model-routing/README.md) has the detail.
+
+    [npm v3.4.0](https://www.npmjs.com/package/@bashbop/otito/v/3.4.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.4.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+
+!!! tip "v3.3.0 published (2026-09-27)"
+    The terminal output gets colour and shape. No command, field or schema was removed.
+
+    - `otito` resolves one glyph set per run (plain Unicode, ASCII in CI, emoji opt-in) and builds tables, trees and coloured lists from shared primitives; list and bullet markers now dim like box borders.
+    - `otito install` asks a human at a terminal how to install, with a short personalized pitch first. `--yes`, `--json`, CI and agents are unaffected.
+
+    [npm v3.3.0](https://www.npmjs.com/package/@bashbop/otito/v/3.3.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.3.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.2.0 published (2026-09-26)"
     The gates gate what they are given. No command, field or schema was removed.
@@ -159,7 +176,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@3.3.0
+    npm install -g @bashbop/otito@3.4.0
     otito doctor
     otito context "review this change" --path .
     ```
@@ -167,7 +184,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@3.3.0 doctor
+    npx -y @bashbop/otito@3.4.0 doctor
     ```
 
 === "Source Checkout"

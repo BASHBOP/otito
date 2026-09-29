@@ -94,7 +94,8 @@ evidence and verdict.
 
 Score `criteria` is an **ordered list**, not an object, index 0 is level 0.
 Noul answers carry no `confidence`, only Score and Choice do, so the router
-reports the weaker of the two Score confidences, for a reader. It is a display
+reports each Score question's own confidence (`scoring.confidences`) and the
+weaker of the two (`scoring.confidence`), for a reader. It is a display
 threshold only, and not a routing input: a spread answer already pays through
 its own score term, and reading confidence as a second input escalated 67% of
 requests on this repository (see the otito dogfood below). The offline estimator
@@ -113,10 +114,17 @@ route   = clamp(AX x (1 - penalty + bonus), 0, 100)
 tier    = route >= 75 cheap | >= 45 mid | < 45 premium
 ```
 
-Then two fail-safe bumps, each moving **one tier toward the more capable model
-and never the other way**: a top-severity risk flag (anything otito already
-weights 3 in `RISK_SCORE_WEIGHTS`), and confidence below 0.55. A router that can
-round *down* on a bad read is a router that ships bad changes cheaply.
+Then two fail-safe bumps, each moving **toward the more capable model and
+never the other way**: a top-severity risk flag (anything otito already weights
+3 in `RISK_SCORE_WEIGHTS`) moves one tier, and `no evidence` (otito matched no
+files) goes straight to premium. Confidence below 0.55 used to be a third bump;
+it was removed (see the otito dogfood below). A router that can round *down* on
+a bad read is a router that ships bad changes cheaply.
+
+When `no evidence` fires, `otito route` and the route prompt hook print **no
+recommendation** instead of a tier, and name premium as the fail-safe. JSON
+`tier` still reads `premium`, and `scoring.evidence.sufficient` is `false`, so
+a caller can tell a decision from an absence.
 
 Both bumps read evidence that has to be about shipped code. Tests and fixture
 corpora still count toward reach, because they are real files the change touches, but
