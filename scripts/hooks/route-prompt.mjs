@@ -234,13 +234,23 @@ export function shouldRoute(input) {
  * subagent only when delegating is already on the table, so a routed tier
  * cannot turn a one-line answer into a spawned agent.
  *
- * @param {{tier: string, hostModel?: string, scoring?: {route?: number}, signals?: {ax?: number}, model?: {read?: any}}} route
+ * @param {{tier: string, hostModel?: string, scoring?: {route?: number, evidence?: {sufficient?: boolean}}, signals?: {ax?: number}, model?: {read?: any}}} route
  * @returns {string}
  */
 export function formatContext(route) {
   const score = route?.scoring?.route;
   const ax = route?.signals?.ax;
   const detail = [score === undefined ? null : `route ${score}`, ax === undefined ? null : `AX ${ax}`].filter(Boolean).join(", ");
+
+  // No evidence is the router's "Otherwise": say so rather than presenting a
+  // read of an empty set as a tier. The fail-safe tier is still named.
+  if (route?.scoring?.evidence?.sufficient === false) {
+    return [
+      `otito has no recommendation for this request: it matched no files, so the route would describe an empty set. Fail-safe tier: **${route.tier}**${route.hostModel ? ` (${route.hostModel})` : ""}.`,
+      "",
+      "This is a recommendation, not a switch: a hook cannot change the model this session runs on. Do not say the model was changed.",
+    ].join("\n");
+  }
 
   const lines = [
     `otito routed this request: tier **${route.tier}**${route.hostModel ? ` (${route.hostModel})` : ""}${detail ? ` — ${detail}` : ""}.`,
@@ -311,8 +321,8 @@ export function routeRequest(cwd, prompt) {
       if (code !== 0) return done(null);
       try {
         const parsed = JSON.parse(out);
-        // A route with no evidence behind it is not worth printing; the router
-        // itself says so through `scoring.evidence.sufficient`.
+        // A route with no evidence behind it is still returned; formatContext
+        // reads `scoring.evidence.sufficient` and says "no recommendation".
         if (!parsed?.tier) return done(null);
         done(parsed);
       } catch {
