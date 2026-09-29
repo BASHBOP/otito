@@ -19,6 +19,9 @@ One context pack can now span a web app and its API, change risk stops counting 
 
 - `change_impact` no longer raises a risk from a domain that only an advisory lead touches. An RSVP gallery fix ranked the RSVP payment-success page as a loose lead and warned of a money-flow change; risks now come from required and supporting files, plus any changed file.
 - `otito route` and the route prompt hook say **no recommendation** when otito matched no files, instead of presenting a read of an empty set as a tier. The fail-safe tier is still named, and `tier` in JSON is unchanged (premium), so callers that read only `tier` behave as before.
+- **`version:check` catches a stale docs site.** `docs/index.md` opens with a `**vX.Y.Z** is published` banner, which replaced the `**Status:** v` line the release sync and drift check looked for, so neither saw it: 3.3.0 was released on 2026-09-27 with `version:check` green while bashbop.github.io/otito still announced v3.2.0 and had no 3.3.0 entry under What's New. `syncPinnedDocVersion` now rewrites the banner, `findPinnedDocVersionDrift` reports it, and a new `findWhatsNewDrift` fails `version:check` when What's New has no `vX.Y.Z published` entry for the `package.json` version (it is written by hand, so the sync cannot add it). The site gets its v3.3.0 banner and entry.
+- `context_pack` reads a request that says "bug", "broken", "crash" or "regression" as debugging instead of an ambiguous action, and in a multi-repo query that names one repository by a word from its folder name, that repository's files rank first.
+- `change_impact` no longer drops a UI page (`page.tsx`, `layout.tsx`) from required owners because the request used no API wording; controllers, DTOs and API routes still need it. A query term that recurs across most of the repository counts for less, and utility-file owners compete on score with conventional owners instead of only being a last resort.
 
 ## [3.3.0] - 2026-09-27
 

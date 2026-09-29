@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { generateImpact, tokenize, weightedQueryTerms } from "../src/lib/impact.js";
+import { computeTokenDocFrequency, generateImpact, tokenWeightFactor, tokenize, weightedQueryTerms } from "../src/lib/impact.js";
 import { generateConvergence } from "../src/lib/converge.js";
 
 test("tokenize splits camelCase and kebab-case identifiers, drops stop-words", () => {
@@ -536,6 +536,98 @@ test("generateImpact suggests only tests a runner executes", () => {
   const suggested = result.data.testSuggestions.filter((line) => line.startsWith("Inspect or run related test"));
   assert.ok(suggested.length > 0, "expected related test suggestions");
   for (const line of suggested) assert.match(line, /\.(test|spec)\.[jt]sx?`$/, line);
+});
+
+// --- Regression: three recorded gaps from a real cross-repo review, all in
+// the "required owners" ranking (see otito's investigation of itself) ---
+
+test("tokenWeightFactor dampens a query term that recurs across most of an indexed repo, and leaves a rare one at full weight", () => {
+  const files = Array.from({ length: 20 }, (_, index) => ({
+    path: `src/module-${index}/index.ts`,
+    kind: "source",
+    domain: `module-${index}`,
+    exports: index < 15 ? ["ticket"] : [],
+    imports: [],
+    symbols: [],
+  }));
+  files[0].exports = [...files[0].exports, "refund"];
+  const weightedQuery = weightedQueryTerms("fix the ticket refund flow");
+
+  const stats = computeTokenDocFrequency(files, weightedQuery);
+  assert.equal(stats.totalFiles, 20);
+  assert.equal(stats.docFreq.get("ticket"), 15, "expected ticket counted in 15/20 files");
+  assert.equal(stats.docFreq.get("refund"), 1, "expected refund counted in 1/20 files");
+  // 15/20 = 75%: a term that generic gets dampened hard.
+  assert.equal(tokenWeightFactor("ticket", stats), 0.2);
+  // 1/20 = 5%: a rare, specific term keeps full weight.
+  assert.equal(tokenWeightFactor("refund", stats), 1);
+  // Below the minimum repo size the signal is too noisy to trust, so every
+  // term is neutral — matches context-engine.js's tokenWeightFactor exactly.
+  const smallStats = computeTokenDocFrequency(files.slice(0, 5), weightedQuery);
+  assert.equal(tokenWeightFactor("ticket", smallStats), 1);
+});
+
+test("generateImpact does not let a UI page route require literal API-boundary wording to become a required owner", () => {
+  // Recorded gap: "deprecate web scan-ticket page, direct organisers to iOS
+  // app download to scan tickets" named no API/route/endpoint word, so the
+  // changed, top-scored page.tsx was gated out of requiredOwners entirely and
+  // a components that only shared the word "ticket" became "required" instead.
+  const root = writeFixture("route-boundary", {
+    "package.json": JSON.stringify({ name: "route-fixture", scripts: { test: "node --test" } }),
+    "app/dashboard/scan-ticket/page.tsx": ["export default function ScanTicketPage() {", "  return null;", "}", ""].join("\n"),
+    "components/TicketBadge.tsx": ["export function TicketBadge() {", "  return null;", "}", ""].join("\n"),
+  });
+
+  const result = generateImpact("deprecate the scan ticket page, send organisers to the app store instead", { path: root, top: 10 });
+  assert.deepEqual(result.data.classifications.requiredOwners, ["app/dashboard/scan-ticket/page.tsx"]);
+  assert.equal(result.data.topFiles[0]?.path, "app/dashboard/scan-ticket/page.tsx");
+});
+
+test("generateImpact still gates a NestJS controller/dto behind API-boundary wording", () => {
+  // The other half of the same fix: `route` (a UI page) came out of
+  // REQUEST_BOUNDARY_KINDS, but `controller`/`dto`/`apiRoute`/`apiClient` (an
+  // actual request/response contract) must still require the request to be
+  // about that boundary, unchanged from before.
+  const root = writeFixture("controller-boundary", {
+    "package.json": JSON.stringify({ name: "controller-fixture", scripts: { test: "node --test" } }),
+    "src/booking/booking.controller.ts": ["export class BookingController {", "  scanTicket() { return true; }", "}", ""].join("\n"),
+  });
+
+  const result = generateImpact("write documentation explaining how ticket scanning works for support staff", { path: root, top: 10 });
+  assert.ok(
+    !result.data.classifications.requiredOwners.includes("src/booking/booking.controller.ts"),
+    "a controller must still need boundary wording to become a required owner",
+  );
+});
+
+test("generateImpact lets a strong source-kind owner outrank a weaker conventional-kind owner instead of being excluded outright", () => {
+  // Recorded gap: the real fix lived in a `*.util.ts` file (kind "source"),
+  // but because an unrelated controller also matched the query on the
+  // generic word "ticket", the utility file was never even considered —
+  // genericOwnerFallback only ran when NO conventional owner kind matched at
+  // all, so the weaker, wrong controller became the sole required owner.
+  const root = writeFixture("owner-pool-merge", {
+    "package.json": JSON.stringify({ name: "merge-fixture", scripts: { test: "node --test" } }),
+    "src/booking/utils/ticket-qr.util.ts": [
+      "export function parseTicketQrPayload(payload) {",
+      "  return payload.replace(/-ticket-\\d+$/, '');",
+      "}",
+      "export function buildTicketQrPayload(bookingId, ticketNumber) {",
+      "  return `${bookingId}-ticket-${ticketNumber}`;",
+      "}",
+      "",
+    ].join("\n"),
+    "src/seller/organizer-ticket-sales.controller.ts": ["export class OrganizerTicketSalesController {", "  getTicketSales() { return []; }", "}", ""].join(
+      "\n",
+    ),
+  });
+
+  const result = generateImpact("fix the ticket QR payload suffix parsing so scanning a ticket doesn't fail", { path: root, top: 10 });
+  assert.deepEqual(result.data.classifications.requiredOwners, ["src/booking/utils/ticket-qr.util.ts"]);
+  assert.ok(
+    !result.data.classifications.requiredOwners.includes("src/seller/organizer-ticket-sales.controller.ts"),
+    "the weaker, unrelated controller must not also become required",
+  );
 });
 
 test("generateImpact raises no risk from a domain only an advisory lead touches", () => {

@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { formatContextPackTerminal, generateContextPack } from "../src/lib/context-engine.js";
+import { AMBIGUOUS_ACTION_QUESTION, formatContextPackTerminal, generateContextPack } from "../src/lib/context-engine.js";
 import { createRenderer } from "../src/lib/render/fancy.js";
 
 test("generateContextPack returns task-aware files, tests, and commands", () => {
@@ -461,4 +461,94 @@ test("generateContextPack puts a named test note in Primary Files rather than dr
   const result = generateContextPack("update __tests__/TEST_SUITE_SUMMARY.md for the overnight tests", { path: multiLocaleFixture });
   assert.equal(result.data.primaryFiles[0]?.path, "__tests__/TEST_SUITE_SUMMARY.md");
   assert.ok(!result.data.tests.some((file) => file.path.endsWith(".md")));
+});
+
+// --- Regression: "review/debug bugs" queries with no action verb, and a
+// multi-repo request naming one repo by a word from its own folder name ---
+// Recorded gap: `otito context "ticket scanning (QR check-in) and date/time
+// display formatting bugs in the mobile app"` across [mobile, api] repos came
+// back with intent "unknown", the ambiguous-action open question, and primary
+// files almost entirely from the larger API repo even though the request said
+// "in the mobile app".
+
+test("generateContextPack infers a debug intent from bug-report language that names no action verb", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-bugreport-"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "bugreport-fixture", scripts: { test: "node --test" } }));
+  fs.mkdirSync(path.join(root, "lib"), { recursive: true });
+  fs.writeFileSync(path.join(root, "lib", "scanner.ts"), "export function scanTicket(code) { return code; }\n");
+
+  const result = generateContextPack("ticket scanning (QR check-in) and date/time display formatting bugs", { path: root });
+
+  assert.equal(result.data.intent.action, "debug", JSON.stringify(result.data.intent));
+  assert.ok(!result.data.openQuestions.includes(AMBIGUOUS_ACTION_QUESTION), result.data.openQuestions.join(" | "));
+
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("generateContextPack still reports an unknown intent when the request names neither a verb nor a bug word", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-noaction-"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "noaction-fixture", scripts: { test: "node --test" } }));
+  fs.mkdirSync(path.join(root, "lib"), { recursive: true });
+  fs.writeFileSync(path.join(root, "lib", "scanner.ts"), "export function scanTicket(code) { return code; }\n");
+
+  const result = generateContextPack("ticket scanner", { path: root });
+
+  assert.equal(result.data.intent.action, "unknown", JSON.stringify(result.data.intent));
+  assert.ok(result.data.openQuestions.includes(AMBIGUOUS_ACTION_QUESTION), result.data.openQuestions.join(" | "));
+
+  fs.rmSync(root, { recursive: true, force: true });
+});
+
+test("generateContextPack boosts the repo a multi-repo request names by a word from its own folder name", () => {
+  // repoA's folder is named "...mobile-fixture-<rand>" — "mobile" is a
+  // discriminating segment repoB's folder does not share (both share "app"
+  // and "fixture", which is why those two are not enough on their own).
+  const repoA = fs.mkdtempSync(path.join(os.tmpdir(), "app-mobile-fixture-"));
+  fs.writeFileSync(path.join(repoA, "package.json"), JSON.stringify({ name: "mobile-fixture", scripts: { test: "node --test" } }));
+  fs.mkdirSync(path.join(repoA, "lib"), { recursive: true });
+  fs.writeFileSync(path.join(repoA, "lib", "scan-ticket.ts"), "export function scanTicket(code) {\n  return code;\n}\n");
+
+  const repoB = fs.mkdtempSync(path.join(os.tmpdir(), "app-api-fixture-"));
+  fs.writeFileSync(path.join(repoB, "package.json"), JSON.stringify({ name: "api-fixture", scripts: { test: "node --test" } }));
+  fs.mkdirSync(path.join(repoB, "src", "ticket"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repoB, "src", "ticket", "ticket-scan-reports.controller.ts"),
+    ["export class TicketScanReportsController {", "  scanTicket() { return true; }", "}", ""].join("\n"),
+  );
+
+  // Unhinted control: repoB's file is the intrinsically stronger match (more
+  // fields — path, domain, symbol — repeat "ticket"/"scan") and leads on its
+  // own merits when the request names no repo.
+  const unhinted = generateContextPack("fix ticket scan bugs", { paths: [repoA, repoB], limit: 8 });
+  assert.equal(unhinted.data.primaryFiles[0]?.repo.root, repoB, unhinted.data.primaryFiles.map((f) => f.path).join(", "));
+
+  // Naming "the mobile app" in an otherwise identical request must not be
+  // silently discarded: repoA's weaker file should now lead, and its reasons
+  // should say why.
+  const hinted = generateContextPack("fix ticket scan bugs in the mobile app", { paths: [repoA, repoB], limit: 8 });
+  assert.equal(hinted.data.primaryFiles[0]?.repo.root, repoA, hinted.data.primaryFiles.map((f) => f.path).join(", "));
+  assert.ok(hinted.data.primaryFiles[0]?.reasons.includes("repo named in request"), hinted.data.primaryFiles[0]?.reasons.join(", "));
+  const otherRepoFile = hinted.data.primaryFiles.find((f) => f.repo.root === repoB);
+  assert.ok(otherRepoFile?.reasons.includes("a different repo than the one named in the request"), otherRepoFile?.reasons.join(", "));
+
+  fs.rmSync(repoA, { recursive: true, force: true });
+  fs.rmSync(repoB, { recursive: true, force: true });
+});
+
+test("generateContextPack does not apply a repo hint for a single-repo request", () => {
+  // computeRepoHints only has anything to discriminate between across 2+
+  // repos; a single-repo call must score exactly as it did before the fix,
+  // whether or not the query happens to contain a word from the repo's own
+  // folder name.
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "app-mobile-fixture-"));
+  fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "mobile-fixture", scripts: { test: "node --test" } }));
+  fs.mkdirSync(path.join(root, "lib"), { recursive: true });
+  fs.writeFileSync(path.join(root, "lib", "scan-ticket.ts"), "export function scanTicket(code) {\n  return code;\n}\n");
+
+  const result = generateContextPack("fix ticket scan bugs in the mobile app", { path: root });
+  const file = result.data.primaryFiles.find((f) => f.path === "lib/scan-ticket.ts");
+  assert.ok(file, result.data.primaryFiles.map((f) => f.path).join(", "));
+  assert.ok(!file.reasons.includes("repo named in request"), file.reasons.join(", "));
+
+  fs.rmSync(root, { recursive: true, force: true });
 });
