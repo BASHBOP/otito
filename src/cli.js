@@ -554,6 +554,18 @@ async function handleRoute(parsed) {
     data.hostModel = hostModelFor(repoPath, parsed.flags.host, data.tier);
   }
 
+  // Enforce mode (OTITO_ROUTE_MODE=delegate) assigns the same arm the hook
+  // would, so a terminal user can see whether this request is one the router
+  // is meant to bind, and the subagent model that binds it.
+  const { AGENT_MODEL, routeArm } = await import("./lib/route-arm.js");
+  const arm = routeArm(query);
+  if (arm.mode === "delegate") {
+    data.enforce = {
+      ...arm,
+      agentModel: data.scoring?.evidence?.sufficient === false ? null : (AGENT_MODEL[/** @type {keyof typeof AGENT_MODEL} */ (data.tier)] ?? null),
+    };
+  }
+
   noteResult(data);
 
   if (parsed.flags.json) {
