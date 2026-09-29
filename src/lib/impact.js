@@ -283,7 +283,14 @@ export function generateImpact(query, options = {}) {
   noteLocaleSiblings(ranked);
 
   const testSuggestions = suggestTests(map.files, ranked, map.repo);
-  const risks = identifyRisks(normalized, ranked, concepts);
+  // An advisory lead is a guess the change may not touch, so its domain is not
+  // this change's risk: a payment page ranked as a loose lead must not raise a
+  // money-flow warning on an RSVP gallery fix. Changed files always count.
+  const risks = identifyRisks(
+    normalized,
+    ranked.filter((entry) => roles.byPath.get(entry.file.path) !== "advisory" || changedPaths.has(entry.file.path)),
+    concepts,
+  );
   const validation = diffSnapshot ? (diffSnapshot.ok ? validateChangedFiles(diffSnapshot.base, exactDiffFiles, roles) : diffSnapshot) : null;
 
   const data = /** @type {Record<string, any> & { tokenEstimate?: any }} */ ({

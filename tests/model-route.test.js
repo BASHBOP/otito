@@ -701,3 +701,53 @@ test("the route call line reports a total it cannot price, and omits itself with
   const offline = render({ source: "offline", tokens: null, billableTokens: null, tokenKind: null, latencyMs: 0 }, null);
   assert.equal(offline.includes("route call:"), false);
 });
+
+test("each question reports its own confidence, not only the weaker of the two", () => {
+  const scoring = scoreDecision({
+    answers: answers({
+      specificity: { type: "score", score: 0, confidence: 0.95, probabilities: {} },
+      blast_radius: { type: "score", score: 0, confidence: 0.4, probabilities: {} },
+    }),
+    signals: signals(),
+  });
+  assert.equal(scoring.confidence, 0.4);
+  assert.deepEqual(scoring.confidences, { specificity: 0.95, blast_radius: 0.4 });
+  assert.equal(scoring.tier, "cheap", "confidence stays display only");
+
+  const offline = scoreDecision({
+    answers: answers({ specificity: { type: "score", score: 0, confidence: null, probabilities: {} } }),
+    signals: signals(),
+  });
+  assert.equal(offline.confidences.specificity, null);
+});
+
+test("no evidence renders as no recommendation, still naming the fail-safe tier", () => {
+  const data = {
+    request: "fix scanning multi date event ticket",
+    repo: { name: "fixture" },
+    scoring: scoreDecision({ answers: answers(), signals: signals({ ax: 84, containment: 100, candidates: 0 }) }),
+    model: { source: "offline", model: "offline-heuristic", answers: answers() },
+    signals: signals({ candidates: 0 }),
+    costUsd: null,
+  };
+  const plain = formatRouteTerminal(data, createRenderer({ color: false, emoji: false }));
+  assert.match(plain, /NO RECOMMENDATION\s+fails safe to premium/);
+  assert.doesNotMatch(plain, /TIER\s+PREMIUM/);
+
+  const markdown = formatRouteMarkdown(data);
+  assert.match(markdown, /# Model route: no recommendation/);
+  assert.match(markdown, /fails safe to premium/);
+});
+
+test("markdown shows each question's confidence beside its score", () => {
+  const data = {
+    request: "a request",
+    repo: { name: "fixture" },
+    scoring: scoreDecision({ answers: answers(), signals: signals() }),
+    model: { source: "jev", model: "jev-1", answers: answers() },
+    signals: signals(),
+  };
+  const markdown = formatRouteMarkdown(data);
+  assert.match(markdown, /\| specificity \| 0\.00 \(confidence 0\.90\) \|/);
+  assert.match(markdown, /\| blast_radius \| 0\.00 \(confidence 0\.90\) \|/);
+});

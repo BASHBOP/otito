@@ -13,7 +13,7 @@ import { generateRoute, hostModelFor, TIERS } from "./model-route.js";
 import { formatRouteMarkdown } from "./render/route.js";
 import { appendEvent, extractSignals, redactError, shareEvent } from "./telemetry.js";
 import { forwardToCanvas } from "./canvas-tap.js";
-import { gatePolicy } from "./config.js";
+import { contextRepoPaths, gatePolicy } from "./config.js";
 import { evaluateLocal } from "./pass-local.js";
 import { evaluatePR } from "./pass-pr.js";
 import { generateReview } from "./review.js";
@@ -165,7 +165,11 @@ export const tools = [
       properties: {
         query: { type: "string", description: "Task or question to gather context for." },
         path: { type: "string", description: "Repository path. Defaults to current working directory." },
-        paths: { type: "array", items: { type: "string" }, description: "Repository paths for a multi-repo context packet." },
+        paths: {
+          type: "array",
+          items: { type: "string" },
+          description: "Repository paths for a multi-repo context packet. Omitted, `path` plus the `companions` listed in its .otitorc.json.",
+        },
         limit: { type: "number", description: "Maximum primary, related, and test files per section. Defaults to 8." },
         includeEvidence: {
           type: "boolean",
@@ -718,7 +722,7 @@ async function dispatchTool(name, args) {
       }
       return withSearchRemediation(searchCatalog(args.query, args));
     case "context_pack": {
-      let result = generateContextPack(requiredString(args.query, "query"), args);
+      let result = generateContextPack(requiredString(args.query, "query"), { ...args, paths: contextRepoPaths(args) });
       if (args.online === true) result = await readContextPack(result);
       return args.includeMarkdown ? result : result.data;
     }

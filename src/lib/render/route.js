@@ -45,13 +45,23 @@ export function formatRouteTerminal(data, renderer) {
 
   const topLevel = (/** @type {any} */ answer) => {
     const best = Object.entries(answer.probabilities ?? {}).sort((a, b) => b[1] - a[1])[0];
-    return best ? dim(`${best[0]} ${(best[1] * 100).toFixed(0)}%`) : "";
+    const level = best ? dim(`${best[0]} ${(best[1] * 100).toFixed(0)}%`) : "";
+    if (typeof answer.confidence !== "number") return level;
+    const code = answer.confidence < CONFIDENCE_FLOOR ? "31" : answer.confidence < 0.8 ? "33" : "32";
+    return `${level}  ${dim("conf")} ${paint(answer.confidence.toFixed(2), code)}`;
   };
 
   const out = [];
   out.push(renderer.header({ text: `MODEL ROUTE   ${data.repo.name ?? ""}`, glyph: "\u{1F6A6}" }, [dim(`"${data.request}"`)]));
   out.push("");
-  out.push(`  ${bold("TIER")}  ${paint(scoring.tier.toUpperCase(), `1;${TIER_COLOR[scoring.tier]}`)}` + (data.hostModel ? dim(`   ${data.hostModel}`) : ""));
+  // No evidence means no recommendation. The tier still fails safe to premium
+  // for a caller that reads only `tier`, but the headline must not present a
+  // read of an empty set as a decision.
+  if (scoring.evidence?.sufficient === false) {
+    out.push(`  ${bold("TIER")}  ${paint("NO RECOMMENDATION", "1;33")}` + dim(`   fails safe to ${scoring.tier}`));
+  } else {
+    out.push(`  ${bold("TIER")}  ${paint(scoring.tier.toUpperCase(), `1;${TIER_COLOR[scoring.tier]}`)}` + (data.hostModel ? dim(`   ${data.hostModel}`) : ""));
+  }
   out.push(
     `  ${dim("route")} ${bold(String(scoring.route).padStart(3))} ${dim("/ 100")}   ` +
       (scoring.tier === scoring.baseTier ? dim("no bump") : paint(`bumped from ${scoring.baseTier}`, "33")),
@@ -151,20 +161,24 @@ export function formatRouteTerminal(data, renderer) {
 export function formatRouteMarkdown(data) {
   const scoring = data.scoring;
   const answers = data.model.answers;
+  const noEvidence = scoring.evidence?.sufficient === false;
+  const conf = (/** @type {any} */ answer) => (typeof answer.confidence === "number" ? ` (confidence ${answer.confidence.toFixed(2)})` : "");
   return [
-    `# Model route: ${scoring.tier}`,
+    `# Model route: ${noEvidence ? "no recommendation" : scoring.tier}`,
     "",
     `> ${data.request}`,
     "",
-    `- **Tier**: ${scoring.tier}${scoring.tier === scoring.baseTier ? "" : ` (bumped from ${scoring.baseTier})`}`,
+    noEvidence
+      ? `- **Tier**: no recommendation, otito matched no files (fails safe to ${scoring.tier})`
+      : `- **Tier**: ${scoring.tier}${scoring.tier === scoring.baseTier ? "" : ` (bumped from ${scoring.baseTier})`}`,
     `- **Route score**: ${scoring.route} / 100`,
     `- **Source**: ${data.model.source === "jev" ? data.model.model : "offline estimate, not calibrated"}`,
     "- **Advisory**: a recommendation, not a model selection",
     "",
     "| Term | Value |",
     "| --- | ---: |",
-    `| specificity | ${answers.specificity.score.toFixed(2)} |`,
-    `| blast_radius | ${answers.blast_radius.score.toFixed(2)} |`,
+    `| specificity | ${answers.specificity.score.toFixed(2)}${conf(answers.specificity)} |`,
+    `| blast_radius | ${answers.blast_radius.score.toFixed(2)}${conf(answers.blast_radius)} |`,
     `| novelty | ${answers.novelty.noul.toFixed(2)} |`,
     `| confidence | ${scoring.confidence === null ? "not measured" : scoring.confidence.toFixed(2)} |`,
     `| AX | ${data.signals.ax} |`,

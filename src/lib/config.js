@@ -181,6 +181,39 @@ export function gatePolicy(repoPath, explicit = {}, env = process.env) {
 }
 
 /**
+ * The companion repositories a context pack on `repoPath` also reads: the
+ * `companions` list in the repository's .otitorc.json, each entry resolved
+ * against that file's directory. A web client whose bugs often live in its API
+ * (`"companions": ["../api"]`) gets one pack across both instead of a pack that
+ * never sees the other side. Entries that are not existing directories drop out,
+ * so a checkout without the sibling still packs its own repository.
+ * @param {string} repoPath
+ * @returns {string[]}
+ */
+export function companionRepos(repoPath) {
+  const localPath = findLocalConfigPath(repoPath);
+  const raw = localPath ? readJsonFile(localPath) : null;
+  if (!localPath || !Array.isArray(raw?.companions)) return [];
+  const base = path.dirname(localPath);
+  return raw.companions
+    .filter((entry) => typeof entry === "string" && entry.trim())
+    .map((entry) => path.resolve(base, entry))
+    .filter((dir) => fs.statSync(dir, { throwIfNoEntry: false })?.isDirectory());
+}
+
+/**
+ * The repositories a context pack reads. Explicit `paths` win as given;
+ * otherwise `path` (default ".") plus its configured companions.
+ * @param {{ path?: string, paths?: string[] }} options
+ * @returns {string[]}
+ */
+export function contextRepoPaths(options) {
+  if (Array.isArray(options.paths) && options.paths.length) return options.paths;
+  const root = path.resolve(options.path ?? ".");
+  return [root, ...companionRepos(root).filter((dir) => dir !== root)];
+}
+
+/**
  * @param {"user" | "local"} scope
  * @param {string} [cwd]
  * @returns {string}
