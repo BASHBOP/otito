@@ -338,8 +338,9 @@ async function handleSearch(parsed) {
 async function handleContext(parsed) {
   const { formatContextPackTerminal, generateContextPack } = await import("./lib/context-engine.js");
   const query = parsed.positionals.join(" ").trim();
+  const { contextRepoPaths } = await import("./lib/config.js");
   let result = generateContextPack(query, {
-    path: parsed.flags.path,
+    paths: contextRepoPaths({ path: parsed.flags.path }),
     limit: parsed.flags.limit,
   });
   // Opt-in: ask a System One model to read the request. Never on by default,

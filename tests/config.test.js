@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { CONFIG_KEYS, gatePolicy, getConfigPath, listConfigSources, loadConfig, writeConfig } from "../src/lib/config.js";
+import { CONFIG_KEYS, companionRepos, contextRepoPaths, gatePolicy, getConfigPath, listConfigSources, loadConfig, writeConfig } from "../src/lib/config.js";
 
 // Every loadConfig call pins XDG_CONFIG_HOME to its temp dir. An empty env
 // still falls back to ~/.config/otito/config.json, so a developer who has run
@@ -231,5 +231,19 @@ test("loadConfig honors XDG_CONFIG_HOME from the injected env (user tier)", () =
   const themeSource = sources.find((entry) => entry.key === "theme");
   assert.equal(themeSource?.value, "from-user-xdg");
   assert.equal(themeSource?.source, "user");
+  fs.rmSync(tmp, { recursive: true });
+});
+
+test("companions in .otitorc.json join a context pack's repositories", () => {
+  const tmp = fs.realpathSync(makeTmpDir());
+  const web = path.join(tmp, "web");
+  const api = path.join(tmp, "api");
+  fs.mkdirSync(web);
+  fs.mkdirSync(api);
+  assert.deepEqual(contextRepoPaths({ path: web }), [web], "no config, just the repository");
+  fs.writeFileSync(path.join(web, ".otitorc.json"), JSON.stringify({ companions: ["../api", "../missing", 3, ".", ""] }));
+  assert.deepEqual(companionRepos(web), [api, web], "resolved against the config file; missing dirs and non-strings drop out");
+  assert.deepEqual(contextRepoPaths({ path: web }), [web, api], "the repository itself is not repeated");
+  assert.deepEqual(contextRepoPaths({ path: web, paths: [api] }), [api], "explicit paths win");
   fs.rmSync(tmp, { recursive: true });
 });

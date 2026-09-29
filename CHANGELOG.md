@@ -6,6 +6,14 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Added
+
+- `context_pack` and `otito context` read a repository's `companions` too: list sibling repositories in its `.otitorc.json` (`"companions": ["../api"]`, resolved against that file) and one pack covers them all, so a web bug whose cause is in the API response no longer gets a web-only pack. Explicit `paths` still win; a companion that is not checked out is skipped.
+
+### Fixed
+
+- `change_impact` no longer raises a risk from a domain that only an advisory lead touches. An RSVP gallery fix ranked the RSVP payment-success page as a loose lead and warned of a money-flow change; risks now come from required and supporting files, plus any changed file.
+
 ## [3.3.0] - 2026-09-27
 
 The terminal output gets colour and shape it didn't have before. `otito` resolves one glyph set per run (plain Unicode by default, ASCII in CI, emoji opt-in) and builds tables, trees and coloured lists from shared string-building primitives instead of ad-hoc strings; every bullet and list item now dims its marker the way a box border is dimmed, matching the headers, boxes and closing line that already had colour. `otito install` prompts a human at a TTY for how to install, with a short personalized pitch first, while every non-interactive caller (`--yes`, `--json`, CI, agents) is unaffected. No command, field or schema was removed.
