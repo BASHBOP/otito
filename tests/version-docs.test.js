@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { syncPinnedDocVersion, findPinnedDocVersionDrift } from "../src/lib/version-docs.js";
+import { syncPinnedDocVersion, findPinnedDocVersionDrift, findWhatsNewDrift } from "../src/lib/version-docs.js";
 
 const WHATS_NEW = `
 ## What's New
@@ -72,4 +72,45 @@ test("findPinnedDocVersionDrift flags a stale Status line", () => {
 test("findPinnedDocVersionDrift ignores docs with no pinned version markers", () => {
   const issues = findPinnedDocVersionDrift("# Just prose, no pins here.", "1.9.2");
   assert.deepEqual(issues, []);
+});
+
+// docs/index.md replaced the "**Status:** v" line with this banner, and the
+// 3.3.0 release shipped with the site still announcing v3.2.0.
+function bannerIndexFixture(bannerVersion, whatsNewVersions) {
+  const entries = whatsNewVersions.map((v) => `!!! tip "v${v} published (2026-09-27)"\n    - notes\n`).join("\n");
+  return `**v${bannerVersion}** is published to npm, GitHub Releases, and the official MCP Registry.
+
+## What's New
+
+${entries}`;
+}
+
+test("syncPinnedDocVersion rewrites the published banner", () => {
+  const { content, changed } = syncPinnedDocVersion(bannerIndexFixture("3.2.0", ["3.2.0"]), "3.3.0");
+  assert.equal(changed, true);
+  assert.match(content, /^\*\*v3\.3\.0\*\* is published/);
+  assert.match(content, /v3\.2\.0 published \(2026-09-27\)/, "What's New history is untouched");
+});
+
+test("findPinnedDocVersionDrift reports a stale published banner", () => {
+  assert.deepEqual(findPinnedDocVersionDrift(bannerIndexFixture("3.2.0", ["3.3.0"]), "3.3.0"), [
+    "published banner says v3.2.0 but package.json version is 3.3.0",
+  ]);
+  assert.deepEqual(findPinnedDocVersionDrift(bannerIndexFixture("3.3.0", ["3.3.0"]), "3.3.0"), []);
+});
+
+test("findWhatsNewDrift reports a release with no What's New entry", () => {
+  assert.deepEqual(findWhatsNewDrift(bannerIndexFixture("3.3.0", ["3.2.0", "3.1.0"]), "3.3.0"), [
+    'What\'s New has no "v3.3.0 published" entry for the current package.json version',
+  ]);
+  assert.deepEqual(findWhatsNewDrift(bannerIndexFixture("3.3.0", ["3.3.0", "3.2.0"]), "3.3.0"), []);
+});
+
+test("findWhatsNewDrift does not accept a different version that shares a prefix", () => {
+  assert.equal(findWhatsNewDrift(bannerIndexFixture("3.3.0", ["3.3.01"]), "3.3.0").length, 1);
+  assert.equal(findWhatsNewDrift(bannerIndexFixture("3.3.0", ["3.3.0-rc.1"]), "3.3.0").length, 1);
+});
+
+test("findWhatsNewDrift ignores docs without a What's New section", () => {
+  assert.deepEqual(findWhatsNewDrift("npm install -g @bashbop/otito@3.3.0\n", "3.3.0"), []);
 });

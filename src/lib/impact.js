@@ -187,7 +187,17 @@ const CONFIG_HINTS = {
 // Kinds that are real implementation owners. The presence of one of these in
 // the top-5 is what we are optimizing for — these get the concept boost.
 const OWNER_KINDS = new Set(["controller", "service", "route", "apiRoute", "apiClient", "schema", "dto", "module", "component", "template", "skill", "doc"]);
-const REQUEST_BOUNDARY_KINDS = new Set(["controller", "route", "apiRoute", "apiClient", "dto"]);
+// Kinds whose behavior change usually crosses a request/response contract, so
+// a "required owner" candidate of this kind is only trusted when the request
+// itself names an API-boundary concern (see requestBoundaryChange below).
+// `route` (a Next.js `page.tsx`/`layout.tsx`, from code-map/classify.js) is
+// deliberately excluded: it is a rendered UI screen, not a request boundary —
+// `apiRoute` (`app/api/**/route.ts`) already covers the actual API-boundary
+// case. Recorded gap: "deprecate web scan-ticket page, direct organisers to
+// iOS app download" named no API word, so the changed `page.tsx` (the actual,
+// diff-confirmed, top-scored owner) was gated out of requiredOwners entirely
+// while unrelated components that merely shared the word "ticket" were not.
+const REQUEST_BOUNDARY_KINDS = new Set(["controller", "apiRoute", "apiClient", "dto"]);
 
 // Markdown owner kinds only own the change when the request is actually about
 // them. A SKILL.md *is* the implementation of a skill and a docs page *is* the
@@ -248,7 +258,8 @@ export function generateImpact(query, options = {}) {
   /** @type {Map<string, PinnedFile>} */
   const pinned = new Map(named.pinned.map((entry, order) => [entry.path, { ...entry, order }]));
 
-  const scored = scoreFiles(map.files, weightedQuery, concepts, { wantsTests, wantsDocs, wantsCopy });
+  const docFrequency = computeTokenDocFrequency(map.files, weightedQuery);
+  const scored = scoreFiles(map.files, weightedQuery, concepts, { wantsTests, wantsDocs, wantsCopy }, docFrequency);
   addNamedFiles(scored, map.files, pinned, named.definers);
   const withBoosts = applyDependencyBoosts(map.files, scored, pinned);
   liftPinnedFiles(withBoosts, pinned);
@@ -348,13 +359,14 @@ export function generateImpact(query, options = {}) {
  * @param {Map<string, number>} weightedQuery
  * @param {string[]} concepts
  * @param {ScoreFlags} flags
+ * @param {TokenDocFrequency} [stats]
  * @returns {Map<string, ScoredEntry>}
  */
-function scoreFiles(files, weightedQuery, concepts, flags) {
+function scoreFiles(files, weightedQuery, concepts, flags, stats) {
   /** @type {Map<string, ScoredEntry>} */
   const scored = new Map();
   for (const file of files) {
-    const result = scoreFile(file, weightedQuery, concepts, flags);
+    const result = scoreFile(file, weightedQuery, concepts, flags, stats);
     if (result.score > 0) {
       scored.set(file.path, { file, score: result.score, reasons: result.reasons, relatedFiles: [] });
     }
@@ -367,9 +379,10 @@ function scoreFiles(files, weightedQuery, concepts, flags) {
  * @param {Map<string, number>} weightedQuery
  * @param {string[]} concepts
  * @param {ScoreFlags} flags
+ * @param {TokenDocFrequency} [stats]
  * @returns {ScoreResult}
  */
-function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs, wantsCopy }) {
+function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs, wantsCopy }, stats) {
   const pathTokens = tokenize(file.path);
   const pathCounts = countTokens(pathTokens);
   const symbolTokens = tokenize(file.symbols.map((symbol) => symbol.name ?? "").join(" "));
@@ -385,37 +398,42 @@ function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs, wants
   // Path matches — strongest single signal because path naming reflects intent.
   // Counts capped at 1 per term so "validation" appearing twice in a directory
   // + filename can't out-rank a single-match owner file from another domain.
+  // Each term's own contribution is additionally weighted by tokenWeightFactor:
+  // a term that recurs across a large share of the repo (a generic domain noun
+  // like "ticket" or "check" shared by several unrelated modules) counts for
+  // less than one that is rare and therefore more likely to name the actual
+  // owner. See computeTokenDocFrequency.
   const pathHits = matchedTerms(pathCounts, weightedQuery);
   if (pathHits.length) {
-    const amount = pathHits.reduce((sum, term) => sum + W_PATH * /** @type {number} */ (weightedQuery.get(term)), 0);
+    const amount = pathHits.reduce((sum, term) => sum + W_PATH * /** @type {number} */ (weightedQuery.get(term)) * tokenWeightFactor(term, stats), 0);
     score += amount;
     reasons.push(`path matches: ${pathHits.slice(0, 8).join(", ")}`);
   }
 
   const symbolHits = matchedTerms(symbolCounts, weightedQuery);
   if (symbolHits.length) {
-    const amount = symbolHits.reduce((sum, term) => sum + W_SYMBOL * /** @type {number} */ (weightedQuery.get(term)), 0);
+    const amount = symbolHits.reduce((sum, term) => sum + W_SYMBOL * /** @type {number} */ (weightedQuery.get(term)) * tokenWeightFactor(term, stats), 0);
     score += amount;
     reasons.push(`symbol matches: ${symbolHits.slice(0, 8).join(", ")}`);
   }
 
   const exportHits = matchedTerms(countTokens(exportTokens), weightedQuery);
   if (exportHits.length) {
-    const amount = exportHits.reduce((sum, term) => sum + W_EXPORT * /** @type {number} */ (weightedQuery.get(term)), 0);
+    const amount = exportHits.reduce((sum, term) => sum + W_EXPORT * /** @type {number} */ (weightedQuery.get(term)) * tokenWeightFactor(term, stats), 0);
     score += amount;
     reasons.push(`export matches: ${exportHits.slice(0, 6).join(", ")}`);
   }
 
   const importHits = matchedTerms(countTokens(importTokens), weightedQuery);
   if (importHits.length) {
-    const amount = importHits.reduce((sum, term) => sum + W_IMPORT * /** @type {number} */ (weightedQuery.get(term)), 0);
+    const amount = importHits.reduce((sum, term) => sum + W_IMPORT * /** @type {number} */ (weightedQuery.get(term)) * tokenWeightFactor(term, stats), 0);
     score += amount;
     reasons.push(`import matches: ${importHits.slice(0, 6).join(", ")}`);
   }
 
   const routeHits = matchedTerms(countTokens(routeTokens), weightedQuery);
   if (routeHits.length) {
-    const amount = routeHits.reduce((sum, term) => sum + W_ROUTE * /** @type {number} */ (weightedQuery.get(term)), 0);
+    const amount = routeHits.reduce((sum, term) => sum + W_ROUTE * /** @type {number} */ (weightedQuery.get(term)) * tokenWeightFactor(term, stats), 0);
     score += amount;
     reasons.push(`route matches: ${routeHits.slice(0, 6).join(", ")}`);
   }
@@ -485,6 +503,75 @@ function scoreFile(file, weightedQuery, concepts, { wantsTests, wantsDocs, wants
   }
 
   return { score, reasons };
+}
+
+/**
+ * Per-query-term document frequency across the indexed repo. Used only as an
+ * IDF-style dampener on scoreFile's path/symbol/export/import/route matches:
+ * a query term that shows up in a large share of the repo (a generic domain
+ * noun such as "ticket" or "check" shared by several unrelated modules)
+ * carries far less evidentiary weight than one that appears in a handful of
+ * files. Ported from context-engine.js's computeTokenDocFrequency, which
+ * impact.js never had — without it, a file whose path, exports, imports,
+ * symbols, and route all happen to repeat one generic query word stacks that
+ * one weak signal five times over and can out-rank the real, narrower owner.
+ * @typedef {{ totalFiles: number, docFreq: Map<string, number> }} TokenDocFrequency
+ */
+
+/**
+ * @param {CodeMapFile[]} files
+ * @param {Map<string, number>} weightedQuery
+ * @returns {TokenDocFrequency}
+ */
+export function computeTokenDocFrequency(files, weightedQuery) {
+  /** @type {Map<string, number>} */
+  const docFreq = new Map();
+  const terms = [...weightedQuery.keys()];
+  if (!terms.length) {
+    return { totalFiles: files.length, docFreq };
+  }
+
+  for (const file of files) {
+    const text = [
+      file.path,
+      file.kind,
+      file.domain,
+      file.route ?? "",
+      file.controllerBasePath ?? "",
+      (file.exports ?? []).join(" "),
+      (file.imports ?? []).join(" "),
+      file.symbols.map((symbol) => symbol.name ?? "").join(" "),
+    ].join(" ");
+    const fileTokens = new Set(tokenize(text));
+    for (const term of terms) {
+      if (fileTokens.has(term)) docFreq.set(term, (docFreq.get(term) ?? 0) + 1);
+    }
+  }
+  return { totalFiles: files.length, docFreq };
+}
+
+/**
+ * IDF-style multiplier for one query term's contribution to a file's score.
+ * Below a minimum repo size the signal is too noisy to trust (small repos and
+ * test fixtures), so every term is treated as neutral — matches
+ * context-engine.js's tokenWeightFactor exactly, including the thresholds.
+ * @param {string} term
+ * @param {TokenDocFrequency} [stats]
+ * @returns {number}
+ */
+export function tokenWeightFactor(term, stats) {
+  if (!stats || stats.totalFiles < 12) {
+    return 1;
+  }
+  const df = stats.docFreq.get(term) ?? 0;
+  if (df === 0) {
+    return 1;
+  }
+  const ratio = df / stats.totalFiles;
+  if (ratio <= 0.02) return 1.4;
+  if (ratio <= 0.06) return 1;
+  if (ratio <= 0.15) return 0.55;
+  return 0.2;
 }
 
 // Demotion factor for a file that matches none of the query's concepts.
@@ -958,7 +1045,19 @@ function classifyImpactRoles(heuristicRanked, allFiles, query, pinned = new Map(
   // named layout a coverage obligation.
   const nonTemplateCandidates = directCandidates.filter((entry) => entry.file.kind !== "template");
   const conventionalPool = nonTemplateCandidates.length ? nonTemplateCandidates : directCandidates;
-  const ownerPool = conventionalPool.length ? conventionalPool : genericOwnerFallback(unnamed);
+  // genericOwnerFallback exists so a repo with no conventional owner kind at
+  // all (a library, a CLI, mostly `source`/`hook` files) can still ground a
+  // task. But gating it entirely behind "no conventional owner kind matched"
+  // means that once ANY controller/dto/component scores at all — even one
+  // that only shares a generic word with the request — a genuinely stronger
+  // `*.util.ts` owner can never be promoted to required, because it is never
+  // even considered. Recorded gap: a fix that actually lived in
+  // ticket-qr.util.ts (kind "source") scored higher than every conventional
+  // candidate, but stayed advisory because organizer-ticket-sales.controller.ts
+  // (kind "controller") also matched. Merge the strong generic candidates in
+  // alongside the conventional ones instead of treating them as a fallback of
+  // last resort, so they compete on score like everything else.
+  const ownerPool = conventionalPool.length ? mergeOwnerCandidates(conventionalPool, genericOwnerFallback(unnamed)) : genericOwnerFallback(unnamed);
   const strongestScore = ownerPool[0]?.score ?? 0;
   const directOwners = [
     ...heuristicRanked.filter((entry) => pinned.has(entry.file.path)).map((entry) => entry.file.path),
@@ -1022,9 +1121,11 @@ function classifyImpactRoles(heuristicRanked, allFiles, query, pinned = new Map(
 }
 
 /**
- * Owner candidates for repositories whose implementation files do not carry a
- * conventional owner kind (libraries, CLIs, most `kind: "source"` code). Only
- * reached when `classifyImpactRoles` found no conventional owner at all.
+ * Owner candidates for implementation files that do not carry a conventional
+ * owner kind (libraries, CLIs, most `kind: "source"` code). Used both as the
+ * sole pool when no conventional owner kind matched at all, and merged
+ * alongside conventional candidates otherwise (see classifyImpactRoles) so a
+ * strong `*.util.ts`-style owner can still compete on score.
  *
  * @param {ScoredEntry[]} heuristicRanked
  * @returns {ScoredEntry[]}
@@ -1035,6 +1136,25 @@ function genericOwnerFallback(heuristicRanked) {
   );
   if ((candidates[0]?.score ?? 0) < FALLBACK_OWNER_MIN_SCORE) return [];
   return candidates;
+}
+
+/**
+ * Combine conventional and generic-fallback owner candidates into one
+ * score-descending pool, keeping each file's higher-scored appearance when it
+ * shows up in both (a conventional owner kind is also eligible for
+ * genericOwnerFallback if it matches the intent terms directly).
+ * @param {ScoredEntry[]} primary
+ * @param {ScoredEntry[]} fallback
+ * @returns {ScoredEntry[]}
+ */
+function mergeOwnerCandidates(primary, fallback) {
+  if (!fallback.length) return primary;
+  const byPath = new Map(primary.map((entry) => [entry.file.path, entry]));
+  for (const entry of fallback) {
+    const existing = byPath.get(entry.file.path);
+    if (!existing || entry.score > existing.score) byPath.set(entry.file.path, entry);
+  }
+  return [...byPath.values()].sort((a, b) => b.score - a.score);
 }
 
 /** @param {ScoredEntry} entry */
