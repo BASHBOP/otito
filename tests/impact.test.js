@@ -537,3 +537,19 @@ test("generateImpact suggests only tests a runner executes", () => {
   assert.ok(suggested.length > 0, "expected related test suggestions");
   for (const line of suggested) assert.match(line, /\.(test|spec)\.[jt]sx?`$/, line);
 });
+
+test("generateImpact raises no risk from a domain only an advisory lead touches", () => {
+  const root = writeFixture("advisory-risk", {
+    "package.json": JSON.stringify({ name: "advisory-risk-fixture" }),
+    "app/rsvp/[eventId]/RsvpByEventId.tsx": "export function RsvpByEventId() { return 'rsvp gallery photos'; }\n",
+    "app/rsvp/[eventId]/page.tsx": "import { RsvpByEventId } from './RsvpByEventId';\nexport default function Page() { return RsvpByEventId(); }\n",
+    "app/rsvp-payment-success/page.tsx": "export default function RsvpPaymentSuccessPage() { return 'paid'; }\n",
+  });
+  const result = generateImpact("RSVP page should show the event gallery photos", { path: root });
+  const advisory = result.data.classifications.advisoryFiles;
+  assert.ok(!result.data.classifications.requiredOwners.includes("app/rsvp-payment-success/page.tsx"));
+  assert.ok(
+    !result.data.risks.some((r) => r.startsWith("Money-flow")),
+    `payment page (advisory: ${advisory.includes("app/rsvp-payment-success/page.tsx")}) must not raise money flow: ${result.data.risks.join(" | ")}`,
+  );
+});
