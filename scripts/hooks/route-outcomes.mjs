@@ -26,7 +26,11 @@
 // neither a prompt nor anybody's follow-up.
 //
 //   node scripts/hooks/route-outcomes.mjs [--log <file>] [--transcripts <dir>]
-//        [--window-min 60] [--min-sample 30] [--json]
+//        [--window-min 60] [--min-sample 30] [--arm delegate|control|advisory] [--json]
+//
+// `--arm` grades one arm of the enforce-mode trial (route-prompt's
+// OTITO_ROUTE_MODE=delegate). Rows logged before the trial have no arm and
+// count as `advisory`.
 
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -194,7 +198,7 @@ export function outcomesFor(events, index, windowMs) {
  * Join the log to the sessions and grade every variant per tier.
  * @param {Record<string, any>[]} records decision-log lines
  * @param {Map<string, any[]>} sessions
- * @param {{ windowMin?: number, minSample?: number }} [options]
+ * @param {{ windowMin?: number, minSample?: number, arm?: string }} [options]
  */
 export function gradeDecisions(records, sessions, options = {}) {
   const windowMs = (options.windowMin ?? 60) * 60000;
@@ -202,7 +206,12 @@ export function gradeDecisions(records, sessions, options = {}) {
   const rows = [];
   let unjoined = 0;
   let excluded = 0;
+  let otherArm = 0;
   for (const record of records) {
+    if (options.arm && (record?.arm ?? "advisory") !== options.arm) {
+      otherArm += 1;
+      continue;
+    }
     const events = record?.sessionId ? sessions.get(record.sessionId) : null;
     // Routed before the hook skipped them. The log holds only a hash, so the
     // row is known by the hash of a harness prompt in its own session.
@@ -241,13 +250,14 @@ export function gradeDecisions(records, sessions, options = {}) {
     };
   }
   return {
-    records: records.length,
+    records: records.length - otherArm,
     excluded,
     joined: rows.length,
     unjoined,
     graded: graded.length,
     windowMin: options.windowMin ?? 60,
     minSample,
+    arm: options.arm ?? null,
     variants,
     caveats: [
       "`corrected` reads the user's next prompt: on the corpus it was audited on it caught the user's own typos, deploy failures and interruptions to add information as often as the model being wrong.",
@@ -285,7 +295,7 @@ export function formatOutcomes(data) {
   const cell = (/** @type {any} */ s) =>
     s.publishable ? `${s.n} · ${pct(s.rate)} (${pct(s.ci95[0])} to ${pct(s.ci95[1])})` : `${s.n} · ${s.hits} _(n < ${data.minSample}, withheld)_`;
   const lines = [
-    "# Route outcomes, same session",
+    `# Route outcomes, same session${data.arm ? ` (${data.arm} arm)` : ""}`,
     "",
     `Decisions: ${data.records} logged, ${data.excluded} excluded as harness prompts (task notifications, CI monitor events, shell records), ${data.joined} joined to a transcript prompt (${data.unjoined} not found), ${data.graded} with a follow-up inside ${data.windowMin} minutes. Minimum sample: ${data.minSample}.`,
     "",
@@ -346,6 +356,7 @@ function main() {
   const data = gradeDecisions(records, readSessions(transcripts), {
     windowMin: flags["window-min"] === undefined ? undefined : Number(flags["window-min"]),
     minSample: flags["min-sample"] === undefined ? undefined : Number(flags["min-sample"]),
+    arm: typeof flags.arm === "string" ? flags.arm : undefined,
   });
   process.stdout.write(flags.json ? `${JSON.stringify({ ok: true, log: logPath, transcripts, ...data }, null, 2)}\n` : `${formatOutcomes(data)}\n`);
 }

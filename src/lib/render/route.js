@@ -61,6 +61,13 @@ export function formatRouteTerminal(data, renderer) {
     out.push(`  ${bold("TIER")}  ${paint("NO RECOMMENDATION", "1;33")}` + dim(`   fails safe to ${scoring.tier}`));
   } else {
     out.push(`  ${bold("TIER")}  ${paint(scoring.tier.toUpperCase(), `1;${TIER_COLOR[scoring.tier]}`)}` + (data.hostModel ? dim(`   ${data.hostModel}`) : ""));
+    if (data.enforce) {
+      out.push(
+        data.enforce.arm === "delegate" && data.enforce.agentModel
+          ? `  ${bold("ENFORCE")}  delegate arm: do the work in a subagent on ${data.enforce.agentModel}`
+          : dim(`  ENFORCE  ${data.enforce.arm} arm: advisory only`),
+      );
+    }
   }
   out.push(
     `  ${dim("route")} ${bold(String(scoring.route).padStart(3))} ${dim("/ 100")}   ` +
