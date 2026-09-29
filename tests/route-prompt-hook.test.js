@@ -265,3 +265,17 @@ test("a routed prompt leaves one line in the decision log, and a skipped one lea
   assert.equal(fs.readFileSync(log, "utf8").trim().split("\n").length, 1, "a harness prompt is not a decision");
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test("a route with no evidence says no recommendation instead of routing", () => {
+  const context = formatContext({
+    tier: "premium",
+    hostModel: "claude-opus-5-5",
+    scoring: { route: 85, evidence: { sufficient: false } },
+    signals: { ax: 84 },
+  });
+  assert.match(context, /no recommendation/);
+  assert.match(context, /Fail-safe tier: \*\*premium\*\* \(claude-opus-5-5\)/);
+  assert.doesNotMatch(context, /otito routed this request/);
+  assert.doesNotMatch(context, /launch it on/);
+  assert.match(context, /Do not say the model was changed/);
+});

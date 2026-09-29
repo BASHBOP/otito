@@ -9,10 +9,12 @@ This project follows SemVer.
 ### Added
 
 - `context_pack` and `otito context` read a repository's `companions` too: list sibling repositories in its `.otitorc.json` (`"companions": ["../api"]`, resolved against that file) and one pack covers them all, so a web bug whose cause is in the API response no longer gets a web-only pack. Explicit `paths` still win; a companion that is not checked out is skipped.
+- `otito route` shows each Score question's own confidence (specificity, blast radius) next to its score, not only the weaker of the two. Display only: confidence still never moves the tier. `scoring.confidences` carries both.
 
 ### Fixed
 
 - `change_impact` no longer raises a risk from a domain that only an advisory lead touches. An RSVP gallery fix ranked the RSVP payment-success page as a loose lead and warned of a money-flow change; risks now come from required and supporting files, plus any changed file.
+- `otito route` and the route prompt hook say **no recommendation** when otito matched no files, instead of presenting a read of an empty set as a tier. The fail-safe tier is still named, and `tier` in JSON is unchanged (premium), so callers that read only `tier` behave as before.
 
 ## [3.3.0] - 2026-09-27
 

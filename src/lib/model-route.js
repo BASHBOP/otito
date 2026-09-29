@@ -450,6 +450,12 @@ export function scoreDecision({ answers, signals }) {
   // escalated 67% of requests, a one-file rename among them.
   const measured = [answers.blast_radius.confidence, answers.specificity.confidence].filter((/** @type {unknown} */ value) => typeof value === "number");
   const confidence = measured.length ? Math.min(...measured) : null;
+  // Each question's own confidence, so a reader sees which answer is weak
+  // instead of only the weaker of the two. Display only, like `confidence`.
+  const confidences = {
+    specificity: typeof answers.specificity.confidence === "number" ? answers.specificity.confidence : null,
+    blast_radius: typeof answers.blast_radius.confidence === "number" ? answers.blast_radius.confidence : null,
+  };
 
   // Zero candidates is ABSENCE, not containment. When otito matches nothing, AX
   // is describing an empty set and `containment` reads high for the same
@@ -508,6 +514,7 @@ export function scoreDecision({ answers, signals }) {
     tier: TIERS[index],
     bumps,
     confidence,
+    confidences,
     // Carried so a caller can say "no recommendation" rather than printing a
     // tier that rests on nothing. The tier itself stays a valid string, and
     // fails safe, so a caller that ignores this field still cannot route an
