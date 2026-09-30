@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v3.5.0** is published to npm, GitHub Releases, and the official MCP Registry. Solumbe is a Bashbop Ltd product, MIT licensed.
+**v4.0.0** is published to npm, GitHub Releases, and the official MCP Registry. Solumbe is a Bashbop Ltd product, MIT licensed.
 
 Formerly **Òtítọ́** (`@bashbop/otito`), renamed in 4.0.0. <!-- rebrand-keep -->
 
@@ -20,6 +20,15 @@ Formerly **Òtítọ́** (`@bashbop/otito`), renamed in 4.0.0. <!-- rebrand-keep
 ---
 
 ## What's New
+
+!!! tip "v4.0.0 published (2026-09-30)"
+    Òtítọ́ is now Solumbe. Behaviour is unchanged from 3.5.0; every name moves, with no fallback to the old ones. <!-- rebrand-keep -->
+
+    - Install `@bashbop/solumbe` and run `solumbe`; the MCP server is `io.github.BASHBOP/solumbe`, so point host configs at the new package and name the server `solumbe` (tools become `mcp__solumbe__*`).
+    - Rename `.otitorc.json` to `.solumberc.json` and `otito.gate.json` to `solumbe.gate.json`, move `.otito/` and `~/.otito/` to `.solumbe/` and `~/.solumbe/`, and rename `OTITO_*` variables to `SOLUMBE_*`. <!-- rebrand-keep -->
+    - The [CHANGELOG](https://github.com/BASHBOP/solumbe/blob/main/CHANGELOG.md) has the full rename map. Releases before 4.0.0 stay on npm as `@bashbop/otito`. <!-- rebrand-keep -->
+
+    [npm v4.0.0](https://www.npmjs.com/package/@bashbop/solumbe/v/4.0.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v4.0.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fsolumbe)
 
 !!! tip "v3.5.0 published (2026-09-30)"
     Model routing can make a share of requests follow the tier it picks, not only recommend it. No command, field or schema was removed.
@@ -190,7 +199,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/solumbe@3.5.0
+    npm install -g @bashbop/solumbe@4.0.0
     solumbe doctor
     solumbe context "review this change" --path .
     ```
@@ -198,7 +207,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/solumbe@3.5.0 doctor
+    npx -y @bashbop/solumbe@4.0.0 doctor
     ```
 
 === "Source Checkout"

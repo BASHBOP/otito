@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-09-30
+
+Òtítọ́ is now Solumbe: the package, binary, MCP server, config files, evidence folders and environment variables all take the new name, with no fallback to the old ones. Behaviour is unchanged from 3.5.0.
+
 ### Changed
 
 - **Òtítọ́ is now Solumbe.** Every name moves in one cut, with no fallback to the old ones:
