@@ -6,6 +6,18 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-09-30
+
+Model routing can now make a share of requests follow the tier it picks instead of only recommending one, and on Claude Code the premium tier names the model that actually runs. No command, field or schema was removed.
+
+### Added
+
+- Enforce mode for model routing. `OTITO_ROUTE_MODE=delegate` puts a share of requests (`OTITO_ROUTE_DELEGATE_SHARE`, 0 to 1, default 0.5) in a delegate arm, where the Claude Code prompt hook tells the session to do the tool work in a subagent on the routed tier, the only model switch a session can make; the rest are the control. Arms are assigned by the prompt's hash, so the same prompt always lands in the same arm. Each logged decision records its arm, `route-outcomes.mjs --arm delegate|control|advisory` grades one arm, and `otito route` shows the arm and the subagent model in the terminal and as `enforce` in JSON. Without the variable, routing stays advisory and nothing changes.
+
+### Fixed
+
+- On the `claude-code` host, `otito route` and the route prompt hook name the premium model `claude-opus-5-5` instead of `claude-opus-5`. The Agent tool's `opus` alias runs Opus 5.5, so the old name was never the model that ran.
+
 ## [3.4.0] - 2026-09-29
 
 One context pack can now span a web app and its API, change risk stops counting files that are only loose leads, and `otito route` shows each question's own confidence and says plainly when it has no recommendation. No command, field or schema was removed.
