@@ -3,7 +3,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { pathToFileURL } from "node:url";
-import { buildOtitoArgs, parseInvocationContext, resolveBase, resolveRepoRoot, runOtito } from "./runtime.mjs";
+import { buildSolumbeArgs, parseInvocationContext, resolveBase, resolveRepoRoot, runSolumbe } from "./runtime.mjs";
 
 const ANSI = {
   reset: "\u001b[0m",
@@ -155,7 +155,7 @@ export function formatTrustSummary(report, repo, base, options = {}) {
   const additions = report.prReviewSummary?.additions ?? 0;
   const deletions = report.prReviewSummary?.deletions ?? 0;
   const lines = [
-    `${paint(" OTITO ", [ANSI.brand, ANSI.black, ANSI.bold], color)}  ${paint("TRUST STATUS", [ANSI.bold], color)}`,
+    `${paint(" SOLUMBE ", [ANSI.brand, ANSI.black, ANSI.bold], color)}  ${paint("TRUST STATUS", [ANSI.bold], color)}`,
     paint("Local merge evidence for AI-assisted changes", [ANSI.muted], color),
     "",
     section("OVERVIEW", width, color),
@@ -211,28 +211,28 @@ export function formatTrustError(error, options = {}) {
   const width = options.width ?? MAX_CONTENT_WIDTH;
   const message = error?.message ?? String(error);
   return [
-    `${paint(" OTITO ", [ANSI.brand, ANSI.black, ANSI.bold], color)}  ${paint("TRUST STATUS", [ANSI.bold], color)}`,
+    `${paint(" SOLUMBE ", [ANSI.brand, ANSI.black, ANSI.bold], color)}  ${paint("TRUST STATUS", [ANSI.bold], color)}`,
     "",
     section("REVIEW UNAVAILABLE", width, color),
     ...wrapText(message, width).map((line) => paint(line, [ANSI.dangerText], color)),
     "",
-    paint("Check the repository and Otito installation, then refresh.", [ANSI.muted], color),
+    paint("Check the repository and Solumbe installation, then refresh.", [ANSI.muted], color),
   ].join("\n");
 }
 
 function readReport(repo, base, request) {
   const args = ["review", repo, "--request", request, "--json"];
   if (base) args.push("--base", base);
-  const result = runOtito(args, { cwd: repo, capture: true });
+  const result = runSolumbe(args, { cwd: repo, capture: true });
   if (result.error) throw result.error;
   let report;
   try {
     report = JSON.parse(result.stdout);
   } catch {
-    throw new Error(result.stderr.trim() || "Otito returned unreadable review data.");
+    throw new Error(result.stderr.trim() || "Solumbe returned unreadable review data.");
   }
   if (report.ok === false) {
-    throw new Error(report.error || "Otito could not generate a review.");
+    throw new Error(report.error || "Solumbe could not generate a review.");
   }
   return report;
 }
@@ -243,9 +243,9 @@ async function runInteractiveCommand(rl, action, repo, base) {
     request = (await rl.question("Change request: ")).trim();
     if (!request) return;
   }
-  const args = buildOtitoArgs(action, { repo, request, base });
+  const args = buildSolumbeArgs(action, { repo, request, base });
   stdout.write("\n");
-  const result = runOtito(args, { cwd: repo });
+  const result = runSolumbe(args, { cwd: repo });
   if (result.error) throw result.error;
   await rl.question("\nPress Enter to return to trust status...");
 }
@@ -280,14 +280,14 @@ export async function main() {
           const nextRequest = (await rl.question("Change request: ")).trim();
           if (nextRequest) {
             request = nextRequest;
-            const result = runOtito(buildOtitoArgs("impact", { repo, request, base }), { cwd: repo });
+            const result = runSolumbe(buildSolumbeArgs("impact", { repo, request, base }), { cwd: repo });
             if (result.error) throw result.error;
             await rl.question("\nPress Enter to return to trust status...");
           }
         } else if (choice === "g") {
           await runInteractiveCommand(rl, "gate-staged", repo, base);
         } else if (choice === "d") {
-          const result = runOtito(["doctor"], { cwd: repo });
+          const result = runSolumbe(["doctor"], { cwd: repo });
           if (result.error) throw result.error;
           await rl.question("\nPress Enter to return to trust status...");
         }
@@ -305,7 +305,7 @@ const isMain = process.argv[1] ? import.meta.url === pathToFileURL(process.argv[
 
 if (isMain) {
   main().catch((error) => {
-    process.stderr.write(`Otito Herdr plugin: ${error.message ?? String(error)}\n`);
+    process.stderr.write(`Solumbe Herdr plugin: ${error.message ?? String(error)}\n`);
     process.exitCode = 1;
   });
 }

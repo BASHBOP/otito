@@ -29,8 +29,8 @@ export function cases() {
 export function renderAll(options) {
   const r = createRenderer(options);
   return {
-    "header:string": r.header("otito doctor"),
-    "header:glyph": r.header({ text: "otito repo · repository overview", glyph: "📦" }, [{ text: "/tmp/repo", glyph: "💬" }, "plain line"]),
+    "header:string": r.header("solumbe doctor"),
+    "header:glyph": r.header({ text: "solumbe repo · repository overview", glyph: "📦" }, [{ text: "/tmp/repo", glyph: "💬" }, "plain line"]),
     "header:dim-subtitle": r.header({ text: "CODE MAP   fixture", glyph: "\u{1F5FA}" }, [`${ESC}[2mreason for the report${ESC}[0m`]),
     "verdict:PASS": r.verdict({ verdict: "PASS" }),
     "verdict:WARN": r.verdict({ verdict: "WARN", nextStep: "run the validation plan" }),

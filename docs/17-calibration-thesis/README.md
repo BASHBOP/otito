@@ -1,8 +1,8 @@
 # Calibration
 
-> Why otito grades its own risk signals against repository history, and why that does not require a model.
+> Why solumbe grades its own risk signals against repository history, and why that does not require a model.
 
-otito's gate scores a change partly on risk flags: does this diff touch
+solumbe's gate scores a change partly on risk flags: does this diff touch
 authentication, money flow, a data model, a migration. Each flag carries a
 weight, and those weights were originally chosen by judgement.
 
@@ -19,16 +19,16 @@ trained against outcomes, so a 0.9 means roughly nine times in ten. The
 accompanying guidance is equally pointed: route on confidence, escalate what
 falls below a threshold, and let deterministic code keep control flow.
 
-The obvious reading is "otito should call that model." The useful reading is the
-question it raises about otito itself:
+The obvious reading is "solumbe should call that model." The useful reading is the
+question it raises about solumbe itself:
 
-> **Is otito's own risk score calibrated?**
+> **Is solumbe's own risk score calibrated?**
 
 It had never been checked. The first attempt, recorded below, said more about
 the measurement than about the score; the second one, with the join that
 attempt proved was load-bearing, found a flag carrying weight it had not
 earned, and a band ordering that was inverted. Both are now fixed, and the
-question is answerable on demand rather than by argument: `otito calibrate`.
+question is answerable on demand rather than by argument: `solumbe calibrate`.
 
 Partly, then. For the flags a repository has enough history to grade, and not
 otherwise, which is itself a result this document takes seriously.
@@ -36,13 +36,13 @@ otherwise, which is itself a result this document takes seriously.
 ## The thesis in one line
 
 > A risk level that has never been compared to an outcome is a heuristic wearing
-> a number. otito's evidence is already deterministic and replayable;
+> a number. solumbe's evidence is already deterministic and replayable;
 > calibration makes it **accountable**: every flag carries a hit rate measured
 > on this repository's own history.
 
-## The substrate otito already has
+## The substrate solumbe already has
 
-| Calibration needs | otito's existing answer |
+| Calibration needs | solumbe's existing answer |
 | --- | --- |
 | A signal worth grading | `inferRisk` flags and level (`src/lib/pr-review.js`), `classifyPath` (`src/lib/risk-paths.js`) |
 | Ground truth without a labelling budget | Git history: reverts, follow-up fixes to the same lines, CI outcome |
@@ -52,7 +52,7 @@ otherwise, which is itself a result this document takes seriously.
 | Dimensions to segment by | CODEOWNERS, risk paths, file kinds, code map fan-out |
 
 Nothing here needs a network, a key, or a vendor. The measurement is the same
-kind of object otito already ships: a deterministic function of repository
+kind of object solumbe already ships: a deterministic function of repository
 state, recorded in a receipt.
 
 ## What is asserted today
@@ -152,20 +152,20 @@ calibration eventually says about it.
 The `configuration` finding above was the one result the first measurement could
 support, so it was the first thing checked against a second repository:
 `bashbop-api`, a production service with **2,680 commits, 2,303 non-merge, 1,064
-scoreable**, seven times otito's corpus.
+scoreable**, seven times solumbe's corpus.
 
 It reproduces, and sharpens.
 
-| | otito | bashbop-api |
+| | solumbe | bashbop-api |
 | --- | ---: | ---: |
 | Scoreable commits | 152 | 1,064 |
 | `configuration` fires on | 63.2% | **56.8%** |
 
 A flag firing on well over half of all changes is therefore not an artifact of
-otito's own young, chore-heavy history. Decomposing each firing by its sole
+solumbe's own young, chore-heavy history. Decomposing each firing by its sole
 cause says what is actually driving it:
 
-| Sole cause of the firing | bashbop-api | otito |
+| Sole cause of the firing | bashbop-api | solumbe |
 | --- | ---: | ---: |
 | Dependency manifest / lockfile | **83%** | 61% |
 | CI workflow | 4% | 18% |
@@ -184,10 +184,10 @@ many.
 The loose path matching that contributed to the rate was narrowed: `"config"`,
 `"lock"` and `"env"` matched as bare word tokens, and `"package.json"` as a raw
 substring, so ordinary source modules and every nested fixture manifest flagged.
-Anchoring those removed 20 of 35 matching paths on otito and 7 of 58 on
+Anchoring those removed 20 of 35 matching paths on solumbe and 7 of 58 on
 bashbop-api, with nothing newly matched and no risk band changed in either.
 
-The rate barely moved: 65.1% → 63.2% on otito, 56.8% → 56.7% on bashbop-api.
+The rate barely moved: 65.1% → 63.2% on solumbe, 56.8% → 56.7% on bashbop-api.
 
 That is the useful part of the result. The breadth was real and worth fixing,
 but it was never what made the flag fire on most changes. **Dependency-manifest
@@ -196,7 +196,7 @@ could not settle. So it was measured.
 
 ## A note on the numbers
 
-The sections above were produced by a prototype, before `otito calibrate`
+The sections above were produced by a prototype, before `solumbe calibrate`
 existed. Its `scoreable` filter excluded any commit with the word "fix"
 anywhere in the subject; the shipped command matches a `fix:`-style prefix
 instead. That is why bashbop-api appears as **1,064 scoreable commits** in the
@@ -209,7 +209,7 @@ stops being one. Everything from this point on is reproducible with the
 shipped command, and each run carries a receipt:
 
 ```bash
-otito calibrate /path/to/repo --window 30
+solumbe calibrate /path/to/repo --window 30
 ```
 
 ## The first calibration (2026-09-19)
@@ -338,12 +338,12 @@ looks like when the second one disagrees.
 
 ### Ship the instrument, not just the number
 
-All of the above now comes from `otito calibrate <repo>`, not a scratch
+All of the above now comes from `solumbe calibrate <repo>`, not a scratch
 script, with the minimum-sample rule enforced in code rather than by hand,
 and a receipt over a canonical timestamp-free payload so every number here can
 be traced to the run that produced it.
 
-Pointed at otito itself, the command mostly declines to answer:
+Pointed at solumbe itself, the command mostly declines to answer:
 
 ```text
 | money flow    | +3 | 1 | withheld (n < 30) | n/a |
@@ -368,7 +368,7 @@ repository, and the tool now says so rather than printing a decimal.
 
 ## Why not simply call a calibrated model?
 
-Because the dependency buys an opinion where otito sells evidence. A vendor's
+Because the dependency buys an opinion where solumbe sells evidence. A vendor's
 probabilities are calibrated against its training outcomes, not against this
 repository's. Adding a hosted call also trades the product's clearest sentence,
 local-first, model-agnostic, no model calls in the core path, for a qualified
@@ -397,7 +397,7 @@ signal, it does not become one.
   <https://docs.typesafe.ai/concepts/system-one>
 - TypeSafe AI, _How to build with System One_ (confidence thresholds, atomic
   questions): <https://docs.typesafe.ai/concepts/how-to-build-with-system-one>
-- otito source referenced above: `src/lib/pr-review.js`, `src/lib/risk-paths.js`,
+- solumbe source referenced above: `src/lib/pr-review.js`, `src/lib/risk-paths.js`,
   `src/lib/converge.js`, `src/lib/policy.js`
 - Companions: [Deterministic Verification](../07-deterministic-verification/README.md),
   [Deterministic Verification](../07-deterministic-verification/README.md),

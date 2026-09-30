@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible otito problem.
+description: Report a reproducible solumbe problem.
 title: "bug: "
 labels:
   - bug
@@ -30,7 +30,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: otito Version or Commit
+      label: solumbe Version or Commit
       placeholder: "1.9.2 or git SHA"
   - type: textarea
     id: environment

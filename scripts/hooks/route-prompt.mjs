@@ -15,7 +15,7 @@
 //     genuinely runs on the routed tier.
 //
 // So the hook advises the session and binds the subagent. With
-// `OTITO_ROUTE_MODE=delegate` it goes one step further on a share of requests
+// `SOLUMBE_ROUTE_MODE=delegate` it goes one step further on a share of requests
 // (the delegate arm): the work itself is handed to a subagent on the routed
 // tier, which is the only model switch a session is allowed to make. The
 // rest stay advisory as the control, and every decision records its arm so
@@ -56,14 +56,14 @@ const GIT_TIMEOUT_MS = 1500;
  * when the turn ends; this file is the only record that a request was routed
  * and how, which is what any later grading of the router has to join to. It
  * never leaves the machine and never holds the prompt, only its hash.
- * `OTITO_ROUTE_LOG` names another file; `off` keeps nothing.
+ * `SOLUMBE_ROUTE_LOG` names another file; `off` keeps nothing.
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {string|null}
  */
 export function routeLogPath(env = process.env) {
-  const raw = env.OTITO_ROUTE_LOG;
+  const raw = env.SOLUMBE_ROUTE_LOG;
   if (raw !== undefined && /^(off|0|false|none)$/i.test(raw.trim())) return null;
-  return path.resolve(raw && raw.trim() ? raw.trim() : path.join(os.homedir(), ".otito", "route-decisions.jsonl"));
+  return path.resolve(raw && raw.trim() ? raw.trim() : path.join(os.homedir(), ".solumbe", "route-decisions.jsonl"));
 }
 
 /**
@@ -87,12 +87,12 @@ export function gitStateAt(cwd) {
 }
 
 /**
- * One line of the decision log: everything `otito regret --rescore` reads to
+ * One line of the decision log: everything `solumbe regret --rescore` reads to
  * re-tier a request (signals and the answers exactly as scored), the tier each
  * half gave, the session it belongs to, and where the repository was. Pure,
  * so it can be tested without a hook run.
  * @param {{ session_id?: string, cwd?: string, prompt?: string }} input
- * @param {any} route the `otito route --json` payload
+ * @param {any} route the `solumbe route --json` payload
  * @param {{ head?: string|null, branch?: string|null }} [git]
  */
 export function decisionRecord(input, route, git = {}, arm = { mode: "advisory", arm: "advisory", share: null }) {
@@ -260,14 +260,14 @@ export function formatContext(route, arm = { arm: "advisory" }) {
   // read of an empty set as a tier. The fail-safe tier is still named.
   if (route?.scoring?.evidence?.sufficient === false) {
     return [
-      `otito has no recommendation for this request: it matched no files, so the route would describe an empty set. Fail-safe tier: **${route.tier}**${route.hostModel ? ` (${route.hostModel})` : ""}.`,
+      `solumbe has no recommendation for this request: it matched no files, so the route would describe an empty set. Fail-safe tier: **${route.tier}**${route.hostModel ? ` (${route.hostModel})` : ""}.`,
       "",
       "This is a recommendation, not a switch: a hook cannot change the model this session runs on. Do not say the model was changed.",
     ].join("\n");
   }
 
   const lines = [
-    `otito routed this request: tier **${route.tier}**${route.hostModel ? ` (${route.hostModel})` : ""}${detail ? ` — ${detail}` : ""}.`,
+    `solumbe routed this request: tier **${route.tier}**${route.hostModel ? ` (${route.hostModel})` : ""}${detail ? ` — ${detail}` : ""}.`,
     "",
     "This is a recommendation, not a switch: a hook cannot change the model this session runs on, and this session cannot re-price its own turns. Do not say the model was changed.",
   ];
@@ -278,7 +278,7 @@ export function formatContext(route, arm = { arm: "advisory" }) {
   const readParts = [];
   if (read?.intent?.accepted) readParts.push(`intent **${read.intent.choice}** (${read.intent.confidence})`);
   if (read?.capability?.accepted && read.capability.choice !== "none") {
-    readParts.push(`otito tool **${read.capability.choice}** (${read.capability.confidence})`);
+    readParts.push(`solumbe tool **${read.capability.choice}** (${read.capability.confidence})`);
   }
   if (readParts.length) lines.push("", `Request read (TypeSafe Jev, advisory): ${readParts.join(", ")}.`);
 
@@ -288,7 +288,7 @@ export function formatContext(route, arm = { arm: "advisory" }) {
   const agentModel = AGENT_MODEL[/** @type {keyof typeof AGENT_MODEL} */ (route.tier)];
   if (arm.arm === "delegate" && agentModel) {
     lines[2] =
-      "otito enforce mode, delegate arm: this request is part of a routing trial. The session's own model cannot change, so the tier is applied by delegation.";
+      "solumbe enforce mode, delegate arm: this request is part of a routing trial. The session's own model cannot change, so the tier is applied by delegation.";
     lines.push(
       "",
       `Do the tool work for this request (investigation, edits, running checks) in a subagent launched with model \`${agentModel}\`${route.hostModel ? ` (${route.hostModel})` : ""}. Brief it fully, then review what it returns before reporting. Answer directly without a subagent only when the request needs no tool work at all. Do not say the session's model was changed.`,
@@ -307,7 +307,7 @@ export function formatContext(route, arm = { arm: "advisory" }) {
 }
 
 /**
- * Run `otito route` for one request.
+ * Run `solumbe route` for one request.
  * @param {string} cwd
  * @param {string} prompt
  * @returns {Promise<any|null>} the route payload, or null on any failure

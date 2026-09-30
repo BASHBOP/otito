@@ -1,4 +1,4 @@
-// `otito dashboard`: aggregate the local usage log (plus existing .otito
+// `solumbe dashboard`: aggregate the local usage log (plus existing .solumbe
 // JSON artifacts and recent git history) into ONE self-contained HTML file —
 // no server, no chart library, no network. The HTML embeds its own data and
 // hand-rolled inline-SVG charts so it opens straight off disk via file://.
@@ -155,13 +155,13 @@ export function aggregate(events, extra = {}) {
 }
 
 /**
- * Classify each .otito/*.json artifact by its discriminating keys and pull
+ * Classify each .solumbe/*.json artifact by its discriminating keys and pull
  * the value signals it persisted. Best-effort and read-only.
  * @param {string} root
  * @returns {{ file: string, kind: string, signals: Record<string, any> | null }[]}
  */
 export function scanArtifacts(root) {
-  const dir = path.join(root, ".otito");
+  const dir = path.join(root, ".solumbe");
   /** @type {{ file: string, kind: string, signals: Record<string, any> | null }[]} */
   const out = [];
   let names;
@@ -225,13 +225,13 @@ function buildBlindSpots(input) {
   const spots = [
     "Only runs made after telemetry was enabled appear here — earlier usage is invisible.",
     "Value signals (tokens, verdicts, convergence) show only for commands that produce them; map/search/doctor contribute usage and latency only.",
-    "Token savings vs naive is a relative cross-build byte-ratio delta from `otito eval`, not an absolute guarantee.",
+    "Token savings vs naive is a relative cross-build byte-ratio delta from `solumbe eval`, not an absolute guarantee.",
     "The repo key is a one-way hash — non-reversible, but confirmable against a candidate path; it is not anonymity.",
   ];
-  if (!input.total) spots.unshift("No events recorded yet. Enable telemetry (`otito config set telemetry true`) and run a few commands.");
+  if (!input.total) spots.unshift("No events recorded yet. Enable telemetry (`solumbe config set telemetry true`) and run a few commands.");
   if (input.total && !input.hasLatency) spots.push("No latency captured yet for these events.");
   if (input.total && !input.hasVerdicts) spots.push("No merge-gate runs recorded, so the verdict mix is empty.");
-  if (input.total && !input.hasEval) spots.push("No `otito eval` run recorded, so token-savings is unavailable.");
+  if (input.total && !input.hasEval) spots.push("No `solumbe eval` run recorded, so token-savings is unavailable.");
   if (input.skipped) spots.push(`${input.skipped} unparseable log line(s) were skipped (likely torn concurrent writes).`);
   if (input.skippedNewerSchema) spots.push(`${input.skippedNewerSchema} event(s) from a newer schema version were ignored.`);
   return spots;
@@ -316,8 +316,8 @@ export function renderDashboardHtml(d) {
     {
       label: "Token savings vs naive",
       value: d.latestEval ? `${Math.round(d.latestEval.savedPct)}%` : "—",
-      sub: d.latestEval && d.latestEval.savedTokens != null ? `${fmt(d.latestEval.savedTokens)} tokens` : "run `otito eval`",
-      tip: "From the latest `otito eval`: how much smaller otito's context is than feeding whole files to the agent. A relative byte-ratio delta, not an absolute guarantee.",
+      sub: d.latestEval && d.latestEval.savedTokens != null ? `${fmt(d.latestEval.savedTokens)} tokens` : "run `solumbe eval`",
+      tip: "From the latest `solumbe eval`: how much smaller solumbe's context is than feeding whole files to the agent. A relative byte-ratio delta, not an absolute guarantee.",
     },
     {
       label: "Gate pass rate",
@@ -355,7 +355,7 @@ export function renderDashboardHtml(d) {
     ? `<table class="grid-table"><thead><tr><th>artifact</th><th>kind</th><th>signal</th></tr></thead><tbody>${artifactRows
         .map((/** @type {any} */ a) => `<tr><td><code>${esc(a.file)}</code></td><td>${esc(a.kind)}</td><td>${esc(summarizeSignal(a.signals))}</td></tr>`)
         .join("")}</tbody></table>`
-    : `<p class="empty">No machine-readable artifacts in .otito yet.</p>`;
+    : `<p class="empty">No machine-readable artifacts in .solumbe yet.</p>`;
 
   const gitRows = (d.git ?? []).slice(0, 10);
   const gitHtml = gitRows.length
@@ -371,7 +371,7 @@ export function renderDashboardHtml(d) {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>otito · usage & performance — ${esc(d.repo?.name ?? "repo")}</title>
+<title>solumbe · usage & performance — ${esc(d.repo?.name ?? "repo")}</title>
 <style>
 :root{--bg:#fbfbfa;--surface:#fff;--ink:#1d1c1a;--muted:#5f5e5a;--faint:#88877f;--line:rgba(0,0,0,.1);--blue:#378ADD;--teal:#1D9E75;--amber:#EF9F27;--red:#E24B4A;--gray:#B4B2A9;}
 @media (prefers-color-scheme:dark){:root{--bg:#1a1a18;--surface:#232320;--ink:#ededdf;--muted:#aaa99f;--faint:#88877f;--line:rgba(255,255,255,.12);}}
@@ -425,10 +425,10 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;}
 </head>
 <body>
 <div class="wrap">
-<h2 class="sr">otito usage and performance dashboard for ${esc(d.repo?.name ?? "repo")}: invocations, latency, token savings versus a naive baseline, top commands, merge-gate verdicts, and the limits of what this view can show. Hover the i markers for how to read each panel.</h2>
+<h2 class="sr">solumbe usage and performance dashboard for ${esc(d.repo?.name ?? "repo")}: invocations, latency, token savings versus a naive baseline, top commands, merge-gate verdicts, and the limits of what this view can show. Hover the i markers for how to read each panel.</h2>
 <div class="head">
   <div>
-    <h1>otito · usage & performance</h1>
+    <h1>solumbe · usage & performance</h1>
     <div style="font-size:13px;color:var(--muted);margin-top:2px;">${esc(d.repo?.name ?? "repo")} · ${esc(range)}</div>
   </div>
   <div class="badges">
@@ -450,15 +450,15 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;}
     ${verdictHtml}
   </div>
   <div class="card">
-    <h2>Convergence over time ${tip("`otito converge` score 0–100: how closely the actual git diff matched the stated task. Higher is more aligned; dips flag scope drift.")}</h2>
+    <h2>Convergence over time ${tip("`solumbe converge` score 0–100: how closely the actual git diff matched the stated task. Higher is more aligned; dips flag scope drift.")}</h2>
     ${convHtml}
   </div>
   <div class="card">
-    <h2>Recent artifacts ${tip("Machine-readable JSON reports already written under .otito, classified by type with their headline signal. Independent of the usage log.")}</h2>
+    <h2>Recent artifacts ${tip("Machine-readable JSON reports already written under .solumbe, classified by type with their headline signal. Independent of the usage log.")}</h2>
     ${artifactsHtml}
   </div>
   <div class="card">
-    <h2>Recent commits ${tip("Latest commit subjects from git log, for at-a-glance activity. Provenance only — not tied to specific otito runs.")}</h2>
+    <h2>Recent commits ${tip("Latest commit subjects from git log, for at-a-glance activity. Provenance only — not tied to specific solumbe runs.")}</h2>
     ${gitHtml}
   </div>
 </div>
@@ -468,9 +468,9 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;}
   <ul>${blindSpots}</ul>
 </div>
 
-<div class="foot">Opt-in local telemetry · ${esc(d.logPath ?? "")} · anonymous sharing is a separate opt-in · clear with <code>otito telemetry clear</code></div>
+<div class="foot">Opt-in local telemetry · ${esc(d.logPath ?? "")} · anonymous sharing is a separate opt-in · clear with <code>solumbe telemetry clear</code></div>
 </div>
-<script type="application/json" id="otito-dashboard-data">${embedded}</script>
+<script type="application/json" id="solumbe-dashboard-data">${embedded}</script>
 </body>
 </html>`;
 }

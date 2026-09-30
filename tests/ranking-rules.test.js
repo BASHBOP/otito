@@ -47,7 +47,7 @@ test("requestLiterals reads named paths and identifier-shaped symbols, not prose
   assert.deepEqual(literals.paths, ["utils/create-event.ts", "EditableDate.tsx"]);
   // `EditableDate` inside `EditableDate.tsx` names the file, not a symbol.
   assert.deepEqual(literals.symbols, ["combineDateAndTime"]);
-  assert.deepEqual(requestLiterals("open https://github.com/BASHBOP/otito/pull/12").paths, []);
+  assert.deepEqual(requestLiterals("open https://github.com/BASHBOP/solumbe/pull/12").paths, []);
 });
 
 test("isCopyRequest recognises requests about wording and translation only", () => {

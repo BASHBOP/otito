@@ -1,15 +1,15 @@
 // Grades the router's tier against the repository's own history.
 //
-// `otito route` recommends cheap, mid or premium from two halves: otito's
+// `solumbe route` recommends cheap, mid or premium from two halves: solumbe's
 // deterministic read of the repository (AX, containment, risk paths) and a
 // model's read of the request. Neither half has been compared to an outcome.
 // This module supplies the comparison the calibration thesis asks for: replay
 // history, recompute the tier from the state as it was, and join to the same
-// `repaired` outcome `otito calibrate` uses for risk flags.
+// `repaired` outcome `solumbe calibrate` uses for risk flags.
 //
 // The metric is regret, not accuracy: a change routed cheap that was repaired
 // within the window is a recommendation the outcome contradicted. It is never
-// "spend avoided": otito cannot know whether a host switched models, so
+// "spend avoided": solumbe cannot know whether a host switched models, so
 // nothing here can claim a saving.
 //
 // Three variants are graded side by side so the model half can be read
@@ -178,7 +178,7 @@ async function replay(repoPath, options) {
   };
   process.on("SIGINT", onInterrupt);
   process.on("SIGTERM", onInterrupt);
-  const worktree = fs.mkdtempSync(path.join(os.tmpdir(), "otito-regret-"));
+  const worktree = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-regret-"));
   try {
     addWorktree(root, scoreable[0].parents[0], worktree);
     let done = 0;
@@ -307,7 +307,7 @@ async function replay(repoPath, options) {
 }
 
 /**
- * Apply the router's arithmetic to a saved `otito regret --json` run and grade
+ * Apply the router's arithmetic to a saved `solumbe regret --json` run and grade
  * it again. Nothing is checked out and no model is called: each row carries
  * the signals and the exact answers it was first scored from, so the only
  * thing that can differ from the saved run is the arithmetic. That is what
@@ -324,7 +324,7 @@ export function rescoreRegret(saved, options = {}) {
   const score = options.score ?? scoreDecision;
   const rows = Array.isArray(saved?.commits) ? saved.commits : null;
   if (!rows?.length || !saved.method) {
-    throw new Error("rescore needs the JSON of an `otito regret --json` run");
+    throw new Error("rescore needs the JSON of a `solumbe regret --json` run");
   }
   if (rows.some((row) => typeof row.containment !== "number" || !row.inputs?.offline)) {
     throw new Error(
@@ -693,7 +693,7 @@ function removeWorktree(root, worktree) {
  */
 export function makeRegretReceipt(data) {
   const canonical = {
-    engine: "otito-regret",
+    engine: "solumbe-regret",
     regretEngineVersion: data.regretEngineVersion,
     modelRouteEngineVersion: data.modelRouteEngineVersion,
     method: data.method,
@@ -740,7 +740,7 @@ export function formatRegretMarkdown(data) {
           `Rescored from \`${data.method.rescoredFrom ?? "a saved run"}\`: saved signals and answers, route engine ${data.modelRouteEngineVersion}; nothing replayed, no model called`,
         ]),
     "",
-    "Regret is a commit routed cheap that was repaired within the window. It is never a saving: otito does not know which model was used. Two rates whose intervals overlap are not shown to differ.",
+    "Regret is a commit routed cheap that was repaired within the window. It is never a saving: solumbe does not know which model was used. Two rates whose intervals overlap are not shown to differ.",
   ];
   for (const [name, variant] of Object.entries(data.variants)) {
     lines.push(

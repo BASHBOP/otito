@@ -13,7 +13,7 @@
 ## Validation
 
 - [ ] `npm run ci`
-- [ ] Otito readiness passed or its `WARN`/`FAIL` state is explained.
+- [ ] Solumbe readiness passed or its `WARN`/`FAIL` state is explained.
 - [ ] Focused tests or manual checks:
 
 ## Version Impact
@@ -25,7 +25,7 @@
 
 ## Review Notes
 
-- [ ] I kept generated artifacts under `.otito/` out of the commit.
+- [ ] I kept generated artifacts under `.solumbe/` out of the commit.
 - [ ] I updated README, skill docs, or eval metadata for command, package script, MCP tool, schema, or output changes.
 - [ ] I identified any skipped checks or follow-up work below.
 - [ ] I understand this PR needs maintainer/code-owner approval before merge.

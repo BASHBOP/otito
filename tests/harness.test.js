@@ -6,7 +6,7 @@ import path from "node:path";
 import { generateHarness } from "../src/lib/harness.js";
 
 test("generateHarness returns commands, focus areas, and token estimates", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-harness-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-harness-"));
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
   fs.writeFileSync(
     path.join(root, "package.json"),
@@ -41,7 +41,7 @@ test("generateHarness returns commands, focus areas, and token estimates", () =>
   assert.ok(result.data.commands.runtime.some((command) => command.command === "npm run dev"));
   assert.ok(result.data.focusAreas.includes("backend request controllers"));
   assert.ok(result.data.tokenEstimate.fullJson > 0);
-  assert.match(result.markdown, /# otito Harness: events-api/);
+  assert.match(result.markdown, /# solumbe Harness: events-api/);
   assert.match(result.markdown, /## Token Budget/);
 });
 
@@ -138,7 +138,7 @@ test("generateHarness keeps the end-to-end script of a package with no headless 
  * @returns {string}
  */
 function packageFixture(scripts, files = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-harness-scripts-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-harness-scripts-"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "scripts-fixture", scripts }));
   for (const [name, contents] of Object.entries(files)) {
     fs.writeFileSync(path.join(root, name), contents);

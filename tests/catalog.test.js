@@ -6,7 +6,7 @@ import path from "node:path";
 import { defaultCatalogPath, discoverRepositories, indexRepositories, listCatalog, searchCatalog } from "../src/lib/catalog.js";
 
 test("discoverRepositories finds local repository roots", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-discover-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-discover-"));
   const app = path.join(root, "apps", "web");
   fs.mkdirSync(app, { recursive: true });
   fs.writeFileSync(path.join(app, "package.json"), JSON.stringify({ name: "web-app" }));
@@ -20,7 +20,7 @@ test("discoverRepositories finds local repository roots", () => {
 });
 
 test("indexRepositories writes an index and catalog entry", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-index-local-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-index-local-"));
   const catalogPath = path.join(root, "catalog.json");
   fs.mkdirSync(path.join(root, "src", "services"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "local-api" }));
@@ -34,11 +34,11 @@ test("indexRepositories writes an index and catalog entry", () => {
   assert.equal(catalog.repositoryCount, 1);
   assert.equal(catalog.repositories[0].name, "local-api");
   assert.ok(fs.existsSync(catalog.repositories[0].indexPath), "catalog should retain an external cache path for offline search");
-  assert.ok(!fs.existsSync(path.join(root, ".otito")), "indexing must not create an artifact in the target repository");
+  assert.ok(!fs.existsSync(path.join(root, ".solumbe")), "indexing must not create an artifact in the target repository");
 });
 
 test("searchCatalog searches indexed paths and symbols", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-search-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-search-"));
   const catalogPath = path.join(root, "catalog.json");
   fs.mkdirSync(path.join(root, "src", "services"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "search-api" }));
@@ -59,7 +59,7 @@ test("searchCatalog searches indexed paths and symbols", () => {
 // indexer this build no longer agrees with — otherwise a map produced before,
 // say, markdown was indexable is served as though it were complete.
 test("searchCatalog --offline skips an index written by a different indexer", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-search-stale-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-search-stale-"));
   const catalogPath = path.join(root, "catalog.json");
   fs.mkdirSync(path.join(root, "src", "services"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "stale-api" }));
@@ -81,7 +81,7 @@ test("searchCatalog --offline skips an index written by a different indexer", ()
   assert.equal(stale.errors[0].root, root);
   assert.match(stale.errors[0].error, /stale/);
   assert.match(stale.errors[0].error, /capabilities/);
-  assert.match(stale.errors[0].error, /otito index/, "the reason should say how to refresh the index");
+  assert.match(stale.errors[0].error, /solumbe index/, "the reason should say how to refresh the index");
 
   // The same search without --offline rebuilds the index and finds the file,
   // which is what the skipped repository's reason points the caller at.
@@ -94,7 +94,7 @@ test("searchCatalog --offline skips an index written by a different indexer", ()
 // A bare code map with no envelope carries no version, no capability signature
 // and no root: nothing that could establish which indexer produced it.
 test("searchCatalog --offline skips an index file with no provenance", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-search-bare-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-search-bare-"));
   const catalogPath = path.join(root, "catalog.json");
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "bare-api" }));
@@ -116,7 +116,7 @@ test("searchCatalog --offline skips an index file with no provenance", () => {
 // stored index, because that is exactly what "without refreshing fingerprints"
 // buys. Only the indexer's own identity is verified.
 test("searchCatalog --offline still serves an index whose repository has changed", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-search-drift-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-search-drift-"));
   const catalogPath = path.join(root, "catalog.json");
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "drift-api" }));
@@ -132,34 +132,34 @@ test("searchCatalog --offline still serves an index whose repository has changed
   assert.equal(result.matches[0].file.path, "src/rsvp.ts");
 });
 
-test("defaultCatalogPath uses OTITO_CATALOG when set", () => {
-  const original = process.env.OTITO_CATALOG;
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-catalog-env-"));
-  const otitoCatalog = path.join(root, "otito-catalog.json");
+test("defaultCatalogPath uses SOLUMBE_CATALOG when set", () => {
+  const original = process.env.SOLUMBE_CATALOG;
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-catalog-env-"));
+  const solumbeCatalog = path.join(root, "solumbe-catalog.json");
 
   try {
-    process.env.OTITO_CATALOG = otitoCatalog;
-    assert.equal(defaultCatalogPath(), otitoCatalog);
+    process.env.SOLUMBE_CATALOG = solumbeCatalog;
+    assert.equal(defaultCatalogPath(), solumbeCatalog);
   } finally {
     if (original === undefined) {
-      delete process.env.OTITO_CATALOG;
+      delete process.env.SOLUMBE_CATALOG;
     } else {
-      process.env.OTITO_CATALOG = original;
+      process.env.SOLUMBE_CATALOG = original;
     }
   }
 });
 
-test("defaultCatalogPath defaults to the otito catalog", () => {
-  const original = process.env.OTITO_CATALOG;
+test("defaultCatalogPath defaults to the solumbe catalog", () => {
+  const original = process.env.SOLUMBE_CATALOG;
 
   try {
-    delete process.env.OTITO_CATALOG;
-    assert.equal(defaultCatalogPath(), path.join(os.homedir(), ".otito", "catalog.json"));
+    delete process.env.SOLUMBE_CATALOG;
+    assert.equal(defaultCatalogPath(), path.join(os.homedir(), ".solumbe", "catalog.json"));
   } finally {
     if (original === undefined) {
-      delete process.env.OTITO_CATALOG;
+      delete process.env.SOLUMBE_CATALOG;
     } else {
-      process.env.OTITO_CATALOG = original;
+      process.env.SOLUMBE_CATALOG = original;
     }
   }
 });

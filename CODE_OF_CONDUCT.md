@@ -38,7 +38,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement. Contact the maintainers listed in [`.github/CODEOWNERS`](.github/CODEOWNERS) through the [BASHBOP organization](https://github.com/BASHBOP), or request a private maintainer conversation on this repository.
 
-Do not use public issues for Code of Conduct reports that include personal data about other people. Do not use [private vulnerability reporting](https://github.com/BASHBOP/otito/security/advisories/new) for conduct reports; that channel is for security issues only. See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+Do not use public issues for Code of Conduct reports that include personal data about other people. Do not use [private vulnerability reporting](https://github.com/BASHBOP/solumbe/security/advisories/new) for conduct reports; that channel is for security issues only. See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
 All complaints will be reviewed and investigated promptly and fairly.
 

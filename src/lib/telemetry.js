@@ -1,10 +1,10 @@
 // Opt-in usage telemetry. Local capture and anonymous remote sharing are two
 // separate permissions. Local capture appends one JSONL line per CLI run and
-// MCP call to ~/.otito/usage.jsonl. Remote sharing sends only a much smaller,
-// explicitly allowlisted shape through Otito's public relay:
+// MCP call to ~/.solumbe/usage.jsonl. Remote sharing sends only a much smaller,
+// explicitly allowlisted shape through Solumbe's public relay:
 //
-//   - off by default; gated by the `telemetry` config key or OTITO_TELEMETRY,
-//     and forced off under CI unless OTITO_TELEMETRY explicitly opts in.
+//   - off by default; gated by the `telemetry` config key or SOLUMBE_TELEMETRY,
+//     and forced off under CI unless SOLUMBE_TELEMETRY explicitly opts in.
 //   - remote sharing is independently off by default; existing local telemetry
 //     consent is never widened into network transmission.
 //   - the gate is resolved ONCE per process and cached, so the hot path never
@@ -26,32 +26,35 @@ import { loadConfig } from "./config.js";
 
 export const TELEMETRY_SCHEMA_VERSION = 1;
 export const TELEMETRY_SHARE_SCHEMA_VERSION = 1;
+// The shared payload's route and its version field keep their pre-rename names
+// on purpose: bashbop-api's analytics controller and DTO define them, and both
+// sides have to move together (rebrand-keep: analytics/otito, TrackOtitoEventDto).
 export const DEFAULT_TELEMETRY_SHARE_ENDPOINT = "https://api.bashbop.com/api/v1/analytics/otito";
 const MAX_LOG_BYTES = 5 * 1024 * 1024; // rotate at 5MB to a single .1 generation
 const MAX_ERROR_LEN = 60;
 const DEFAULT_SHARE_TIMEOUT_MS = 750;
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-let otitoVersion = "0.0.0";
+let solumbeVersion = "0.0.0";
 try {
-  otitoVersion = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8")).version ?? "0.0.0";
+  solumbeVersion = JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8")).version ?? "0.0.0";
 } catch {
   // best-effort; version is cosmetic in the log
 }
 
 /**
- * Resolve the append-only log path. OTITO_TELEMETRY_PATH overrides (used by
- * tests and power users); otherwise it sits beside the catalog under ~/.otito.
+ * Resolve the append-only log path. SOLUMBE_TELEMETRY_PATH overrides (used by
+ * tests and power users); otherwise it sits beside the catalog under ~/.solumbe.
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {string}
  */
 export function telemetryLogPath(env = process.env) {
-  return path.resolve(env.OTITO_TELEMETRY_PATH ?? path.join(os.homedir(), ".otito", "usage.jsonl"));
+  return path.resolve(env.SOLUMBE_TELEMETRY_PATH ?? path.join(os.homedir(), ".solumbe", "usage.jsonl"));
 }
 
 /** @param {NodeJS.ProcessEnv} [env] */
 export function telemetryAnonymousIdPath(env = process.env) {
-  return path.resolve(env.OTITO_TELEMETRY_ID_PATH ?? path.join(os.homedir(), ".otito", "anonymous-id"));
+  return path.resolve(env.SOLUMBE_TELEMETRY_ID_PATH ?? path.join(os.homedir(), ".solumbe", "anonymous-id"));
 }
 
 /**
@@ -65,7 +68,7 @@ function coerceBool(value) {
 }
 
 /**
- * Resolve whether telemetry is enabled. Precedence: OTITO_TELEMETRY env wins;
+ * Resolve whether telemetry is enabled. Precedence: SOLUMBE_TELEMETRY env wins;
  * under CI the default is OFF unless the env explicitly opts in; otherwise the
  * persisted `telemetry` config key. Pure given its inputs.
  * @param {NodeJS.ProcessEnv} env
@@ -73,9 +76,9 @@ function coerceBool(value) {
  * @returns {boolean}
  */
 function resolveEnabled(env, cwd) {
-  const envBool = coerceBool(env.OTITO_TELEMETRY);
+  const envBool = coerceBool(env.SOLUMBE_TELEMETRY);
   // CI must never capture from an inherited user config; only an explicit
-  // OTITO_TELEMETRY=1 turns it on there.
+  // SOLUMBE_TELEMETRY=1 turns it on there.
   if (env.CI) return envBool === true;
   if (envBool !== undefined) return envBool;
   try {
@@ -90,7 +93,7 @@ function resolveEnabled(env, cwd) {
  * @param {string} cwd
  */
 function resolveSharingEnabled(env, cwd) {
-  const envBool = coerceBool(env.OTITO_TELEMETRY_SHARE);
+  const envBool = coerceBool(env.SOLUMBE_TELEMETRY_SHARE);
   if (env.CI) return envBool === true;
   if (envBool !== undefined) return envBool;
   try {
@@ -201,7 +204,7 @@ export function takePendingSignals() {
 
 /**
  * Append one usage event, best-effort. Short-circuits when telemetry is off.
- * Stamps the envelope (schema version, wall-clock ts, otito/node version, and
+ * Stamps the envelope (schema version, wall-clock ts, solumbe/node version, and
  * a non-reversible repo group key). NEVER throws, NEVER writes stdout.
  * @param {Record<string, any>} event
  * @param {{ env?: NodeJS.ProcessEnv, cwd?: string }} [opts]
@@ -224,7 +227,7 @@ export function appendEvent(event, opts = {}) {
       error: event.error ?? null,
       durationMs: typeof event.durationMs === "number" ? Math.round(event.durationMs) : null,
       repo: repoRoot ? crypto.createHash("sha256").update(String(repoRoot)).digest("hex").slice(0, 12) : null,
-      otitoVersion,
+      solumbeVersion,
       node: process.version,
       signals: event.signals ?? null,
     };
@@ -329,7 +332,7 @@ export function buildSharedTelemetryPayload(record, opts = {}) {
     command: normalizedCommand(record.cmd),
     outcome: ["error", "fail", "ok"].includes(record.outcome) ? record.outcome : "error",
     duration_bucket: durationBucket(record.durationMs),
-    otito_version: normalizedVersion(record.otitoVersion),
+    otito_version: normalizedVersion(record.solumbeVersion),
     node_major: Number.isInteger(nodeMajor) && nodeMajor >= 18 && nodeMajor <= 100 ? nodeMajor : 18,
     platform: normalizedPlatform(opts.platform ?? process.platform),
   };
@@ -347,7 +350,7 @@ export async function shareEvent(record, opts = {}) {
   const env = opts.env ?? process.env;
   if (!isTelemetrySharingEnabled({ env, cwd: opts.cwd })) return false;
 
-  const endpoint = env.OTITO_TELEMETRY_ENDPOINT ?? DEFAULT_TELEMETRY_SHARE_ENDPOINT;
+  const endpoint = env.SOLUMBE_TELEMETRY_ENDPOINT ?? DEFAULT_TELEMETRY_SHARE_ENDPOINT;
   try {
     const url = new URL(endpoint);
     if (url.protocol !== "https:" && !(url.protocol === "http:" && ["localhost", "127.0.0.1"].includes(url.hostname))) return false;
@@ -433,7 +436,7 @@ export function clearTelemetryLog(opts = {}) {
 }
 
 /**
- * Snapshot of the telemetry state for `otito telemetry status`.
+ * Snapshot of the telemetry state for `solumbe telemetry status`.
  * @param {{ env?: NodeJS.ProcessEnv, cwd?: string }} [opts]
  * @returns {{ enabled: boolean, sharing: boolean, shareEndpoint: string, path: string, exists: boolean, sizeBytes: number, events: number }}
  */
@@ -452,7 +455,7 @@ export function telemetryStatus(opts = {}) {
   return {
     enabled: isTelemetryEnabled({ env, cwd: opts.cwd, fresh: true }),
     sharing: isTelemetrySharingEnabled({ env, cwd: opts.cwd, fresh: true }),
-    shareEndpoint: env.OTITO_TELEMETRY_ENDPOINT ?? DEFAULT_TELEMETRY_SHARE_ENDPOINT,
+    shareEndpoint: env.SOLUMBE_TELEMETRY_ENDPOINT ?? DEFAULT_TELEMETRY_SHARE_ENDPOINT,
     path: logPath,
     exists,
     sizeBytes,

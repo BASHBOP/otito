@@ -78,7 +78,7 @@ test("the allow marker suppresses a reviewed false positive", () => {
 });
 
 test("the generic rule warns only on high-entropy literals without whitespace", () => {
-  // otito:allow-secret — this sample is the rule's own input, not a credential.
+  // solumbe:allow-secret — this sample is the rule's own input, not a credential.
   const highEntropy = scanSecretContent('const password = "Xq7$mR2vLp9!zKw4Tb8";', { file: "src/auth.js" });
   assert.equal(highEntropy.length, 1);
   assert.equal(highEntropy[0].rule, "generic-credential-assignment");

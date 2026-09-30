@@ -71,9 +71,9 @@ test("renderDashboardHtml escapes embedded strings", () => {
   assert.match(html, /&lt;script&gt;/);
 });
 
-test("scanArtifacts classifies .otito JSON by its discriminating keys", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-dash-art-"));
-  const dir = path.join(root, ".otito");
+test("scanArtifacts classifies .solumbe JSON by its discriminating keys", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-dash-art-"));
+  const dir = path.join(root, ".solumbe");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "converge.json"), JSON.stringify({ convergence: 80, band: "aligned" }));
   fs.writeFileSync(path.join(dir, "gate.json"), JSON.stringify({ verdict: "WARN", checks: [] }));
@@ -90,9 +90,9 @@ test("scanArtifacts classifies .otito JSON by its discriminating keys", () => {
 });
 
 test("generateDashboard returns both the aggregate data and a renderable HTML string", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-dash-gen-"));
-  const { data, html } = generateDashboard(root, { env: { OTITO_TELEMETRY_PATH: path.join(root, "nope.jsonl") }, includeGit: false });
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-dash-gen-"));
+  const { data, html } = generateDashboard(root, { env: { SOLUMBE_TELEMETRY_PATH: path.join(root, "nope.jsonl") }, includeGit: false });
   assert.equal(data.totals.events, 0);
-  assert.match(html, /otito · usage & performance/);
+  assert.match(html, /solumbe · usage & performance/);
   fs.rmSync(root, { recursive: true });
 });

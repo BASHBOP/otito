@@ -33,7 +33,7 @@ const versionFlags = new Set(["--version", "-v"]);
 
 // Commands that gate a repository named by a positional or --path. They take
 // policy and governance from that repository's config (gatePolicy), not from
-// the directory otito runs in, so main() leaves those two flags to them.
+// the directory solumbe runs in, so main() leaves those two flags to them.
 const gateCommands = new Set(["pass", "pass-pr", "gate", "review", "workspace-gate"]);
 
 /** @type {Record<string, ((parsed: CliArgs) => void | Promise<void>) | undefined>} */
@@ -140,7 +140,7 @@ async function main(argv = process.argv.slice(2)) {
     if (parsed.flags.json) {
       printJson({ ok: false, error: message });
     } else {
-      console.error(`otito: ${message}`);
+      console.error(`solumbe: ${message}`);
     }
     process.exitCode = 1;
   } finally {
@@ -344,7 +344,7 @@ async function handleContext(parsed) {
     limit: parsed.flags.limit,
   });
   // Opt-in: ask a System One model to read the request. Never on by default,
-  // because an ordinary otito command makes no network call.
+  // because an ordinary solumbe command makes no network call.
   if (parsed.flags.online === true) {
     const { readContextPack } = await import("./lib/context-read.js");
     result = await readContextPack(result);
@@ -370,7 +370,7 @@ async function handleContext(parsed) {
 
 /**
  * One advisory routing line under commands that already hold an impact pass and
- * an AX score. Offline by construction: no ordinary otito command makes a
+ * an AX score. Offline by construction: no ordinary solumbe command makes a
  * network call, and a failure here must never change the command's own output.
  * @param {CliArgs} parsed
  * @param {string} query
@@ -389,7 +389,7 @@ async function printRouteFooter(parsed, query, impact, ax) {
 }
 
 /**
- * Render a command's Markdown report with otito's shared document treatment.
+ * Render a command's Markdown report with solumbe's shared document treatment.
  * Presentation only: the source Markdown still reaches the terminal, and
  * `--json` / `--out` never reach this path.
  * @param {CliArgs} parsed
@@ -424,7 +424,7 @@ async function handleImpact(parsed) {
     query = parsed.positionals.slice(1).join(" ").trim();
   }
   if (!query) {
-    throw new Error('impact requires a change request, e.g. `otito impact . "add Stripe refunds"`');
+    throw new Error('impact requires a change request, e.g. `solumbe impact . "add Stripe refunds"`');
   }
   const result = generateImpact(query, {
     path: repoPath,
@@ -463,7 +463,7 @@ async function handleObsidian(parsed) {
   const { writeObsidianVault } = await import("./lib/obsidian.js");
   const repoPath = parsed.positionals[0] ?? ".";
   const query = typeof parsed.flags.query === "string" ? parsed.flags.query : undefined;
-  const vaultPath = typeof parsed.flags.out === "string" ? parsed.flags.out : join(repoPath, ".otito", "obsidian");
+  const vaultPath = typeof parsed.flags.out === "string" ? parsed.flags.out : join(repoPath, ".solumbe", "obsidian");
   const manifest = writeObsidianVault(repoPath, vaultPath, {
     query,
     limit: parsed.flags.limit,
@@ -495,7 +495,7 @@ async function handleAx(parsed) {
     query = parsed.positionals.slice(1).join(" ").trim();
   }
   if (!query) {
-    throw new Error('ax requires a change request, e.g. `otito ax "add a new MCP tool" --path .`');
+    throw new Error('ax requires a change request, e.g. `solumbe ax "add a new MCP tool" --path .`');
   }
   const data = generateAxScore(query, { path: repoPath, top: parsed.flags.top });
   noteResult(data);
@@ -539,7 +539,7 @@ async function handleRoute(parsed) {
     query = parsed.positionals.slice(1).join(" ").trim();
   }
   if (!query) {
-    throw new Error('route requires a change request, e.g. `otito route . "add a --json flag"`');
+    throw new Error('route requires a change request, e.g. `solumbe route . "add a --json flag"`');
   }
 
   const data = await generateRoute(query, {
@@ -554,7 +554,7 @@ async function handleRoute(parsed) {
     data.hostModel = hostModelFor(repoPath, parsed.flags.host, data.tier);
   }
 
-  // Enforce mode (OTITO_ROUTE_MODE=delegate) assigns the same arm the hook
+  // Enforce mode (SOLUMBE_ROUTE_MODE=delegate) assigns the same arm the hook
   // would, so a terminal user can see whether this request is one the router
   // is meant to bind, and the subagent model that binds it.
   const { AGENT_MODEL, routeArm } = await import("./lib/route-arm.js");
@@ -644,7 +644,7 @@ async function handleConverge(parsed) {
     query = parsed.positionals.join(" ").trim();
   }
   if (!query) {
-    throw new Error('converge requires a task, e.g. `otito converge "add Stripe refunds" --base origin/main`');
+    throw new Error('converge requires a task, e.g. `solumbe converge "add Stripe refunds" --base origin/main`');
   }
   const data = generateConvergence(query, {
     path: repoPath,
@@ -720,11 +720,11 @@ async function handlePass(parsed) {
 async function handlePassPr(parsed) {
   const { evaluatePR, formatPassPrMarkdown, formatPassPrTerminal } = await import("./lib/pass-pr.js");
   // No selector gates the current branch's PR, as `gh pr view` does. A blank
-  // one is `otito pass-pr "$PR_NUMBER"` with the variable unset, not a request
+  // one is `solumbe pass-pr "$PR_NUMBER"` with the variable unset, not a request
   // for that PR.
   const selector = parsed.positionals[0];
   if (selector !== undefined && !isPrSelector(selector)) {
-    throw new Error("pass-pr was given a blank PR selector; name the PR, e.g. `otito pass-pr 123 --path .`, or leave it out to gate the current branch's PR");
+    throw new Error("pass-pr was given a blank PR selector; name the PR, e.g. `solumbe pass-pr 123 --path .`, or leave it out to gate the current branch's PR");
   }
   const repoPath = parsed.flags.path ?? ".";
   const { policy, governance } = gatePolicy(repoPath, parsed.flags);
@@ -762,8 +762,8 @@ async function handlePassPr(parsed) {
 }
 
 /**
- * `otito attest [repo] --verdict file --merge sha [...]` appends a hash-chained
- * record to the repository's audit ledger; `otito attest [repo] --verify`
+ * `solumbe attest [repo] --verdict file --merge sha [...]` appends a hash-chained
+ * record to the repository's audit ledger; `solumbe attest [repo] --verify`
  * recomputes the whole chain and exits 1 if any record was altered.
  * @param {CliArgs} parsed
  */
@@ -791,7 +791,7 @@ async function handleAttest(parsed) {
   }
 
   if (!parsed.flags.verdict || parsed.flags.verdict === true) {
-    throw new Error("attest requires --verdict <file> (from `otito review --json`) and --merge <sha>, or --verify");
+    throw new Error("attest requires --verdict <file> (from `solumbe review --json`) and --merge <sha>, or --verify");
   }
   const verdict = JSON.parse(readFileSync(String(parsed.flags.verdict), "utf8"));
   const record = appendAttestation({
@@ -818,7 +818,7 @@ async function handleAttest(parsed) {
 }
 
 /**
- * `otito regret <repo>` grades the router's tier against the repository's own
+ * `solumbe regret <repo>` grades the router's tier against the repository's own
  * history: replay commits, recompute the tier from the parent tree, join to
  * the same `repaired` outcome calibrate uses. Offline unless a key is set;
  * `--offline` keeps it keyless either way. `--rescore <run.json>` grades the
@@ -833,7 +833,7 @@ async function handleRegret(parsed) {
   try {
     const rescore = parsed.flags.rescore;
     if (rescore === true) {
-      throw new Error("--rescore needs the path of a saved `otito regret --json` run");
+      throw new Error("--rescore needs the path of a saved `solumbe regret --json` run");
     }
     data =
       rescore === undefined
@@ -854,7 +854,7 @@ async function handleRegret(parsed) {
     // expects an interrupted command to, not as a failed one.
     const signal = /** @type {any} */ (error)?.signal;
     if (signal === "SIGINT" || signal === "SIGTERM") {
-      process.stderr.write(`otito: regret interrupted by ${signal}; the replay worktree was removed\n`);
+      process.stderr.write(`solumbe: regret interrupted by ${signal}; the replay worktree was removed\n`);
       process.exit(signal === "SIGTERM" ? 143 : 130);
     }
     throw error;
@@ -890,7 +890,7 @@ async function handleGate(parsed) {
   // variable unset leaves --pr bare and its empty string as a positional,
   // which would otherwise be taken for the repository.
   if (selector !== undefined && !isPrSelector(selector)) {
-    throw new Error("gate --pr needs a PR number or URL, e.g. `otito gate --pr 123 --path .`");
+    throw new Error("gate --pr needs a PR number or URL, e.g. `solumbe gate --pr 123 --path .`");
   }
   const repoPath = gateRepoPath(parsed);
   if (selector !== undefined) {
@@ -930,7 +930,7 @@ function gateRepoPath(parsed) {
   const positional = parsed.positionals[0];
   const flag = parsed.flags.path;
   if (flag === true) {
-    throw new Error("gate --path needs a repository, e.g. `otito gate --path .`");
+    throw new Error("gate --path needs a repository, e.g. `solumbe gate --path .`");
   }
   if (positional === undefined || flag === undefined) {
     return positional ?? flag ?? ".";
@@ -953,12 +953,12 @@ function gateRepoPath(parsed) {
 async function handleReview(parsed) {
   const { formatReviewMermaid, formatReviewTerminal, generateReview } = await import("./lib/review.js");
   if (parsed.flags.pr !== undefined && !isPrSelector(parsed.flags.pr)) {
-    throw new Error("review --pr needs a PR number or URL, e.g. `otito review . --pr 123`");
+    throw new Error("review --pr needs a PR number or URL, e.g. `solumbe review . --pr 123`");
   }
   // Mirror `impact` and `ax` arg parsing: `review "<request>" --path <repo>` or
   // `review <repo> "<request>"`. Policy and governance come from the same repo.
   if (parsed.flags.path === true) {
-    throw new Error("review --path needs a repository, e.g. `otito review --path .`");
+    throw new Error("review --path needs a repository, e.g. `solumbe review --path .`");
   }
   let repoPath;
   let trailingRequest;
@@ -1005,7 +1005,7 @@ async function handleReview(parsed) {
 
 /** @param {CliArgs} parsed */
 async function handleInstall(parsed) {
-  const { formatInstallSummary, getInstallPlan, getWelcomeMessage, installOtito } = await import("./lib/install.js");
+  const { formatInstallSummary, getInstallPlan, getWelcomeMessage, installSolumbe } = await import("./lib/install.js");
 
   let global = Boolean(parsed.flags.global);
   let link = Boolean(parsed.flags.link);
@@ -1027,7 +1027,7 @@ async function handleInstall(parsed) {
     link = mode === "link";
   }
 
-  const result = installOtito({ global, link });
+  const result = installSolumbe({ global, link });
 
   if (parsed.flags.json) {
     printJson(result);
@@ -1121,7 +1121,7 @@ async function handleDeps(parsed) {
   const { inspectDependency } = await import("./lib/deps.js");
   const packageName = parsed.positionals[0];
   if (!packageName) {
-    throw new Error("deps requires a package name, for example: otito deps zod --query parse");
+    throw new Error("deps requires a package name, for example: solumbe deps zod --query parse");
   }
 
   // inspectDependency is declared to return an opaque `object`; describe the
@@ -1150,7 +1150,7 @@ async function handleDeps(parsed) {
   }
 
   const renderer = rendererFor(parsed);
-  const lines = [renderer.header({ text: "otito deps · dependency source", glyph: "\u{1F4E6}" }, [renderer.code(result.packageName)]), ""];
+  const lines = [renderer.header({ text: "solumbe deps · dependency source", glyph: "\u{1F4E6}" }, [renderer.code(result.packageName)]), ""];
   lines.push(
     renderer.table([
       ["Package", result.packageName],
@@ -1361,7 +1361,7 @@ async function handleReport(parsed) {
 async function handleWorkspace(parsed) {
   const { formatWorkspaceMermaid, generateWorkspaceReport } = await import("./lib/workspace.js");
   if (parsed.positionals.length < 2) {
-    throw new Error("workspace requires at least two repo paths, for example: otito workspace ../web ../api");
+    throw new Error("workspace requires at least two repo paths, for example: solumbe workspace ../web ../api");
   }
 
   const result = generateWorkspaceReport(parsed.positionals);
@@ -1392,7 +1392,7 @@ async function handleWorkspace(parsed) {
 async function handleWorkspaceGate(parsed) {
   const { evaluateWorkspaceGate, formatWorkspaceGateMarkdown } = await import("./lib/workspace-gate.js");
   if (parsed.positionals.length < 2) {
-    throw new Error("workspace-gate requires at least two repo paths, for example: otito workspace-gate ../web ../api --staged");
+    throw new Error("workspace-gate requires at least two repo paths, for example: solumbe workspace-gate ../web ../api --staged");
   }
   const data = evaluateWorkspaceGate(parsed.positionals, {
     base: parsed.flags.base,
@@ -1574,11 +1574,11 @@ async function handleDashboard(parsed) {
     return;
   }
 
-  const target = parsed.flags.out ?? join(repoPath, ".otito", "dashboard.html");
+  const target = parsed.flags.out ?? join(repoPath, ".solumbe", "dashboard.html");
   const artifact = writeArtifact(target, html);
   printText(`Dashboard written: ${artifact.path}`);
   if (!data.totals.events) {
-    printText("No usage events recorded yet. Enable capture with `otito config set telemetry true`, then run some commands.");
+    printText("No usage events recorded yet. Enable capture with `solumbe config set telemetry true`, then run some commands.");
   }
   printClose(parsed, verifyWrittenFiles(dirname(artifact.path), [basename(artifact.path)]));
 }
@@ -1600,7 +1600,7 @@ async function handleTelemetry(parsed) {
       printClose(parsed, verifyConfigValue(scope, "telemetryShare", action === "on"));
       return;
     }
-    if (action !== "status") throw new Error("Usage: otito telemetry share [status|on|off]");
+    if (action !== "status") throw new Error("Usage: solumbe telemetry share [status|on|off]");
   }
 
   if (sub === "on" || sub === "off") {
@@ -1608,7 +1608,7 @@ async function handleTelemetry(parsed) {
     writeConfig(sub === "on" ? { telemetry: true } : { telemetry: false, telemetryShare: false }, scope);
     printText(
       sub === "on"
-        ? `Local telemetry on (${getConfigPath(scope)}). Nothing is shared unless you run \`otito telemetry share on\`.`
+        ? `Local telemetry on (${getConfigPath(scope)}). Nothing is shared unless you run \`solumbe telemetry share on\`.`
         : `Telemetry off (${getConfigPath(scope)}). Local capture and anonymous sharing are both disabled.`,
     );
     printClose(parsed, verifyConfigValue(scope, "telemetry", sub === "on"));
@@ -1641,9 +1641,9 @@ async function handleTelemetry(parsed) {
       ]),
       "",
       renderer.list([
-        status.enabled ? ["otito telemetry off", "disable all telemetry"] : ["otito telemetry on", "enable local capture"],
-        status.sharing ? ["otito telemetry share off", "disable sharing"] : ["otito telemetry share on", "share anonymous usage"],
-        ["otito telemetry clear", "clear the log"],
+        status.enabled ? ["solumbe telemetry off", "disable all telemetry"] : ["solumbe telemetry on", "enable local capture"],
+        status.sharing ? ["solumbe telemetry share off", "disable sharing"] : ["solumbe telemetry share on", "share anonymous usage"],
+        ["solumbe telemetry clear", "clear the log"],
       ]),
     ].join("\n"),
   );
@@ -1716,7 +1716,7 @@ async function handleConfig(parsed) {
     const key = parsed.positionals[1];
     const rawValue = parsed.positionals[2];
     if (!key || rawValue === undefined) {
-      throw new Error("config set requires a key and a value, e.g. otito config set color true");
+      throw new Error("config set requires a key and a value, e.g. solumbe config set color true");
     }
     if (!CONFIG_KEYS.includes(key)) {
       throw new Error(`config set: unknown key "${key}". Valid keys: ${CONFIG_KEYS.join(", ")}`);
@@ -1768,7 +1768,7 @@ async function handleConfig(parsed) {
   const renderer = rendererFor(parsed);
   printText(
     [
-      renderer.header({ text: "otito config", glyph: "\u{2699}\u{FE0F}" }),
+      renderer.header({ text: "solumbe config", glyph: "\u{2699}\u{FE0F}" }),
       "",
       renderer.table(
         sources.map(({ key, value, source }) => [key, String(value ?? ""), source]),
@@ -1812,14 +1812,14 @@ function handleHelp(_parsed) {
   printText(
     [
       "Merge gate (v2):",
-      "  otito gate [repo | --path repo] [--base ref] [--head ref | --staged] [--run-validation] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
-      "  otito gate --pr <selector> [repo | --path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
-      "  otito workspace-gate <repo...> [--base ref] [--run-validation] [--policy x] [--governance x] [--request text] [--json]                           # one staged receipt across repositories",
+      "  solumbe gate [repo | --path repo] [--base ref] [--head ref | --staged] [--run-validation] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]   # local gate",
+      "  solumbe gate --pr <selector> [repo | --path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--json]            # GitHub PR gate",
+      "  solumbe workspace-gate <repo...> [--base ref] [--run-validation] [--policy x] [--governance x] [--request text] [--json]                           # one staged receipt across repositories",
       "",
       "Evaluation gates (v2):",
-      "  otito eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",
-      "  otito eval --harness [--corpus path] [--json] [--out file]    # run inferred install/test/typecheck/build commands in isolated fixtures",
-      "  otito eval --gate-effectiveness [--corpus path] [--json] [--out file] # assert gate verdicts and deterministic reasons in isolated Git fixtures",
+      "  solumbe eval --accuracy [--corpus path] [--json] [--out file]   # labeled retrieval + risk corpus; non-zero exit below thresholds",
+      "  solumbe eval --harness [--corpus path] [--json] [--out file]    # run inferred install/test/typecheck/build commands in isolated fixtures",
+      "  solumbe eval --gate-effectiveness [--corpus path] [--json] [--out file] # assert gate verdicts and deterministic reasons in isolated Git fixtures",
       "",
       "Canonical vs legacy commands:",
       "  gate                 canonical merge gate; `pass` (local) and `pass-pr` (PR) remain as legacy aliases",
@@ -1829,7 +1829,7 @@ function handleHelp(_parsed) {
       "Legacy MCP tool names (pr_review, review_pr, merge_readiness, pr_merge_readiness,",
       "repo_catalog, repo_discover, find_*) still work via tools/call in 3.x, and no",
       "release is named to remove them. Each maps to a canonical tool:",
-      "https://bashbop.github.io/otito/02-mcp-agent-workflows/#legacy-tool-names",
+      "https://bashbop.github.io/solumbe/02-mcp-agent-workflows/#legacy-tool-names",
     ].join("\n"),
   );
 }
@@ -1854,7 +1854,7 @@ function formatCommentResult(comment) {
  */
 function formatRepoSummary(result, options = {}) {
   return formatTerminalSummary({
-    title: "otito repo · repository overview",
+    title: "solumbe repo · repository overview",
     glyph: "📦",
     subtitle: result.root,
     facts: [
@@ -1883,7 +1883,7 @@ function formatRepoSummary(result, options = {}) {
  */
 function explainError(message) {
   if (/Cannot find (?:package|module) ['"]typescript['"]/.test(message)) {
-    return `${message}\n\notito needs its bundled \`typescript\` dependency to build code maps. Reinstall it with \`npm install -g @bashbop/otito\`, or run \`npm install\` in a source checkout.`;
+    return `${message}\n\nsolumbe needs its bundled \`typescript\` dependency to build code maps. Reinstall it with \`npm install -g @bashbop/solumbe\`, or run \`npm install\` in a source checkout.`;
   }
   return message;
 }

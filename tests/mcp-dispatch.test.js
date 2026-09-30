@@ -28,7 +28,7 @@ function writeFiles(root, files) {
 }
 
 function makeRepoFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-mcp-disp-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-mcp-disp-"));
   writeFiles(root, {
     "package.json": JSON.stringify({
       name: "fixture-events-api",
@@ -54,7 +54,7 @@ function makeRepoFixture() {
 }
 
 function makeGitRepoFixture(prefix) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), `otito-mcp-git-${prefix}-`));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), `solumbe-mcp-git-${prefix}-`));
   git(root, "init", "-q", "-b", "main");
   git(root, "config", "commit.gpgsign", "false");
   writeFiles(root, {
@@ -212,7 +212,7 @@ test("tools/call validates params, name, arguments, and unknown tools", async ()
 });
 
 test("tools/call returns isError content when the underlying tool throws", async () => {
-  const bogusPath = path.join(os.tmpdir(), "otito-mcp-missing-xyz-abc-123");
+  const bogusPath = path.join(os.tmpdir(), "solumbe-mcp-missing-xyz-abc-123");
   const messages = await runRequests([{ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_inspect", arguments: { path: bogusPath } } }]);
   const response = byId(messages, 1);
   assert.equal(response.result.isError, true);
@@ -273,7 +273,7 @@ test("repo_inspect, repo_map, and repo_harness produce structured results", asyn
 
 test("repo_index dryRun is read-only and does not write the catalog", async () => {
   const fixture = makeRepoFixture();
-  const catalogPath = path.join(os.tmpdir(), `otito-mcp-dry-${path.basename(fixture)}.json`);
+  const catalogPath = path.join(os.tmpdir(), `solumbe-mcp-dry-${path.basename(fixture)}.json`);
   // Run the dryRun request on its own so the assertion sees the state before any
   // non-dryRun index could write the catalog.
   const messages = await runRequests([
@@ -295,7 +295,7 @@ test("repo_index dryRun is read-only and does not write the catalog", async () =
 
 test("repo_index, repo_search query, and no-query repo_search catalog round-trip a fixture", async () => {
   const fixture = makeRepoFixture();
-  const catalogPath = path.join(os.tmpdir(), `otito-mcp-cat-${path.basename(fixture)}.json`);
+  const catalogPath = path.join(os.tmpdir(), `solumbe-mcp-cat-${path.basename(fixture)}.json`);
   const messages = await runRequests([
     { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_index", arguments: { paths: [fixture], catalog: catalogPath } } },
     // repo_search with no query returns the catalog listing (old repo_catalog).
@@ -329,7 +329,7 @@ test("repo_index, repo_search query, and no-query repo_search catalog round-trip
 
 test("repo_search on an empty catalog returns a remediation hint pointing at repo_index", async () => {
   // A non-existent catalog path loads as an empty catalog (no repositories).
-  const emptyCatalog = path.join(os.tmpdir(), `otito-mcp-empty-cat-${Date.now()}-${Math.random().toString(16).slice(2)}.json`);
+  const emptyCatalog = path.join(os.tmpdir(), `solumbe-mcp-empty-cat-${Date.now()}-${Math.random().toString(16).slice(2)}.json`);
   const messages = await runRequests([
     { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "repo_search", arguments: { query: "events", catalog: emptyCatalog } } },
   ]);
@@ -820,10 +820,10 @@ test("pr_merge_readiness gates the checked-out branch's PR when its selector is 
 });
 
 // Pin the user config tier to an empty directory, so a developer's own
-// ~/.config/otito/config.json cannot decide a gate's policy or governance.
+// ~/.config/solumbe/config.json cannot decide a gate's policy or governance.
 function withEmptyUserConfig(t) {
   const saved = process.env.XDG_CONFIG_HOME;
-  process.env.XDG_CONFIG_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "otito-mcp-xdg-"));
+  process.env.XDG_CONFIG_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-mcp-xdg-"));
   t.after(() => {
     if (saved === undefined) delete process.env.XDG_CONFIG_HOME;
     else process.env.XDG_CONFIG_HOME = saved;
@@ -839,7 +839,7 @@ function withCwd(t, dir) {
 // Put a `gh` on PATH that answers the GitHub gate from canned JSON, keyed by
 // argument prefix, so a review_gate pr call runs evaluatePR end to end offline.
 function withFakeGh(t, responses) {
-  const bin = fs.mkdtempSync(path.join(os.tmpdir(), "otito-mcp-gh-"));
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-mcp-gh-"));
   const gh = path.join(bin, "gh");
   fs.writeFileSync(
     gh,
@@ -893,7 +893,7 @@ function ghPullRequests(fixture) {
 test("review_gate and review_verdict fill an omitted policy and governance from the gated repository's config", async (t) => {
   withEmptyUserConfig(t);
   const configured = makeGitRepoFixture("gate-config");
-  fs.writeFileSync(path.join(configured, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
+  fs.writeFileSync(path.join(configured, ".solumberc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
   const unconfigured = makeGitRepoFixture("gate-no-config");
   // The server runs inside the configured repository, so a lookup from its cwd
   // instead of the gated path would wrongly gate `unconfigured` as solo too.
@@ -909,7 +909,7 @@ test("review_gate and review_verdict fill an omitted policy and governance from 
   ]);
   const settings = (report) => ({ policy: report.policy, governance: report.governance });
 
-  assert.deepEqual(settings(structured(messages, 1)), { policy: "high-risk", governance: "solo" }, "the repository's .otitorc.json fills omitted arguments");
+  assert.deepEqual(settings(structured(messages, 1)), { policy: "high-risk", governance: "solo" }, "the repository's .solumberc.json fills omitted arguments");
   assert.deepEqual(settings(structured(messages, 2).pass), { policy: "high-risk", governance: "solo" }, "review_verdict gates under the same config");
   assert.deepEqual(settings(structured(messages, 3)), { policy: "standard", governance: "team" }, "an explicit argument still wins");
   assert.deepEqual(settings(structured(messages, 4)), { policy: "high-risk", governance: "solo" }, "a blank argument counts as omitted");
@@ -917,14 +917,14 @@ test("review_gate and review_verdict fill an omitted policy and governance from 
   assert.deepEqual(settings(structured(messages, 6)), { policy: "high-risk", governance: "solo" }, "no path gates the cwd under the cwd's config");
 });
 
-test("review_gate in PR mode applies the repository's solo governance, as `otito pass-pr` does", async (t) => {
-  // The 2026-09-26 split on PR #214: `otito pass-pr 214` read .otitorc.json and
+test("review_gate in PR mode applies the repository's solo governance, as `solumbe pass-pr` does", async (t) => {
+  // The 2026-09-26 split on PR #214: `solumbe pass-pr 214` read .solumberc.json and
   // warned on CODEOWNERS under solo governance, while review_gate { pr: "214" }
   // ignored it and failed CODEOWNERS under team governance.
   withEmptyUserConfig(t);
   const fixture = makeGitRepoFixture("gate-pr-config");
   writeFiles(fixture, {
-    ".otitorc.json": JSON.stringify({ governance: "solo" }),
+    ".solumberc.json": JSON.stringify({ governance: "solo" }),
     ".github/CODEOWNERS": "src/index.ts @alice\n",
   });
   withFakeGh(t, {
@@ -1050,7 +1050,7 @@ test("repo_map domain/kind/route filters fold in the retired find_* tools", asyn
 test("every legacy tool name still dispatches to a sane result via tools/call", async () => {
   const fixture = makeRepoFixture();
   const gitFixture = makeGitRepoFixture("legacy");
-  const catalogPath = path.join(os.tmpdir(), `otito-mcp-legacy-cat-${path.basename(fixture)}.json`);
+  const catalogPath = path.join(os.tmpdir(), `solumbe-mcp-legacy-cat-${path.basename(fixture)}.json`);
 
   // Seed the catalog so repo_catalog (no-query repo_search) has something to list.
   await runRequests([{ jsonrpc: "2.0", id: 0, method: "tools/call", params: { name: "repo_index", arguments: { paths: [fixture], catalog: catalogPath } } }]);

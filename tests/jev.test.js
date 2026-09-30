@@ -111,7 +111,7 @@ test("askSystemOne posts one call with a bearer key and a timeout, and reports u
   assert.equal(sent.init.headers.authorization, "Bearer test-key");
   // The call identifies its client and nothing else: no user, repo or key.
   assert.equal(sent.init.headers["user-agent"], JEV_USER_AGENT);
-  assert.match(JEV_USER_AGENT, /^otito\/\d+\.\d+\.\d+/);
+  assert.match(JEV_USER_AGENT, /^solumbe\/\d+\.\d+\.\d+/);
   assert.deepEqual(Object.keys(sent.init.headers).sort(), ["authorization", "content-type", "user-agent"]);
   assert.ok(sent.init.signal, "a hung vendor call must not hang the tool that made it");
   const body = JSON.parse(sent.init.body);

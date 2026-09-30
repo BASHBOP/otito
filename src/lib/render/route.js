@@ -1,8 +1,8 @@
-// Terminal and markdown rendering for `otito route`.
+// Terminal and markdown rendering for `solumbe route`.
 //
 // Kept apart from the scoring in `src/lib/model-route.js` so the arithmetic
 // stays readable on its own and the presentation can change without touching
-// it. Takes otito's renderer, so `--color`, `--no-color`, `--theme`, NO_COLOR
+// it. Takes solumbe's renderer, so `--color`, `--no-color`, `--theme`, NO_COLOR
 // and a piped stdout behave exactly as they do in every other command.
 
 import { DEMOTE_BELOW } from "../jev.js";
@@ -113,7 +113,7 @@ export function formatRouteTerminal(data, renderer) {
     out.push(renderer.section(`request read  ${dim("(reported, never scored)")}`, ""));
     for (const [label, answer] of /** @type {[string, any][]} */ ([
       ["intent", read.intent],
-      ["otito tool", read.capability],
+      ["solumbe tool", read.capability],
     ])) {
       if (!answer) {
         out.push(`    ${dim(label.padEnd(16))}${dim("no answer")}`);
@@ -176,7 +176,7 @@ export function formatRouteMarkdown(data) {
     `> ${data.request}`,
     "",
     noEvidence
-      ? `- **Tier**: no recommendation, otito matched no files (fails safe to ${scoring.tier})`
+      ? `- **Tier**: no recommendation, solumbe matched no files (fails safe to ${scoring.tier})`
       : `- **Tier**: ${scoring.tier}${scoring.tier === scoring.baseTier ? "" : ` (bumped from ${scoring.baseTier})`}`,
     `- **Route score**: ${scoring.route} / 100`,
     `- **Source**: ${data.model.source === "jev" ? data.model.model : "offline estimate, not calibrated"}`,
@@ -212,7 +212,7 @@ function formatReadMarkdown(read) {
     "Request read, reported and never scored:",
     "",
     `- **Intent**: ${choice(read.intent)}`,
-    `- **otito tool**: ${choice(read.capability)}`,
+    `- **solumbe tool**: ${choice(read.capability)}`,
     `- **Files the request needs**: ${files || "no answer"}`,
     "",
   ];

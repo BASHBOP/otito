@@ -48,7 +48,7 @@ function runHook(input, { timeout = 30000, env: extra = {} } = {}) {
     // because of what the developer's shell exports. And no test writes the
     // developer's real decision log.
     const { TYPESAFE_API_KEY: _key, ...env } = process.env;
-    const child = spawn(process.execPath, [HOOK], { stdio: ["pipe", "pipe", "pipe"], env: { ...env, OTITO_ROUTE_LOG: "off", ...extra } });
+    const child = spawn(process.execPath, [HOOK], { stdio: ["pipe", "pipe", "pipe"], env: { ...env, SOLUMBE_ROUTE_LOG: "off", ...extra } });
     let out = "";
     let err = "";
     const timer = setTimeout(() => child.kill("SIGKILL"), timeout);
@@ -96,7 +96,7 @@ test("what the harness submits on its own is not a request, so it routes nothing
 
 test("a reminder in front of a prompt is looked past, not taken as the prompt", () => {
   // Every logged prompt that opened with a reminder had a request behind it.
-  const request = `${REMINDER}\n\nIn the otito repo, the local gate gives a wrong repair hint`;
+  const request = `${REMINDER}\n\nIn the solumbe repo, the local gate gives a wrong repair hint`;
   assert.equal(isRoutable(request), true);
   assert.equal(isHarnessPrompt(request), false);
   assert.equal(isRoutable(`${REMINDER}\n${REMINDER}\n\nopen prs if needed let me know when to merge`), true, "two reminders, one request");
@@ -162,7 +162,7 @@ test("an accepted request read rides along; an unsure one stays out", () => {
     relevance: [],
   };
   const context = formatContext({ tier: "mid", scoring: { route: 60 }, model: { read } });
-  assert.match(context, /Request read \(TypeSafe Jev, advisory\): intent \*\*fix\*\* \(0\.93\), otito tool \*\*change_impact\*\* \(0\.61\)\./);
+  assert.match(context, /Request read \(TypeSafe Jev, advisory\): intent \*\*fix\*\* \(0\.93\), solumbe tool \*\*change_impact\*\* \(0\.61\)\./);
 
   const unsure = formatContext({
     tier: "mid",
@@ -203,7 +203,7 @@ test("a real request produces the documented hook output shape", async () => {
   const parsed = JSON.parse(out);
   assert.equal(parsed.hookSpecificOutput.hookEventName, "UserPromptSubmit");
   const context = parsed.hookSpecificOutput.additionalContext;
-  assert.match(context, /otito routed this request/);
+  assert.match(context, /solumbe routed this request/);
   // The host map is real, so the model id must be one of the three it holds.
   assert.match(context, /claude-(haiku-4-5-20251001|sonnet-5|opus-5)/);
 });
@@ -214,7 +214,7 @@ test("the decision record keeps what a rescore reads and never the prompt", () =
     hostModel: "claude-sonnet-5",
     scoring: { route: 61, baseTier: "mid" },
     deterministic: { tier: "cheap", route: 80 },
-    repo: { name: "otito", root: "/repo" },
+    repo: { name: "solumbe", root: "/repo" },
     signals: { ax: 72, containment: 55, candidates: 4, riskPaths: ["configuration"], evidence: [{ path: "src/a.js" }] },
     model: { source: "offline", model: "offline-heuristic", answers: { specificity: { score: 0.6 }, blast_radius: { score: 0.4 }, novelty: { noul: 0.1 } } },
     modelRouteEngineVersion: "0.1.0",
@@ -238,10 +238,10 @@ test("the decision record keeps what a rescore reads and never the prompt", () =
 });
 
 test("the decision log is on by default, movable, and off when asked", () => {
-  assert.match(routeLogPath({}), /\.otito[\\/]route-decisions\.jsonl$/);
-  assert.equal(routeLogPath({ OTITO_ROUTE_LOG: "off" }), null);
-  assert.equal(routeLogPath({ OTITO_ROUTE_LOG: "0" }), null);
-  assert.equal(routeLogPath({ OTITO_ROUTE_LOG: "/tmp/x.jsonl" }), path.resolve("/tmp/x.jsonl"));
+  assert.match(routeLogPath({}), /\.solumbe[\\/]route-decisions\.jsonl$/);
+  assert.equal(routeLogPath({ SOLUMBE_ROUTE_LOG: "off" }), null);
+  assert.equal(routeLogPath({ SOLUMBE_ROUTE_LOG: "0" }), null);
+  assert.equal(routeLogPath({ SOLUMBE_ROUTE_LOG: "/tmp/x.jsonl" }), path.resolve("/tmp/x.jsonl"));
   assert.equal(appendDecision({ v: 1 }, null), false, "off keeps nothing and says so");
 });
 
@@ -249,7 +249,7 @@ test("a routed prompt leaves one line in the decision log, and a skipped one lea
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "route-log-"));
   const log = path.join(dir, "nested", "route-decisions.jsonl");
   const prompt = "rename the variable running to score in model-route.js";
-  const { code } = await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt }, { env: { OTITO_ROUTE_LOG: log } });
+  const { code } = await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt }, { env: { SOLUMBE_ROUTE_LOG: log } });
   assert.equal(code, 0);
   const lines = fs.readFileSync(log, "utf8").trim().split("\n");
   assert.equal(lines.length, 1);
@@ -263,12 +263,12 @@ test("a routed prompt leaves one line in the decision log, and a skipped one lea
   assert.match(record.head ?? "", /^[0-9a-f]{12}$/, "the head at prompt time is kept");
   assert.doesNotMatch(lines[0], /rename the variable/);
 
-  await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt: "ok" }, { env: { OTITO_ROUTE_LOG: log } });
+  await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt: "ok" }, { env: { SOLUMBE_ROUTE_LOG: log } });
   assert.equal(fs.readFileSync(log, "utf8").trim().split("\n").length, 1, "a skipped prompt is not a decision");
 
   // The harness delivers a finished background task through the same event.
   for (const prompt of [TASK_NOTIFICATION, CI_MONITOR_EVENT, SHELL_RECORD]) {
-    const harness = await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt }, { env: { OTITO_ROUTE_LOG: log } });
+    const harness = await runHook({ hook_event_name: "UserPromptSubmit", session_id: "sess-42", cwd: REPO, prompt }, { env: { SOLUMBE_ROUTE_LOG: log } });
     assert.equal(harness.code, 0);
     assert.equal(harness.out, "", "no routing hint is injected for a prompt nobody wrote");
   }
@@ -285,21 +285,21 @@ test("a route with no evidence says no recommendation instead of routing", () =>
   });
   assert.match(context, /no recommendation/);
   assert.match(context, /Fail-safe tier: \*\*premium\*\* \(claude-opus-5-5\)/);
-  assert.doesNotMatch(context, /otito routed this request/);
+  assert.doesNotMatch(context, /solumbe routed this request/);
   assert.doesNotMatch(context, /launch it on/);
   assert.match(context, /Do not say the model was changed/);
 });
 
 test("enforce mode is off unless asked for, and splits requests into two stable arms", () => {
   assert.deepEqual(routeArm("fix the login bug", {}), { mode: "advisory", arm: "advisory", share: null });
-  const env = { OTITO_ROUTE_MODE: "delegate" };
+  const env = { SOLUMBE_ROUTE_MODE: "delegate" };
   const arms = Array.from({ length: 400 }, (_, i) => routeArm(`request ${i}`, env).arm);
   const delegated = arms.filter((a) => a === "delegate").length;
   assert.ok(delegated > 150 && delegated < 250, `about half delegate, got ${delegated}`);
   assert.ok(arms.every((a) => a === "delegate" || a === "control"));
   assert.equal(routeArm("same prompt", env).arm, routeArm("same prompt", env).arm);
-  assert.equal(routeArm("x", { ...env, OTITO_ROUTE_DELEGATE_SHARE: "1" }).arm, "delegate");
-  assert.equal(routeArm("x", { ...env, OTITO_ROUTE_DELEGATE_SHARE: "0" }).arm, "control");
+  assert.equal(routeArm("x", { ...env, SOLUMBE_ROUTE_DELEGATE_SHARE: "1" }).arm, "delegate");
+  assert.equal(routeArm("x", { ...env, SOLUMBE_ROUTE_DELEGATE_SHARE: "0" }).arm, "control");
 });
 
 test("the delegate arm hands the work to a subagent on the routed tier, and never claims a switch", () => {
@@ -323,15 +323,15 @@ test("a decision records its arm", () => {
   assert.equal(decisionRecord({ prompt: "p" }, { tier: "mid" }).arm, "advisory");
 });
 
-test("otito route reports the enforce arm in the terminal and in JSON", () => {
+test("solumbe route reports the enforce arm in the terminal and in JSON", () => {
   const CLI = path.join(REPO, "src", "cli.js");
   const { TYPESAFE_API_KEY: _key, ...env } = process.env;
   const run = (/** @type {string[]} */ args, /** @type {Record<string,string>} */ extra) =>
     spawnSync(process.execPath, [CLI, "route", REPO, "fix the route prompt hook arm", "--offline", ...args], { encoding: "utf8", env: { ...env, ...extra } });
   const off = JSON.parse(run(["--json"], {}).stdout);
   assert.equal(off.enforce, undefined);
-  const on = JSON.parse(run(["--json"], { OTITO_ROUTE_MODE: "delegate", OTITO_ROUTE_DELEGATE_SHARE: "1" }).stdout);
+  const on = JSON.parse(run(["--json"], { SOLUMBE_ROUTE_MODE: "delegate", SOLUMBE_ROUTE_DELEGATE_SHARE: "1" }).stdout);
   assert.equal(on.enforce.arm, "delegate");
   assert.equal(on.enforce.agentModel, AGENT_MODEL[on.tier]);
-  assert.match(run([], { OTITO_ROUTE_MODE: "delegate", OTITO_ROUTE_DELEGATE_SHARE: "1", NO_COLOR: "1" }).stdout, /ENFORCE/);
+  assert.match(run([], { SOLUMBE_ROUTE_MODE: "delegate", SOLUMBE_ROUTE_DELEGATE_SHARE: "1", NO_COLOR: "1" }).stdout, /ENFORCE/);
 });

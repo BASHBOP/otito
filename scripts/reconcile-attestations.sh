@@ -3,21 +3,21 @@
 # Missing first-parent commits are attested oldest-first so the hash chain
 # remains deterministic and complete even when a bot merge suppresses push CI.
 #
-# Runs against this checkout by default. OTITO_REPO, OTITO_BIN and
-# OTITO_LEDGER select another repository, otito command and ledger file; see
+# Runs against this checkout by default. SOLUMBE_REPO, SOLUMBE_BIN and
+# SOLUMBE_LEDGER select another repository, solumbe command and ledger file; see
 # post-merge-attest.sh, which this script drives.
 set -euo pipefail
 
 TOOL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ROOT="${OTITO_REPO:-$TOOL_ROOT}"
+ROOT="${SOLUMBE_REPO:-$TOOL_ROOT}"
 ROOT="$(cd "$ROOT" && pwd)"
-OTITO_BIN="${OTITO_BIN:-node $TOOL_ROOT/src/cli.js}"
+SOLUMBE_BIN="${SOLUMBE_BIN:-node $TOOL_ROOT/src/cli.js}"
 cd "$ROOT"
 
-# OTITO_TARGET_SHA first: in Actions, GITHUB_SHA is the runner's own value and
+# SOLUMBE_TARGET_SHA first: in Actions, GITHUB_SHA is the runner's own value and
 # cannot be overridden by the workflow. GITHUB_SHA remains for standalone use.
-TARGET_SHA="${OTITO_TARGET_SHA:-${GITHUB_SHA:-$(git rev-parse HEAD)}}"
-LEDGER="${OTITO_LEDGER:-$ROOT/audit-pilot/ledger.jsonl}"
+TARGET_SHA="${SOLUMBE_TARGET_SHA:-${GITHUB_SHA:-$(git rev-parse HEAD)}}"
+LEDGER="${SOLUMBE_LEDGER:-$ROOT/audit-pilot/ledger.jsonl}"
 
 git rev-parse --verify "${TARGET_SHA}^{commit}" >/dev/null
 
@@ -37,7 +37,7 @@ LAST_SHA="$(printf '%s\n' "$LEDGER_SHAS" | tail -n 1)"
 # and must not be diagnosed as one: `git rev-list A..B` on commits that do not
 # exist fails with "Invalid revision range" and exit 128, which reads like a
 # broken script rather than a ledger bound to a history that no longer exists.
-# That is what a rename or a history rewrite leaves behind — otito's ledger
+# That is what a rename or a history rewrite leaves behind — solumbe's ledger
 # still chained against repoctx's commits, so every real run died at exit 128
 # while runs that resolved no merge skipped and reported success.
 #
@@ -60,7 +60,7 @@ if [ -n "$FIRST_SHA" ]; then
 fi
 
 if [ -n "$ORPHANED" ]; then
-  if [ "${OTITO_ATTEST_RESET_LEDGER:-0}" = "1" ]; then
+  if [ "${SOLUMBE_ATTEST_RESET_LEDGER:-0}" = "1" ]; then
     # Deliberate, opt-in restart. The superseded chain is NOT deleted: it stays
     # in the history of whatever branch carries it, and is archived beside the
     # new one so an auditor can still verify it on its own terms.
@@ -85,7 +85,7 @@ if [ -n "$ORPHANED" ]; then
     echo "  which a rename or a history rewrite will do. Nothing here is recoverable" >&2
     echo "  by retrying: the commits it attests are gone." >&2
     echo "  To archive the superseded chain and start a new one at the current tip:" >&2
-    echo "    OTITO_ATTEST_RESET_LEDGER=1 bash scripts/reconcile-attestations.sh" >&2
+    echo "    SOLUMBE_ATTEST_RESET_LEDGER=1 bash scripts/reconcile-attestations.sh" >&2
     echo "  or run the Post-merge audit attestation workflow by hand with reset_ledger=true." >&2
     exit 1
   fi
@@ -117,7 +117,7 @@ else
 fi
 if [ -z "$COMMITS" ]; then
   echo "reconcile-attestations: ledger already covers $TARGET_SHA"
-  $OTITO_BIN attest . --verify --ledger "$LEDGER"
+  $SOLUMBE_BIN attest . --verify --ledger "$LEDGER"
   exit 0
 fi
 
@@ -128,7 +128,7 @@ for MERGE_SHA in $COMMITS; do
     BASE_SHA="$MERGE_SHA"
   fi
 
-  if [ "${OTITO_ATTEST_DRY_RUN:-0}" = "1" ]; then
+  if [ "${SOLUMBE_ATTEST_DRY_RUN:-0}" = "1" ]; then
     echo "$MERGE_SHA"
     continue
   fi
@@ -138,16 +138,16 @@ for MERGE_SHA in $COMMITS; do
     ATTEST_MODE="auto"
   fi
 
-  OTITO_ATTEST_MODE="$ATTEST_MODE" \
-    OTITO_REPO="$ROOT" \
-    OTITO_BIN="$OTITO_BIN" \
-    OTITO_LEDGER="$LEDGER" \
-    OTITO_TARGET_SHA="$MERGE_SHA" \
+  SOLUMBE_ATTEST_MODE="$ATTEST_MODE" \
+    SOLUMBE_REPO="$ROOT" \
+    SOLUMBE_BIN="$SOLUMBE_BIN" \
+    SOLUMBE_LEDGER="$LEDGER" \
+    SOLUMBE_TARGET_SHA="$MERGE_SHA" \
     GITHUB_SHA="$MERGE_SHA" \
     GITHUB_EVENT_BEFORE="$BASE_SHA" \
     bash "$TOOL_ROOT/scripts/post-merge-attest.sh"
 done
 
-if [ "${OTITO_ATTEST_DRY_RUN:-0}" != "1" ]; then
-  $OTITO_BIN attest . --verify --ledger "$LEDGER"
+if [ "${SOLUMBE_ATTEST_DRY_RUN:-0}" != "1" ]; then
+  $SOLUMBE_BIN attest . --verify --ledger "$LEDGER"
 fi

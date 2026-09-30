@@ -9,7 +9,7 @@ const coloured = () => createRenderer({ color: true, emoji: false });
 
 test("every line of the source report still reaches the terminal", () => {
   // The whole contract of this renderer is that it changes presentation and
-  // never content, so anything that greps otito's output keeps working.
+  // never content, so anything that greps solumbe's output keeps working.
   const markdown = [
     "# Report Name",
     "",

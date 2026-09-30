@@ -8,21 +8,21 @@ import { PassThrough } from "node:stream";
 import { canvasEvent, canvasIngestUrl, forwardToCanvas, REQUEST_ARGUMENT } from "../src/lib/canvas-tap.js";
 import { startMcpServer, tools } from "../src/lib/mcp.js";
 
-test("the tap is off unless OTITO_CANVAS_URL names a loopback http address", () => {
+test("the tap is off unless SOLUMBE_CANVAS_URL names a loopback http address", () => {
   assert.equal(canvasIngestUrl({}), null, "unset means off");
-  assert.equal(canvasIngestUrl({ OTITO_CANVAS_URL: "  " }), null);
-  assert.equal(canvasIngestUrl({ OTITO_CANVAS_URL: "not a url" }), null);
-  assert.equal(canvasIngestUrl({ OTITO_CANVAS_URL: "http://example.com:7801" }), null, "a remote host would receive unreleased work");
-  assert.equal(canvasIngestUrl({ OTITO_CANVAS_URL: "http://10.0.0.5:7801" }), null);
-  assert.equal(canvasIngestUrl({ OTITO_CANVAS_URL: "https://127.0.0.1:7801" }), null, "the canvas serves plain http on loopback");
+  assert.equal(canvasIngestUrl({ SOLUMBE_CANVAS_URL: "  " }), null);
+  assert.equal(canvasIngestUrl({ SOLUMBE_CANVAS_URL: "not a url" }), null);
+  assert.equal(canvasIngestUrl({ SOLUMBE_CANVAS_URL: "http://example.com:7801" }), null, "a remote host would receive unreleased work");
+  assert.equal(canvasIngestUrl({ SOLUMBE_CANVAS_URL: "http://10.0.0.5:7801" }), null);
+  assert.equal(canvasIngestUrl({ SOLUMBE_CANVAS_URL: "https://127.0.0.1:7801" }), null, "the canvas serves plain http on loopback");
 
-  assert.equal(canvasIngestUrl({ OTITO_CANVAS_URL: "http://127.0.0.1:7801" })?.href, "http://127.0.0.1:7801/ingest");
-  assert.equal(canvasIngestUrl({ OTITO_CANVAS_URL: "http://localhost:7801/" })?.href, "http://localhost:7801/ingest");
-  assert.equal(canvasIngestUrl({ OTITO_CANVAS_URL: "http://[::1]:7801" })?.href, "http://[::1]:7801/ingest");
+  assert.equal(canvasIngestUrl({ SOLUMBE_CANVAS_URL: "http://127.0.0.1:7801" })?.href, "http://127.0.0.1:7801/ingest");
+  assert.equal(canvasIngestUrl({ SOLUMBE_CANVAS_URL: "http://localhost:7801/" })?.href, "http://localhost:7801/ingest");
+  assert.equal(canvasIngestUrl({ SOLUMBE_CANVAS_URL: "http://[::1]:7801" })?.href, "http://[::1]:7801/ingest");
 });
 
 test("only a tool that carries a plain-English request is forwarded, and only its text", () => {
-  const env = { OTITO_HOST: "cursor" };
+  const env = { SOLUMBE_HOST: "cursor" };
   assert.deepEqual(canvasEvent("context_pack", { query: "  add a flag  ", path: "/secret/repo" }, env), {
     request: "add a flag",
     source: "cursor",
@@ -39,7 +39,7 @@ test("only a tool that carries a plain-English request is forwarded, and only it
   assert.equal(canvasEvent("context_pack", { query: "   " }, env), null);
   assert.equal(canvasEvent("review_gate", { request: 42 }, env), null);
 
-  const long = canvasEvent("context_pack", { query: "x".repeat(10_000) }, { OTITO_HOST: "h".repeat(100) });
+  const long = canvasEvent("context_pack", { query: "x".repeat(10_000) }, { SOLUMBE_HOST: "h".repeat(100) });
   assert.equal(long?.request.length, 4000);
   assert.equal(long?.source.length, 32);
 });
@@ -54,7 +54,7 @@ test("every request-bearing argument the tap reads exists on that MCP tool", () 
 });
 
 test("forwardToCanvas posts the event, and a failing canvas never throws", async () => {
-  const env = { OTITO_CANVAS_URL: "http://127.0.0.1:7801", OTITO_HOST: "vscode" };
+  const env = { SOLUMBE_CANVAS_URL: "http://127.0.0.1:7801", SOLUMBE_HOST: "vscode" };
   const sent = [];
   const ok = await forwardToCanvas(
     "model_route",
@@ -137,23 +137,23 @@ test("an MCP tool call reaches a live canvas without waiting on it", async (t) =
     return send;
   };
 
-  const saved = { url: process.env.OTITO_CANVAS_URL, host: process.env.OTITO_HOST };
-  process.env.OTITO_CANVAS_URL = canvasUrl;
-  process.env.OTITO_HOST = "cursor";
+  const saved = { url: process.env.SOLUMBE_CANVAS_URL, host: process.env.SOLUMBE_HOST };
+  process.env.SOLUMBE_CANVAS_URL = canvasUrl;
+  process.env.SOLUMBE_HOST = "cursor";
   t.after(() => {
     release();
     canvas.close();
     globalThis.fetch = savedFetch;
     for (const [key, value] of [
-      ["OTITO_CANVAS_URL", saved.url],
-      ["OTITO_HOST", saved.host],
+      ["SOLUMBE_CANVAS_URL", saved.url],
+      ["SOLUMBE_HOST", saved.host],
     ]) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
     }
   });
 
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-canvas-tap-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-canvas-tap-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "tap-fixture", scripts: { test: "node --test" } }));
   fs.mkdirSync(path.join(fixture, "src"));
   fs.writeFileSync(path.join(fixture, "src", "flags.js"), "export const quiet = false;\n");

@@ -17,7 +17,7 @@ function makeRepo(name) {
 const cachePathFor = (root) => getCodeMapCachePath(root);
 
 test("getCachedCodeMap writes and reuses an index outside the inspected repository", () => {
-  const root = makeRepo("otito-index-");
+  const root = makeRepo("solumbe-index-");
 
   const first = getCachedCodeMap(root);
   const second = getCachedCodeMap(root);
@@ -27,11 +27,11 @@ test("getCachedCodeMap writes and reuses an index outside the inspected reposito
   assert.equal(second.repo.name, "cached-repo");
   assert.ok(fs.existsSync(cachePathFor(root)));
   assert.equal(first.cache.path, cachePathFor(root));
-  assert.ok(!fs.existsSync(path.join(root, ".otito")), "mapping a repository must not create a working-tree artifact");
+  assert.ok(!fs.existsSync(path.join(root, ".solumbe")), "mapping a repository must not create a working-tree artifact");
 });
 
 test("regenerates when a file changes (fingerprint staleness)", () => {
-  const root = makeRepo("otito-index-stale-");
+  const root = makeRepo("solumbe-index-stale-");
 
   const first = getCachedCodeMap(root);
   assert.equal(first.cache.hit, false);
@@ -51,7 +51,7 @@ test("regenerates when a file changes (fingerprint staleness)", () => {
 });
 
 test("regenerates (without throwing) when the cache file is corrupted JSON", () => {
-  const root = makeRepo("otito-index-corrupt-");
+  const root = makeRepo("solumbe-index-corrupt-");
   const cachePath = cachePathFor(root);
   fs.mkdirSync(path.dirname(cachePath), { recursive: true });
   fs.writeFileSync(cachePath, "{ this is not: valid json ]]]");
@@ -71,7 +71,7 @@ test("regenerates (without throwing) when the cache file is corrupted JSON", () 
 });
 
 test("a stale cacheVersion on disk is ignored on the first read of a repo", () => {
-  const root = makeRepo("otito-index-version-fresh-");
+  const root = makeRepo("solumbe-index-version-fresh-");
   const cachePath = cachePathFor(root);
 
   // Write a structurally valid cache with an old version BEFORE any call for
@@ -89,7 +89,7 @@ test("a stale cacheVersion on disk is ignored on the first read of a repo", () =
 });
 
 test("writes the cache atomically and leaves no temp files behind", () => {
-  const root = makeRepo("otito-index-atomic-");
+  const root = makeRepo("solumbe-index-atomic-");
   const result = getCachedCodeMap(root);
   assert.equal(result.cache.hit, false);
 
@@ -104,7 +104,7 @@ test("writes the cache atomically and leaves no temp files behind", () => {
 });
 
 test("write failures do not throw and the call still returns a map", () => {
-  const root = makeRepo("otito-index-writefail-");
+  const root = makeRepo("solumbe-index-writefail-");
   // Make the external cache directory a file so mkdir/write underneath fails.
   fs.mkdirSync(path.dirname(path.dirname(cachePathFor(root))), { recursive: true });
   fs.writeFileSync(path.dirname(cachePathFor(root)), "not a directory");
@@ -115,11 +115,11 @@ test("write failures do not throw and the call still returns a map", () => {
   });
   assert.equal(result.cache.hit, false);
   assert.equal(result.repo.name, "cached-repo", "a failed cache write still returns a freshly generated map");
-  assert.ok(!fs.existsSync(path.join(root, ".otito")), "a failed cache write must not fall back to the repository");
+  assert.ok(!fs.existsSync(path.join(root, ".solumbe")), "a failed cache write must not fall back to the repository");
 });
 
 test("repeated calls are served from the in-process memo without re-reading disk", () => {
-  const root = makeRepo("otito-index-memo-");
+  const root = makeRepo("solumbe-index-memo-");
 
   const first = getCachedCodeMap(root);
   assert.equal(first.cache.hit, false);
@@ -138,7 +138,7 @@ test("repeated calls are served from the in-process memo without re-reading disk
 });
 
 test("memo returns equivalent repo data across calls", () => {
-  const root = makeRepo("otito-index-memo-eq-");
+  const root = makeRepo("solumbe-index-memo-eq-");
   const first = getCachedCodeMap(root);
   const second = getCachedCodeMap(root);
   assert.equal(second.cache.source, "memo");
@@ -166,7 +166,7 @@ function poisonIndexWithCapabilities(root, capabilities) {
 }
 
 test("an index written by an indexer with different capabilities is rebuilt", () => {
-  const root = makeRepo("otito-index-capability-");
+  const root = makeRepo("solumbe-index-capability-");
   poisonIndexWithCapabilities(root, "cap1:0000000000000000");
 
   const result = getCachedCodeMap(root);
@@ -177,7 +177,7 @@ test("an index written by an indexer with different capabilities is rebuilt", ()
 });
 
 test("an index written before capabilities were recorded is rebuilt", () => {
-  const root = makeRepo("otito-index-capability-absent-");
+  const root = makeRepo("solumbe-index-capability-absent-");
   // Exactly what every index written before this field existed looks like:
   // right version, right fingerprint, no capability signature at all.
   poisonIndexWithCapabilities(root, undefined);
@@ -191,7 +191,7 @@ test("an index written before capabilities were recorded is rebuilt", () => {
 test("a matching capability signature is still a hit", () => {
   // The guard must reject stale indexers without rejecting good ones: the
   // same repository under the same indexer stays a disk hit across processes.
-  const root = makeRepo("otito-index-capability-match-");
+  const root = makeRepo("solumbe-index-capability-match-");
   const first = getCachedCodeMap(root);
   assert.equal(first.cache.hit, false);
 
@@ -202,7 +202,7 @@ test("a matching capability signature is still a hit", () => {
 });
 
 test("the written index records the capability signature", () => {
-  const root = makeRepo("otito-index-capability-write-");
+  const root = makeRepo("solumbe-index-capability-write-");
   const result = getCachedCodeMap(root);
   assert.equal(result.cache.hit, false);
   assert.equal(result.cache.capabilities, codeMapCapabilitySignature());
@@ -217,7 +217,7 @@ test("the written index records the capability signature", () => {
 // records. Every README/skill/doc request then matched nothing, the `no
 // evidence` fail-safe fired, and a one-line typo fix routed to premium.
 test("a pre-markdown index is rebuilt even though version and fingerprint still match", () => {
-  const root = makeRepo("otito-index-premarkdown-");
+  const root = makeRepo("solumbe-index-premarkdown-");
   fs.writeFileSync(path.join(root, "README.md"), "# cached-repo\n\nA README with a typo.\n");
 
   const fresh = getCachedCodeMap(root);
@@ -257,7 +257,7 @@ test("a pre-markdown index is rebuilt even though version and fingerprint still 
 // Without the capability check, the same setup is served verbatim — this pins
 // the failure mode so a future refactor cannot quietly reintroduce it.
 test("fingerprint alone cannot detect an indexer change", () => {
-  const root = makeRepo("otito-index-fingerprint-blind-");
+  const root = makeRepo("solumbe-index-fingerprint-blind-");
   fs.writeFileSync(path.join(root, "README.md"), "# cached-repo\n");
 
   const first = getCachedCodeMap(root);

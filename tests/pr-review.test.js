@@ -21,8 +21,8 @@ test("generatePrReview summarizes branch diff with risk and test hints", () => {
   assert.match(result.markdown, /## Changed Files/);
 
   const comment = formatPrCommentMarkdown(result.data);
-  assert.match(comment, /<!-- otito-pr-review -->/);
-  assert.match(comment, /otito PR Review/);
+  assert.match(comment, /<!-- solumbe-pr-review -->/);
+  assert.match(comment, /solumbe PR Review/);
   assert.match(comment, /Risky Files/);
 });
 
@@ -57,7 +57,7 @@ test("generatePrReview hints the headless end-to-end script when the package has
 
 test("generatePrReview can create a sticky PR comment through gh", () => {
   const fixture = createPrFixture();
-  const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gh-"));
+  const fakeBin = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-gh-"));
   const fakeGh = path.join(fakeBin, "gh");
   fs.writeFileSync(
     fakeGh,
@@ -70,23 +70,23 @@ test("generatePrReview can create a sticky PR comment through gh", () => {
       "  process.exit(0);",
       "}",
       "if (args[0] === 'repo' && args[1] === 'view') {",
-      "  console.log(JSON.stringify({ nameWithOwner: 'example/otito' }));",
+      "  console.log(JSON.stringify({ nameWithOwner: 'example/solumbe' }));",
       "  process.exit(0);",
       "}",
       "if (args[0] === 'api') {",
       "  const endpoint = args[1];",
-      "  if (endpoint === 'repos/example/otito/pulls/123/comments') {",
+      "  if (endpoint === 'repos/example/solumbe/pulls/123/comments') {",
       "    console.log('[]');",
       "    process.exit(0);",
       "  }",
-      "  if (endpoint === 'repos/example/otito/issues/123/comments?per_page=100') {",
+      "  if (endpoint === 'repos/example/solumbe/issues/123/comments?per_page=100') {",
       "    console.log('[]');",
       "    process.exit(0);",
       "  }",
-      "  if (endpoint === 'repos/example/otito/issues/123/comments') {",
+      "  if (endpoint === 'repos/example/solumbe/issues/123/comments') {",
       "    const inputPath = args[args.indexOf('--input') + 1];",
       "    const payload = JSON.parse(fs.readFileSync(inputPath, 'utf8'));",
-      "    if (!payload.body.includes('<!-- otito-pr-review -->')) process.exit(2);",
+      "    if (!payload.body.includes('<!-- solumbe-pr-review -->')) process.exit(2);",
       "    console.log(JSON.stringify({ id: 77, html_url: 'https://example.test/comment' }));",
       "    process.exit(0);",
       "  }",
@@ -185,7 +185,7 @@ test("generatePrReview still scores money flow when the service itself changes",
 });
 
 function createSpecOnlyFixture({ withService = false } = {}) {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-spec-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-pr-spec-"));
   fs.mkdirSync(path.join(fixture, "tests"), { recursive: true });
   fs.mkdirSync(path.join(fixture, "src", "payment"), { recursive: true });
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
@@ -221,7 +221,7 @@ test("generatePrReview omits the raw package.json scripts map from the result pa
 });
 
 function createSubstringRiskFixture() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-tokens-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-pr-tokens-"));
   fs.mkdirSync(path.join(fixture, "src", "lib"), { recursive: true });
   fs.writeFileSync(
     path.join(fixture, "package.json"),
@@ -243,7 +243,7 @@ function createSubstringRiskFixture() {
 }
 
 function createAuthRiskFixture() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-auth-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-pr-auth-"));
   fs.mkdirSync(path.join(fixture, "src", "auth"), { recursive: true });
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
   fs.writeFileSync(
@@ -262,7 +262,7 @@ function createAuthRiskFixture() {
 }
 
 function createPrFixture(scripts = { lint: "eslint .", test: "node --test" }) {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-pr-"));
   fs.mkdirSync(path.join(fixture, "src", "booking"), { recursive: true });
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts }));
   fs.writeFileSync(
@@ -292,7 +292,7 @@ function createPrFixture(scripts = { lint: "eslint .", test: "node --test" }) {
 }
 
 function createGoPrFixture() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-go-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-pr-go-"));
   fs.mkdirSync(path.join(fixture, "internal", "githubpr"), { recursive: true });
   fs.writeFileSync(path.join(fixture, "go.mod"), "module example.com/pullpass\n\ngo 1.22\n");
   fs.writeFileSync(
@@ -317,7 +317,7 @@ function createGoPrFixture() {
 }
 
 function createDeletedGoTestFixture() {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-pr-go-deleted-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-pr-go-deleted-"));
   fs.mkdirSync(path.join(fixture, "internal", "githubpr"), { recursive: true });
   fs.writeFileSync(path.join(fixture, "go.mod"), "module example.com/pullpass\n\ngo 1.22\n");
   fs.writeFileSync(path.join(fixture, "internal", "githubpr", "evaluate.go"), "package githubpr\n");

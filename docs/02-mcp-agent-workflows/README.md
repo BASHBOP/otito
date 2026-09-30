@@ -1,23 +1,23 @@
 # MCP and Agent Workflows
 
-otito can run as a stdio MCP server so agent hosts can ask for repository context without scraping terminal output.
+solumbe can run as a stdio MCP server so agent hosts can ask for repository context without scraping terminal output.
 
 ---
 
 ## Start The Server
 
-Install the published package when you want Otito available as a local command:
+Install the published package when you want Solumbe available as a local command:
 
 ```bash
-npm install -g @bashbop/otito
-otito doctor
+npm install -g @bashbop/solumbe
+solumbe doctor
 ```
 
 Or start from a local checkout:
 
 ```bash
-git clone https://github.com/BASHBOP/otito.git
-cd otito && npm ci
+git clone https://github.com/BASHBOP/solumbe.git
+cd solumbe && npm ci
 node src/cli.js doctor
 ```
 
@@ -31,14 +31,14 @@ From a local checkout:
 node src/cli.js mcp
 ```
 
-The MCP server uses stdio. The agent host starts `otito mcp` as a child process and speaks JSON-RPC over standard input and output.
+The MCP server uses stdio. The agent host starts `solumbe mcp` as a child process and speaks JSON-RPC over standard input and output.
 
 ---
 
 ## MCP Client Examples
 
-Use the installed `otito` binary where available. A local checkout is equally
-valid when you are developing Otito itself.
+Use the installed `solumbe` binary where available. A local checkout is equally
+valid when you are developing Solumbe itself.
 
 ### Generic stdio client
 
@@ -47,9 +47,9 @@ Many MCP clients use this shape:
 ```json
 {
   "mcpServers": {
-    "otito": {
+    "solumbe": {
       "command": "node",
-      "args": ["/absolute/path/to/otito/src/cli.js", "mcp"],
+      "args": ["/absolute/path/to/solumbe/src/cli.js", "mcp"],
       "env": {}
     }
   }
@@ -63,16 +63,16 @@ For a local checkout instead of a global install:
 ```json
 {
   "mcpServers": {
-    "otito": {
+    "solumbe": {
       "command": "node",
-      "args": ["/path/to/otito/src/cli.js", "mcp"],
+      "args": ["/path/to/solumbe/src/cli.js", "mcp"],
       "env": {}
     }
   }
 }
 ```
 
-Keep `/path/to/otito` as a private local path. Do not commit machine-specific absolute paths to public documentation or shared repositories.
+Keep `/path/to/solumbe` as a private local path. Do not commit machine-specific absolute paths to public documentation or shared repositories.
 
 ### Claude Desktop
 
@@ -86,9 +86,9 @@ Claude Desktop uses `claude_desktop_config.json` with a top-level `mcpServers` o
 ```json
 {
   "mcpServers": {
-    "otito": {
+    "solumbe": {
       "type": "stdio",
-      "command": "otito",
+      "command": "solumbe",
       "args": ["mcp"],
       "env": {}
     }
@@ -96,7 +96,7 @@ Claude Desktop uses `claude_desktop_config.json` with a top-level `mcpServers` o
 }
 ```
 
-After editing the config, fully restart Claude Desktop. If the server does not appear, run `otito doctor` and `otito mcp` manually in a terminal first, then check the MCP logs for the host.
+After editing the config, fully restart Claude Desktop. If the server does not appear, run `solumbe doctor` and `solumbe mcp` manually in a terminal first, then check the MCP logs for the host.
 
 Reference: [Model Context Protocol local server guide](https://modelcontextprotocol.io/docs/develop/connect-local-servers).
 
@@ -109,9 +109,9 @@ VS Code uses a top-level `servers` object:
 ```json
 {
   "servers": {
-    "otito": {
+    "solumbe": {
       "type": "stdio",
-      "command": "otito",
+      "command": "solumbe",
       "args": ["mcp"]
     }
   }
@@ -140,8 +140,8 @@ Cursor uses `mcp.json` with a top-level `mcpServers` object.
 ```json
 {
   "mcpServers": {
-    "otito": {
-      "command": "otito",
+    "solumbe": {
+      "command": "solumbe",
       "args": ["mcp"],
       "env": {}
     }
@@ -149,20 +149,20 @@ Cursor uses `mcp.json` with a top-level `mcpServers` object.
 }
 ```
 
-Use a project config when otito should only be available for one workspace. Use a global config only when you want the server available across projects. Project `.cursor/mcp.json` is local editor config and is not committed in this repository.
+Use a project config when solumbe should only be available for one workspace. Use a global config only when you want the server available across projects. Project `.cursor/mcp.json` is local editor config and is not committed in this repository.
 
 Reference: [Cursor MCP docs](https://docs.cursor.com/context/mcp).
 
 ### Gemini CLI
 
-Gemini CLI supports stdio MCP servers. Add Otito to user-level
+Gemini CLI supports stdio MCP servers. Add Solumbe to user-level
 `~/.gemini/settings.json` or project-level `.gemini/settings.json`:
 
 ```json
 {
   "mcpServers": {
-    "otito": {
-      "command": "otito",
+    "solumbe": {
+      "command": "solumbe",
       "args": ["mcp"]
     }
   }
@@ -170,21 +170,21 @@ Gemini CLI supports stdio MCP servers. Add Otito to user-level
 ```
 
 Restart Gemini CLI and run `gemini mcp list` (or `/mcp list`) to confirm the
-server is connected. Gemini CLI also supports Skills, so use the Otito trusted
+server is connected. Gemini CLI also supports Skills, so use the Solumbe trusted
 agent workflow before asking it to edit code.
 
 Reference: [Gemini CLI MCP servers](https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md).
 
 ### Kimi Code CLI
 
-Kimi Code CLI supports stdio MCP servers. Add Otito to the user-level
+Kimi Code CLI supports stdio MCP servers. Add Solumbe to the user-level
 `~/.kimi-code/mcp.json` or project-level `.kimi-code/mcp.json` file:
 
 ```json
 {
   "mcpServers": {
-    "otito": {
-      "command": "otito",
+    "solumbe": {
+      "command": "solumbe",
       "args": ["mcp"]
     }
   }
@@ -198,14 +198,14 @@ Reference: [Kimi Code CLI MCP support](https://www.kimi.com/code/docs/en/kimi-co
 
 ### Grok
 
-Grok custom MCP connectors use a publicly reachable MCP endpoint. Otito's
-local `otito mcp` command is stdio-only, so it must **not** be exposed through
-a local tunnel by default. Until Otito offers a reviewed remote MCP deployment,
+Grok custom MCP connectors use a publicly reachable MCP endpoint. Solumbe's
+local `solumbe mcp` command is stdio-only, so it must **not** be exposed through
+a local tunnel by default. Until Solumbe offers a reviewed remote MCP deployment,
 use the structured-handoff path instead:
 
 ```bash
-otito context "<task>" --path . --out .otito/context-pack.md
-otito pr . --base origin/main --out .otito/pr-review.md
+solumbe context "<task>" --path . --out .solumbe/context-pack.md
+solumbe pr . --base origin/main --out .solumbe/pr-review.md
 ```
 
 Share only a sanitised summary or approved artifact with Grok. A future remote
@@ -219,8 +219,8 @@ Reference: [Grok custom MCP connectors](https://docs.x.ai/grok/connectors).
 Codex CLI starts stdio MCP servers from `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.otito]
-command = "otito"
+[mcp_servers.solumbe]
+command = "solumbe"
 args = ["mcp"]
 ```
 
@@ -228,7 +228,7 @@ args = ["mcp"]
 
 ChatGPT reaches MCP servers through connectors that call a remote endpoint; it
 does not start a local stdio process. The Grok guidance above applies
-unchanged: do not tunnel `otito mcp` to the internet. Use Codex CLI for direct
+unchanged: do not tunnel `solumbe mcp` to the internet. Use Codex CLI for direct
 tool access, or hand ChatGPT a reviewed artifact from the structured-handoff
 commands.
 
@@ -237,15 +237,15 @@ commands.
 ## Realtime Canvas and model routing (opt-in)
 
 Two environment variables in a host's MCP config let that host appear on a
-local Otito Realtime Canvas, an observer that listens on `127.0.0.1` and shows
+local Solumbe Realtime Canvas, an observer that listens on `127.0.0.1` and shows
 each request becoming an intent, a context, a tier and a result. A third lets
 `model_route` ask a calibrated model. All three are off unless set.
 
 | Variable | Effect |
 | --- | --- |
-| `OTITO_CANVAS_URL` | Forward each request-bearing tool call (`context_pack`, `change_impact`, `agent_experience`, `model_route`, `convergence_score`, `review_gate`, `review_verdict`) to the canvas at this address. Loopback `http` only; any other address is ignored. |
-| `OTITO_HOST` | The label the canvas shows for this host, e.g. `cursor`. Defaults to `mcp`. |
-| `TYPESAFE_API_KEY` | Lets `model_route` ask TypeSafe's Jev for its read of the request. Without it the read is a labelled offline estimate. Billed by TypeSafe. Calls identify themselves as `otito/<version>` and nothing else. |
+| `SOLUMBE_CANVAS_URL` | Forward each request-bearing tool call (`context_pack`, `change_impact`, `agent_experience`, `model_route`, `convergence_score`, `review_gate`, `review_verdict`) to the canvas at this address. Loopback `http` only; any other address is ignored. |
+| `SOLUMBE_HOST` | The label the canvas shows for this host, e.g. `cursor`. Defaults to `mcp`. |
+| `TYPESAFE_API_KEY` | Lets `model_route` ask TypeSafe's Jev for its read of the request. Without it the read is a labelled offline estimate. Billed by TypeSafe. Calls identify themselves as `solumbe/<version>` and nothing else. |
 
 The tap sends the request text, the tool name and the host label. It never
 sends a tool result, a path argument or file contents, and it never waits for
@@ -256,10 +256,10 @@ Cursor (`~/.cursor/mcp.json`):
 ```json
 {
   "mcpServers": {
-    "otito": {
-      "command": "otito",
+    "solumbe": {
+      "command": "solumbe",
       "args": ["mcp"],
-      "env": { "OTITO_CANVAS_URL": "http://127.0.0.1:7801", "OTITO_HOST": "cursor" }
+      "env": { "SOLUMBE_CANVAS_URL": "http://127.0.0.1:7801", "SOLUMBE_HOST": "cursor" }
     }
   }
 }
@@ -270,11 +270,11 @@ VS Code (`.vscode/mcp.json`):
 ```json
 {
   "servers": {
-    "otito": {
+    "solumbe": {
       "type": "stdio",
-      "command": "otito",
+      "command": "solumbe",
       "args": ["mcp"],
-      "env": { "OTITO_CANVAS_URL": "http://127.0.0.1:7801", "OTITO_HOST": "vscode" }
+      "env": { "SOLUMBE_CANVAS_URL": "http://127.0.0.1:7801", "SOLUMBE_HOST": "vscode" }
     }
   }
 }
@@ -283,10 +283,10 @@ VS Code (`.vscode/mcp.json`):
 Codex CLI (`~/.codex/config.toml`):
 
 ```toml
-[mcp_servers.otito]
-command = "otito"
+[mcp_servers.solumbe]
+command = "solumbe"
 args = ["mcp"]
-env = { OTITO_CANVAS_URL = "http://127.0.0.1:7801", OTITO_HOST = "codex" }
+env = { SOLUMBE_CANVAS_URL = "http://127.0.0.1:7801", SOLUMBE_HOST = "codex" }
 ```
 
 Claude Desktop takes the same `env` object as Cursor. Claude Code already
@@ -299,13 +299,13 @@ commit.
 
 ## MCP Tool Surface
 
-Òtítọ́ exposes **14** MCP tools for deterministic repository context and merge evidence.
+Solumbe exposes **14** MCP tools for deterministic repository context and merge evidence.
 
 | Tool               | Purpose                                                                               |
 | ------------------ | ------------------------------------------------------------------------------------- |
 | `repo_inspect`     | Inspect repository shape, scripts, package managers, entrypoints, and git state       |
 | `repo_map`         | Build a compact JSON code map with optional domain, kind, and route filters (TS/JS, Go, C#, Python, Java, Ruby, Rust) |
-| `repo_index`       | Generate local `.otito/index.json` files and catalog entries; `dryRun:true` discovers read-only |
+| `repo_index`       | Generate local `.solumbe/index.json` files and catalog entries; `dryRun:true` discovers read-only |
 | `repo_search`      | Search cataloged repositories by path, route, import, export, symbol, or domain; omit `query` to list the catalog |
 | `context_pack`     | Build a task-aware context packet                                                     |
 | `change_impact`    | Rank files most likely to own a plain-English change request                          |
@@ -320,7 +320,7 @@ commit.
 
 ### Legacy tool names
 
-The older names below still work through `tools/call`, although `tools/list` does not advertise them. They date from otito 2.0, which folded 18 tools into 11. Each call is forwarded to its canonical tool with the arguments translated, so a host configured with the old names keeps working. They still work in 3.x, and no release has been named to remove them; use the canonical names in new configs.
+The older names below still work through `tools/call`, although `tools/list` does not advertise them. They date from solumbe 2.0, which folded 18 tools into 11. Each call is forwarded to its canonical tool with the arguments translated, so a host configured with the old names keeps working. They still work in 3.x, and no release has been named to remove them; use the canonical names in new configs.
 
 | Legacy name                | Canonical tool   | Arguments                                                    |
 | -------------------------- | ---------------- | ------------------------------------------------------------ |
@@ -345,16 +345,16 @@ The four `find_*` tools pass `limit` through, use the first of `paths` when `pat
 sequenceDiagram
     participant User
     participant Agent
-    participant otito
+    participant solumbe
     participant Repo
 
     User->>Agent: Make a change safely
-    Agent->>otito: context_pack(task, repo)
-    otito->>Repo: Inspect files and git state
-    otito-->>Agent: Primary files, related files, tests, commands
+    Agent->>solumbe: context_pack(task, repo)
+    solumbe->>Repo: Inspect files and git state
+    solumbe-->>Agent: Primary files, related files, tests, commands
     Agent->>Repo: Edit scoped files
-    Agent->>otito: review_context(base, head)
-    otito-->>Agent: Review prompts and risk flags
+    Agent->>solumbe: review_context(base, head)
+    solumbe-->>Agent: Review prompts and risk flags
     Agent->>User: Verified change summary
 ```
 
@@ -367,7 +367,7 @@ that can use local MCP or a structured handoff:
 Request -> context -> scoped change -> validation -> review context -> gate -> human decision
 ```
 
-The host does not determine whether a change is trustworthy. Otito provides
+The host does not determine whether a change is trustworthy. Solumbe provides
 local, deterministic evidence; tests, protected branches, and a human reviewer
 provide accountability. Do not represent a passing gate as an automatic merge
 approval. A workspace-level gate binds local staged evidence across repositories;
@@ -378,10 +378,10 @@ it does not establish hosted CI state, GitHub approval, or mergeability.
 ## Host Guidance
 
 !!! success "Recommended agent behavior"
-    Ask otito for context before planning broad work. Use the output to choose the smallest owner files to read, not as a replacement for source inspection. Prefer existing patterns over a new layer. See the [clean code thesis](../07-deterministic-verification/README.md).
+    Ask solumbe for context before planning broad work. Use the output to choose the smallest owner files to read, not as a replacement for source inspection. Prefer existing patterns over a new layer. See the [clean code thesis](../07-deterministic-verification/README.md).
 
 !!! warning "Boundary"
-    Òtítọ́ does not approve or merge code. Pair it with tests, code review, branch protection, and a human decision.
+    Solumbe does not approve or merge code. Pair it with tests, code review, branch protection, and a human decision.
 
 !!! warning "MCP safety"
     MCP hosts can start local processes. Only add MCP servers from trusted repositories, review command paths before enabling them, avoid putting secrets directly in config files, and keep local absolute paths out of public docs.

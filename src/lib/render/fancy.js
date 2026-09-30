@@ -1,4 +1,4 @@
-// Fancy terminal renderer used by otito commands that produce a verdict or
+// Fancy terminal renderer used by solumbe commands that produce a verdict or
 // ranked list. Returns strings (no I/O) so it stays testable.
 //
 // Every mark the renderer prints comes from one glyph set, chosen once per
@@ -9,7 +9,7 @@
 //               at all; nothing in it matches \p{Extended_Pictographic}.
 // `unicode` is the interactive default. `ascii` follows `emoji: false`,
 // NO_EMOJI, CI and TERM=dumb; `emoji` is an opt-in through `emoji: true`
-// (`--emoji`, `emoji: true` in config, OTITO_EMOJI=1).
+// (`--emoji`, `emoji: true` in config, SOLUMBE_EMOJI=1).
 
 /**
  * @typedef {"unicode" | "ascii" | "emoji"} GlyphMode

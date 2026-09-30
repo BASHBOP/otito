@@ -879,10 +879,10 @@ function checkRunIdFromDetailsUrl(detailsUrl) {
  */
 function contextEvidence(pr, request) {
   const subject = String(request ?? pr.title ?? "review this pull request").trim() || "review this pull request";
-  const evidence = [`otito impact . ${JSON.stringify(subject)} --json`];
-  if (pr.number) evidence.push(`otito pr . --number ${pr.number} --out .otito/pr-review.md`);
-  else if (pr.baseRefName) evidence.push(`otito pr . --base ${pr.baseRefName} --out .otito/pr-review.md`);
-  else evidence.push("otito pr . --out .otito/pr-review.md");
+  const evidence = [`solumbe impact . ${JSON.stringify(subject)} --json`];
+  if (pr.number) evidence.push(`solumbe pr . --number ${pr.number} --out .solumbe/pr-review.md`);
+  else if (pr.baseRefName) evidence.push(`solumbe pr . --base ${pr.baseRefName} --out .solumbe/pr-review.md`);
+  else evidence.push("solumbe pr . --out .solumbe/pr-review.md");
   return evidence;
 }
 
@@ -948,7 +948,7 @@ export function formatPassPrTerminal(data, rendererFactory) {
     { text: `base: ${data.pr.baseRefName || "?"} · policy: ${data.policy} · governance: ${data.governance}`, glyph: "⚙️" },
   ];
   if (data.pr.baseSha && data.pr.headSha) sub.push({ text: `commits: ${data.pr.baseSha.slice(0, 8)}..${data.pr.headSha.slice(0, 8)}`, glyph: "🧾" });
-  lines.push(renderer.header({ text: "otito pass-pr · GitHub merge readiness", glyph: "📋" }, sub));
+  lines.push(renderer.header({ text: "solumbe pass-pr · GitHub merge readiness", glyph: "📋" }, sub));
   lines.push("");
 
   for (const check of data.checks) {
@@ -997,7 +997,7 @@ function nextStep(data, blocked, warning) {
  */
 export function formatPassPrMarkdown(data) {
   const lines = [
-    `# otito pass-pr: #${data.pr.number ?? "?"} ${data.pr.title ?? ""}`.trim(),
+    `# solumbe pass-pr: #${data.pr.number ?? "?"} ${data.pr.title ?? ""}`.trim(),
     "",
     `Verdict: **${data.verdict}**`,
     `Repository: \`${data.repo.root}\``,

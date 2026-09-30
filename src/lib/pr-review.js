@@ -190,7 +190,7 @@ const statusNames = {
 };
 
 const preferredScripts = ["lint", "typecheck", "type-check", "check:type", "tsc", "tsc:check", "test", "test:unit", "test:e2e", "build"];
-const prCommentMarker = "<!-- otito-pr-review -->";
+const prCommentMarker = "<!-- solumbe-pr-review -->";
 
 /**
  * @param {string} [repoPath]
@@ -394,7 +394,7 @@ export function formatPrReviewMarkdown(data) {
 export function formatPrCommentMarkdown(data) {
   const lines = [
     prCommentMarker,
-    "## otito PR Review",
+    "## solumbe PR Review",
     "",
     `**Risk:** ${data.risk.level} (${data.risk.score})`,
     `**Changed files:** ${data.comparison.changedFileCount}`,
@@ -444,7 +444,7 @@ export function formatPrCommentMarkdown(data) {
     lines.push("- no obvious package scripts detected");
   }
 
-  lines.push("", "_Full Markdown report is uploaded as the `otito-pr-review` workflow artifact when run in GitHub Actions._", "");
+  lines.push("", "_Full Markdown report is uploaded as the `solumbe-pr-review` workflow artifact when run in GitHub Actions._", "");
   return lines.join("\n");
 }
 
@@ -625,7 +625,7 @@ function findExistingPrComment(root, nameWithOwner, number) {
  * @returns {string}
  */
 function writeCommentPayload(body) {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "otito-comment-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-comment-"));
   const payloadPath = path.join(directory, "body.json");
   fs.writeFileSync(payloadPath, JSON.stringify({ body }));
   return payloadPath;
@@ -1135,7 +1135,7 @@ function inferRisk(files, diff, comments) {
     }
   }
 
-  // Per-flag weights live in risk-paths.js so `otito calibrate` can report a
+  // Per-flag weights live in risk-paths.js so `solumbe calibrate` can report a
   // measured lift beside the weight the flag actually carries. `dependency`
   // weighs zero there: across two corpora it lifts 0.53x and 1.05x — no
   // consistent signal in either direction — and the +2 it used to carry as

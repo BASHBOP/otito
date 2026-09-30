@@ -1,29 +1,29 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { formatInstallSummary, getInstallPlan, installOtito } from "../src/lib/install.js";
+import { formatInstallSummary, getInstallPlan, installSolumbe } from "../src/lib/install.js";
 
 test("getInstallPlan reports product name, binary, and commands", () => {
   const plan = getInstallPlan();
 
   assert.equal(plan.ok, true);
-  assert.equal(plan.productName, "Òtítọ́");
-  assert.equal(plan.binaryName, "otito");
-  assert.equal(plan.commands.fromNpm, "npm install -g @bashbop/otito");
-  assert.equal(plan.commands.verify, "otito doctor");
+  assert.equal(plan.productName, "Solumbe");
+  assert.equal(plan.binaryName, "solumbe");
+  assert.equal(plan.commands.fromNpm, "npm install -g @bashbop/solumbe");
+  assert.equal(plan.commands.verify, "solumbe doctor");
 });
 
-test("installOtito defaults to a non-mutating plan", () => {
-  const result = installOtito();
+test("installSolumbe defaults to a non-mutating plan", () => {
+  const result = installSolumbe();
 
   assert.equal(result.ok, true);
   assert.equal(result.applied, undefined);
   assert.equal(result.commands.developmentLink, "npm link");
 });
 
-test("formatInstallSummary includes the Òtítọ́ identity print", () => {
+test("formatInstallSummary includes the Solumbe identity print", () => {
   const summary = formatInstallSummary(getInstallPlan());
 
-  assert.match(summary, /Òtítọ́ · installer/);
+  assert.match(summary, /Solumbe · installer/);
   assert.match(summary, /At a glance/);
   assert.match(summary, /Install commands/);
   assert.match(summary, /Next steps/);

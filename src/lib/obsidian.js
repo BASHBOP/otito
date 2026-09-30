@@ -12,8 +12,8 @@ import { inspectRepo } from "./repo.js";
  */
 
 /**
- * Generate an Obsidian-compatible Markdown vault from Otito's local evidence.
- * The vault is a navigable projection; the repository and Otito remain the
+ * Generate an Obsidian-compatible Markdown vault from Solumbe's local evidence.
+ * The vault is a navigable projection; the repository and Solumbe remain the
  * sources of truth.
  *
  * @param {string} repoPath
@@ -21,7 +21,7 @@ import { inspectRepo } from "./repo.js";
  * @param {ObsidianOptions} [options]
  * @returns {{ manifest: Record<string, unknown>, files: Map<string, string> }}
  */
-export function generateObsidianVault(repoPath = ".", vaultPath = ".otito/obsidian", options = {}) {
+export function generateObsidianVault(repoPath = ".", vaultPath = ".solumbe/obsidian", options = {}) {
   const root = path.resolve(repoPath);
   const absoluteVaultPath = path.resolve(vaultPath);
   const repo = inspectRepo(root);
@@ -62,7 +62,7 @@ export function generateObsidianVault(repoPath = ".", vaultPath = ".otito/obsidi
  * @param {ObsidianOptions} [options]
  * @returns {Record<string, unknown>}
  */
-export function writeObsidianVault(repoPath = ".", vaultPath = ".otito/obsidian", options = {}) {
+export function writeObsidianVault(repoPath = ".", vaultPath = ".solumbe/obsidian", options = {}) {
   const result = generateObsidianVault(repoPath, vaultPath, options);
   for (const [relativePath, contents] of result.files) {
     const target = path.join(String(result.manifest.vaultPath), relativePath);
@@ -77,14 +77,14 @@ function renderHome(repo, generatedAt, querySlug) {
   const repositoryName = repo.package?.name ?? path.basename(repo.root);
   const lines = [
     "---",
-    "type: otito-vault",
+    "type: solumbe-vault",
     `generated: ${generatedAt}`,
     `repository: ${quoteYaml(repositoryName)}`,
     "---",
     "",
-    `# ${repositoryName} · Otito`,
+    `# ${repositoryName} · Solumbe`,
     "",
-    "This vault is a local, human-readable projection of Otito repository evidence.",
+    "This vault is a local, human-readable projection of Solumbe repository evidence.",
     "",
     "- [[Repository]]",
     "- [[Evidence]]",
@@ -92,7 +92,7 @@ function renderHome(repo, generatedAt, querySlug) {
   if (querySlug) {
     lines.push(`- [[Context/${querySlug}]]`, `- [[Impact/${querySlug}]]`);
   }
-  lines.push("", "Otito remains the source of truth for generated context, impact, review, and gate evidence.", "");
+  lines.push("", "Solumbe remains the source of truth for generated context, impact, review, and gate evidence.", "");
   return lines.join("\n");
 }
 
@@ -141,14 +141,14 @@ function renderRepository(repo, vaultPath, root, generatedAt) {
 function renderEvidence(repo, generatedAt, query, context, impact) {
   const lines = [
     "---",
-    "type: otito-evidence-index",
+    "type: solumbe-evidence-index",
     `generated: ${generatedAt}`,
     `repository: ${quoteYaml(repo.package?.name ?? path.basename(repo.root))}`,
     "---",
     "",
     "# Evidence Index",
     "",
-    "These notes are generated locally by Otito and are intended for navigation, discussion, and agent handoff.",
+    "These notes are generated locally by Solumbe and are intended for navigation, discussion, and agent handoff.",
     "They do not replace exact staged-tree gates, hosted CI, CODEOWNERS, or human review.",
     "",
     `- Generated: ${generatedAt}`,
@@ -157,7 +157,7 @@ function renderEvidence(repo, generatedAt, query, context, impact) {
     `- Context packet: ${context ? "[[Context/" + slugify(query) + "]]" : "not generated"}`,
     `- Impact analysis: ${impact ? "[[Impact/" + slugify(query) + "]]" : "not generated"}`,
     "",
-    "Regenerate this vault after meaningful repository or task changes with `otito obsidian`.",
+    "Regenerate this vault after meaningful repository or task changes with `solumbe obsidian`.",
     "",
   ];
   return lines.join("\n");

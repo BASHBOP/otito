@@ -4,9 +4,9 @@ import { formatTerminalSummary } from "./output.js";
 import { commandExists, runCommand } from "./tools.js";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const productName = "Òtítọ́";
-const binaryName = "otito";
-const repoUrl = "https://github.com/BASHBOP/otito";
+const productName = "Solumbe";
+const binaryName = "solumbe";
+const repoUrl = "https://github.com/BASHBOP/solumbe";
 
 /**
  * @typedef {object} InstallOptions
@@ -18,7 +18,7 @@ const repoUrl = "https://github.com/BASHBOP/otito";
  * @param {InstallOptions} [options]
  * @returns {ReturnType<typeof getInstallPlan> & { mode?: string, applied?: boolean, command?: string, stdout?: string, stderr?: string, error?: string }}
  */
-export function installOtito(options = {}) {
+export function installSolumbe(options = {}) {
   // getInstallPlan() ignores its arguments; this passed `options` is dead and
   // has no effect at runtime. Suppressing the arity error rather than changing
   // the call (annotation-only pass). See suspected-bug report.
@@ -78,7 +78,7 @@ export function getInstallPlan() {
     installed: status.available,
     binaryPath: status.path,
     commands: {
-      fromNpm: "npm install -g @bashbop/otito",
+      fromNpm: "npm install -g @bashbop/solumbe",
       fromCheckout: "npm install -g .",
       developmentLink: "npm link",
       verify: `${binaryName} doctor`,
@@ -91,7 +91,7 @@ export function getInstallPlan() {
 }
 
 /**
- * @param {ReturnType<typeof installOtito>} result
+ * @param {ReturnType<typeof installSolumbe>} result
  * @param {{ emoji?: boolean, color?: boolean, theme?: string }} [options]
  * @param {import("./output.js").ClosingLine} [close] the caller's verdict on the install
  * @returns {string}

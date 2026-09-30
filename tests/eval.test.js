@@ -9,7 +9,7 @@ import { runEval, runGateEffectivenessEval, runHarnessExecutionEval, runRetrieva
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 test("runEval returns per-task and total token estimates for a tiny repo", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-eval-"));
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(
     path.join(root, "package.json"),
@@ -34,17 +34,17 @@ test("runEval returns per-task and total token estimates for a tiny repo", () =>
 
   for (const task of data.tasks) {
     assert.equal(task.ok, true, `task ${task.name} should run cleanly: ${task.error}`);
-    assert.ok(task.otitoBytes >= 0);
+    assert.ok(task.solumbeBytes >= 0);
     assert.ok(task.naiveBytes >= 0);
-    assert.ok(task.otitoTokens >= 0);
+    assert.ok(task.solumbeTokens >= 0);
     assert.ok(task.naiveTokens >= 0);
   }
 
-  assert.ok(data.totals.otitoBytes > 0);
-  assert.equal(data.totals.otitoTokens + data.totals.savedTokens, data.totals.naiveTokens, "otito + saved should equal naive");
+  assert.ok(data.totals.solumbeBytes > 0);
+  assert.equal(data.totals.solumbeTokens + data.totals.savedTokens, data.totals.naiveTokens, "solumbe + saved should equal naive");
 
-  assert.match(markdown, /# otito Eval:/);
-  assert.match(markdown, /\| Task \| otito tokens \|/);
+  assert.match(markdown, /# solumbe Eval:/);
+  assert.match(markdown, /\| Task \| solumbe tokens \|/);
   assert.match(markdown, /## Totals/);
 });
 
@@ -76,7 +76,7 @@ test("runRetrievalEval scores the committed corpus and passes its thresholds", (
   assert.equal(data.passed, true, "committed corpus must pass all thresholds");
   assert.equal(data.exitCode, 0);
 
-  assert.match(markdown, /# otito Accuracy Eval/);
+  assert.match(markdown, /# solumbe Accuracy Eval/);
   assert.match(markdown, /## Scoreboard/);
   assert.match(markdown, /Overall: PASS/);
 });
@@ -97,12 +97,12 @@ test("runHarnessExecutionEval proves the committed install, test, typecheck, and
     ["install", "test", "typecheck", "build"],
   );
   assert.ok(commands.every((command) => command.inferred && command.executed && command.pass));
-  assert.match(markdown, /# otito Harness Execution Eval/);
+  assert.match(markdown, /# solumbe Harness Execution Eval/);
   assert.match(markdown, /Commands: 4\/4 passed/);
 });
 
 test("runHarnessExecutionEval fails closed when the fixture harness cannot infer a declared command", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-harness-corpus-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-harness-corpus-"));
   const corpusPath = path.join(dir, "corpus.json");
   const fixture = path.join(repoRoot, "evals", "fixtures", "harness-node");
   fs.writeFileSync(
@@ -130,8 +130,8 @@ test("runHarnessExecutionEval fails closed when the fixture harness cannot infer
 });
 
 test("runHarnessExecutionEval rejects a corpus that redirects execution outside committed fixtures", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-harness-unsafe-corpus-"));
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-harness-unsafe-fixture-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-harness-unsafe-corpus-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-harness-unsafe-fixture-"));
   const corpusPath = path.join(dir, "corpus.json");
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
   fs.writeFileSync(
@@ -173,13 +173,13 @@ test("runGateEffectivenessEval proves the committed gate cases and their determi
   assert.equal(byName.get("scope-drift-fails-convergence")?.checks[0]?.name, "Convergence");
   assert.ok(data.cases.every((testCase) => testCase.pass && testCase.unexpectedFailures.length === 0));
 
-  assert.match(markdown, /# otito Gate Effectiveness Eval/);
+  assert.match(markdown, /# solumbe Gate Effectiveness Eval/);
   assert.match(markdown, /Expected blocks: 7\/7 blocked for the encoded reason/);
   assert.match(markdown, /Overall: PASS/);
 });
 
 test("runGateEffectivenessEval fails when the real gate reason differs from the corpus expectation", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gate-corpus-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-gate-corpus-"));
   const corpusPath = path.join(dir, "corpus.json");
   const fixture = path.join(repoRoot, "evals", "fixtures", "gate-node");
   fs.writeFileSync(
@@ -212,8 +212,8 @@ test("runGateEffectivenessEval fails when the real gate reason differs from the 
 });
 
 test("runGateEffectivenessEval rejects external fixtures and path-like change-set names", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gate-unsafe-corpus-"));
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gate-unsafe-fixture-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-gate-unsafe-corpus-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-gate-unsafe-fixture-"));
   const corpusPath = path.join(dir, "corpus.json");
   fs.writeFileSync(
     corpusPath,
@@ -311,14 +311,14 @@ test("runRetrievalEval fails (exit 1) when a corpus regresses below threshold", 
   // Synthetic corpus: a retrieval case whose expected primary can never be
   // returned, with thresholds the engine cannot meet. Proves the runner is a
   // real gate, not a rubber stamp — a randomly-wrong pack must NOT pass.
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-corpus-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-eval-corpus-"));
   const corpusPath = path.join(dir, "corpus.json");
   fs.writeFileSync(
     corpusPath,
     JSON.stringify({
       k: 5,
       thresholds: { retrieval: { precisionAtK: 0.99, recallAtK: 0.99, mrr: 0.99 }, risk: { accuracy: 0.99 } },
-      fixtureRoots: { "sample-api": "codex/skills/otito/evals/files/sample-api" },
+      fixtureRoots: { "sample-api": "codex/skills/solumbe/evals/files/sample-api" },
       retrieval: [
         {
           name: "impossible",
@@ -350,7 +350,7 @@ test("runRetrievalEval fails (exit 1) when a corpus regresses below threshold", 
 });
 
 test("runRetrievalEval rejects a malformed corpus", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-bad-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-eval-bad-"));
   const corpusPath = path.join(dir, "corpus.json");
   fs.writeFileSync(corpusPath, JSON.stringify({ retrieval: "nope" }));
   assert.throws(() => runRetrievalEval({ corpusPath }), /retrieval\[\] and risk\[\]/);

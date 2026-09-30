@@ -1,24 +1,24 @@
 ---
-name: otito-review
-description: Run otito review and gate before merge — composite verdict, PR context, and PASS/WARN/FAIL checks. Invoke before declaring a PR merge-ready.
+name: solumbe-review
+description: Run solumbe review and gate before merge — composite verdict, PR context, and PASS/WARN/FAIL checks. Invoke before declaring a PR merge-ready.
 ---
 
-# otito review (procedure)
+# solumbe review (procedure)
 
 Use this **before** merge or when the user asks if a change is safe to land.
 
 ## Local changes
 
 ```bash
-otito review . --request "<what changed>" --base origin/main --json
-otito gate . --base origin/main
+solumbe review . --request "<what changed>" --base origin/main --json
+solumbe gate . --base origin/main
 ```
 
 ## GitHub PR
 
 ```bash
-otito review . --pr <number> --json
-otito gate --pr <number> --path .
+solumbe review . --pr <number> --json
+solumbe gate --pr <number> --path .
 ```
 
 ## Interpretation

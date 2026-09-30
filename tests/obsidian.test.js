@@ -6,8 +6,8 @@ import path from "node:path";
 import { generateObsidianVault, writeObsidianVault } from "../src/lib/obsidian.js";
 
 test("Obsidian export creates navigable repository and task notes", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-obsidian-repo-"));
-  const vault = path.join(root, ".otito", "obsidian");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-obsidian-repo-"));
+  const vault = path.join(root, ".solumbe", "obsidian");
   fs.mkdirSync(path.join(root, "src", "lib"), { recursive: true });
   fs.mkdirSync(path.join(root, "tests"), { recursive: true });
   fs.writeFileSync(

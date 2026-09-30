@@ -59,7 +59,7 @@ const ignoredDirectories = new Set([
   ".git",
   ".hg",
   ".svn",
-  ".otito",
+  ".solumbe",
   ".cache",
   ".next",
   ".turbo",
@@ -99,7 +99,7 @@ const stopWords = new Set([
 ]);
 
 export function defaultCatalogPath() {
-  return path.resolve(process.env.OTITO_CATALOG ?? path.join(os.homedir(), ".otito", "catalog.json"));
+  return path.resolve(process.env.SOLUMBE_CATALOG ?? path.join(os.homedir(), ".solumbe", "catalog.json"));
 }
 
 /**
@@ -294,7 +294,7 @@ export function searchCatalog(query, options = {}) {
  */
 export function formatDiscoverSummary(result, options = {}) {
   return formatTerminalSummary({
-    title: "otito discover · repository finder",
+    title: "solumbe discover · repository finder",
     glyph: "🔎",
     subtitle: `${result.roots.join(", ")} · depth ${result.maxDepth}`,
     facts: [["Repositories discovered", result.repositoryCount]],
@@ -316,7 +316,7 @@ export function formatDiscoverSummary(result, options = {}) {
  */
 export function formatIndexSummary(result, options = {}) {
   return formatTerminalSummary({
-    title: "otito index · repository catalog",
+    title: "solumbe index · repository catalog",
     glyph: "🗂️",
     subtitle: result.catalogPath,
     facts: [
@@ -338,7 +338,7 @@ export function formatIndexSummary(result, options = {}) {
  */
 export function formatCatalogSummary(result, options = {}) {
   return formatTerminalSummary({
-    title: "otito catalog · indexed repositories",
+    title: "solumbe catalog · indexed repositories",
     glyph: "📚",
     subtitle: result.updatedAt ? `updated ${result.updatedAt}` : "not updated yet",
     facts: [["Repositories", result.repositoryCount]],
@@ -366,7 +366,7 @@ export function formatCatalogSummary(result, options = {}) {
  */
 export function formatSearchResults(result, options = {}) {
   return formatTerminalSummary({
-    title: "otito search · catalog matches",
+    title: "solumbe search · catalog matches",
     glyph: "🧭",
     subtitle: `query: ${result.query}`,
     facts: [
@@ -457,7 +457,7 @@ function catalogEntryFromMap(map, indexedAt) {
     sourceFileCount: map.repo.sourceFileCount,
     summary: map.summary,
     domains: map.domains,
-    indexPath: map.cache?.path ?? path.join(map.repo.root, ".otito", "index.json"),
+    indexPath: map.cache?.path ?? path.join(map.repo.root, ".solumbe", "index.json"),
     fingerprint: map.cache?.fingerprint,
     generatedAt: map.cache?.generatedAt ?? indexedAt,
     indexedAt,
@@ -500,7 +500,7 @@ function readIndexedMap(repository, capabilities) {
   const root = path.resolve(String(repository.root));
   const verdict = checkIndexEnvelope(envelope, root, capabilities);
   if (!verdict.ok) {
-    throw new Error(`stored index is stale: ${verdict.reason}. Re-run \`otito index\` for this repository, or search without --offline to rebuild it now`);
+    throw new Error(`stored index is stale: ${verdict.reason}. Re-run \`solumbe index\` for this repository, or search without --offline to rebuild it now`);
   }
   return envelope.map;
 }

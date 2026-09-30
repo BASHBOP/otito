@@ -428,7 +428,7 @@ function skillFixture(prefix) {
       "",
       "## Sync",
       "",
-      "Canonical: `otito/codex/skills/model-router/`.",
+      "Canonical: `solumbe/codex/skills/model-router/`.",
       "",
     ].join("\n"),
     "docs/18-model-routing/README.md": "# Model routing\n\n## The advisory footer\n",
@@ -539,7 +539,7 @@ test("generateImpact suggests only tests a runner executes", () => {
 });
 
 // --- Regression: three recorded gaps from a real cross-repo review, all in
-// the "required owners" ranking (see otito's investigation of itself) ---
+// the "required owners" ranking (see solumbe's investigation of itself) ---
 
 test("tokenWeightFactor dampens a query term that recurs across most of an indexed repo, and leaves a rare one at full weight", () => {
   const files = Array.from({ length: 20 }, (_, index) => ({

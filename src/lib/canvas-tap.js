@@ -1,12 +1,12 @@
-// Opt-in: show an MCP host's requests on a local Otito Realtime Canvas.
+// Opt-in: show an MCP host's requests on a local Solumbe Realtime Canvas.
 //
-// The canvas is an observer, never a participant (see the otito-canvas
+// The canvas is an observer, never a participant (see the solumbe-canvas
 // README). Claude Code reaches it through a prompt hook; Cursor, VS Code,
 // Codex and the other MCP hosts have no such hook, so without this tap their
 // requests never appear on it.
 //
-// Off unless OTITO_CANVAS_URL is set in the MCP server's environment, which
-// is a line in the host's MCP config, so the promise that otito makes no
+// Off unless SOLUMBE_CANVAS_URL is set in the MCP server's environment, which
+// is a line in the host's MCP config, so the promise that solumbe makes no
 // network call by default still holds. When it is on, the tap:
 //
 //   - sends the request text, the tool name and a host label, never a result,
@@ -39,7 +39,7 @@ const MAX_REQUEST_CHARS = 4000;
  * @returns {URL | null}
  */
 export function canvasIngestUrl(env = process.env) {
-  const raw = env.OTITO_CANVAS_URL;
+  const raw = env.SOLUMBE_CANVAS_URL;
   if (!raw || !raw.trim()) return null;
   let url;
   try {
@@ -64,7 +64,7 @@ export function canvasEvent(tool, args, env = process.env) {
   if (!key) return null;
   const value = args?.[key];
   if (typeof value !== "string" || !value.trim()) return null;
-  const host = (env.OTITO_HOST ?? "").trim();
+  const host = (env.SOLUMBE_HOST ?? "").trim();
   return {
     request: value.trim().slice(0, MAX_REQUEST_CHARS),
     // The canvas prefixes its own transport and keeps 32 characters.

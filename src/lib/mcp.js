@@ -38,7 +38,7 @@ import { generateWorkspaceReport } from "./workspace.js";
  * @property {string} name
  * @property {string} title
  * @property {string} summary One or two plain sentences on what the tool is for. Not sent over tools/list;
- *   it is the blurb the How It Works page and `otito agent-tools` print, so a change in meaning is made here once.
+ *   it is the blurb the How It Works page and `solumbe agent-tools` print, so a change in meaning is made here once.
  * @property {string} description
  * @property {{ readOnlyHint?: boolean, openWorldHint?: boolean }} annotations
  * @property {McpInputSchema} inputSchema
@@ -168,7 +168,7 @@ export const tools = [
         paths: {
           type: "array",
           items: { type: "string" },
-          description: "Repository paths for a multi-repo context packet. Omitted, `path` plus the `companions` listed in its .otitorc.json.",
+          description: "Repository paths for a multi-repo context packet. Omitted, `path` plus the `companions` listed in its .solumberc.json.",
         },
         limit: { type: "number", description: "Maximum primary, related, and test files per section. Defaults to 8." },
         includeEvidence: {
@@ -230,10 +230,10 @@ export const tools = [
   {
     name: "model_route",
     summary:
-      "Recommends a model tier (cheap, mid or premium) before work starts. otito answers the repository half deterministically; TypeSafe's Jev reads the request when TYPESAFE_API_KEY is set, otherwise the read is a labelled offline estimate. Advisory: it never feeds the gate.",
+      "Recommends a model tier (cheap, mid or premium) before work starts. solumbe answers the repository half deterministically; TypeSafe's Jev reads the request when TYPESAFE_API_KEY is set, otherwise the read is a labelled offline estimate. Advisory: it never feeds the gate.",
     title: "Model Route",
     description:
-      "Recommend a model tier (cheap, mid or premium) for a coding request before any work starts. Combines otito's deterministic repository half (AX, containment, top-severity risk paths) with a System One model's calibrated read of the request (specificity, blast radius, novelty). The model is called only when TYPESAFE_API_KEY is set in this server's environment and offline is not true; otherwise the read is a labelled offline estimate, and model.source says which. Advisory: it recommends a tier and never feeds review_gate or review_verdict. Pass host to map the tier to that host's model id.",
+      "Recommend a model tier (cheap, mid or premium) for a coding request before any work starts. Combines solumbe's deterministic repository half (AX, containment, top-severity risk paths) with a System One model's calibrated read of the request (specificity, blast radius, novelty). The model is called only when TYPESAFE_API_KEY is set in this server's environment and offline is not true; otherwise the read is a labelled offline estimate, and model.source says which. Advisory: it recommends a tier and never feeds review_gate or review_verdict. Pass host to map the tier to that host's model id.",
     annotations: { readOnlyHint: true, openWorldHint: true },
     inputSchema: {
       type: "object",
@@ -243,7 +243,7 @@ export const tools = [
         top: { type: "number", description: "Number of impact files to consider. Defaults to 8." },
         host: {
           type: "string",
-          description: "Optional host whose model map resolves the tier to a model id (built in: claude-code; add others in .otito/model-route.json).",
+          description: "Optional host whose model map resolves the tier to a model id (built in: claude-code; add others in .solumbe/model-route.json).",
         },
         offline: { type: "boolean", description: "Never call the model, even when a key is set. Defaults to false." },
         includeMarkdown: { type: "boolean", description: "Return a compact human-readable markdown report instead of the full JSON. Defaults to false." },
@@ -315,9 +315,9 @@ export const tools = [
         base: { type: "string", description: "Base ref for the local gate. Defaults to origin/main, then HEAD. Ignored in PR mode." },
         policy: {
           type: "string",
-          description: "Policy profile: standard, company, or high-risk. Omitted, the repository's .otitorc.json or user config decides, else standard.",
+          description: "Policy profile: standard, company, or high-risk. Omitted, the repository's .solumberc.json or user config decides, else standard.",
         },
-        governance: { type: "string", description: "Governance: team or solo. Omitted, the repository's .otitorc.json or user config decides, else team." },
+        governance: { type: "string", description: "Governance: team or solo. Omitted, the repository's .solumberc.json or user config decides, else team." },
         request: { type: "string", description: "Optional change request for context evidence output." },
         minConvergence: {
           type: "number",
@@ -351,9 +351,9 @@ export const tools = [
         },
         policy: {
           type: "string",
-          description: "Policy profile: standard, company, or high-risk. Omitted, the repository's .otitorc.json or user config decides, else standard.",
+          description: "Policy profile: standard, company, or high-risk. Omitted, the repository's .solumberc.json or user config decides, else standard.",
         },
-        governance: { type: "string", description: "Governance: team or solo. Omitted, the repository's .otitorc.json or user config decides, else team." },
+        governance: { type: "string", description: "Governance: team or solo. Omitted, the repository's .solumberc.json or user config decides, else team." },
         impactTop: { type: "number", description: "Number of impact files. Defaults to 8." },
         minConvergence: { type: "number", description: "Optional minimum convergence score (0–100) enforced by the merge gate." },
         receipt: {
@@ -595,7 +595,7 @@ async function callTool(params = {}) {
   }
 
   const startedAt = performance.now();
-  // Opt-in and fire-and-forget: off unless OTITO_CANVAS_URL is set. When it is
+  // Opt-in and fire-and-forget: off unless SOLUMBE_CANVAS_URL is set. When it is
   // on, yield once so the loopback POST is flushed before a synchronous,
   // CPU-bound dispatch (context_pack, change_impact) blocks the event loop —
   // otherwise the request sits unsent until the tool finishes, and a dispatch

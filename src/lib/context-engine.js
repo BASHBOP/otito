@@ -303,15 +303,15 @@ export function formatContextPackMarkdown(data) {
 function formatModelRead(read) {
   if (!read) return [];
   if (read.source !== "jev") {
-    return ["## Model Read", "", `- Not applied: ${read.fallbackReason ?? "no model call was made"}. The ranking below is otito's alone.`, ""];
+    return ["## Model Read", "", `- Not applied: ${read.fallbackReason ?? "no model call was made"}. The ranking below is solumbe's alone.`, ""];
   }
   const cost = typeof read.costUsd === "number" ? `, $${read.costUsd.toFixed(6)}` : "";
   const lines = ["## Model Read", "", `- Source: ${read.model} (TypeSafe System One), ${read.latencyMs} ms${cost}. Advisory; never read by a gate.`];
   if (read.intent) {
     lines.push(
       read.intent.accepted
-        ? `- Intent: ${read.intent.choice} (confidence ${read.intent.confidence}; otito's own reading was ${read.intent.heuristic})`
-        : `- Intent: ${read.intent.choice} at confidence ${read.intent.confidence}, under the floor; kept otito's reading (${read.intent.heuristic})`,
+        ? `- Intent: ${read.intent.choice} (confidence ${read.intent.confidence}; solumbe's own reading was ${read.intent.heuristic})`
+        : `- Intent: ${read.intent.choice} at confidence ${read.intent.confidence}, under the floor; kept solumbe's reading (${read.intent.heuristic})`,
     );
   }
   if (read.demoted?.length) {
@@ -345,7 +345,7 @@ export function formatContextPackTerminal(data, rendererFactory) {
   const sourceCount = data.repos.reduce((/** @type {number} */ sum, /** @type {{ sourceFileCount?: number }} */ repo) => sum + (repo.sourceFileCount ?? 0), 0);
 
   lines.push(
-    renderer.header({ text: "otito context · repository guide", glyph: "🧭" }, [
+    renderer.header({ text: "solumbe context · repository guide", glyph: "🧭" }, [
       { text: `"${data.query}"`, glyph: "💬" },
       { text: `${repoCount} repo${repoCount === 1 ? "" : "s"} · ${sourceCount} source file(s)`, glyph: "📂" },
       { text: `${data.primaryFiles.length} primary · ${data.hotspots.length} hotspots · ${data.tests.length} tests`, glyph: "🎯" },
@@ -1389,7 +1389,7 @@ function inferCommands(repoPaths, query) {
     );
     commands.push({
       repo: harness.repo.name,
-      command: `otito context ${JSON.stringify(query)} --path ${JSON.stringify(harness.repo.root)} --json`,
+      command: `solumbe context ${JSON.stringify(query)} --path ${JSON.stringify(harness.repo.root)} --json`,
       reason: "refresh this context packet before planning or review",
     });
   }
@@ -1470,7 +1470,7 @@ function inferSources(maps, commands) {
     ).map((command) => ({
       type: "harness",
       repo: command.repo,
-      command: "otito harness <path> --json",
+      command: "solumbe harness <path> --json",
     })),
   ];
 }

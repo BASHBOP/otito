@@ -16,7 +16,7 @@
   <text x="40" y="103" fill="#8b949e" font-size="13">deterministic repository evidence</text>
   <line x1="40" x2="760" y1="122" y2="122" stroke="#30363d"/>
   <text x="40" y="158" fill="#7ee787" font-size="17">›</text>
-  <text x="61" y="158" fill="#c9d1d9" font-size="17">otito context "prepare a release" --path .</text>
+  <text x="61" y="158" fill="#c9d1d9" font-size="17">solumbe context "prepare a release" --path .</text>
   <text x="40" y="202" fill="#8b949e" font-size="15">intent</text>
   <text x="174" y="202" fill="#c9d1d9" font-size="15">prepare a release</text>
   <text x="40" y="233" fill="#8b949e" font-size="15">primary</text>
@@ -24,7 +24,7 @@
   <text x="40" y="264" fill="#8b949e" font-size="15">tests</text>
   <text x="174" y="264" fill="#c9d1d9" font-size="15">npm test  ·  npm run typecheck</text>
   <text x="40" y="295" fill="#8b949e" font-size="15">evidence</text>
-  <text x="174" y="295" fill="#c9d1d9" font-size="15">.otito/context-pack.md</text>
+  <text x="174" y="295" fill="#c9d1d9" font-size="15">.solumbe/context-pack.md</text>
   <text x="40" y="326" fill="#8b949e" font-size="15">next</text>
   <text x="174" y="326" fill="#c9d1d9" font-size="15">review the exact staged tree before merge</text>
   <rect x="40" y="342" width="315" height="26" rx="5" fill="#143321"/>

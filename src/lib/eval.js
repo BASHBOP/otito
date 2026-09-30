@@ -33,8 +33,8 @@ import { runCommand } from "./tools.js";
  * @property {string} description
  * @property {boolean} ok
  * @property {string} [error]
- * @property {number} otitoBytes
- * @property {number} otitoTokens
+ * @property {number} solumbeBytes
+ * @property {number} solumbeTokens
  * @property {number} naiveBytes
  * @property {number} naiveTokens
  * @property {number} savedTokens
@@ -259,7 +259,7 @@ const IGNORED_DIRS = new Set([
   "build",
   "out",
   ".next",
-  ".otito",
+  ".solumbe",
   "bin",
   "obj",
   "coverage",
@@ -309,7 +309,7 @@ export function runEval(repoPath, options = {}) {
  * @returns {TaskResult}
  */
 function runRepoOverview(root) {
-  const otito = safeRun(() => {
+  const solumbe = safeRun(() => {
     const result = inspectRepo(root);
     return JSON.stringify(result);
   });
@@ -320,7 +320,7 @@ function runRepoOverview(root) {
     if (isFile(p)) naiveBytes += statSize(p);
   }
 
-  return makeTaskResult("repo_overview", "Identify what this repo is", otito, naiveBytes);
+  return makeTaskResult("repo_overview", "Identify what this repo is", solumbe, naiveBytes);
 }
 
 /**
@@ -331,7 +331,7 @@ function runRepoOverview(root) {
 function runCodeMap(root, opts) {
   /** @type {number|undefined} */
   let mapFileCount;
-  const otito = safeRun(() => {
+  const solumbe = safeRun(() => {
     const map = generateCodeMap(root);
     mapFileCount = (map.files ?? []).length;
     return JSON.stringify(map);
@@ -340,7 +340,7 @@ function runCodeMap(root, opts) {
   const sources = listSourceFiles(root).slice(0, opts.naiveFileCap);
   const naiveBytes = sources.reduce((sum, p) => sum + statSize(p), 0);
 
-  return makeTaskResult("code_map", `Map the source (naive caps at ${opts.naiveFileCap} files)`, otito, naiveBytes, {
+  return makeTaskResult("code_map", `Map the source (naive caps at ${opts.naiveFileCap} files)`, solumbe, naiveBytes, {
     mapFileCount,
     naiveFileCount: sources.length,
   });
@@ -351,7 +351,7 @@ function runCodeMap(root, opts) {
  * @returns {TaskResult}
  */
 function runHarness(root) {
-  const otito = safeRun(() => {
+  const solumbe = safeRun(() => {
     const result = generateHarness(root);
     return result.markdown ?? JSON.stringify(result.data);
   });
@@ -370,7 +370,7 @@ function runHarness(root) {
     }
   }
 
-  return makeTaskResult("harness", "Identify setup/validation/runtime commands", otito, naiveBytes);
+  return makeTaskResult("harness", "Identify setup/validation/runtime commands", solumbe, naiveBytes);
 }
 
 /**
@@ -379,7 +379,7 @@ function runHarness(root) {
  * @returns {TaskResult}
  */
 function runContextPack(root, opts) {
-  const otito = safeRun(() => {
+  const solumbe = safeRun(() => {
     const result = generateContextPack(opts.query, { path: root });
     return result.markdown ?? JSON.stringify(result.data ?? result);
   });
@@ -387,7 +387,7 @@ function runContextPack(root, opts) {
   const sources = listSourceFiles(root).slice(0, opts.naiveFileCap);
   const naiveBytes = sources.reduce((sum, p) => sum + statSize(p), 0);
 
-  return makeTaskResult("context_pack", `Task-aware context for: "${opts.query}"`, otito, naiveBytes);
+  return makeTaskResult("context_pack", `Task-aware context for: "${opts.query}"`, solumbe, naiveBytes);
 }
 
 /**
@@ -406,23 +406,23 @@ function safeRun(fn) {
 /**
  * @param {string} name
  * @param {string} description
- * @param {ProbeResult} otito
+ * @param {ProbeResult} solumbe
  * @param {number} naiveBytes
  * @param {{ mapFileCount?: number, naiveFileCount?: number }} [extra]
  * @returns {TaskResult}
  */
-function makeTaskResult(name, description, otito, naiveBytes, extra = {}) {
-  const otitoTokens = Math.ceil(otito.bytes / CHARS_PER_TOKEN);
+function makeTaskResult(name, description, solumbe, naiveBytes, extra = {}) {
+  const solumbeTokens = Math.ceil(solumbe.bytes / CHARS_PER_TOKEN);
   const naiveTokens = Math.ceil(naiveBytes / CHARS_PER_TOKEN);
-  const savedTokens = naiveTokens - otitoTokens;
-  const savedPct = naiveBytes > 0 ? Math.round(((naiveBytes - otito.bytes) / naiveBytes) * 100) : 0;
+  const savedTokens = naiveTokens - solumbeTokens;
+  const savedPct = naiveBytes > 0 ? Math.round(((naiveBytes - solumbe.bytes) / naiveBytes) * 100) : 0;
   return {
     name,
     description,
-    ok: otito.ok,
-    error: otito.error,
-    otitoBytes: otito.bytes,
-    otitoTokens,
+    ok: solumbe.ok,
+    error: solumbe.error,
+    solumbeBytes: solumbe.bytes,
+    solumbeTokens,
     naiveBytes,
     naiveTokens,
     savedTokens,
@@ -435,17 +435,17 @@ function makeTaskResult(name, description, otito, naiveBytes, extra = {}) {
  * @param {TaskResult[]} tasks
  */
 function aggregate(tasks) {
-  const otitoBytes = tasks.reduce((s, t) => s + t.otitoBytes, 0);
+  const solumbeBytes = tasks.reduce((s, t) => s + t.solumbeBytes, 0);
   const naiveBytes = tasks.reduce((s, t) => s + t.naiveBytes, 0);
-  const otitoTokens = Math.ceil(otitoBytes / CHARS_PER_TOKEN);
+  const solumbeTokens = Math.ceil(solumbeBytes / CHARS_PER_TOKEN);
   const naiveTokens = Math.ceil(naiveBytes / CHARS_PER_TOKEN);
   return {
-    otitoBytes,
+    solumbeBytes,
     naiveBytes,
-    otitoTokens,
+    solumbeTokens,
     naiveTokens,
-    savedTokens: naiveTokens - otitoTokens,
-    savedPct: naiveBytes > 0 ? Math.round(((naiveBytes - otitoBytes) / naiveBytes) * 100) : 0,
+    savedTokens: naiveTokens - solumbeTokens,
+    savedPct: naiveBytes > 0 ? Math.round(((naiveBytes - solumbeBytes) / naiveBytes) * 100) : 0,
   };
 }
 
@@ -571,7 +571,7 @@ function statSize(p) {
  */
 export function formatEvalMarkdown(data) {
   const lines = [
-    `# otito Eval: ${data.repo.name}`,
+    `# solumbe Eval: ${data.repo.name}`,
     "",
     `Generated: ${data.generatedAt}`,
     `Eval version: ${data.evalVersion}`,
@@ -581,21 +581,21 @@ export function formatEvalMarkdown(data) {
     "",
     "## Per-task",
     "",
-    "| Task | otito tokens | naive tokens | saved | saved% | coverage | ok |",
+    "| Task | solumbe tokens | naive tokens | saved | saved% | coverage | ok |",
     "|---|---:|---:|---:|---:|:---:|:---:|",
     ...data.tasks.map(
-      (t) => `| ${t.name} | ${t.otitoTokens} | ${t.naiveTokens} | ${t.savedTokens} | ${t.savedPct}% | ${formatCoverage(t)} | ${t.ok ? "yes" : "no"} |`,
+      (t) => `| ${t.name} | ${t.solumbeTokens} | ${t.naiveTokens} | ${t.savedTokens} | ${t.savedPct}% | ${formatCoverage(t)} | ${t.ok ? "yes" : "no"} |`,
     ),
     "",
     "## Totals",
     "",
-    `- otito: **${data.totals.otitoTokens} tokens** (${data.totals.otitoBytes} bytes)`,
+    `- solumbe: **${data.totals.solumbeTokens} tokens** (${data.totals.solumbeBytes} bytes)`,
     `- naive:   **${data.totals.naiveTokens} tokens** (${data.totals.naiveBytes} bytes)`,
     `- saved:   **${data.totals.savedTokens} tokens (${data.totals.savedPct}%)**`,
     "",
     "_Naive is a deterministic JS-side approximation of what a grep+ls+read agent would absorb, not a live subagent transcript. Same approximation runs on every run, so deltas across builds are the trustworthy signal._",
     "",
-    "_Coverage on `code_map` is `files_mapped / files_naive_would_read`. A high savings% with low coverage means otito is smaller because it understands less, not because it summarised better — fix the language adapter before celebrating._",
+    "_Coverage on `code_map` is `files_mapped / files_naive_would_read`. A high savings% with low coverage means solumbe is smaller because it understands less, not because it summarised better — fix the language adapter before celebrating._",
     "",
   ];
   return lines.join("\n");
@@ -631,7 +631,7 @@ const defaultCorpusPath = path.join(repoRoot, "evals", "corpus.json");
  *
  * @param {object} [options]
  * @param {string} [options.corpusPath] absolute path to a corpus.json (defaults to evals/corpus.json)
- * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the otito repo root)
+ * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the solumbe repo root)
  * @returns {{ data: object, markdown: string }}
  */
 export function runRetrievalEval(options = {}) {
@@ -681,9 +681,9 @@ export function runRetrievalEval(options = {}) {
 // ---------------------------------------------------------------------------
 // Harness execution eval.
 //
-// Accuracy eval proves that Otito retrieves the right source context and labels
+// Accuracy eval proves that Solumbe retrieves the right source context and labels
 // risk correctly. This runner proves a distinct claim: for reviewed, committed
-// fixture repositories, the setup and validation commands Otito inferred can
+// fixture repositories, the setup and validation commands Solumbe inferred can
 // actually run. Fixtures are copied to a temp directory; no customer checkout
 // is executed. Command lines are deliberately constrained to package-manager
 // forms, and install lifecycle scripts are disabled.
@@ -694,7 +694,7 @@ export function runRetrievalEval(options = {}) {
  *
  * @param {object} [options]
  * @param {string} [options.corpusPath] absolute path to a corpus.json (defaults to evals/corpus.json)
- * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the otito repo root)
+ * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the solumbe repo root)
  * @returns {{ data: object, markdown: string }}
  */
 export function runHarnessExecutionEval(options = {}) {
@@ -746,7 +746,7 @@ export function runHarnessExecutionEval(options = {}) {
  *
  * @param {object} [options]
  * @param {string} [options.corpusPath] absolute path to a corpus.json (defaults to evals/corpus.json)
- * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the otito repo root)
+ * @param {string} [options.repoRoot] root used to resolve corpus fixtureRoots (defaults to the solumbe repo root)
  * @returns {{ data: object, markdown: string }}
  */
 export function runGateEffectivenessEval(options = {}) {
@@ -994,7 +994,7 @@ function prepareGateFixture(source, changeSet) {
     throw new Error(`gate effectiveness change-set "${changeSet}" must have exactly one reviewed directory or patch under ${source}`);
   }
 
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gate-eval-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-gate-eval-"));
   try {
     copyDirectoryContents(baseDir, dir);
     initGateFixtureGit(dir);
@@ -1010,8 +1010,8 @@ function prepareGateFixture(source, changeSet) {
 }
 
 /**
- * Credential-shaped fixture lines carry an `otito:allow-secret` marker so the
- * committed corpus never trips otito's own secret gate. The marker is removed
+ * Credential-shaped fixture lines carry a `solumbe:allow-secret` marker so the
+ * committed corpus never trips solumbe's own secret gate. The marker is removed
  * from the isolated copy before the gate runs, so the case exercises real
  * detection rather than the suppression path. This only deletes a suppression
  * comment from reviewed fixture files; it cannot introduce content.
@@ -1052,7 +1052,7 @@ function stripAllowMarkers(dir) {
  */
 function copyDirectoryContents(source, destination) {
   for (const ent of readDirEnts(source)) {
-    if (ent.name === ".git" || ent.name === "node_modules" || ent.name === ".otito") continue;
+    if (ent.name === ".git" || ent.name === "node_modules" || ent.name === ".solumbe") continue;
     fs.cpSync(path.join(source, ent.name), path.join(destination, ent.name), { recursive: true });
   }
 }
@@ -1060,8 +1060,8 @@ function copyDirectoryContents(source, destination) {
 /** @param {string} dir */
 function initGateFixtureGit(dir) {
   runGateGit(dir, ["init", "--quiet"]);
-  runGateGit(dir, ["config", "user.email", "eval@otito.local"]);
-  runGateGit(dir, ["config", "user.name", "otito gate eval"]);
+  runGateGit(dir, ["config", "user.email", "eval@solumbe.local"]);
+  runGateGit(dir, ["config", "user.name", "solumbe gate eval"]);
   runGateGit(dir, ["add", "--all"]);
   runGateGit(dir, ["-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "--quiet", "-m", "baseline"]);
 }
@@ -1113,11 +1113,11 @@ function runGateFixture(dir, options) {
     env: {
       ...process.env,
       NO_COLOR: "1",
-      OTITO_AIGLARE: "0",
-      OTITO_BOUNCER_CONFIG: "",
-      OTITO_TIELINE_CONFIG: "",
-      OTITO_TELEMETRY: "0",
-      OTITO_TELEMETRY_SHARE: "0",
+      SOLUMBE_AIGLARE: "0",
+      SOLUMBE_BOUNCER_CONFIG: "",
+      SOLUMBE_TIELINE_CONFIG: "",
+      SOLUMBE_TELEMETRY: "0",
+      SOLUMBE_TELEMETRY_SHARE: "0",
     },
     timeout: 60000,
     maxBuffer: 2 * 1024 * 1024,
@@ -1238,7 +1238,7 @@ function loadCorpus(corpusPath) {
 
 // Resolve the fixtures named by a retrieval case to absolute directories, copy
 // each into an isolated temp dir (so the committed fixtures are never mutated
-// and the stale `.otito/index.json` they ship with — pinned to an old
+// and the stale `.solumbe/index.json` they ship with — pinned to an old
 // absolute root and an old cache version — is dropped so the map regenerates
 // from the real files), run generateContextPack, then clean the temp dirs up.
 /**
@@ -1335,7 +1335,7 @@ function fixtureForPrimary(file, fixtureNames, paths) {
 
 // precision@k = relevant-in-top-k / returned-in-top-k. The denominator is the
 // number of files the pack actually returned (capped at k), NOT k itself:
-// otito packs are intentionally tiny (often 1-3 primary files), so dividing a
+// solumbe packs are intentionally tiny (often 1-3 primary files), so dividing a
 // single correct hit by a fixed k=5 would score a *perfect* one-file pack at
 // 0.2 and punish precision for being concise. Dividing by what was returned
 // answers the right question — "of the files it surfaced, how many mattered?".
@@ -1520,9 +1520,9 @@ function resolveFixture(root, fixtureRoots, name) {
  * @returns {{ dir: string }}
  */
 function copyFixtureToTemp(source) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-eval-fix-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-eval-fix-"));
   for (const ent of readDirEnts(source)) {
-    if (ent.name === ".otito" || ent.name === "node_modules") continue;
+    if (ent.name === ".solumbe" || ent.name === "node_modules") continue;
     fs.cpSync(path.join(source, ent.name), path.join(dir, ent.name), { recursive: true });
   }
   return { dir };
@@ -1542,7 +1542,7 @@ function round3(value) {
  */
 export function formatRetrievalEvalMarkdown(data) {
   const lines = [
-    "# otito Accuracy Eval",
+    "# solumbe Accuracy Eval",
     "",
     `Generated: ${data.generatedAt}`,
     `Corpus: ${data.corpusPath}`,
@@ -1574,7 +1574,7 @@ export function formatRetrievalEvalMarkdown(data) {
  */
 export function formatHarnessExecutionEvalMarkdown(data) {
   const lines = [
-    "# otito Harness Execution Eval",
+    "# solumbe Harness Execution Eval",
     "",
     `Generated: ${data.generatedAt}`,
     `Corpus: ${data.corpusPath}`,
@@ -1610,7 +1610,7 @@ export function formatHarnessExecutionEvalMarkdown(data) {
  */
 export function formatGateEffectivenessEvalMarkdown(data) {
   const lines = [
-    "# otito Gate Effectiveness Eval",
+    "# solumbe Gate Effectiveness Eval",
     "",
     `Generated: ${data.generatedAt}`,
     `Corpus: ${data.corpusPath}`,
