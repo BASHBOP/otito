@@ -27,6 +27,7 @@ This project follows SemVer.
 
   To upgrade, install `@bashbop/solumbe`; rename `.otitorc.json`, `otito.gate.json` and any `otito:allow-secret` markers; move `.otito/` and `~/.otito/`; rename `OTITO_*` variables; and point MCP host configs at the new package and server key. Two things keep the old name on purpose: telemetry sharing still posts to bashbop-api's `analytics/otito` route with an `otito_version` field, because both sides of that contract have to move together, and links to releases before 4.0.0 still point at `@bashbop/otito`, where those versions live.
 
+- The Release workflow skips `npm publish` when npm already has the version, instead of failing and taking the GitHub Release and MCP Registry jobs down with it. A new package name's first publish has to be done by hand, because npm Trusted Publishing is configured per existing package; re-running a release after a later job failed also hits this.
 - `scripts/rebrand.mjs` (`plan`, `apply`, `check`) made the rename from `.rebrandrc.json`: case-preserving, git-moved paths, idempotent. `npm run quality` now runs `rebrand:check`, so the old name cannot creep back outside the CHANGELOG and the preserved links.
 
 ## [3.5.0] - 2026-09-30

@@ -156,8 +156,17 @@ test("workflow dependencies use setup-node v7 and TypeScript majors require migr
 test("release publishing uses GitHub OIDC without a stored npm token", () => {
   const workflow = read(".github/workflows/release.yml");
   assert.match(workflow, /id-token: write/);
-  assert.match(workflow, /- name: Publish\n\s+run: npm publish/);
+  assert.match(workflow, /- name: Publish\n\s+if: steps\.npm\.outputs\.published != 'true'\n\s+run: npm publish/);
   assert.doesNotMatch(workflow, /NPM_TOKEN|NODE_AUTH_TOKEN/);
+});
+
+test("release skips npm publish for a version npm already has, so the later jobs still run", () => {
+  const workflow = read(".github/workflows/release.yml");
+  // Only the publish step is skipped: the GitHub Release and MCP Registry jobs
+  // need it to succeed, and a skipped step still leaves the job green.
+  assert.match(workflow, /id: npm\n\s+run: \|[\s\S]*?npm view "\$NAME@\$VERSION" version[\s\S]*?published=true" >> "\$GITHUB_OUTPUT"/);
+  assert.match(workflow, /github-release:[\s\S]*?needs: publish/);
+  assert.match(workflow, /publish-mcp:[\s\S]*?needs: publish/);
 });
 
 test("MCP Registry identity matches Bashbop's granted OIDC namespace", () => {
