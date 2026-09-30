@@ -164,7 +164,7 @@ a model, so nothing about the scoring is specific to one editor:
 
 ```bash
 otito route . "$PROMPT" --tier-only          # -> premium
-otito route . "$PROMPT" --host claude-code   # -> claude-opus-5
+otito route . "$PROMPT" --host claude-code   # -> claude-opus-5-5
 claude --model "$(otito route . "$PROMPT" --host claude-code)" -p "$PROMPT"
 ```
 

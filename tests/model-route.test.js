@@ -524,7 +524,7 @@ test("host maps merge built-ins with repo config, and repo wins", () => {
   fs.writeFileSync(path.join(fixture, ".otito", "model-route.json"), JSON.stringify({ hosts: { cursor: { cheap: "c", mid: "m", premium: "p" } } }));
   const hosts = loadHosts(fixture);
   assert.equal(hosts.cursor.premium, "p");
-  assert.equal(hosts["claude-code"].premium, "claude-opus-5");
+  assert.equal(hosts["claude-code"].premium, "claude-opus-5-5");
 
   // A missing or unreadable config is not an error.
   const empty = loadHosts(fs.mkdtempSync(path.join(os.tmpdir(), "otito-route-empty-")));
