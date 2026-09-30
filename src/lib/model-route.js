@@ -80,7 +80,7 @@ export const BUILTIN_HOSTS = {
   "claude-code": {
     cheap: "claude-haiku-4-5-20251001",
     mid: "claude-sonnet-5",
-    premium: "claude-opus-5",
+    premium: "claude-opus-5-5",
   },
 };
 
