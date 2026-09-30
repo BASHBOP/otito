@@ -104,6 +104,18 @@ $BETWEEN"
   fi
 fi
 
+# The ledger follows one first-parent line. A target whose first-parent
+# history does not pass through the ledger tip sits on another line (a
+# develop merge commit, say): walking tip..target would append that line's
+# commits and break coverage for every later run, which is how records for
+# develop-only merges reached the main ledger. Refuse before writing anything.
+# (grep reads all its input: with -q it would exit on the first match, and
+# pipefail would then report rev-list's SIGPIPE as a failure.)
+if [ -n "$LAST_SHA" ] && ! git rev-list --first-parent "$TARGET_SHA" | grep -x "$LAST_SHA" > /dev/null; then
+  echo "reconcile-attestations: target $TARGET_SHA does not continue the ledger: tip $LAST_SHA is not on its first-parent history. Nothing attested." >&2
+  exit 1
+fi
+
 if [ -n "$LAST_SHA" ]; then
   RANGE="$LAST_SHA..$TARGET_SHA"
 else

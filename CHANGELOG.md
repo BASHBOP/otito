@@ -6,6 +6,10 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Post-merge attestation keeps to main's first-parent line.** A PR into `develop` whose CI finished after it merged resolved to its `develop` merge commit, and reconciliation walked `develop`'s first-parent line into the main ledger (four records on 2026-09-29), so every main attestation since v3.4.0 failed with a coverage gap. The resolve step now attests a PR's merge commit only when the PR merged into `main`, and `reconcile-attestations.sh` refuses any target whose first-parent history does not pass through the ledger tip, before writing a record.
+
 ## [4.0.0] - 2026-09-30
 
 Òtítọ́ is now Solumbe: the package, binary, MCP server, config files, evidence folders and environment variables all take the new name, with no fallback to the old ones. Behaviour is unchanged from 3.5.0.
