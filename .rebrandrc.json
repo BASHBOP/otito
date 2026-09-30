@@ -2,7 +2,8 @@
   "from": "otito",
   "to": "solumbe",
   "aliases": {
-    "Òtítọ́": "Solumbe"
+    "Òtítọ́": "Solumbe",
+    "ÒTÍTỌ́": "SOLUMBE"
   },
   "keep": ["CHANGELOG.md", ".rebrandrc.json"],
   "preserve": [

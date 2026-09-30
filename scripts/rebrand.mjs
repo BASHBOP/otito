@@ -95,7 +95,7 @@ function aliasPairs(cfg) {
 
 /**
  * Rewrites one line. Returns the new line, how many replacements it made and
- * any mixed-case spellings it had to leave.
+ * any mixed-case or accented spellings it had to leave.
  * @param {string} line
  * @param {RebrandConfig} cfg
  */
@@ -123,6 +123,18 @@ export function rewriteLine(line, cfg) {
     count += 1;
     return mapped;
   });
+  // An accented spelling no alias covers (the upper-case form of an accented
+  // display name, when only its mixed-case form is listed) slips past the
+  // plain match. Compare against the line with its accents stripped, so
+  // `check` reports it instead of calling the repo clean.
+  const plainLeft = (out.match(new RegExp(escapeRegExp(cfg.from), "gi")) ?? []).length;
+  const anyLeft = (
+    out
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .match(new RegExp(escapeRegExp(cfg.from), "gi")) ?? []
+  ).length;
+  for (let i = plainLeft; i < anyLeft; i += 1) unhandled.push("an accented spelling no alias covers");
   out = out.replace(/\0(\d+)\0/g, (_, i) => cfg.preserve[Number(i)]);
   return { line: out, count, unhandled };
 }
@@ -310,10 +322,10 @@ function parseArgs(argv) {
 function printSummary(manifest, verb) {
   for (const e of manifest.edits) console.log(`  edit   ${e.file} (${e.count})`);
   for (const r of manifest.renames) console.log(`  rename ${r.from} -> ${r.to}`);
-  for (const u of manifest.unhandled) console.log(`  MIXED  ${u.file}:${u.line} ${u.text}`);
+  for (const u of manifest.unhandled) console.log(`  LEFT   ${u.file}:${u.line} ${u.text}`);
   const t = manifest.totals;
   console.log(
-    `${verb}: ${t.replacements} replacement(s) in ${t.files} file(s), ${t.renames} rename(s), ${t.unhandled} mixed-case spelling(s) left for a human`,
+    `${verb}: ${t.replacements} replacement(s) in ${t.files} file(s), ${t.renames} rename(s), ${t.unhandled} mixed-case or accented spelling(s) left for a human`,
   );
 }
 
