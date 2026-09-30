@@ -1,41 +1,41 @@
 {
   "ok": true,
-  "generatedAt": "2026-09-29T18:53:30.288Z",
+  "generatedAt": "2026-09-30T19:34:18.906Z",
   "schemaVersion": 1,
   "reviewEngineVersion": 1,
   "request": "review this change",
   "verdict": "WARN",
   "confidence": 70,
   "repo": {
-    "root": "/home/runner/work/otito/otito",
-    "name": "otito"
+    "root": "/home/runner/work/solumbe/solumbe",
+    "name": "solumbe"
   },
   "impactSummary": {
     "concepts": [],
     "topFiles": [
       {
-        "path": "CHANGELOG.md",
-        "score": 0,
+        "path": "src/lib/review.js",
+        "score": 22.6,
         "riskFlags": []
       },
       {
-        "path": "docs/index.md",
-        "score": 0,
+        "path": "src/lib/pr-review.js",
+        "score": 19.8,
         "riskFlags": []
       },
       {
-        "path": "scripts/check-version.js",
-        "score": 0,
+        "path": "codex/skills/solumbe-review/SKILL.md",
+        "score": 17.7,
         "riskFlags": []
       },
       {
-        "path": "src/lib/context-engine.js",
-        "score": 0,
+        "path": "src/lib/agent-tools.js",
+        "score": 12.1,
         "riskFlags": []
       },
       {
-        "path": "src/lib/impact.js",
-        "score": 0,
+        "path": "src/lib/args.js",
+        "score": 12.1,
         "riskFlags": []
       }
     ],
@@ -44,11 +44,13 @@
     ]
   },
   "prReviewSummary": {
-    "changedFiles": 9,
-    "additions": 496,
-    "deletions": 31,
+    "changedFiles": 1,
+    "additions": 6,
+    "deletions": 6,
     "riskLevel": "low",
-    "riskFlags": [],
+    "riskFlags": [
+      "dependency"
+    ],
     "reviewTargetsCount": 0
   },
   "pass": {
@@ -59,7 +61,7 @@
       {
         "name": "Changed files",
         "status": "PASS",
-        "summary": "10 changed files found."
+        "summary": "2 changed files found."
       },
       {
         "name": "Secret safety",
@@ -74,7 +76,7 @@
       {
         "name": "Release discipline",
         "status": "PASS",
-        "summary": "No version metadata changes found."
+        "summary": "Version metadata changed but the project version is unchanged (dependency or lockfile update)."
       },
       {
         "name": "Validation commands",
@@ -99,6 +101,6 @@
     ]
   },
   "tokenEstimate": {
-    "fullJson": 420
+    "fullJson": 447
   }
 }
