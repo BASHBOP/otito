@@ -70,7 +70,15 @@ jobs:
             for attempt in $(seq 1 "$ATTEMPTS"); do
               MERGED_AT="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.merged_at // ""')"
               if [ -n "$MERGED_AT" ]; then
-                TARGET_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.merge_commit_sha')"
+                # Only a merge into main belongs in the main ledger. A PR into
+                # develop whose CI finished after it merged used to resolve to
+                # its develop merge commit and write develop's line into it.
+                BASE_REF="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.base.ref')"
+                if [ "$BASE_REF" = "main" ]; then
+                  TARGET_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.merge_commit_sha')"
+                else
+                  echo "PR #${PR_NUMBER} merged into ${BASE_REF}, not main: nothing to attest."
+                fi
                 break
               fi
               if [ "$attempt" -lt "$ATTEMPTS" ]; then
