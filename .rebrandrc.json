@@ -1,0 +1,7 @@
+{
+  "from": "otito",
+  "to": "solumbe",
+  "aliases": { "Òtítọ́": "Solumbe" },
+  "keep": ["CHANGELOG.md", ".rebrandrc.json"],
+  "preserve": ["npmjs.com/package/@bashbop/otito/v/", "io.github.BASHBOP%2Fotito", "glama.ai/mcp/servers/BASHBOP/otito", "mcpservers.org/servers/bashbop/otito"]
+}

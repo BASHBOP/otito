@@ -38,6 +38,8 @@
     "ci": "npm run quality",
     "prepublishOnly": "npm run ci",
     "smoke:tarball": "node scripts/smoke-tarball.mjs",
+    "rebrand:plan": "node scripts/rebrand.mjs plan",
+    "rebrand:check": "node scripts/rebrand.mjs check",
     "eval:accuracy": "node src/cli.js eval --accuracy",
     "eval:harness": "node src/cli.js eval --harness",
     "eval:gate": "node src/cli.js eval --gate-effectiveness",
