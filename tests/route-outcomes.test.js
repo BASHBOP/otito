@@ -244,6 +244,16 @@ test("decisions join to their prompt by session and hash, and grade per tier wit
   const deterministic = data.variants.deterministic.tiers.find((t) => t.name === "cheap");
   assert.equal(deterministic.corrected.n, 2, "both joined prompts were deterministic-cheap");
 
+  // Rows logged before the trial carry no arm and grade as advisory.
+  assert.equal(gradeDecisions(records, readSessions(transcripts), { minSample: 1, arm: "advisory" }).records, 4);
+  const delegateOnly = gradeDecisions(
+    records.map((r, i) => (i === 0 ? { ...r, arm: "delegate" } : r)),
+    readSessions(transcripts),
+    { minSample: 1, arm: "delegate" },
+  );
+  assert.equal(delegateOnly.records, 1);
+  assert.equal(delegateOnly.arm, "delegate");
+
   const withheld = gradeDecisions(records, readSessions(transcripts), { minSample: 30 });
   assert.equal(withheld.variants.offline.tiers[0].corrected.rate, null);
   const text = formatOutcomes(withheld);

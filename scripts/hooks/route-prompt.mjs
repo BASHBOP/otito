@@ -14,7 +14,14 @@
 //     real actuation: the Task/Agent tool takes a model, so delegated work
 //     genuinely runs on the routed tier.
 //
-// So the hook advises the session and binds the subagent. It never claims the
+// So the hook advises the session and binds the subagent. With
+// `OTITO_ROUTE_MODE=delegate` it goes one step further on a share of requests
+// (the delegate arm): the work itself is handed to a subagent on the routed
+// tier, which is the only model switch a session is allowed to make. The
+// rest stay advisory as the control, and every decision records its arm so
+// `route-outcomes` can grade following the router against not following it.
+//
+// So by default the hook advises the session and binds the subagent. It never claims the
 // session was switched, which is the anti-pattern the model-router skill calls
 // out by name. It also keeps what it decided, one line per routed prompt in a
 // local log, because a tier printed as context is gone when the turn ends and
@@ -29,6 +36,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { AGENT_MODEL, routeArm } from "../../src/lib/route-arm.js";
+
+export { AGENT_MODEL, routeArm };
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 /** This checkout's CLI, so the hook works whatever directory it routes. */
@@ -84,7 +95,7 @@ export function gitStateAt(cwd) {
  * @param {any} route the `otito route --json` payload
  * @param {{ head?: string|null, branch?: string|null }} [git]
  */
-export function decisionRecord(input, route, git = {}) {
+export function decisionRecord(input, route, git = {}, arm = { mode: "advisory", arm: "advisory", share: null }) {
   const prompt = String(input.prompt ?? "");
   const source = route?.model?.source === "jev" ? "jev" : "offline";
   const tiers = { deterministic: route?.deterministic?.tier ?? null, [source]: route?.tier ?? null };
@@ -102,6 +113,9 @@ export function decisionRecord(input, route, git = {}) {
     promptHash: crypto.createHash("sha256").update(prompt).digest("hex").slice(0, 16),
     promptChars: prompt.length,
     tier: route?.tier ?? null,
+    mode: arm.mode,
+    arm: arm.arm,
+    delegateShare: arm.share,
     hostModel: route?.hostModel ?? null,
     tiers,
     routes,
@@ -237,7 +251,7 @@ export function shouldRoute(input) {
  * @param {{tier: string, hostModel?: string, scoring?: {route?: number, evidence?: {sufficient?: boolean}}, signals?: {ax?: number}, model?: {read?: any}}} route
  * @returns {string}
  */
-export function formatContext(route) {
+export function formatContext(route, arm = { arm: "advisory" }) {
   const score = route?.scoring?.route;
   const ax = route?.signals?.ax;
   const detail = [score === undefined ? null : `route ${score}`, ax === undefined ? null : `AX ${ax}`].filter(Boolean).join(", ");
@@ -267,6 +281,20 @@ export function formatContext(route) {
     readParts.push(`otito tool **${read.capability.choice}** (${read.capability.confidence})`);
   }
   if (readParts.length) lines.push("", `Request read (TypeSafe Jev, advisory): ${readParts.join(", ")}.`);
+
+  // The delegate arm: the one real switch available. The session keeps the
+  // conversation and the review; the routed tier does the work. Evidence-free
+  // routes never reach here, so a fail-safe premium is never enforced.
+  const agentModel = AGENT_MODEL[/** @type {keyof typeof AGENT_MODEL} */ (route.tier)];
+  if (arm.arm === "delegate" && agentModel) {
+    lines[2] =
+      "otito enforce mode, delegate arm: this request is part of a routing trial. The session's own model cannot change, so the tier is applied by delegation.";
+    lines.push(
+      "",
+      `Do the tool work for this request (investigation, edits, running checks) in a subagent launched with model \`${agentModel}\`${route.hostModel ? ` (${route.hostModel})` : ""}. Brief it fully, then review what it returns before reporting. Answer directly without a subagent only when the request needs no tool work at all. Do not say the session's model was changed.`,
+    );
+    return lines.join("\n");
+  }
 
   if (route.hostModel) {
     lines.push(
@@ -358,14 +386,16 @@ async function main() {
   const route = await routeRequest(input.cwd, input.prompt);
   if (!route) return;
 
+  const arm = routeArm(String(input.prompt ?? ""));
+
   // The decision outlives the turn only here.
-  appendDecision(decisionRecord(input, route, gitStateAt(input.cwd)), routeLogPath());
+  appendDecision(decisionRecord(input, route, gitStateAt(input.cwd), arm), routeLogPath());
 
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {
         hookEventName: "UserPromptSubmit",
-        additionalContext: formatContext(route),
+        additionalContext: formatContext(route, arm),
       },
     }),
   );

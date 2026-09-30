@@ -1,13 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { appendDecision, decisionRecord, formatContext, isHarnessPrompt, isRoutable, routeLogPath, shouldRoute } from "../scripts/hooks/route-prompt.mjs";
+import {
+  AGENT_MODEL,
+  appendDecision,
+  decisionRecord,
+  formatContext,
+  routeArm,
+  isHarnessPrompt,
+  isRoutable,
+  routeLogPath,
+  shouldRoute,
+} from "../scripts/hooks/route-prompt.mjs";
 
 const HOOK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "scripts", "hooks", "route-prompt.mjs");
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -278,4 +288,50 @@ test("a route with no evidence says no recommendation instead of routing", () =>
   assert.doesNotMatch(context, /otito routed this request/);
   assert.doesNotMatch(context, /launch it on/);
   assert.match(context, /Do not say the model was changed/);
+});
+
+test("enforce mode is off unless asked for, and splits requests into two stable arms", () => {
+  assert.deepEqual(routeArm("fix the login bug", {}), { mode: "advisory", arm: "advisory", share: null });
+  const env = { OTITO_ROUTE_MODE: "delegate" };
+  const arms = Array.from({ length: 400 }, (_, i) => routeArm(`request ${i}`, env).arm);
+  const delegated = arms.filter((a) => a === "delegate").length;
+  assert.ok(delegated > 150 && delegated < 250, `about half delegate, got ${delegated}`);
+  assert.ok(arms.every((a) => a === "delegate" || a === "control"));
+  assert.equal(routeArm("same prompt", env).arm, routeArm("same prompt", env).arm);
+  assert.equal(routeArm("x", { ...env, OTITO_ROUTE_DELEGATE_SHARE: "1" }).arm, "delegate");
+  assert.equal(routeArm("x", { ...env, OTITO_ROUTE_DELEGATE_SHARE: "0" }).arm, "control");
+});
+
+test("the delegate arm hands the work to a subagent on the routed tier, and never claims a switch", () => {
+  const route = { tier: "cheap", hostModel: "claude-haiku-4-5-20251001", scoring: { route: 80 } };
+  const context = formatContext(route, { arm: "delegate" });
+  assert.match(context, /subagent launched with model `haiku`/);
+  assert.match(context, /Do not say the session's model was changed/);
+  assert.doesNotMatch(context, /Do not spawn a subagent you would not otherwise have used/);
+  assert.equal(AGENT_MODEL.premium, "opus");
+  // The control arm reads exactly like advisory.
+  assert.equal(formatContext(route, { arm: "control" }), formatContext(route));
+  // No evidence: nothing is enforced.
+  assert.doesNotMatch(formatContext({ ...route, scoring: { evidence: { sufficient: false } } }, { arm: "delegate" }), /subagent launched/);
+});
+
+test("a decision records its arm", () => {
+  const record = decisionRecord({ prompt: "p" }, { tier: "mid" }, {}, { mode: "delegate", arm: "control", share: 0.5 });
+  assert.equal(record.mode, "delegate");
+  assert.equal(record.arm, "control");
+  assert.equal(record.delegateShare, 0.5);
+  assert.equal(decisionRecord({ prompt: "p" }, { tier: "mid" }).arm, "advisory");
+});
+
+test("otito route reports the enforce arm in the terminal and in JSON", () => {
+  const CLI = path.join(REPO, "src", "cli.js");
+  const { TYPESAFE_API_KEY: _key, ...env } = process.env;
+  const run = (/** @type {string[]} */ args, /** @type {Record<string,string>} */ extra) =>
+    spawnSync(process.execPath, [CLI, "route", REPO, "fix the route prompt hook arm", "--offline", ...args], { encoding: "utf8", env: { ...env, ...extra } });
+  const off = JSON.parse(run(["--json"], {}).stdout);
+  assert.equal(off.enforce, undefined);
+  const on = JSON.parse(run(["--json"], { OTITO_ROUTE_MODE: "delegate", OTITO_ROUTE_DELEGATE_SHARE: "1" }).stdout);
+  assert.equal(on.enforce.arm, "delegate");
+  assert.equal(on.enforce.agentModel, AGENT_MODEL[on.tier]);
+  assert.match(run([], { OTITO_ROUTE_MODE: "delegate", OTITO_ROUTE_DELEGATE_SHARE: "1", NO_COLOR: "1" }).stdout, /ENFORCE/);
 });

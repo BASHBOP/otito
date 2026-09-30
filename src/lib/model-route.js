@@ -80,7 +80,7 @@ export const BUILTIN_HOSTS = {
   "claude-code": {
     cheap: "claude-haiku-4-5-20251001",
     mid: "claude-sonnet-5",
-    premium: "claude-opus-5",
+    premium: "claude-opus-5-5",
   },
 };
 
@@ -565,6 +565,8 @@ export async function generateRoute(request, options = {}) {
     generatedAt: new Date().toISOString(),
     /** Filled in by a caller that resolved a host map. */
     hostModel: /** @type {string | undefined} */ (undefined),
+    /** Enforce-mode arm, set by the CLI when OTITO_ROUTE_MODE=delegate. */
+    enforce: /** @type {{ mode: string, arm: string, share: number|null, agentModel: string|null } | undefined} */ (undefined),
     modelRouteEngineVersion,
     request: normalized,
     repo: { name: signals.repoName, root: impact.repo?.root ?? path.resolve(repoPath) },

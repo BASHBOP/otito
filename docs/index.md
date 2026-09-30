@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v3.4.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
+**v3.5.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
 
 ---
 
@@ -18,6 +18,14 @@
 ---
 
 ## What's New
+
+!!! tip "v3.5.0 published (2026-09-30)"
+    Model routing can make a share of requests follow the tier it picks, not only recommend it. No command, field or schema was removed.
+
+    - `OTITO_ROUTE_MODE=delegate` turns on enforce mode: a share of requests (`OTITO_ROUTE_DELEGATE_SHARE`, default 0.5) is told to do its tool work in a subagent on the routed tier, and the rest are a control. `otito route` shows the arm and the subagent model, and `route-outcomes.mjs --arm` grades each arm separately.
+    - On Claude Code, the premium tier names `claude-opus-5-5`, the model that actually runs.
+
+    [npm v3.5.0](https://www.npmjs.com/package/@bashbop/otito/v/3.5.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.5.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.4.0 published (2026-09-29)"
     One context pack can span a web app and its API, and the router says when it has nothing to go on. No command, field or schema was removed.
@@ -180,7 +188,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@3.4.0
+    npm install -g @bashbop/otito@3.5.0
     otito doctor
     otito context "review this change" --path .
     ```
@@ -188,7 +196,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@3.4.0 doctor
+    npx -y @bashbop/otito@3.5.0 doctor
     ```
 
 === "Source Checkout"
