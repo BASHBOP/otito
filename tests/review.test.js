@@ -58,7 +58,7 @@ test("formatReviewTerminal renders a verdict line with bars in fancy mode", asyn
   });
   const { data } = await generateReview(root, { request: "tweak something", base: "HEAD" });
   const fancy = formatReviewTerminal(data, (opts) => createRenderer({ ...opts, emoji: true }));
-  assert.match(fancy, /otito review/);
+  assert.match(fancy, /solumbe review/);
   assert.match(fancy, /verdict/);
   assert.match(fancy, /confidence/);
 });

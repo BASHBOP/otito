@@ -131,7 +131,7 @@ test("bumps only ever escalate, and report a ceiling instead of wrapping", () =>
   assert.equal(ceiling.bumps.find((b) => b.name === "risk path").ceiling, true);
 });
 
-test("only top-severity risk flags bump, as otito already weights them", () => {
+test("only top-severity risk flags bump, as solumbe already weights them", () => {
   // `dependency` is weighted zero by the gate, so it must not escalate here.
   const dependency = scoreDecision({ answers: answers(), signals: signals({ ax: 50, riskPaths: ["dependency"] }) });
   assert.equal(dependency.tier, "mid");
@@ -180,7 +180,7 @@ test("an unsure question does not discard a confident one", () => {
 });
 
 test("no bump routes on confidence at all", () => {
-  // The remaining bumps are otito's own deterministic repository signals. A
+  // The remaining bumps are solumbe's own deterministic repository signals. A
   // vendor answer's self-reported certainty is not one of them.
   const scoring = scoreDecision({
     answers: answers({ specificity: { score: 0, confidence: 0, probabilities: {} } }),
@@ -474,7 +474,7 @@ test("askJev folds the request read into the same call and keeps it out of the s
   });
   assert.match(markdown, /Request read, reported and never scored/);
   assert.match(markdown, /\*\*Intent\*\*: change \(confidence 0\.8\)/);
-  assert.match(markdown, /\*\*otito tool\*\*: model_route \(confidence 0\.2, under the floor\)/);
+  assert.match(markdown, /\*\*solumbe tool\*\*: model_route \(confidence 0\.2, under the floor\)/);
   assert.match(markdown, /`src\/billing\.js` 0\.05/);
 
   const terminal = formatRouteTerminal(
@@ -489,7 +489,7 @@ test("askJev folds the request read into the same call and keeps it out of the s
     createRenderer({ color: false, emoji: false }),
   );
   assert.match(terminal, /request read {2}\(reported, never scored\)/);
-  assert.match(terminal, /otito tool {6}model_route {2}0\.20 {2}under the floor/);
+  assert.match(terminal, /solumbe tool {6}model_route {2}0\.20 {2}under the floor/);
 });
 
 /** @param {Record<string, any>} answers */
@@ -519,15 +519,15 @@ test("askJev surfaces an API failure rather than inventing an answer", async (t)
 });
 
 test("host maps merge built-ins with repo config, and repo wins", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-route-hosts-"));
-  fs.mkdirSync(path.join(fixture, ".otito"), { recursive: true });
-  fs.writeFileSync(path.join(fixture, ".otito", "model-route.json"), JSON.stringify({ hosts: { cursor: { cheap: "c", mid: "m", premium: "p" } } }));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-route-hosts-"));
+  fs.mkdirSync(path.join(fixture, ".solumbe"), { recursive: true });
+  fs.writeFileSync(path.join(fixture, ".solumbe", "model-route.json"), JSON.stringify({ hosts: { cursor: { cheap: "c", mid: "m", premium: "p" } } }));
   const hosts = loadHosts(fixture);
   assert.equal(hosts.cursor.premium, "p");
   assert.equal(hosts["claude-code"].premium, "claude-opus-5-5");
 
   // A missing or unreadable config is not an error.
-  const empty = loadHosts(fs.mkdtempSync(path.join(os.tmpdir(), "otito-route-empty-")));
+  const empty = loadHosts(fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-route-empty-")));
   assert.ok(empty["claude-code"]);
 });
 
@@ -577,7 +577,7 @@ test("markdown output records the tier, the source, and that it is advisory", ()
 });
 
 test("AX accepts an injected impact pass, so a composite command pays for it once", () => {
-  // `otito route` needs the impact pass for its own signals and AX needs it for
+  // `solumbe route` needs the impact pass for its own signals and AX needs it for
   // changeability. Without injection the expensive half runs twice, which was
   // the whole of the prototype's local cost.
   const impact = {

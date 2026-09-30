@@ -10,7 +10,7 @@ const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 const cli = path.join(packageRoot, "src", "cli.js");
 const iterations = readPositiveIntegerFlag("--iterations", 5);
 const json = process.argv.includes("--json");
-const configHome = fs.mkdtempSync(path.join(os.tmpdir(), "otito-benchmark-config-"));
+const configHome = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-benchmark-config-"));
 const cases = [
   { name: "version", args: ["--version"] },
   { name: "help", args: ["help"] },
@@ -32,7 +32,7 @@ try {
   if (json) {
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   } else {
-    process.stdout.write(`Otito CLI benchmark (${iterations} measured run${iterations === 1 ? "" : "s"} per command)\n`);
+    process.stdout.write(`Solumbe CLI benchmark (${iterations} measured run${iterations === 1 ? "" : "s"} per command)\n`);
     process.stdout.write(`Node ${process.version} · ${process.platform}-${process.arch}\n\n`);
     process.stdout.write("command       median     p95       min       max\n");
     for (const result of results) {
@@ -73,8 +73,8 @@ function runCli(args) {
     env: {
       ...process.env,
       CI: "1",
-      OTITO_TELEMETRY: "0",
-      OTITO_TELEMETRY_SHARE: "0",
+      SOLUMBE_TELEMETRY: "0",
+      SOLUMBE_TELEMETRY_SHARE: "0",
       XDG_CONFIG_HOME: configHome,
     },
     maxBuffer: 64 * 1024 * 1024,

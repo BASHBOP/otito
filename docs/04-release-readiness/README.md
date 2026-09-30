@@ -1,6 +1,6 @@
 # Release Readiness
 
-otito follows Semantic Versioning and keeps releases tied to tests, changelog discipline, and maintainer review.
+solumbe follows Semantic Versioning and keeps releases tied to tests, changelog discipline, and maintainer review.
 
 ---
 
@@ -32,18 +32,18 @@ Maintainers should keep these aligned:
 - Git tag
 - GitHub release notes
 
-The Git tag follows from `package.json`. Once `otito CI` passes on the release commit on `main`, the `Tag release` workflow pushes `vX.Y.Z` and starts the `Release` workflow. It refuses a version that is not newer than the latest tag or that `CHANGELOG.md` has no section for.
+The Git tag follows from `package.json`. Once `solumbe CI` passes on the release commit on `main`, the `Tag release` workflow pushes `vX.Y.Z` and starts the `Release` workflow. It refuses a version that is not newer than the latest tag or that `CHANGELOG.md` has no section for.
 
 ---
 
-## Òtítọ́ PR Readiness
+## Solumbe PR Readiness
 
-Òtítọ́ runs merge-readiness checks on pull requests so evidence is visible before an owner or reviewer merges.
+Solumbe runs merge-readiness checks on pull requests so evidence is visible before an owner or reviewer merges.
 
 For a solo-maintainer repository, run:
 
 ```bash
-otito gate --pr "$PR_NUMBER" --path . --governance solo
+solumbe gate --pr "$PR_NUMBER" --path . --governance solo
 ```
 
 Solo governance keeps one-person maintainer work moving while making missing separate review or CODEOWNERS approval explicit `WARN` evidence. The owner/admin decision still has to be recorded before merge.
@@ -51,18 +51,18 @@ Solo governance keeps one-person maintainer work moving while making missing sep
 For a company or shared-team repository, switch the same workflow to:
 
 ```bash
-otito gate --pr "$PR_NUMBER" --path . --governance team --policy company
+solumbe gate --pr "$PR_NUMBER" --path . --governance team --policy company
 ```
 
-Then require the Òtítọ́ readiness check alongside CI, docs build, required review, CODEOWNERS approval, and conversation resolution.
+Then require the Solumbe readiness check alongside CI, docs build, required review, CODEOWNERS approval, and conversation resolution.
 
 ---
 
 ## Current Install Path
 
 ```bash
-git clone https://github.com/BASHBOP/otito.git
-cd otito && npm ci && node src/cli.js doctor
+git clone https://github.com/BASHBOP/solumbe.git
+cd solumbe && npm ci && node src/cli.js doctor
 ```
 
 ---
@@ -71,10 +71,10 @@ cd otito && npm ci && node src/cli.js doctor
 
 ```mermaid
 flowchart TD
-    A[otito context] --> B[Implementation]
+    A[solumbe context] --> B[Implementation]
     B --> C[npm run ci]
     C --> D[PR review]
-    D --> E[Òtítọ́ gate]
+    D --> E[Solumbe gate]
     E --> F[Version and changelog]
     F --> G[Tag and GitHub release]
 ```

@@ -1,13 +1,13 @@
-# otito Evals
+# solumbe Evals
 
-otito ships four evals. They answer different questions and must not be
+solumbe ships four evals. They answer different questions and must not be
 confused:
 
 | Eval | Entry point | Question it answers |
 |---|---|---|
 | Token-savings | `runEval(repoPath)` | _Is the context pack **smaller** than a naive file dump?_ |
 | Accuracy | `runRetrievalEval()` | _Is the context pack **right**, meaning does it surface the files an agent needs, and does the risk classifier label paths/queries correctly?_ |
-| Harness execution | `runHarnessExecutionEval()` | _Do the encoded setup and validation commands Otito inferred actually run?_ |
+| Harness execution | `runHarnessExecutionEval()` | _Do the encoded setup and validation commands Solumbe inferred actually run?_ |
 | Gate effectiveness | `runGateEffectivenessEval()` | _Does the real local gate allow a valid change and block known-bad changes for the expected deterministic reason?_ |
 
 The token-savings eval is necessary but not sufficient: a randomly-ranked pack
@@ -26,7 +26,7 @@ scores whether the labeled files land in `primaryFiles`:
 
 - **precision@k**: of the files the pack returned (capped at `k`), how many
   were relevant. The denominator is _what was returned_, not `k`, because
-  otito packs are intentionally tiny (often 1–3 files); dividing a single
+  solumbe packs are intentionally tiny (often 1–3 files); dividing a single
   correct hit by a fixed `k=5` would score a perfect one-file pack at 0.2 and
   punish concision.
 - **recall@k**: of the relevant files, how many appeared in the top `k`.
@@ -73,7 +73,7 @@ absent. Encoded regression guards include:
 ### Harness execution cases
 
 The `harnessExecution` corpus encodes a small, reviewed fixture repository and
-the exact commands Otito must infer from it. The current Node fixture proves:
+the exact commands Solumbe must infer from it. The current Node fixture proves:
 
 - `npm install`
 - `npm test`
@@ -98,7 +98,7 @@ fixture when extending coverage to another ecosystem or command form.
 
 ### Gate-effectiveness cases
 
-The `gateEffectiveness` corpus runs Otito's real local gate against reviewed,
+The `gateEffectiveness` corpus runs Solumbe's real local gate against reviewed,
 committed staged changes. The current fixture contains one valid control and
 six expected blocks:
 
@@ -117,9 +117,9 @@ expected reason is missing, or the gate returns an unexpected `FAIL` check.
 The runner copies `base/` into an isolated temporary directory, creates a
 deterministic Git baseline, applies one reviewed `changes/<changeSet>/`
 directory or `changes/<changeSet>.patch`, stages the result, and invokes
-`otito gate --staged --json`. The patch form lets a safety case create a
+`solumbe gate --staged --json`. The patch form lets a safety case create a
 secret-like path only inside the temporary repository, without placing that
-path in Otito's own working tree. Corpus entries cannot provide shell commands,
+path in Solumbe's own working tree. Corpus entries cannot provide shell commands,
 redirect execution outside `evals/fixtures/`, or use path-like change-set
 names. The source fixture and customer repositories are never mutated or
 executed.
@@ -191,7 +191,7 @@ cases they were written against; without them the expected file sits at rank
 1. **Pick or add a fixture.** Reuse a name under `fixtureRoots` in
    `evals/corpus.json`, or add a small synthetic repo under `evals/fixtures/`
    and register it in `fixtureRoots`. Keep fixtures tiny and synthetic: a few
-   files that exercise one behavior. Do **not** add a `.otito/` cache to a
+   files that exercise one behavior. Do **not** add a `.solumbe/` cache to a
    fixture; the runner copies each fixture to a temp dir and regenerates the map
    from source so the committed fixtures are never mutated.
 
@@ -277,6 +277,6 @@ npm run eval:harness
 npm run eval:gate
 ```
 
-The CLI equivalents are `otito eval --accuracy`, `otito eval --harness`, and
-`otito eval --gate-effectiveness`. Each exits non-zero on a failed corpus, and
+The CLI equivalents are `solumbe eval --accuracy`, `solumbe eval --harness`, and
+`solumbe eval --gate-effectiveness`. Each exits non-zero on a failed corpus, and
 `npm run quality` runs all three release-gating suites.

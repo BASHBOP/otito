@@ -1,14 +1,14 @@
-# Òtítọ́
+# Solumbe
 
-**Models generate the change. Otito proves whether it is safe to merge.**
+**Models generate the change. Solumbe proves whether it is safe to merge.**
 
-[![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/otito/otito-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/otito/actions/workflows/otito-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/otito?style=flat-square)](https://www.npmjs.com/package/@bashbop/otito) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/) [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/bashbop/otito) [![Òtítọ́ MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/score.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
+[![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/solumbe/solumbe-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/solumbe/actions/workflows/solumbe-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/solumbe?style=flat-square)](https://www.npmjs.com/package/@bashbop/solumbe) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/) [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/bashbop/otito) [![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/score.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
 
-![otito demo](otito-demo.gif)
+![solumbe demo](solumbe-demo.gif)
 
-[![Òtítọ́ MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/card.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
+[![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/card.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
 
-Otito is a local-first, deterministic, model-agnostic trust layer for AI-assisted development. It builds task-aware repository context before an agent edits, scores how much a change actually touches, and gates merge readiness against the exact staged tree, with no server, no account, and no code leaving the machine.
+Solumbe is a local-first, deterministic, model-agnostic trust layer for AI-assisted development. It builds task-aware repository context before an agent edits, scores how much a change actually touches, and gates merge readiness against the exact staged tree, with no server, no account, and no code leaving the machine.
 
 It does not replace Claude Code, Codex, Cursor, Gemini, or any native agent harness. It runs beside them and keeps working as the models change underneath.
 
@@ -17,18 +17,18 @@ A passing local gate is never an automatic merge approval: hosted CI, GitHub rev
 ## Install
 
 ```bash
-npm install -g @bashbop/otito
-otito doctor
+npm install -g @bashbop/solumbe
+solumbe doctor
 ```
 
-Or without installing: `npx -y @bashbop/otito doctor`.
+Or without installing: `npx -y @bashbop/solumbe doctor`.
 
 ## What it does
 
 **Rank what a change actually touches**, from the request alone, with no model, no embeddings, and no network:
 
 ```console
-$ otito impact . "add refund handling to checkout" --top 3
+$ solumbe impact . "add refund handling to checkout" --top 3
 
   concepts: money flow
 
@@ -47,7 +47,7 @@ $ otito impact . "add refund handling to checkout" --top 3
 **Gate the exact staged tree**, and say precisely why:
 
 ```console
-$ otito gate . --staged --base origin/main --request "add refund handling to checkout" --min-convergence 80
+$ solumbe gate . --staged --base origin/main --request "add refund handling to checkout" --min-convergence 80
 
   [OK]    Changed files          1 changed file found.
   [OK]    Staged snapshot        Changed-file scope and convergence evidence are captured from the exact staged Git tree.
@@ -72,83 +72,83 @@ Three commands are the product. They call no model, open no socket, and read not
 
 | Step             | Command                                                                    |
 | ---------------- | -------------------------------------------------------------------------- |
-| Before the edit  | `otito context "add refund handling" --path .`                             |
-| Before the merge | `otito gate . --staged --base origin/main --request "add refund handling"` |
-| For the reviewer | `otito pr . --base origin/main --out .otito/pr-review.md`                  |
+| Before the edit  | `solumbe context "add refund handling" --path .`                             |
+| Before the merge | `solumbe gate . --staged --base origin/main --request "add refund handling"` |
+| For the reviewer | `solumbe pr . --base origin/main --out .solumbe/pr-review.md`                  |
 
-Nothing hosted is required, and nothing hosted can change a verdict. [Local Core, Optional Hosted](https://bashbop.github.io/otito/19-local-core-optional-hosted/) lists exactly what the optional pieces send, and where.
+Nothing hosted is required, and nothing hosted can change a verdict. [Local Core, Optional Hosted](https://bashbop.github.io/solumbe/19-local-core-optional-hosted/) lists exactly what the optional pieces send, and where.
 
 ## Supporting commands
 
 | Goal                               | Command                                                                     |
 | ---------------------------------- | --------------------------------------------------------------------------- |
-| Rank change blast radius           | `otito impact . "add refund handling" --top 12`                             |
-| Score intent vs. execution         | `otito converge "add refunds" --path . --base HEAD --staged`                |
-| Score a committed change exactly   | `otito converge "add refunds" --path . --base HEAD~1 --head HEAD`           |
-| Gate a product change across repos | `otito workspace-gate ../web ../api --request "ship change"`                |
-| Grade risk flags against history   | `otito calibrate . --window 30`                                             |
-| Grade route tiers against history  | `otito regret . --window 30 --offline`                                      |
-| Regrade a saved run, same answers  | `otito regret --rescore run.json`                                           |
-| Score Agent Experience             | `otito ax . "add a new MCP tool"`                                           |
-| Recommend a model tier             | `otito route . "add a new MCP tool"`                                        |
-| Sharpen context with a model read  | `otito context "add a new MCP tool" --path . --online`                      |
-| Inspect one repo                   | `otito repo . --json`                                                       |
-| Build a code map                   | `otito map . --json`                                                        |
-| Index and search local projects    | `otito index ~/projects --discover` then `otito search "events controller"` |
-| Generate an agent harness          | `otito harness . --out .otito/harness.md`                                   |
-| Run the MCP server                 | `otito mcp`                                                                 |
+| Rank change blast radius           | `solumbe impact . "add refund handling" --top 12`                             |
+| Score intent vs. execution         | `solumbe converge "add refunds" --path . --base HEAD --staged`                |
+| Score a committed change exactly   | `solumbe converge "add refunds" --path . --base HEAD~1 --head HEAD`           |
+| Gate a product change across repos | `solumbe workspace-gate ../web ../api --request "ship change"`                |
+| Grade risk flags against history   | `solumbe calibrate . --window 30`                                             |
+| Grade route tiers against history  | `solumbe regret . --window 30 --offline`                                      |
+| Regrade a saved run, same answers  | `solumbe regret --rescore run.json`                                           |
+| Score Agent Experience             | `solumbe ax . "add a new MCP tool"`                                           |
+| Recommend a model tier             | `solumbe route . "add a new MCP tool"`                                        |
+| Sharpen context with a model read  | `solumbe context "add a new MCP tool" --path . --online`                      |
+| Inspect one repo                   | `solumbe repo . --json`                                                       |
+| Build a code map                   | `solumbe map . --json`                                                        |
+| Index and search local projects    | `solumbe index ~/projects --discover` then `solumbe search "events controller"` |
+| Generate an agent harness          | `solumbe harness . --out .solumbe/harness.md`                                   |
+| Run the MCP server                 | `solumbe mcp`                                                                 |
 
-Every command takes `--json`, and `otito help` lists the full set with flags.
+Every command takes `--json`, and `solumbe help` lists the full set with flags.
 
 ## MCP
 
-Otito ships a stdio MCP server exposing **14 tools**: `repo_inspect`, `repo_map`, `repo_index`, `repo_search`, `context_pack`, `change_impact`, `agent_experience`, `model_route`, `convergence_score`, `review_context`, `review_gate`, `review_verdict`, `workspace_report`, and `repo_harness`.
+Solumbe ships a stdio MCP server exposing **14 tools**: `repo_inspect`, `repo_map`, `repo_index`, `repo_search`, `context_pack`, `change_impact`, `agent_experience`, `model_route`, `convergence_score`, `review_context`, `review_gate`, `review_verdict`, `workspace_report`, and `repo_harness`.
 
 ```json
 {
   "mcpServers": {
-    "otito": {
+    "solumbe": {
       "command": "npx",
-      "args": ["-y", "@bashbop/otito", "mcp"]
+      "args": ["-y", "@bashbop/solumbe", "mcp"]
     }
   }
 }
 ```
 
-Published in the MCP Registry as `io.github.BASHBOP/otito`. Repo-map lookups use an external per-user cache and never write into the inspected repository. Host-specific setup for Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI, and Kimi Code is in [MCP and Agent Workflows](https://bashbop.github.io/otito/02-mcp-agent-workflows/).
+Published in the MCP Registry as `io.github.BASHBOP/solumbe`. Repo-map lookups use an external per-user cache and never write into the inspected repository. Host-specific setup for Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI, and Kimi Code is in [MCP and Agent Workflows](https://bashbop.github.io/solumbe/02-mcp-agent-workflows/).
 
 ## How it compares
 
-| Approach | Strengths | Where otito differs |
+| Approach | Strengths | Where solumbe differs |
 | --- | --- | --- |
 | Sourcegraph / Cody context | Powerful hosted code search and embedding-based context across an org | Local-first and deterministic: no server, no account, no code leaves the machine, and the same query always yields the same packet |
-| Hand-written `CLAUDE.md` / rules files | Curated, intent-rich guidance | Hand-written context goes stale; otito regenerates context from the actual code (symbols, imports, routes, tests) on every run and complements a short `CLAUDE.md` |
-| `grep` / `ripgrep` | Fast, universal text matching | otito ranks whole files by task intent across paths, symbols, exports, and tests, then adds patterns and validation commands, producing a context packet rather than a list of matching lines |
+| Hand-written `CLAUDE.md` / rules files | Curated, intent-rich guidance | Hand-written context goes stale; solumbe regenerates context from the actual code (symbols, imports, routes, tests) on every run and complements a short `CLAUDE.md` |
+| `grep` / `ripgrep` | Fast, universal text matching | solumbe ranks whole files by task intent across paths, symbols, exports, and tests, then adds patterns and validation commands, producing a context packet rather than a list of matching lines |
 
 ## Documentation
 
 Full command reference, agent workflows, release process, evaluation method, and the design theses behind the trust layer:
 
-**[bashbop.github.io/otito](https://bashbop.github.io/otito/)**
+**[bashbop.github.io/solumbe](https://bashbop.github.io/solumbe/)**
 
 ## Contributing
 
 ```bash
-git clone https://github.com/BASHBOP/otito.git
-cd otito && npm ci && npm run ci
+git clone https://github.com/BASHBOP/solumbe.git
+cd solumbe && npm ci && npm run ci
 ```
 
 `npm run ci` is the full gate: format, lint, typecheck, version check, tests, coverage floors (70% lines / 60% branches / 75% functions), three evaluation corpora, dependency audit, and a packaged-tarball smoke test. Run it before requesting review.
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). All changes need maintainer review; `main` requires passing gates and resolved conversations. Otito follows Semantic Versioning, so say whether a PR is no-impact, patch, minor, or major.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). All changes need maintainer review; `main` requires passing gates and resolved conversations. Solumbe follows Semantic Versioning, so say whether a PR is no-impact, patch, minor, or major.
 
 ---
 
 ## Part of the toolchain
 
-**otito** is one of four tools that form a deterministic trust layer for AI-assisted development. Each uses static analysis to answer a question people keep handing to an LLM.
+**solumbe** is one of four tools that form a deterministic trust layer for AI-assisted development. Each uses static analysis to answer a question people keep handing to an LLM.
 
-- **otito** (this tool), for context: what does this change actually touch?
+- **solumbe** (this tool), for context: what does this change actually touch?
 - [tieline](https://www.npmjs.com/package/@nugehs/tieline), for contracts: did the front end and back end quietly stop agreeing?
 - [bouncer](https://www.npmjs.com/package/@nugehs/bouncer), for compliance: could you defend this to Ofcom?
 - [aiglare](https://www.npmjs.com/package/@nugehs/aiglare), for governance: where can the model do something you can't undo?

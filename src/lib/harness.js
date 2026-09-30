@@ -103,7 +103,7 @@ export function generateHarness(repoPath = ".", options = {}) {
  */
 export function formatHarnessMarkdown(data) {
   const lines = [
-    `# otito Harness: ${data.repo.name}`,
+    `# solumbe Harness: ${data.repo.name}`,
     "",
     `Generated: ${data.generatedAt}`,
     `Harness version: ${data.harnessVersion}`,
@@ -163,15 +163,15 @@ function inferCommands(repo) {
     runtime: inferScriptCommands(repo.scripts, runner, runtimeScripts),
     context: [
       {
-        command: "otito repo . --json",
+        command: "solumbe repo . --json",
         reason: "inspect repository facts",
       },
       {
-        command: "otito map . --json",
+        command: "solumbe map . --json",
         reason: "generate agent-readable code map",
       },
       {
-        command: "otito harness . --json",
+        command: "solumbe harness . --json",
         reason: "refresh harness commands and token estimates",
       },
     ],

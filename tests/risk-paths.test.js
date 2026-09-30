@@ -237,7 +237,7 @@ const CONFIGURATION_FALSE_POSITIVES = [
   "src/env/index.ts",
   "evals/fixtures/shop-api/package.json",
   "evals/fixtures/gate-node/base/package-lock.json",
-  "codex/skills/otito/evals/files/sample-api/package.json",
+  "codex/skills/solumbe/evals/files/sample-api/package.json",
 ];
 
 for (const path of CONFIGURATION_FALSE_POSITIVES) {

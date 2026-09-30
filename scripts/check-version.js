@@ -41,7 +41,7 @@ if (serverManifest) {
 checkPinnedDocVersions(path.join(root, "docs", "index.md"), packageJson.version);
 checkPinnedDocVersions(path.join(root, "RELEASE.md"), packageJson.version);
 
-console.log(`ok: otito version ${packageJson.version} is SemVer`);
+console.log(`ok: solumbe version ${packageJson.version} is SemVer`);
 
 function checkPinnedDocVersions(filePath, expectedVersion) {
   if (!fs.existsSync(filePath)) return;

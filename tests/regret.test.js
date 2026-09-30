@@ -200,7 +200,7 @@ test("--offline keeps a run keyless even when the environment has a key, and --m
 test("help lists the regret command beside calibrate", () => {
   const result = spawnSync(process.execPath, [path.resolve("src/cli.js"), "help"], { encoding: "utf8" });
   assert.equal(result.status, 0);
-  assert.match(result.stdout, /otito regret <repo>/);
+  assert.match(result.stdout, /solumbe regret <repo>/);
   assert.match(result.stdout, /grade route tiers against this repo's own history/);
 });
 
@@ -449,7 +449,7 @@ test("rescore refuses a run that did not keep its inputs, and anything that is n
     commits: saved.commits.map(({ containment: _containment, riskPaths: _riskPaths, inputs: _inputs, ...row }) => row),
   };
   assert.throws(() => rescoreRegret(before), /saved by regret 0\.2\.0, which did not keep the signals and answers a rescore needs/);
-  assert.throws(() => rescoreRegret({}), /needs the JSON of an `otito regret --json` run/);
+  assert.throws(() => rescoreRegret({}), /needs the JSON of an `solumbe regret --json` run/);
 });
 
 test("the CLI rescores a saved run from a file, and says what --rescore needs when it has no path", async () => {
@@ -466,7 +466,7 @@ test("the CLI rescores a saved run from a file, and says what --rescore needs wh
 
   const missing = spawnSync(process.execPath, [path.resolve("src/cli.js"), "regret", "--rescore"], { encoding: "utf8" });
   assert.notEqual(missing.status, 0);
-  assert.match(missing.stderr, /--rescore needs the path of a saved `otito regret --json` run/);
+  assert.match(missing.stderr, /--rescore needs the path of a saved `solumbe regret --json` run/);
 });
 
 test("release and version-bump commits are not graded, in a replay or in a rescore of a run that had graded them", async () => {
@@ -475,7 +475,7 @@ test("release and version-bump commits are not graded, in a replay or in a resco
     "chore: bump version to 1.4.0",
     "chore: release v1.2.0",
     "chore: prepare repoctx v0.3 release",
-    "release: otito 1.2.0",
+    "release: solumbe 1.2.0",
     "Release Repoctx 1.2",
     "1.2.3",
     "chore: Update schema snapshot after merge [skip ci]",

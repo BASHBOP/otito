@@ -1,4 +1,4 @@
-// Grades otito's own risk flags against the repository's own history.
+// Grades solumbe's own risk flags against the repository's own history.
 //
 // A risk level that has never been compared to an outcome is a heuristic
 // wearing a number. This module supplies the comparison: walk history, recover
@@ -345,7 +345,7 @@ function blameRepairedCommits(root, fix) {
 export function readHistory(root, since) {
   // Record separator: built from a character code so no literal control
   // byte lands in the source, and spawn never sees a null in an argument.
-  const separator = `${String.fromCharCode(30)}otito${String.fromCharCode(30)}`;
+  const separator = `${String.fromCharCode(30)}solumbe${String.fromCharCode(30)}`;
   const args = ["log", "--no-merges", "--numstat", "--no-renames", `--format=${separator}%H%x09%P%x09%ct%x09%s`];
   if (since) args.push(`--since=${since}`);
   const raw = tryGit(root, args);
@@ -397,7 +397,7 @@ function tryGit(root, args) {
  */
 export function makeCalibrationReceipt(data) {
   const canonical = {
-    engine: "otito-calibrate",
+    engine: "solumbe-calibrate",
     join: data.method.join,
     outcome: data.method.outcome,
     fixCommitRule: data.method.fixCommitRule,

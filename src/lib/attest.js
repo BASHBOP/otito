@@ -81,7 +81,7 @@ export function readLedger(ledgerPath) {
 
 /**
  * @typedef {object} AttestOptions
- * @property {Record<string, any>} verdict the `otito review --json` payload
+ * @property {Record<string, any>} verdict the `solumbe review --json` payload
  * @property {string} merge the merged commit SHA
  * @property {string} [prev] the base (first parent) SHA
  * @property {number|string|null} [pr]
@@ -97,7 +97,7 @@ export function readLedger(ledgerPath) {
  */
 export function buildAttestation(options, rows) {
   const { verdict } = options;
-  if (!verdict || typeof verdict !== "object") throw new Error("attest needs a review verdict (JSON from `otito review --json`)");
+  if (!verdict || typeof verdict !== "object") throw new Error("attest needs a review verdict (JSON from `solumbe review --json`)");
   if (!options.merge) throw new Error("attest needs --merge <sha>, the merged commit to bind the record to");
   const prevHash = rows.length ? rows[rows.length - 1].recordHash : GENESIS_HASH;
   const pr = Number(options.pr ?? 0) || null;

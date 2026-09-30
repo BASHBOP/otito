@@ -6,7 +6,7 @@ import path from "node:path";
 import { generateCodeMap, isVendorFile } from "../src/lib/code-map.js";
 
 test("generateCodeMap classifies Next routes and symbols", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-web-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-web-"));
   fs.mkdirSync(path.join(root, "app", "events"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { next: "15.0.0" } }));
   fs.writeFileSync(path.join(root, "app", "events", "page.tsx"), "export default function EventsPage() { return null; }\nexport const count = 1;\n");
@@ -18,7 +18,7 @@ test("generateCodeMap classifies Next routes and symbols", () => {
 });
 
 test("generateCodeMap indexes Handlebars templates and predictable email supporting artifacts", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-email-artifacts-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-email-artifacts-"));
   fs.mkdirSync(path.join(root, "src", "email", "templates"), { recursive: true });
   fs.mkdirSync(path.join(root, "src", "i18n"), { recursive: true });
   fs.mkdirSync(path.join(root, "src", "feature-flags", "config"), { recursive: true });
@@ -41,7 +41,7 @@ test("generateCodeMap indexes Handlebars templates and predictable email support
 });
 
 test("generateCodeMap classifies Nest controllers and methods", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-api-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-api-"));
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ main: "dist/main" }));
   fs.writeFileSync(
@@ -58,7 +58,7 @@ test("generateCodeMap classifies Nest controllers and methods", () => {
 });
 
 test("generateCodeMap extracts Nest service class methods for context ranking", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-service-methods-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-service-methods-"));
   fs.mkdirSync(path.join(root, "src", "email"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ main: "dist/main" }));
   fs.writeFileSync(
@@ -89,7 +89,7 @@ test("generateCodeMap extracts Nest service class methods for context ranking", 
 });
 
 test("generateCodeMap ignores code-like strings in fixtures", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-fixture-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-fixture-"));
   fs.mkdirSync(path.join(root, "tests"), { recursive: true });
   fs.writeFileSync(
     path.join(root, "tests", "fixture.test.ts"),
@@ -110,7 +110,7 @@ test("generateCodeMap ignores code-like strings in fixtures", () => {
 });
 
 test("generateCodeMap classifies Go source and test files", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-go-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-go-"));
   fs.mkdirSync(path.join(root, "internal", "githubpr"), { recursive: true });
   fs.writeFileSync(path.join(root, "go.mod"), "module example.com/pullpass\n\ngo 1.22\n");
   fs.writeFileSync(
@@ -147,7 +147,7 @@ test("generateCodeMap classifies Go source and test files", () => {
 });
 
 test("generateCodeMap extracts C# namespace, class, interface, enum, methods, and using-directives", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-cs-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-cs-"));
   fs.writeFileSync(
     path.join(root, "booking.aspx.cs"),
     [
@@ -193,7 +193,7 @@ test("generateCodeMap extracts C# namespace, class, interface, enum, methods, an
 });
 
 test("generateCodeMap extracts Python classes, functions, imports, with comments/strings ignored", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-py-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-py-"));
   fs.writeFileSync(
     path.join(root, "service.py"),
     [
@@ -281,7 +281,7 @@ test("isVendorFile detects minified, library-named, and vendor-pathed files", ()
 });
 
 test("generateCodeMap extracts Java package, classes, interfaces, enums, records, and imports", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-java-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-java-"));
   fs.writeFileSync(
     path.join(root, "BookingService.java"),
     [
@@ -322,7 +322,7 @@ test("generateCodeMap extracts Java package, classes, interfaces, enums, records
 });
 
 test("generateCodeMap extracts Ruby modules, classes, methods, and require directives", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-rb-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-rb-"));
   fs.writeFileSync(
     path.join(root, "service.rb"),
     [
@@ -367,7 +367,7 @@ test("generateCodeMap extracts Ruby modules, classes, methods, and require direc
 });
 
 test("generateCodeMap extracts Rust use, mod, struct, enum, trait, fn with pub visibility", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-rs-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-rs-"));
   fs.writeFileSync(
     path.join(root, "lib.rs"),
     [
@@ -418,7 +418,7 @@ test("generateCodeMap extracts Rust use, mod, struct, enum, trait, fn with pub v
 });
 
 test("generateCodeMap tags files with feature subdir as a secondary domain", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-domains-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-domains-"));
   fs.mkdirSync(path.join(root, "components", "livestream"), { recursive: true });
   fs.mkdirSync(path.join(root, "app", "dashboard", "livestream"), { recursive: true });
   fs.mkdirSync(path.join(root, "components"), { recursive: true });
@@ -449,7 +449,7 @@ test("generateCodeMap tags files with feature subdir as a secondary domain", () 
 });
 
 test("generateCodeMap summary counts every kind, symbol, and data-access hit in one pass", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-summary-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-summary-"));
   fs.mkdirSync(path.join(root, "app", "events"), { recursive: true });
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ dependencies: { next: "15.0.0" } }));
@@ -497,7 +497,7 @@ test("generateCodeMap summary counts every kind, symbol, and data-access hit in 
 });
 
 test("generateCodeMap flags vendor files via isVendor and downstream filters them in context_pack", async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-vendor-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-vendor-"));
   fs.mkdirSync(path.join(root, "js"), { recursive: true });
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(path.join(root, "js", "jquery.min.js"), "// fake jquery\n");
@@ -514,7 +514,7 @@ test("generateCodeMap flags vendor files via isVendor and downstream filters the
 });
 
 test("generateCodeMap indexes skill and documentation markdown with distinct kinds", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-markdown-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-markdown-"));
   fs.mkdirSync(path.join(root, "codex", "skills", "model-router"), { recursive: true });
   fs.mkdirSync(path.join(root, "docs", "routing"), { recursive: true });
   fs.writeFileSync(
@@ -564,7 +564,7 @@ test("generateCodeMap indexes skill and documentation markdown with distinct kin
 });
 
 test("generateCodeMap does not mine data-access hits from SQL quoted in documentation", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-map-md-sql-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-map-md-sql-"));
   fs.mkdirSync(path.join(root, "docs"), { recursive: true });
   fs.writeFileSync(path.join(root, "docs", "queries.md"), ["# Queries", "", "```sql", '"SELECT id FROM bookings WHERE paid = 1"', "```", ""].join("\n"));
 

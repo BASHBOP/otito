@@ -1,32 +1,32 @@
 # Usage & Performance Dashboard
 
-`otito dashboard` turns a local, opt-in usage log into a single self-contained
-HTML page that answers two questions: **how is otito being used**, and **how
+`solumbe dashboard` turns a local, opt-in usage log into a single self-contained
+HTML page that answers two questions: **how is solumbe being used**, and **how
 well is it performing**. The dashboard needs no server or account. Its local
 capture remains separate from optional anonymous usage sharing.
 
 It is the observability companion to the trust layer: the same local-first,
-deterministic discipline applied to otito's own usage.
+deterministic discipline applied to solumbe's own usage.
 
 ## Quick start
 
 ```bash
-otito telemetry on          # opt in (off by default)
-otito context "add a tool" --path .
-otito gate .
-otito dashboard             # writes .otito/dashboard.html
+solumbe telemetry on          # opt in (off by default)
+solumbe context "add a tool" --path .
+solumbe gate .
+solumbe dashboard             # writes .solumbe/dashboard.html
 ```
 
-To help improve Otito, a developer can make a second, explicit choice:
+To help improve Solumbe, a developer can make a second, explicit choice:
 
 ```bash
-otito telemetry share on    # enables local capture and anonymous sharing
+solumbe telemetry share on    # enables local capture and anonymous sharing
 ```
 
 This is never enabled by installation, `init`, local telemetry consent, or an
 upgrade.
 
-Open `.otito/dashboard.html` in any browser. It works straight off disk
+Open `.solumbe/dashboard.html` in any browser. It works straight off disk
 (`file://`), offline.
 
 ## What it shows
@@ -34,10 +34,10 @@ Open `.otito/dashboard.html` in any browser. It works straight off disk
 | Panel | Reads |
 | --- | --- |
 | Invocations / latency tiles | run counts and wall-clock duration per command and MCP tool |
-| Token savings vs naive | the latest `otito eval` byte-ratio delta against a whole-file baseline |
+| Token savings vs naive | the latest `solumbe eval` byte-ratio delta against a whole-file baseline |
 | Gate pass rate / verdict mix | `PASS` / `WARN` / `FAIL` outcomes from `gate`, `pass`, and `review` |
-| Convergence over time | `otito converge` scores (intent vs diff) as a trend |
-| Recent artifacts / commits | existing `.otito/*.json` reports and recent git history |
+| Convergence over time | `solumbe converge` scores (intent vs diff) as a trend |
+| Recent artifacts / commits | existing `.solumbe/*.json` reports and recent git history |
 
 Every tile and chart carries an interpretation tooltip, and a **"what this can't
 show"** panel keeps the coverage gaps explicit (latency only for runs after
@@ -47,12 +47,12 @@ naive-savings number is a relative cross-build delta, not an absolute guarantee)
 ## Privacy & determinism
 
 - **Off by default.** Capture is gated by the `telemetry` config key or the
-  `OTITO_TELEMETRY` env var, and is forced off under CI unless explicitly
+  `SOLUMBE_TELEMETRY` env var, and is forced off under CI unless explicitly
   opted in. There is no `init`-time nudge: you turn it on manually.
-- **Local by default.** Events append to `~/.otito/usage.jsonl`. The derived
-  HTML lives under the repo's gitignored `.otito/`. This local log is not sent.
-- **Sharing is separate.** `otito telemetry share on` sends a smaller event
-  through Otito's public relay. Existing `telemetry: true` configurations remain
+- **Local by default.** Events append to `~/.solumbe/usage.jsonl`. The derived
+  HTML lives under the repo's gitignored `.solumbe/`. This local log is not sent.
+- **Sharing is separate.** `solumbe telemetry share on` sends a smaller event
+  through Solumbe's public relay. Existing `telemetry: true` configurations remain
   local-only.
 - **Shape, not content.** Each event records the command name, the *shape* of its
   arguments (key names only, never flag values, paths, or queries), latency,
@@ -66,9 +66,9 @@ naive-savings number is a relative cross-build delta, not an absolute guarantee)
 ### What anonymous sharing sends
 
 Shared events contain only a random installation ID, CLI or MCP surface,
-command name, outcome, coarse duration bucket, Otito version, Node major
+command name, outcome, coarse duration bucket, Solumbe version, Node major
 version, operating-system family, and schema version. The random ID is created
-only after opt-in and stored at `~/.otito/anonymous-id`.
+only after opt-in and stored at `~/.solumbe/anonymous-id`.
 
 Shared events never contain prompts, argument values or shapes, paths,
 repository names or hashes, source content, errors, receipt IDs, result data,
@@ -79,11 +79,11 @@ is not present in the public npm package.
 ## Commands
 
 ```bash
-otito telemetry status        # show state, log location, size, event count
-otito telemetry on | off      # toggle capture (writes the config key)
-otito telemetry share on | off # toggle anonymous sharing separately
-otito telemetry clear         # delete the local usage log
-otito dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]
+solumbe telemetry status        # show state, log location, size, event count
+solumbe telemetry on | off      # toggle capture (writes the config key)
+solumbe telemetry share on | off # toggle anonymous sharing separately
+solumbe telemetry clear         # delete the local usage log
+solumbe dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]
 ```
 
 The repo grouping key in each event is a one-way hash of the repository root: it

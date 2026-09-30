@@ -3,7 +3,7 @@
 // scripts/check-version.js (verifies), and unit-tested independently of
 // the filesystem so the regexes stay correct without a real repo checkout.
 
-const VERSIONED_COMMAND = /(npm install -g @bashbop\/otito@|npx -y @bashbop\/otito@)(\d+\.\d+\.\d+)/g;
+const VERSIONED_COMMAND = /(npm install -g @bashbop\/solumbe@|npx -y @bashbop\/solumbe@)(\d+\.\d+\.\d+)/g;
 const STATUS_LINE = /(\*\*Status:\*\* v)(\d+\.\d+\.\d+)/;
 // The landing page's banner, "**v3.3.0** is published to npm, ...". It
 // replaced the "**Status:** v" line, and neither the sync nor the drift
@@ -12,7 +12,7 @@ const STATUS_LINE = /(\*\*Status:\*\* v)(\d+\.\d+\.\d+)/;
 const PUBLISHED_BANNER = /(\*\*v)(\d+\.\d+\.\d+)(\*\* is published)/;
 const WHATS_NEW_HEADING = /^## What's New\s*$/m;
 
-// Rewrites pinned `@bashbop/otito@X.Y.Z` install/verify commands, the
+// Rewrites pinned `@bashbop/solumbe@X.Y.Z` install/verify commands, the
 // docs "Status" line and the landing page's published banner to the current
 // release. Deliberately does not touch docs/index.md's "What's New" section
 // (a per-release changelog entry with its own historical npm/GitHub-release

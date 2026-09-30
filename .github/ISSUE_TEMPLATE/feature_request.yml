@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest a otito improvement.
+description: Suggest a solumbe improvement.
 title: "feature: "
 labels:
   - enhancement
@@ -15,7 +15,7 @@ body:
     id: proposal
     attributes:
       label: Proposal
-      description: What should otito do?
+      description: What should solumbe do?
     validations:
       required: true
   - type: textarea

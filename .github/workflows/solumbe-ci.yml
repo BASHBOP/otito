@@ -1,4 +1,4 @@
-name: otito CI
+name: solumbe CI
 
 on:
   pull_request:
@@ -96,7 +96,7 @@ jobs:
             --base "origin/${{ github.base_ref }}" \
             --head HEAD \
             --number "${{ github.event.pull_request.number }}" \
-            --out .otito/pr-review.md \
+            --out .solumbe/pr-review.md \
             --comment
 
       - name: Generate commit review context
@@ -114,16 +114,16 @@ jobs:
           node src/cli.js pr . \
             --base "$BASE" \
             --head "${{ github.sha }}" \
-            --out .otito/pr-review.md
+            --out .solumbe/pr-review.md
 
       - name: Upload PR review artifact
         uses: actions/upload-artifact@v7
         with:
-          name: otito-pr-review
-          path: .otito/pr-review.md
+          name: solumbe-pr-review
+          path: .solumbe/pr-review.md
 
-  otito-readiness:
-    name: Otito readiness
+  solumbe-readiness:
+    name: Solumbe readiness
     runs-on: ubuntu-latest
 
     steps:
@@ -154,7 +154,7 @@ jobs:
         if: github.event_name == 'pull_request'
         run: git fetch origin "+${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}" --depth=1
 
-      # otito's own merge-readiness gate (impact + PR review + local pass).
+      # solumbe's own merge-readiness gate (impact + PR review + local pass).
       # Exits non-zero only on a blocking FAIL verdict; WARN does not block.
       - name: Evaluate merge readiness
         if: github.event_name == 'pull_request'

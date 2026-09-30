@@ -1,19 +1,19 @@
-# :material-source-branch: Òtítọ́
+# :material-source-branch: Solumbe
 
 ## Independent trust infrastructure for agents and reviewers
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v3.5.0** is published to npm, GitHub Releases, and the official MCP Registry. Òtítọ́ is a Bashbop Ltd product, MIT licensed.
+**v3.5.0** is published to npm, GitHub Releases, and the official MCP Registry. Solumbe is a Bashbop Ltd product, MIT licensed.
 
 ---
 
-!!! info "About Òtítọ́"
-    Òtítọ́ is a local-first trust harness for coding agents. It maps repository context before a change, then produces deterministic impact, validation, ownership, and review evidence before merge. It complements model-native agent loops instead of replacing them.
+!!! info "About Solumbe"
+    Solumbe is a local-first trust harness for coding agents. It maps repository context before a change, then produces deterministic impact, validation, ownership, and review evidence before merge. It complements model-native agent loops instead of replacing them.
 
-    Its command-line and package identity is `otito`.
+    Its command-line and package identity is `solumbe`.
 
-    :material-animation-play: See the [**How It Works** visual walkthrough](assets/otito-how-it-works.html): the loop from context before the edit, to a verdict before the merge, to an attestation after it, with every shipped MCP tool in its place.
+    :material-animation-play: See the [**How It Works** visual walkthrough](assets/solumbe-how-it-works.html): the loop from context before the edit, to a verdict before the merge, to an attestation after it, with every shipped MCP tool in its place.
 
 ---
 
@@ -22,69 +22,69 @@
 !!! tip "v3.5.0 published (2026-09-30)"
     Model routing can make a share of requests follow the tier it picks, not only recommend it. No command, field or schema was removed.
 
-    - `OTITO_ROUTE_MODE=delegate` turns on enforce mode: a share of requests (`OTITO_ROUTE_DELEGATE_SHARE`, default 0.5) is told to do its tool work in a subagent on the routed tier, and the rest are a control. `otito route` shows the arm and the subagent model, and `route-outcomes.mjs --arm` grades each arm separately.
+    - `SOLUMBE_ROUTE_MODE=delegate` turns on enforce mode: a share of requests (`SOLUMBE_ROUTE_DELEGATE_SHARE`, default 0.5) is told to do its tool work in a subagent on the routed tier, and the rest are a control. `solumbe route` shows the arm and the subagent model, and `route-outcomes.mjs --arm` grades each arm separately.
     - On Claude Code, the premium tier names `claude-opus-5-5`, the model that actually runs.
 
-    [npm v3.5.0](https://www.npmjs.com/package/@bashbop/otito/v/3.5.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.5.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v3.5.0](https://www.npmjs.com/package/@bashbop/otito/v/3.5.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v3.5.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.4.0 published (2026-09-29)"
     One context pack can span a web app and its API, and the router says when it has nothing to go on. No command, field or schema was removed.
 
-    - `context_pack` and `otito context` read `companions` from a repository's `.otitorc.json` (`"companions": ["../api"]`), so a web bug whose cause is in the API gets one pack covering both. Explicit `paths` still win; a companion that is not checked out is skipped.
+    - `context_pack` and `solumbe context` read `companions` from a repository's `.solumberc.json` (`"companions": ["../api"]`), so a web bug whose cause is in the API gets one pack covering both. Explicit `paths` still win; a companion that is not checked out is skipped.
     - `change_impact` raises risk only from required and supporting files, plus any changed file, not from a domain that only an advisory lead touches.
-    - `otito route` shows each Score question's own confidence next to its score, display only, and says **no recommendation** when otito matched no files, while still naming the fail-safe tier. [docs/18](18-model-routing/README.md) has the detail.
+    - `solumbe route` shows each Score question's own confidence next to its score, display only, and says **no recommendation** when solumbe matched no files, while still naming the fail-safe tier. [docs/18](18-model-routing/README.md) has the detail.
     - `context_pack` reads "bug", "broken" or "crash" as debugging, and ranks the repository a multi-repo request names first; `change_impact` keeps a UI page as a required owner without API wording.
     - `version:check` fails when the site banner or What's New lags the released version.
 
-    [npm v3.4.0](https://www.npmjs.com/package/@bashbop/otito/v/3.4.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.4.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v3.4.0](https://www.npmjs.com/package/@bashbop/otito/v/3.4.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v3.4.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.3.0 published (2026-09-27)"
     The terminal output gets colour and shape it didn't have before. No command, field or schema was removed.
 
     - The default terminal look is plain Unicode (`✓ ! ✗`, box drawing, arrows) with no emoji; CI, `NO_EMOJI`, `--no-emoji` and `TERM=dumb` keep ASCII, and `--emoji` opts back in. Tables, trees and lists come from shared primitives, and every command that prints for a person ends with one closing line such as `Verified.` or `Runs without errors.`
-    - `otito install` asks a person at a terminal how to install, while `--yes`, `--json`, CI and agents get the same output as before.
+    - `solumbe install` asks a person at a terminal how to install, while `--yes`, `--json`, CI and agents get the same output as before.
     - `context_pack` and `change_impact` stop ranking translation catalogs, file extensions and test notes ahead of the code a request names; a path or symbol named in the request is pinned as a required owner.
     - A version bump that reaches `main` is tagged and released by the new `Tag release` workflow, without a hand-pushed tag.
 
-    [npm v3.3.0](https://www.npmjs.com/package/@bashbop/otito/v/3.3.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.3.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v3.3.0](https://www.npmjs.com/package/@bashbop/otito/v/3.3.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v3.3.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.2.0 published (2026-09-26)"
     The gates gate what they are given. No command, field or schema was removed.
 
-    - `otito gate` and `otito review` take the repository from the positional or `--path`, in local and PR mode alike, and every gate, CLI or MCP, reads policy and governance from the `.otitorc.json` of the repository it gates, not the directory it runs in.
+    - `solumbe gate` and `solumbe review` take the repository from the positional or `--path`, in local and PR mode alike, and every gate, CLI or MCP, reads policy and governance from the `.solumberc.json` of the repository it gates, not the directory it runs in.
     - The GitHub PR gate reads whether a PR is open, merged or closed and reports it as `pr.state` and `pr.mergedAt`, so a merged PR is no longer gated as if it were still open.
     - A `--pr` or selector that names no PR is refused rather than gating the wrong thing. Over MCP a blank `pr` reads as no PR, and `pr_merge_readiness` with no selector gates the checked-out branch's PR again.
-    - Repair hints name the `@nugehs` packages that exist, and `otito help` no longer says the legacy MCP tool names stop working at 3.0; [docs/02](02-mcp-agent-workflows/README.md#legacy-tool-names) maps each one to its canonical tool.
+    - Repair hints name the `@nugehs` packages that exist, and `solumbe help` no longer says the legacy MCP tool names stop working at 3.0; [docs/02](02-mcp-agent-workflows/README.md#legacy-tool-names) maps each one to its canonical tool.
 
-    [npm v3.2.0](https://www.npmjs.com/package/@bashbop/otito/v/3.2.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.2.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v3.2.0](https://www.npmjs.com/package/@bashbop/otito/v/3.2.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v3.2.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.1.0 published (2026-09-26)"
     The router gets graded, and the answer so far is that nothing can grade it yet. Nothing was removed or renamed.
 
-    - `otito regret` replays a repository's history and grades the tier each half of the router would have given against the same `repaired` outcome `otito calibrate` uses; `--rescore` grades a new arithmetic on frozen model answers, with no checkout and no model call.
-    - On three repositories no variant orders outcomes, and offline audits of the join and of a same-session outcome say why, so `otito route` stays advisory. [docs/18](18-model-routing/README.md) has the tables.
-    - The route-prompt hook now keeps every decision it makes (`~/.otito/route-decisions.jsonl`, never the prompt text), so the router can be graded once enough real requests exist.
-    - `otito attest` and `otito attest --verify` move post-merge attestation into the CLI, with versioned records and a reusable workflow.
+    - `solumbe regret` replays a repository's history and grades the tier each half of the router would have given against the same `repaired` outcome `solumbe calibrate` uses; `--rescore` grades a new arithmetic on frozen model answers, with no checkout and no model call.
+    - On three repositories no variant orders outcomes, and offline audits of the join and of a same-session outcome say why, so `solumbe route` stays advisory. [docs/18](18-model-routing/README.md) has the tables.
+    - The route-prompt hook now keeps every decision it makes (`~/.solumbe/route-decisions.jsonl`, never the prompt text), so the router can be graded once enough real requests exist.
+    - `solumbe attest` and `solumbe attest --verify` move post-merge attestation into the CLI, with versioned records and a reusable workflow.
 
-    [npm v3.1.0](https://www.npmjs.com/package/@bashbop/otito/v/3.1.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.1.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v3.1.0](https://www.npmjs.com/package/@bashbop/otito/v/3.1.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v3.1.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v3.0.0 published (2026-09-25)"
-    The first major since the Òtítọ́ cutover. It follows 1.15.0 directly; the `v2.x` tags belong to earlier otito releases, from before the cutover.
+    The first major since the Solumbe cutover. It follows 1.15.0 directly; the `v2.x` tags belong to earlier solumbe releases, from before the cutover.
 
-    - **Breaking:** otito stops interpreting the request and leaves that to the model. `intent.hints`, `patterns` and `agentPrompt` leave the context pack, `implementationPlan` leaves impact, and `reviewPrompts` and `nextSteps` leave PR review. The ranked files, hotspots, risk flags and review targets they were derived from are unchanged. See [Migrating from 1.x](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md#migrating-from-1x).
-    - `otito converge --head <ref>` and `otito gate --head <ref>` score exactly `base..head`, so a dirty checkout no longer counts as scope drift. A confirmed owner's own siblings and tests are in scope, not drift; on a 25-file commit that moved convergence from 55 to 84.
+    - **Breaking:** solumbe stops interpreting the request and leaves that to the model. `intent.hints`, `patterns` and `agentPrompt` leave the context pack, `implementationPlan` leaves impact, and `reviewPrompts` and `nextSteps` leave PR review. The ranked files, hotspots, risk flags and review targets they were derived from are unchanged. See [Migrating from 1.x](https://github.com/BASHBOP/solumbe/blob/main/CHANGELOG.md#migrating-from-1x).
+    - `solumbe converge --head <ref>` and `solumbe gate --head <ref>` score exactly `base..head`, so a dirty checkout no longer counts as scope drift. A confirmed owner's own siblings and tests are in scope, not drift; on a 25-file commit that moved convergence from 55 to 84.
     - Working-tree convergence no longer scores untracked files by default (`--include-untracked` restores it).
     - Fixed: post-merge attestation attested the wrong commit, the context pack reported a working tree that no longer existed, and a manual run can now reset an orphaned audit ledger.
 
-    [npm v3.0.0](https://www.npmjs.com/package/@bashbop/otito/v/3.0.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v3.0.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v3.0.0](https://www.npmjs.com/package/@bashbop/otito/v/3.0.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v3.0.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v1.15.0 published (2026-09-23)"
     - `model_route` is now an MCP tool, so every MCP host (Cursor, VS Code, Claude Desktop, Codex, Gemini) can ask for a tier, not only the CLI.
-    - A request read rides the same System One call: what kind of work it is, which otito tool answers it, and which ranked files it needs. It is reported, never scored; the tier is identical with and without it.
-    - `otito context --online` / `context_pack { online: true }` applies that read to a context pack: it relabels a confident intent and demotes files the model judges irrelevant. Off unless asked.
-    - Any MCP host can appear on a local Realtime Canvas via `OTITO_CANVAS_URL` and `OTITO_HOST`, sending the request text only.
+    - A request read rides the same System One call: what kind of work it is, which solumbe tool answers it, and which ranked files it needs. It is reported, never scored; the tier is identical with and without it.
+    - `solumbe context --online` / `context_pack { online: true }` applies that read to a context pack: it relabels a confident intent and demotes files the model judges irrelevant. Off unless asked.
+    - Any MCP host can appear on a local Realtime Canvas via `SOLUMBE_CANVAS_URL` and `SOLUMBE_HOST`, sending the request text only.
 
-    [npm v1.15.0](https://www.npmjs.com/package/@bashbop/otito/v/1.15.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.15.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.15.0](https://www.npmjs.com/package/@bashbop/otito/v/1.15.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v1.15.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v1.14.0 published (2026-09-20)"
     - A `UserPromptSubmit` hook routes **every** request before any work starts, not only the ones a skill remembers to route. It advises the session and binds the model on delegated subagents; it cannot switch the session's own model, and says so.
@@ -92,34 +92,34 @@
     - Fixed: a stale stored index kept serving after the indexer changed, including on offline workspace search. Indexes now carry a capability signature and are rebuilt when it moves.
     - Fixed: a doc *about* an auth-like area escalated a typo fix to premium; the router escalated two thirds of requests because it bumped on a model's self-reported confidence (now 0% escalation over nine requests); post-merge attestation died on `exit 128` and reported green when it had done nothing.
 
-    [npm v1.14.0](https://www.npmjs.com/package/@bashbop/otito/v/1.14.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.14.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.14.0](https://www.npmjs.com/package/@bashbop/otito/v/1.14.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v1.14.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v1.13.1 published (2026-09-20)"
     - The documentation pack is rewritten for a reader rather than its author: seven overlapping pages become one [deterministic verification](./07-deterministic-verification/README.md) page, and navigation is grouped by what you are trying to do.
     - The model router skill can offer a realtime canvas, at most once per session.
 
 !!! tip "v1.13.0 published (2026-09-20)"
-    - `otito route <repo> "<request>"` scores a coding task **before** tokens are spent on it and recommends a cheap, mid, or premium tier. otito answers the repository half deterministically; a System One model answers the request half with calibrated probabilities. It ships **advisory**, because the weights have never been graded against an outcome.
+    - `solumbe route <repo> "<request>"` scores a coding task **before** tokens are spent on it and recommends a cheap, mid, or premium tier. solumbe answers the repository half deterministically; a System One model answers the request half with calibrated probabilities. It ships **advisory**, because the weights have never been graded against an outcome.
     - The router is not the gate and cannot become one. It runs before work starts; the gate runs after the diff exists. An unreachable or unkeyed model costs a tier, never a verdict.
     - Fixed: zero matched files read as a *contained* change, so the request a repository understood least was routed to the cheapest model. Absence now fails safe to the ceiling.
     - Nineteen report commands moved onto the shared document renderer, so every command reads like `review` and `impact`.
 
-    [npm v1.13.0](https://www.npmjs.com/package/@bashbop/otito/v/1.13.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.13.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.13.0](https://www.npmjs.com/package/@bashbop/otito/v/1.13.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v1.13.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v1.12.0 published (2026-09-19)"
     - Model routing arrived as a prototype alongside [the routing doc](./18-model-routing/README.md), dogfooded on a production application where the first pass routed *every* request to premium and surfaced two defects worth recording.
     - A question whose answer never moves carries no information however well calibrated it is: asked as a yes/no, "is this request ambiguous?" returned 0.57 to 0.81 for every request including a typo fix.
 
-    [npm v1.12.0](https://www.npmjs.com/package/@bashbop/otito/v/1.12.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.12.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.12.0](https://www.npmjs.com/package/@bashbop/otito/v/1.12.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v1.12.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
 !!! tip "v1.11.0 published (2026-09-19)"
-    - `otito calibrate <repo>` grades the risk flags against the repository's own history, joining fix commits to the commits they repair by line overlap rather than by filename. Pointed at a small corpus it declines to answer most rows, which is the honest result.
+    - `solumbe calibrate <repo>` grades the risk flags against the repository's own history, joining fix commits to the commits they repair by line overlap rather than by filename. Pointed at a small corpus it declines to answer most rows, which is the honest result.
     - `configuration` was two signals under one name: manifest-only commits were repaired at 0.42x the base rate, real config files at 2.03x. Merged, they cancelled out and inverted the risk bands, leaving `medium` changes *less* likely to be repaired than `low` at every window.
     - A zero-weight flag could gate a merge on its own; gating now requires a flag that scores.
 
-    [npm v1.11.0](https://www.npmjs.com/package/@bashbop/otito/v/1.11.0) · [GitHub Release](https://github.com/BASHBOP/otito/releases/tag/v1.11.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
+    [npm v1.11.0](https://www.npmjs.com/package/@bashbop/otito/v/1.11.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v1.11.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fotito)
 
-See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for the full history.
+See [CHANGELOG.md](https://github.com/BASHBOP/solumbe/blob/main/CHANGELOG.md) for the full history.
 
 ---
 
@@ -132,7 +132,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 | [Local Core, Optional Hosted](./19-local-core-optional-hosted/README.md) | The three core commands, what the optional hosted pieces send and where, and the rules that do not change with a paid plan |
 | [Context Foundation](./01-context-foundation/README.md) | Repository inspection, maps, search, context packs, and harnesses |
 | [MCP and Agents](./02-mcp-agent-workflows/README.md) | MCP tools and agent-facing workflows |
-| [Publishing to npm and the MCP Registry](./02-mcp-agent-workflows/publishing.md) | How Òtítọ́ itself is released |
+| [Publishing to npm and the MCP Registry](./02-mcp-agent-workflows/publishing.md) | How Solumbe itself is released |
 | [Codespaces and Tutorials](./08-tutorials-integration/README.md) | Setup and MCP onboarding alongside a tutorials repository |
 | [Herdr Integration](./15-herdr-integration/README.md) | Context and merge evidence inside persistent agent workspaces |
 
@@ -140,7 +140,7 @@ See [CHANGELOG.md](https://github.com/BASHBOP/otito/blob/main/CHANGELOG.md) for 
 
 | Document | What it covers |
 | --- | --- |
-| [Trust-Layer Demo](./05-trust-layer-demo/README.md) | Òtítọ́ as a repeatable review workflow |
+| [Trust-Layer Demo](./05-trust-layer-demo/README.md) | Solumbe as a repeatable review workflow |
 | [Contributor Governance](./03-contributor-governance/README.md) | Protected review, CODEOWNERS, required checks, and merge authority |
 | [Release Readiness](./04-release-readiness/README.md) | SemVer, changelog discipline, CI, and release gates |
 | [Usage Dashboard](./10-usage-dashboard/README.md) | Local usage logging and performance trends |
@@ -180,7 +180,7 @@ flowchart LR
     D --> E[Agent or reviewer]
     E --> F[Change]
     F --> G[PR review context]
-    G --> H[Otito gate]
+    G --> H[Solumbe gate]
 ```
 
 ## Quick Start
@@ -188,22 +188,22 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/otito@3.5.0
-    otito doctor
-    otito context "review this change" --path .
+    npm install -g @bashbop/solumbe@3.5.0
+    solumbe doctor
+    solumbe context "review this change" --path .
     ```
 
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/otito@3.5.0 doctor
+    npx -y @bashbop/solumbe@3.5.0 doctor
     ```
 
 === "Source Checkout"
 
     ```bash
-    git clone https://github.com/BASHBOP/otito.git
-    cd otito
+    git clone https://github.com/BASHBOP/solumbe.git
+    cd solumbe
     npm ci
     npm run ci
     node src/cli.js doctor
@@ -212,13 +212,13 @@ flowchart LR
 === "MCP"
 
     ```bash
-    otito mcp
+    solumbe mcp
     ```
 
 Prove the deterministic merge gate against the committed valid and adversarial corpus:
 
 ```bash
-otito eval --gate-effectiveness
+solumbe eval --gate-effectiveness
 ```
 
 ---

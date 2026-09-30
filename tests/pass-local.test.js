@@ -91,7 +91,7 @@ test("run-validation executes the base-committed policy against the exact staged
   writeAndCommit(
     root,
     {
-      "otito.gate.json": JSON.stringify({
+      "solumbe.gate.json": JSON.stringify({
         version: 1,
         validation: {
           commands: [
@@ -117,7 +117,7 @@ test("run-validation executes the base-committed policy against the exact staged
   assert.equal(execution.status, "PASS");
   assert.match(execution.summary, /exact staged tree/);
   assert.equal(result.validationEvidence.policy.version, 1);
-  assert.equal(result.validationEvidence.policy.path, "otito.gate.json");
+  assert.equal(result.validationEvidence.policy.path, "solumbe.gate.json");
   assert.equal(result.validationEvidence.environment.dependencyStateAttested, false);
   assert.equal(result.validationEvidence.commands[0].status, "PASS");
   assert.equal(result.validationEvidence.receipt.receiptVersion, 1);
@@ -129,7 +129,7 @@ test("run-validation reads its policy from the base commit rather than the stage
   writeAndCommit(
     root,
     {
-      "otito.gate.json": JSON.stringify({
+      "solumbe.gate.json": JSON.stringify({
         version: 1,
         validation: { commands: [{ id: "base-policy", command: `${process.execPath} -e "process.exit(0)"` }] },
       }),
@@ -138,11 +138,11 @@ test("run-validation reads its policy from the base commit rather than the stage
     "init",
   );
   fs.writeFileSync(
-    path.join(root, "otito.gate.json"),
+    path.join(root, "solumbe.gate.json"),
     JSON.stringify({ version: 1, validation: { commands: [{ id: "staged-policy", command: `${process.execPath} -e "process.exit(1)"` }] } }),
   );
   fs.writeFileSync(path.join(root, "src/value.js"), "module.exports = 'staged';\n");
-  git(root, "add", "otito.gate.json", "src/value.js");
+  git(root, "add", "solumbe.gate.json", "src/value.js");
 
   const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
 
@@ -156,7 +156,7 @@ test("run-validation rejects a staged replacement of a base-pinned npm script", 
     root,
     {
       "package.json": JSON.stringify({ scripts: { test: `${process.execPath} -e "process.exit(0)"` } }),
-      "otito.gate.json": JSON.stringify({ version: 1, validation: { commands: [{ id: "unit", command: "npm test" }] } }),
+      "solumbe.gate.json": JSON.stringify({ version: 1, validation: { commands: [{ id: "unit", command: "npm test" }] } }),
       "src/value.js": "module.exports = 'base';\n",
     },
     "init",
@@ -189,7 +189,7 @@ for (const [label, policyCommand, expectedManager] of [
       root,
       {
         "package.json": JSON.stringify({ scripts: { test: `${process.execPath} -e "process.exit(0)"` } }),
-        "otito.gate.json": JSON.stringify({ version: 1, validation: { commands: [{ id: "unit", command: policyCommand }] } }),
+        "solumbe.gate.json": JSON.stringify({ version: 1, validation: { commands: [{ id: "unit", command: policyCommand }] } }),
         "src/value.js": "module.exports = 'base';\n",
       },
       "init",
@@ -209,15 +209,15 @@ for (const [label, policyCommand, expectedManager] of [
 
 test("run-validation excludes host secrets unless the base policy explicitly allows them", () => {
   const root = initRepo("validation-environment");
-  const previous = process.env.OTITO_TEST_HOST_SECRET;
-  process.env.OTITO_TEST_HOST_SECRET = "not-for-staged-code";
+  const previous = process.env.SOLUMBE_TEST_HOST_SECRET;
+  process.env.SOLUMBE_TEST_HOST_SECRET = "not-for-staged-code";
   writeAndCommit(
     root,
     {
-      "otito.gate.json": JSON.stringify({
+      "solumbe.gate.json": JSON.stringify({
         version: 1,
         validation: {
-          commands: [{ id: "secret-boundary", command: `${process.execPath} -e "process.exit(process.env.OTITO_TEST_HOST_SECRET ? 1 : 0)"` }],
+          commands: [{ id: "secret-boundary", command: `${process.execPath} -e "process.exit(process.env.SOLUMBE_TEST_HOST_SECRET ? 1 : 0)"` }],
         },
       }),
       "src/value.js": "module.exports = 'base';\n",
@@ -233,24 +233,24 @@ test("run-validation excludes host secrets unless the base policy explicitly all
     assert.deepEqual(result.validationEvidence.environment.inheritedVariables, []);
     assert.equal(result.validationEvidence.environment.isolatedHome, true);
   } finally {
-    if (previous === undefined) delete process.env.OTITO_TEST_HOST_SECRET;
-    else process.env.OTITO_TEST_HOST_SECRET = previous;
+    if (previous === undefined) delete process.env.SOLUMBE_TEST_HOST_SECRET;
+    else process.env.SOLUMBE_TEST_HOST_SECRET = previous;
   }
 });
 
 test("run-validation supports a base-policy allowlist for required environment variables", () => {
   const root = initRepo("validation-environment-allow");
-  const previous = process.env.OTITO_TEST_REQUIRED_VALUE;
-  process.env.OTITO_TEST_REQUIRED_VALUE = "available";
+  const previous = process.env.SOLUMBE_TEST_REQUIRED_VALUE;
+  process.env.SOLUMBE_TEST_REQUIRED_VALUE = "available";
   writeAndCommit(
     root,
     {
-      "otito.gate.json": JSON.stringify({
+      "solumbe.gate.json": JSON.stringify({
         version: 1,
         validation: {
-          environment: { allow: ["OTITO_TEST_REQUIRED_VALUE"] },
+          environment: { allow: ["SOLUMBE_TEST_REQUIRED_VALUE"] },
           commands: [
-            { id: "explicit-secret", command: `${process.execPath} -e "process.exit(process.env.OTITO_TEST_REQUIRED_VALUE === 'available' ? 0 : 1)"` },
+            { id: "explicit-secret", command: `${process.execPath} -e "process.exit(process.env.SOLUMBE_TEST_REQUIRED_VALUE === 'available' ? 0 : 1)"` },
           ],
         },
       }),
@@ -264,23 +264,23 @@ test("run-validation supports a base-policy allowlist for required environment v
   try {
     const result = evaluateLocal(root, { base: "HEAD", staged: true, runValidation: true });
     assert.equal(result.checks.find((check) => check.name === "Validation execution").status, "PASS");
-    assert.deepEqual(result.validationEvidence.environment.inheritedVariables, ["OTITO_TEST_REQUIRED_VALUE"]);
+    assert.deepEqual(result.validationEvidence.environment.inheritedVariables, ["SOLUMBE_TEST_REQUIRED_VALUE"]);
   } finally {
-    if (previous === undefined) delete process.env.OTITO_TEST_REQUIRED_VALUE;
-    else process.env.OTITO_TEST_REQUIRED_VALUE = previous;
+    if (previous === undefined) delete process.env.SOLUMBE_TEST_REQUIRED_VALUE;
+    else process.env.SOLUMBE_TEST_REQUIRED_VALUE = previous;
   }
 });
 
 test("run-validation records failed command evidence without retaining raw output", () => {
   const root = initRepo("validation-failure");
-  const previous = process.env.OTITO_TEST_SECRET_OUTPUT;
-  process.env.OTITO_TEST_SECRET_OUTPUT = "private failure";
+  const previous = process.env.SOLUMBE_TEST_SECRET_OUTPUT;
+  process.env.SOLUMBE_TEST_SECRET_OUTPUT = "private failure";
   writeAndCommit(
     root,
     {
-      "otito.gate.json": JSON.stringify({
+      "solumbe.gate.json": JSON.stringify({
         version: 1,
-        validation: { commands: [{ id: "fails", command: `${process.execPath} -e "console.error(process.env.OTITO_TEST_SECRET_OUTPUT); process.exit(2)"` }] },
+        validation: { commands: [{ id: "fails", command: `${process.execPath} -e "console.error(process.env.SOLUMBE_TEST_SECRET_OUTPUT); process.exit(2)"` }] },
       }),
       "src/value.js": "module.exports = 'base';\n",
     },
@@ -299,8 +299,8 @@ test("run-validation records failed command evidence without retaining raw outpu
     assert.match(result.validationEvidence.commands[0].stderrSha256, /^[0-9a-f]{64}$/);
     assert.ok(!JSON.stringify(result.validationEvidence).includes("private failure"));
   } finally {
-    if (previous === undefined) delete process.env.OTITO_TEST_SECRET_OUTPUT;
-    else process.env.OTITO_TEST_SECRET_OUTPUT = previous;
+    if (previous === undefined) delete process.env.SOLUMBE_TEST_SECRET_OUTPUT;
+    else process.env.SOLUMBE_TEST_SECRET_OUTPUT = previous;
   }
 });
 
@@ -324,7 +324,7 @@ test("staged convergence receipt is bound to the captured Git index tree", () =>
     {
       "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
       "package-lock.json": JSON.stringify({ name: "fixture", version: "1.0.0", lockfileVersion: 3 }),
-      ".gitattributes": "*.ts filter=otito-test\n",
+      ".gitattributes": "*.ts filter=solumbe-test\n",
       "src/index.ts": "export const greet = () => 'hi';\n",
       "src/later.ts": "export const later = false;\n",
     },
@@ -338,9 +338,9 @@ test("staged convergence receipt is bound to the captured Git index tree", () =>
     `const fs = require("node:fs"); fs.writeFileSync(${JSON.stringify(filterSentinel)}, "ran"); process.stdin.pipe(process.stdout);\n`,
   );
   fs.writeFileSync(cleanFilterScript, "process.stdin.pipe(process.stdout);\n");
-  git(root, "config", "filter.otito-test.clean", `${process.execPath} ${cleanFilterScript}`);
-  git(root, "config", "filter.otito-test.smudge", `${process.execPath} ${filterScript}`);
-  git(root, "config", "filter.otito-test.required", "true");
+  git(root, "config", "filter.solumbe-test.clean", `${process.execPath} ${cleanFilterScript}`);
+  git(root, "config", "filter.solumbe-test.smudge", `${process.execPath} ${filterScript}`);
+  git(root, "config", "filter.solumbe-test.required", "true");
   fs.writeFileSync(path.join(root, "src/index.ts"), "export const greet = () => 'hello';\n");
   git(root, "add", "src/index.ts");
   fs.writeFileSync(path.join(root, "src/later.ts"), "export const later = true;\n");
@@ -516,16 +516,16 @@ test("evaluateLocal includes configured tieline contract evidence", () => {
   const bin = path.join(root, "fake-tieline");
   fs.writeFileSync(bin, `#!/usr/bin/env node\nconsole.log(JSON.stringify({ totals: { drift: 0 }, drift: [] }));\n`);
   fs.chmodSync(bin, 0o755);
-  const previous = process.env.OTITO_TIELINE_BIN;
-  process.env.OTITO_TIELINE_BIN = bin;
+  const previous = process.env.SOLUMBE_TIELINE_BIN;
+  process.env.SOLUMBE_TIELINE_BIN = bin;
   try {
     const result = evaluateLocal(root, { base: "HEAD" });
     const contracts = result.checks.find((check) => check.name === "Contract drift");
     assert.equal(contracts.status, "PASS");
     assert.match(contracts.summary, /No frontend↔backend contract drift/);
   } finally {
-    if (previous === undefined) delete process.env.OTITO_TIELINE_BIN;
-    else process.env.OTITO_TIELINE_BIN = previous;
+    if (previous === undefined) delete process.env.SOLUMBE_TIELINE_BIN;
+    else process.env.SOLUMBE_TIELINE_BIN = previous;
   }
 });
 
@@ -561,8 +561,8 @@ test("evaluateLocal includes configured bouncer compliance evidence", () => {
     `#!/usr/bin/env node\nconsole.log(JSON.stringify({ totals: { pass: 2, fail: 1, unknown: 0 }, findings: [{ ruleId: 'osa.report', status: 'fail', fix: 'Add report controls.' }] }));\n`,
   );
   fs.chmodSync(bin, 0o755);
-  const previous = process.env.OTITO_BOUNCER_BIN;
-  process.env.OTITO_BOUNCER_BIN = bin;
+  const previous = process.env.SOLUMBE_BOUNCER_BIN;
+  process.env.SOLUMBE_BOUNCER_BIN = bin;
   try {
     const result = evaluateLocal(root, { base: "HEAD" });
     const compliance = result.checks.find((check) => check.name === "Compliance controls");
@@ -571,8 +571,8 @@ test("evaluateLocal includes configured bouncer compliance evidence", () => {
     assert.ok(compliance.details.some((detail) => detail.includes("Repair action: Add report controls.")));
     assert.ok(compliance.details.some((detail) => detail.includes("Recheck command:")));
   } finally {
-    if (previous === undefined) delete process.env.OTITO_BOUNCER_BIN;
-    else process.env.OTITO_BOUNCER_BIN = previous;
+    if (previous === undefined) delete process.env.SOLUMBE_BOUNCER_BIN;
+    else process.env.SOLUMBE_BOUNCER_BIN = previous;
   }
 });
 
@@ -654,20 +654,20 @@ test("evaluateLocal includes opted-in aiglare governance evidence", () => {
     `#!/usr/bin/env node\nconsole.log(JSON.stringify({ surfaceCount: 1, surfaces: [{ file: 'src/ai.ts', sink: 'side-effectful', severity: 'red' }], gate: { passed: false, blocking: 1 } }));\n`,
   );
   fs.chmodSync(bin, 0o755);
-  const previousBin = process.env.OTITO_AIGLARE_BIN;
-  const previousOptIn = process.env.OTITO_AIGLARE;
-  process.env.OTITO_AIGLARE_BIN = bin;
-  process.env.OTITO_AIGLARE = "1";
+  const previousBin = process.env.SOLUMBE_AIGLARE_BIN;
+  const previousOptIn = process.env.SOLUMBE_AIGLARE;
+  process.env.SOLUMBE_AIGLARE_BIN = bin;
+  process.env.SOLUMBE_AIGLARE = "1";
   try {
     const result = evaluateLocal(root, { base: "HEAD" });
     const governance = result.checks.find((check) => check.name === "AI governance");
     assert.equal(governance.status, "FAIL");
     assert.match(governance.summary, /1 irreversible AI surface lacks/);
   } finally {
-    if (previousBin === undefined) delete process.env.OTITO_AIGLARE_BIN;
-    else process.env.OTITO_AIGLARE_BIN = previousBin;
-    if (previousOptIn === undefined) delete process.env.OTITO_AIGLARE;
-    else process.env.OTITO_AIGLARE = previousOptIn;
+    if (previousBin === undefined) delete process.env.SOLUMBE_AIGLARE_BIN;
+    else process.env.SOLUMBE_AIGLARE_BIN = previousBin;
+    if (previousOptIn === undefined) delete process.env.SOLUMBE_AIGLARE;
+    else process.env.SOLUMBE_AIGLARE = previousOptIn;
   }
 });
 
@@ -962,7 +962,7 @@ test("evaluateLocal markdown rendering includes the verdict and check names", ()
   );
   const data = evaluateLocal(root, { base: "HEAD" });
   const markdown = formatPassMarkdown(data);
-  assert.match(markdown, /# otito pass/);
+  assert.match(markdown, /# solumbe pass/);
   assert.match(markdown, /Verdict:/);
   assert.match(markdown, /Secret safety/);
 });

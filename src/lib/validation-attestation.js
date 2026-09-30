@@ -12,7 +12,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
-const POLICY_PATH = "otito.gate.json";
+const POLICY_PATH = "solumbe.gate.json";
 const MAX_COMMANDS = 20;
 const MAX_TIMEOUT_SECONDS = 600;
 const MAX_OUTPUT_BYTES = 1024 * 1024;
@@ -33,7 +33,7 @@ export function executeValidationPlan(options) {
     return {
       status: "FAIL",
       summary: "Validation execution requires an exact staged Git-tree subject.",
-      details: ["Run `otito gate <repo> --staged --run-validation` after staging the intended change."],
+      details: ["Run `solumbe gate <repo> --staged --run-validation` after staging the intended change."],
     };
   }
 
@@ -50,7 +50,7 @@ export function executeValidationPlan(options) {
 
   let snapshot = "";
   try {
-    snapshot = fs.mkdtempSync(path.join(os.tmpdir(), "otito-gate-"));
+    snapshot = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-gate-"));
     materializeTree(root, String(subject.treeSha), snapshot);
     const dependencyMode = linkDependencies(root, snapshot);
     const environment = validationEnvironment(snapshot, subject, policy);
@@ -210,15 +210,15 @@ function runValidationCommand(command, cwd, subject, policy, environment) {
 
 /** @param {string} snapshot @param {Record<string, any>} subject @param {Record<string, any>} policy */
 function validationEnvironment(snapshot, subject, policy) {
-  const home = path.join(snapshot, ".otito-validation-home");
+  const home = path.join(snapshot, ".solumbe-validation-home");
   fs.mkdirSync(home, { recursive: true });
   /** @type {Record<string, string>} */
   const env = {
     PATH: process.env.PATH ?? "/usr/bin:/bin",
     HOME: home,
-    OTITO_GATE_SUBJECT_TREE: String(subject.treeSha),
-    OTITO_GATE_BASE_SHA: String(subject.baseSha),
-    OTITO_GATE_POLICY_BLOB: String(policy.blobSha),
+    SOLUMBE_GATE_SUBJECT_TREE: String(subject.treeSha),
+    SOLUMBE_GATE_BASE_SHA: String(subject.baseSha),
+    SOLUMBE_GATE_POLICY_BLOB: String(policy.blobSha),
   };
   for (const name of ["TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL", "SystemRoot", "ComSpec"]) {
     if (process.env[name] !== undefined) env[name] = String(process.env[name]);
@@ -237,8 +237,8 @@ function normalizeValidationEnvironment(config) {
     throw new Error(`${POLICY_PATH} validation.environment.allow must list at most ${MAX_INHERITED_ENVIRONMENT_VARIABLES} variable names.`);
   }
   const names = allow.map((name) => String(name));
-  if (new Set(names).size !== names.length || names.some((name) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || name.startsWith("OTITO_GATE_"))) {
-    throw new Error(`${POLICY_PATH} validation.environment.allow must contain unique environment variable names and cannot override OTITO_GATE_* values.`);
+  if (new Set(names).size !== names.length || names.some((name) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || name.startsWith("SOLUMBE_GATE_"))) {
+    throw new Error(`${POLICY_PATH} validation.environment.allow must contain unique environment variable names and cannot override SOLUMBE_GATE_* values.`);
   }
   return { allow: names };
 }

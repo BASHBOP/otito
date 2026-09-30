@@ -46,14 +46,14 @@ const DEFAULTS = {
 function getUserConfigPath(env = process.env) {
   const xdg = env.XDG_CONFIG_HOME;
   const base = xdg ? xdg : path.join(os.homedir(), ".config");
-  return path.join(base, "otito", "config.json");
+  return path.join(base, "solumbe", "config.json");
 }
 
 /**
- * Walk up from cwd looking for .otitorc.json, stopping at the home dir.
+ * Walk up from cwd looking for .solumberc.json, stopping at the home dir.
  * A relative cwd (an MCP tool's `path: "."`) is resolved first: path.dirname
  * cannot climb above ".", so the walk would otherwise stop where it began, and
- * from `otito pass ../api` it would climb to "." and read this directory's
+ * from `solumbe pass ../api` it would climb to "." and read this directory's
  * config instead of reaching the one above ../api.
  * @param {string} cwd
  * @returns {string | null}
@@ -62,7 +62,7 @@ function findLocalConfigPath(cwd) {
   const home = os.homedir();
   let dir = path.resolve(cwd);
   for (;;) {
-    const candidate = path.join(dir, ".otitorc.json");
+    const candidate = path.join(dir, ".solumberc.json");
     if (fs.existsSync(candidate)) return candidate;
     const parent = path.dirname(dir);
     if (parent === dir || dir === home) return null;
@@ -94,32 +94,32 @@ function coerceBool(value) {
 }
 
 /**
- * Apply OTITO_* and NO_COLOR env vars into the config object in-place.
+ * Apply SOLUMBE_* and NO_COLOR env vars into the config object in-place.
  * @param {Partial<ResolvedConfig>} cfg
  * @param {NodeJS.ProcessEnv} env
  */
 function applyEnv(cfg, env) {
-  if (env.OTITO_EMOJI !== undefined) {
-    const v = coerceBool(env.OTITO_EMOJI);
+  if (env.SOLUMBE_EMOJI !== undefined) {
+    const v = coerceBool(env.SOLUMBE_EMOJI);
     if (v !== undefined) cfg.emoji = v;
   }
-  if (env.OTITO_COLOR !== undefined) {
-    const v = coerceBool(env.OTITO_COLOR);
+  if (env.SOLUMBE_COLOR !== undefined) {
+    const v = coerceBool(env.SOLUMBE_COLOR);
     if (v !== undefined) cfg.color = v;
   }
   // NO_COLOR spec: any value (including empty string) disables color.
   if (env.NO_COLOR !== undefined) cfg.color = false;
-  if (env.OTITO_THEME !== undefined) cfg.theme = env.OTITO_THEME;
-  if (env.OTITO_TELEMETRY !== undefined) {
-    const v = coerceBool(env.OTITO_TELEMETRY);
+  if (env.SOLUMBE_THEME !== undefined) cfg.theme = env.SOLUMBE_THEME;
+  if (env.SOLUMBE_TELEMETRY !== undefined) {
+    const v = coerceBool(env.SOLUMBE_TELEMETRY);
     if (v !== undefined) cfg.telemetry = v;
   }
-  if (env.OTITO_TELEMETRY_SHARE !== undefined) {
-    const v = coerceBool(env.OTITO_TELEMETRY_SHARE);
+  if (env.SOLUMBE_TELEMETRY_SHARE !== undefined) {
+    const v = coerceBool(env.SOLUMBE_TELEMETRY_SHARE);
     if (v !== undefined) cfg.telemetryShare = v;
   }
-  if (env.OTITO_WIDTH !== undefined) {
-    const n = Number(env.OTITO_WIDTH);
+  if (env.SOLUMBE_WIDTH !== undefined) {
+    const n = Number(env.SOLUMBE_WIDTH);
     if (!isNaN(n) && n > 0) cfg.width = n;
   }
 }
@@ -161,8 +161,8 @@ export function loadConfig({ cwd = process.cwd(), env = process.env } = {}) {
 /**
  * The policy and governance a gate on `repoPath` runs under. An explicit value
  * wins. An omitted or blank one comes from the config found from the gated
- * repository (its .otitorc.json, then the user config), not from the process's
- * cwd: `otito pass-pr 12 --path ../api` can run from inside another repository,
+ * repository (its .solumberc.json, then the user config), not from the process's
+ * cwd: `solumbe pass-pr 12 --path ../api` can run from inside another repository,
  * and an MCP server runs wherever its host launched it. Blank counts as omitted,
  * as it does in normalizeProfile and normalizeGovernance. The CLI gate commands
  * and the MCP gate tools both resolve through here, so one repository gets the
@@ -182,7 +182,7 @@ export function gatePolicy(repoPath, explicit = {}, env = process.env) {
 
 /**
  * The companion repositories a context pack on `repoPath` also reads: the
- * `companions` list in the repository's .otitorc.json, each entry resolved
+ * `companions` list in the repository's .solumberc.json, each entry resolved
  * against that file's directory. A web client whose bugs often live in its API
  * (`"companions": ["../api"]`) gets one pack across both instead of a pack that
  * never sees the other side. Entries that are not existing directories drop out,
@@ -219,11 +219,11 @@ export function contextRepoPaths(options) {
  * @returns {string}
  */
 export function getConfigPath(scope, cwd = process.cwd()) {
-  return scope === "local" ? path.join(cwd, ".otitorc.json") : getUserConfigPath();
+  return scope === "local" ? path.join(cwd, ".solumberc.json") : getUserConfigPath();
 }
 
 /**
- * Merge partial config into the target file (user or local .otitorc.json).
+ * Merge partial config into the target file (user or local .solumberc.json).
  * @param {Partial<ResolvedConfig>} config
  * @param {"user" | "local"} [scope]
  * @param {string} [cwd]

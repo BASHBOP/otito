@@ -1,6 +1,6 @@
 // Ranking rules the context engine and the impact engine share. Each answers a
 // question both engines got wrong on the same real request (bashbop-event-web,
-// 2026-09-27; the recorded outputs are in .otito/runs/2026-09-27/):
+// 2026-09-27; the recorded outputs are in .solumbe/runs/2026-09-27/):
 //
 // - A translation catalog holds thousands of keys, so it matched almost any
 //   plain-language request, and its five locales took five ranked slots.

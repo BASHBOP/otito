@@ -1,13 +1,13 @@
 # Model Routing
 
-> Why otito can ask a model for a probability without becoming probabilistic.
+> Why solumbe can ask a model for a probability without becoming probabilistic.
 
 Some questions about a coding task have no answer in repository state. How
 precisely a request names what has to change, and how far the edits it implies
-will reach, are properties of the sentence rather than of the code. otito has
+will reach, are properties of the sentence rather than of the code. solumbe has
 never read a request as language, so it cannot answer them.
 
-The question this document answers is whether otito can spend a calibrated
+The question this document answers is whether solumbe can spend a calibrated
 model on that half without giving up what makes it trustworthy.
 
 The answer is yes, and the reason is a boundary rather than a compromise: the
@@ -18,12 +18,12 @@ The calibrated model used here is a System One model
 ([announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev),
 [concepts](https://docs.typesafe.ai/concepts/system-one)), which takes typed
 questions and returns probabilities trained against outcomes rather than prose
-to be parsed. The reverse direction, grading otito's own signals against
+to be parsed. The reverse direction, grading solumbe's own signals against
 history, is in the [calibration](../17-calibration-thesis/README.md) page.
 
 ## The boundary, this does not weaken the gate
 
-otito's three standing promises are that the gate is a pure function of
+solumbe's three standing promises are that the gate is a pure function of
 repository state, that it needs no network, key or vendor, and that every number
 it reports can be traced to a measurement. A vendor model call inside the gate
 would break all three at once.
@@ -41,10 +41,10 @@ Nothing the router says can make a change pass. If Jev is down, unreachable or
 unkeyed, the router falls back to a local estimate and says so in
 `jev.source`; the gate does not notice, because the gate never asks. The code
 enforces the separation physically: the router lives in `scripts/`, imports
-otito's libraries read-only, and writes nothing any gate reads.
+solumbe's libraries read-only, and writes nothing any gate reads.
 
-So it does not violate otito. It extends it, in the direction the calibration
-thesis already pointed: otito's signals get a second consumer, and the router's
+So it does not violate solumbe. It extends it, in the direction the calibration
+thesis already pointed: solumbe's signals get a second consumer, and the router's
 tier becomes one more number that has to be graded against outcomes rather than
 asserted. What follows is largely the record of that grading going badly at
 first, which is the point.
@@ -56,10 +56,10 @@ returns typed answers with calibrated probabilities. It does not write prose and
 we never ask it to. One call, `POST https://api.typesafe.ai/v1/systemone`,
 answers every question in parallel against one state.
 
-### The state is otito's output
+### The state is solumbe's output
 
-The first thing we send is not the prompt. It is the prompt **plus otito's
-resolution of it**, the files otito believes the request touches, and why:
+The first thing we send is not the prompt. It is the prompt **plus solumbe's
+resolution of it**, the files solumbe believes the request touches, and why:
 
 ```json
 {
@@ -74,7 +74,7 @@ resolution of it**, the files otito believes the request touches, and why:
 ```
 
 This is the join that makes the pairing worth anything. Jev has never seen the
-repository; otito has never read the request as language. Each supplies what the
+repository; solumbe has never read the request as language. Each supplies what the
 other cannot.
 
 ### Three questions, and why each one
@@ -89,7 +89,7 @@ They are deliberately atomic. We never ask "which model should I use?", that is
 a judgement with no ground truth to calibrate against, and it would hand control
 flow to the model. We ask narrow questions, take the probabilities, and combine
 them in code we can read. That is the [composite scoring](https://docs.typesafe.ai/patterns/composite-scoring)
-pattern, and it is the same division of labour otito already draws between
+pattern, and it is the same division of labour solumbe already draws between
 evidence and verdict.
 
 Score `criteria` is an **ordered list**, not an object, index 0 is level 0.
@@ -98,7 +98,7 @@ reports each Score question's own confidence (`scoring.confidences`) and the
 weaker of the two (`scoring.confidence`), for a reader. It is a display
 threshold only, and not a routing input: a spread answer already pays through
 its own score term, and reading confidence as a second input escalated 67% of
-requests on this repository (see the otito dogfood below). The offline estimator
+requests on this repository (see the solumbe dogfood below). The offline estimator
 reports `null`: it has a shape, not a measurement.
 
 ### The arithmetic
@@ -115,28 +115,28 @@ tier    = route >= 75 cheap | >= 45 mid | < 45 premium
 ```
 
 Then two fail-safe bumps, each moving **toward the more capable model and
-never the other way**: a top-severity risk flag (anything otito already weights
-3 in `RISK_SCORE_WEIGHTS`) moves one tier, and `no evidence` (otito matched no
+never the other way**: a top-severity risk flag (anything solumbe already weights
+3 in `RISK_SCORE_WEIGHTS`) moves one tier, and `no evidence` (solumbe matched no
 files) goes straight to premium. Confidence below 0.55 used to be a third bump;
-it was removed (see the otito dogfood below). A router that can round *down* on
+it was removed (see the solumbe dogfood below). A router that can round *down* on
 a bad read is a router that ships bad changes cheaply.
 
-When `no evidence` fires, `otito route` and the route prompt hook print **no
+When `no evidence` fires, `solumbe route` and the route prompt hook print **no
 recommendation** instead of a tier, and name premium as the fail-safe. JSON
 `tier` still reads `premium`, and `scoring.evidence.sufficient` is `false`, so
 a caller can tell a decision from an absence.
 
 Both bumps read evidence that has to be about shipped code. Tests and fixture
 corpora still count toward reach, because they are real files the change touches, but
-they never carry a risk flag. Routing otito itself is the case that shows why:
+they never carry a risk flag. Routing solumbe itself is the case that shows why:
 the repository has no checkout and no auth controller, so `add refund handling
 to checkout` ranks `evals/fixtures/shop-api/.../checkout.service.ts` first and
 used to escalate to premium on evidence from a corpus that ships nothing.
 
 ### What the call carries
 
-Every call goes out under a `user-agent` of `otito/<version>`, so TypeSafe can
-tell Otito's traffic from a hand-written client. The tag holds the client name
+Every call goes out under a `user-agent` of `solumbe/<version>`, so TypeSafe can
+tell Solumbe's traffic from a hand-written client. The tag holds the client name
 and version only: no user, no repository, no key. The body is the state
 described above and the questions; file contents never leave the machine.
 
@@ -148,35 +148,35 @@ against `jev-1.13.0`, with the request read folded into the same call: **2,059 t
 `context --online` read at the 24-file cap is 2,827 tokens, $0.000119 (below).
 The pre-read figure this section used to print, 728 to 845 tokens, is 2.6× lower
 than the call that ships today. The money is a rounding error against one
-premium turn. Latency is the budget that binds, and otito's
+premium turn. Latency is the budget that binds, and solumbe's
 own half costs more than Jev's, about 5s, because `generateAxScore` recomputes
-the impact pass the router already ran. A real `otito route` should compute
+the impact pass the router already ran. A real `solumbe route` should compute
 impact once.
 
 ## Running it, any host, one contract
 
 ```bash
-otito route <repo> "<request>" [--json|--tier-only|--host <id>] [--offline] [--out file]
+solumbe route <repo> "<request>" [--json|--tier-only|--host <id>] [--offline] [--out file]
 ```
 
 The router decides a **tier**. Each host turns that tier into whatever it calls
 a model, so nothing about the scoring is specific to one editor:
 
 ```bash
-otito route . "$PROMPT" --tier-only          # -> premium
-otito route . "$PROMPT" --host claude-code   # -> claude-opus-5-5
-claude --model "$(otito route . "$PROMPT" --host claude-code)" -p "$PROMPT"
+solumbe route . "$PROMPT" --tier-only          # -> premium
+solumbe route . "$PROMPT" --host claude-code   # -> claude-opus-5-5
+claude --model "$(solumbe route . "$PROMPT" --host claude-code)" -p "$PROMPT"
 ```
 
 Only `claude-code` ships filled in, because those are the ids this repository
-can verify. Add your own in `.otito/model-route.json` (repo) or
-`~/.otito/model-route.json` (user):
+can verify. Add your own in `.solumbe/model-route.json` (repo) or
+`~/.solumbe/model-route.json` (user):
 
 ```json
 { "hosts": { "cursor": { "cheap": "...", "mid": "...", "premium": "..." } } }
 ```
 
-Hosts with no map still work through `--tier-only`. Terminal output uses otito's
+Hosts with no map still work through `--tier-only`. Terminal output uses solumbe's
 own renderer, so `--color`, `--no-color`, `--theme`, `NO_COLOR` and a piped
 stdout behave exactly as they do everywhere else in the CLI.
 
@@ -191,26 +191,26 @@ tier: the offline router's default was "spend more".
 
 ### The advisory footer
 
-`otito ax` and `otito impact` already compute everything the repository half
+`solumbe ax` and `solumbe impact` already compute everything the repository half
 needs, so both print one routing line under their normal output:
 
 ```
 model route: premium (score 36) - offline estimate, advisory
 ```
 
-That line is **offline by construction**. An ordinary otito command does not
+That line is **offline by construction**. An ordinary solumbe command does not
 make a network call, and a failure inside the router is swallowed rather than
 allowed to change the output of the command you actually ran. `--json`,
-`--out` and `--mermaid` are untouched, so nothing that parses otito's output
+`--out` and `--mermaid` are untouched, so nothing that parses solumbe's output
 sees it; `--no-route` turns it off.
 
-Reach for `otito route` when you want the model's read and the full arithmetic.
+Reach for `solumbe route` when you want the model's read and the full arithmetic.
 
 ### Over MCP
 
 The `model_route` tool is the same contract for any MCP host (Cursor, VS Code,
 Claude Desktop, Codex, Gemini): `{ query, path?, host?, offline? }` in, the
-`otito route --json` payload out. It calls Jev only when `TYPESAFE_API_KEY` is
+`solumbe route --json` payload out. It calls Jev only when `TYPESAFE_API_KEY` is
 in the server's environment and `offline` is not true, and it declares
 `openWorldHint: true` because it may. Host configs are in
 [MCP and Agent Workflows](../02-mcp-agent-workflows/README.md#realtime-canvas-and-model-routing-opt-in).
@@ -234,16 +234,16 @@ do not act under 0.5, and scale the bar with the consequence. Relabelling an
 intent is cheap to get wrong; dropping a file from an agent's context is not,
 so a file leaves only on a strong no.
 
-**In `otito route`** the read is reported under `model.read` and in its own
+**In `solumbe route`** the read is reported under `model.read` and in its own
 section of the output, and `scoreDecision` never sees it: a test holds that the
 same route answers score identically with and without it. The Claude Code prompt
 hook adds a line for any answer that cleared its floor.
 
-**In `otito context --online`** (MCP: `context_pack { online: true }`) the read
+**In `solumbe context --online`** (MCP: `context_pack { online: true }`) the read
 is applied, and nowhere else. The same questions run over the pack's primary and
 related files:
 
-- an accepted intent replaces otito's action word and withdraws the
+- an accepted intent replaces solumbe's action word and withdraws the
   "requested action is ambiguous" open question;
 - a file under 0.2 leaves the ranked lists, and its hotspots with it, and is
   kept under `modelRead.demoted` with its score and original rank;
@@ -254,7 +254,7 @@ related files:
   same reasoning as the router's `no evidence` floor.
 
 A pack is still a pure function of repository state unless `online` is asked
-for, and a failed or unkeyed call returns otito's pack unchanged with the
+for, and a failed or unkeyed call returns solumbe's pack unchanged with the
 reason under `modelRead`. Measured on this repository against a question whose
 offline pack ranked an RSVP eval fixture as related to MCP integration: intent
 `unknown` → `add` at 0.60, the fixture demoted at 0.17, `src/lib/mcp.js`
@@ -296,7 +296,7 @@ twice and be logged twice.
     "UserPromptSubmit": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "node \"/path/to/otito/scripts/hooks/route-prompt.mjs\"", "timeout": 10 }]
+        "hooks": [{ "type": "command", "command": "node \"/path/to/solumbe/scripts/hooks/route-prompt.mjs\"", "timeout": 10 }]
       }
     ]
   }
@@ -330,22 +330,22 @@ Create PR command, and a message from another session.
 so re-routing would second-guess that, and a subagent that routes could launch a
 subagent.
 
-Keying is the same as `otito route`: with `TYPESAFE_API_KEY` set it asks Jev,
+Keying is the same as `solumbe route`: with `TYPESAFE_API_KEY` set it asks Jev,
 and without one it falls back to the offline estimate, which is weaker but free
 and needs no network.
 
 **It keeps its decision.** A tier printed as context is gone when the turn
 ends, and a router can only be graded against decisions that were kept. So
-every routed prompt leaves one line in `~/.otito/route-decisions.jsonl`
-(`OTITO_ROUTE_LOG` moves it, `OTITO_ROUTE_LOG=off` keeps nothing). The line
+every routed prompt leaves one line in `~/.solumbe/route-decisions.jsonl`
+(`SOLUMBE_ROUTE_LOG` moves it, `SOLUMBE_ROUTE_LOG=off` keeps nothing). The line
 never holds the prompt, only its hash, and never leaves the machine.
 
 | Field | Why it is there |
 | --- | --- |
 | `sessionId`, `ts`, `promptHash`, `promptChars` | joins the decision to the prompt in the session transcript, which holds everything else: the prompts in order, interruptions, the assistant's edits |
 | `repo`, `root`, `branch`, `head` | the head at prompt time names the change: the next commit on that branch whose first parent is `head`, for the `repaired` join later |
-| `tiers`, `routes` per variant (`deterministic`, and `offline` or `jev`) | what each half of the router said; `otito route --json` now reports `deterministic` beside the scored tier |
-| `signals`, `answers`, `modelRouteEngineVersion` | exactly what `otito regret --rescore` reads, so a live corpus re-tiers under a new arithmetic the way a frozen run does |
+| `tiers`, `routes` per variant (`deterministic`, and `offline` or `jev`) | what each half of the router said; `solumbe route --json` now reports `deterministic` beside the scored tier |
+| `signals`, `answers`, `modelRouteEngineVersion` | exactly what `solumbe regret --rescore` reads, so a live corpus re-tiers under a new arithmetic the way a frozen run does |
 | `hostModel` | the only tier the hook actuates, through a subagent launch |
 
 The caveat the log does not remove: the tier the session ran on stays
@@ -409,7 +409,7 @@ counts as not found, as it did before. And 13 routed requests do not join: 8
 were typed in the middle of a turn, which the transcript files as an
 attachment, 4 opened with a blank line that the hook hashed and the join
 trims, and 1 came from another session. Evidence, hashes and counts only, in
-`.otito/runs/2026-09-27/route-harness-prompts/`, local only.
+`.solumbe/runs/2026-09-27/route-harness-prompts/`, local only.
 
 ## Dogfood, bashbop-event-web, 2026-09-19
 
@@ -445,7 +445,7 @@ the `--json` flag, 1.76 for the bug hunt. **Measure a question's variance before
 trusting its weight.**
 
 **2. State quality decides the answer.** The first run sent the prompt and four
-numbers. Grounding the state in otito's ranked file evidence changed every
+numbers. Grounding the state in solumbe's ranked file evidence changed every
 answer. Jev cannot tell whether "the publish confirmation copy" is specific
 without seeing what the phrase resolves to.
 
@@ -453,7 +453,7 @@ without seeing what the phrase resolves to.
 `blast_radius` from `containment`, which is already inside AX at weight 0.30.
 In a low-containment repository (bashbop-event-web sits at 11 to 26 throughout)
 every prompt was penalised twice and pinned at blast 1.86. Keeping the model on
-the request side and otito on the repository side is not a style preference; it
+the request side and solumbe on the repository side is not a style preference; it
 is what stops the double count.
 
 **4. AX's bands do not belong to a non-AX quantity.** The 45/75 thresholds were
@@ -480,7 +480,7 @@ change into a money-flow change. The router now classifies owners, supporting
 files, and the top three ranked predictions whatever bucket they landed in: rank
 is evidence, the bucket is a label.
 
-## Dogfood, otito, 2026-09-20
+## Dogfood, solumbe, 2026-09-20
 
 The corpus above was measured against `bashbop-event-web`, whose AX tops out at
 74. Run against **this** repository, the same router escalated 67% of requests
@@ -523,12 +523,12 @@ priced into that answer's own term, and confidence is reported for a reader
 rather than read by the router. Same Jev answers, rescored: escalation 67% → 0%,
 premium 6/9 → 1/9.
 
-The remaining bumps — `no evidence` and `risk path` — are otito's own
+The remaining bumps — `no evidence` and `risk path` — are solumbe's own
 deterministic repository signals, which is the half of this pairing that is
 entitled to overrule a model. A vendor's self-reported certainty is not.
 
 The auth request moving to `cheap` is that division working, not a hole in it:
-`risk path` did not fire because this repository has no auth code for otito to
+`risk path` did not fire because this repository has no auth code for solumbe to
 match. In a repository that has some, the flag fires on repository evidence.
 
 What this run does **not** fix: the route score still separates the corpus
@@ -548,13 +548,13 @@ writes about `inferRisk`, and it applies here with no discount:
 
 So the router ships **advisory**: it prints a decision and a recommended tier,
 and it does not pick a model for you. Promoting it past advisory needs the same
-treatment `otito calibrate` gives the gate: replay the repository's history,
+treatment `solumbe calibrate` gives the gate: replay the repository's history,
 recompute the tier from the state as it was, and join to outcomes. The metric is
 not accuracy. It is **regret**: a change routed cheap that was repaired, by a
-fix or a revert, within the outcome window. It is never a saving, because otito
+fix or a revert, within the outcome window. It is never a saving, because solumbe
 does not know whether a host switched models.
 
-`otito regret <repo>` runs that backtest. For each commit that is neither a
+`solumbe regret <repo>` runs that backtest. For each commit that is neither a
 fix nor a release (a `chore(release): 2.26.5 [skip ci]`, a `chore: bump version
 to 1.4.0`: tooling wrote it, so no router saw a request) it checks the
 parent tree out into a temporary worktree, scores the commit subject as the
@@ -571,11 +571,11 @@ function of repository state with a receipt; with a key the model's answers
 are not replayable and the receipt says so.
 
 ```bash
-otito regret . --window 30 --max 150 --offline   # keyless, replayable
-otito regret . --window 30 --max 150             # adds the jev variant on your key
+solumbe regret . --window 30 --max 150 --offline   # keyless, replayable
+solumbe regret . --window 30 --max 150             # adds the jev variant on your key
 ```
 
-### Measured, otito, 2026-09-26
+### Measured, solumbe, 2026-09-26
 
 The 150 most recent gradable non-fix commits of this repository (20 of them
 docs-only), replayed against their parents; 47 younger commits censored, 30-day
@@ -632,8 +632,8 @@ tiers were scored from, and `--rescore` applies the current arithmetic to a
 saved run without checking anything out or calling anything:
 
 ```bash
-otito regret . --json > run.json          # once, with the key: the answers are frozen here
-otito regret --rescore run.json           # any number of times: this version's arithmetic, same answers
+solumbe regret . --json > run.json          # once, with the key: the answers are frozen here
+solumbe regret --rescore run.json           # any number of times: this version's arithmetic, same answers
 ```
 
 The rescore carries its own receipt, names the run it read in
@@ -659,7 +659,7 @@ replaces the shipped one only if, rescored on the frozen runs below:
    cheap lane's repair rate is no higher than the shipped arithmetic's on
    that run.
 4. **Tune on two, confirm on one.** Candidates are compared on bashbop-api
-   and otito. bashbop-event-web, the run with the most outcomes, is scored
+   and solumbe. bashbop-event-web, the run with the most outcomes, is scored
    once, on the candidate chosen, and a failure there is a failure.
 5. **Nothing it does not own moves.** The `no evidence` ceiling and the
    `risk path` bump are unchanged, `modelRouteEngineVersion` is bumped, and
@@ -667,18 +667,18 @@ replaces the shipped one only if, rescored on the frozen runs below:
 
 **The frozen runs.** Each repository's whole history, replayed on 2026-09-26:
 30-day window, minimum sample 30, `jev-1.13.0`, 2,385 answered calls and 2
-failed, $0.20 in all. The runs are kept under `.otito/runs/`, outside the
+failed, $0.20 in all. The runs are kept under `.solumbe/runs/`, outside the
 repository, because two of the three are private and every row carries a
 commit subject; the receipts identify them.
 
 | Run | Graded | Base rate | Receipt |
 | --- | --: | --- | --- |
-| otito | 157 | 19.7% (14.3 to 26.7) | `regret_7d94fd0a73bd` |
+| solumbe | 157 | 19.7% (14.3 to 26.7) | `regret_7d94fd0a73bd` |
 | bashbop-api | 1,214 | 24.7% (22.4 to 27.2) | `regret_a4499a13f0ee` |
 | bashbop-event-web | 1,016 | 46.9% (43.8 to 49.9) | `regret_9582de4ba43a` |
 
 Rescored with the shipped arithmetic, every saved tier and route comes back
-unchanged, 2,387 rows of 2,387. otito's run is too small to grade the top tier,
+unchanged, 2,387 rows of 2,387. solumbe's run is too small to grade the top tier,
 as in the section above. The two bashbop runs are not:
 
 | Run | Variant | cheap | mid | premium | Ordered |
@@ -744,14 +744,14 @@ tables stay comparable. "Confident" is not a separate gate: a read earns the
 whole of the cheap-ward share only when its distribution puts most of its
 mass on the easiest level, which is what the expectation already measures.
 
-Swept on the tuning runs, bashbop-api and otito, rescored on the frozen
+Swept on the tuning runs, bashbop-api and solumbe, rescored on the frozen
 answers. Cheap lanes only, as commits · repaired; every centre above zero
 orders both variants on bashbop-api with cheap and premium apart:
 
-| c | bashbop-api · offline | bashbop-api · jev | otito · offline | otito · jev | Bar, tuning runs |
+| c | bashbop-api · offline | bashbop-api · jev | solumbe · offline | solumbe · jev | Bar, tuning runs |
 | --- | --- | --- | --- | --- | --- |
 | 0, shipped | 129 · 22.5% | 186 · 4.8% | 72 · 22.2% | 35 · 14.3% | fails 1: keyless inverted |
-| 0.1 | 326 · 11.3% | 332 · 4.2% | 103 · 21.4% | 53 · 15.1% | fails 3: otito jev |
+| 0.1 | 326 · 11.3% | 332 · 4.2% | 103 · 21.4% | 53 · 15.1% | fails 3: solumbe jev |
 | 0.2 | 424 · 10.8% | 384 · 4.7% | 115 · 19.1% | 73 · 12.3% | **passes** |
 | 0.25 | 449 · 10.5% | 396 · 5.3% | 121 · 20.7% | 83 · 15.7% | fails 3: both jev |
 | 0.5, symmetric | 509 · 11.2% | 469 · 9.8% | 151 · 19.9% | 124 · 18.5% | fails 3: both jev |
@@ -776,7 +776,7 @@ were repaired once.
 
 `c = 0.2`, the one centre that passes, is a knife edge. Its neighbours fail
 criterion 3 by amounts inside every interval, 15.1% against 14.3% over 53
-otito commits and 5.3% against 4.8% on bashbop-api. That is the shape of a fit
+solumbe commits and 5.3% against 4.8% on bashbop-api. That is the shape of a fit
 to noise, and it is why the bar keeps a run back.
 
 **Confirmed once on bashbop-event-web, and failed.**
@@ -837,10 +837,10 @@ the deterministic half put 365 of them in `cheap`, which is the whole of
 that lane's 10.1%, and the keyless heuristic moved them to `mid`
 because their candidates (a lockfile, a changelog, a manifest) span areas,
 which is the whole of the "inversion". bashbop-event-web has 82
-`chore: bump version to N` commits with the same shape, and otito 28 release
+`chore: bump version to N` commits with the same shape, and solumbe 28 release
 commits of its own.
 
-`otito regret` 0.4.0 leaves release commits out of the corpus the way it
+`solumbe regret` 0.4.0 leaves release commits out of the corpus the way it
 already leaves fix commits out: a subject marked `[skip ci]`, a bare version,
 or a chore, build, ci or release subject that names a version
 (`RELEASE_SUBJECT` in `regret.js`). A subject that merely mentions a release
@@ -856,9 +856,9 @@ frozen runs re-grade without a model call. Rescored, shipped arithmetic:
 | bashbop-event-web | 934 | 50.5% (47.3 to 53.7) | deterministic | 168 · 45.2% (37.9 to 52.8) | 446 · 52.7% (48.1 to 57.3) | 320 · 50.3% (44.9 to 55.8) | no |
 | bashbop-event-web | | | offline | 52 · 44.2% (31.6 to 57.7) | 390 · 49.5% (44.6 to 54.4) | 492 · 52.0% (47.6 to 56.4) | yes, overlapping |
 | bashbop-event-web | | | jev | 8 · withheld | 273 · 46.9% (41.1 to 52.8) | 653 · 52.4% (48.5 to 56.2) | unknown |
-| otito | 129 | 18.6% (12.8 to 26.2) | deterministic | 98 · 18.4% (11.9 to 27.2) | 30 · 16.7% (7.3 to 33.6) | 1 · withheld | unknown |
-| otito | | | offline | 63 · 17.5% (10.0 to 28.6) | 65 · 18.5% (10.9 to 29.6) | 1 · withheld | unknown |
-| otito | | | jev | 29 · withheld | 94 · 20.2% (13.3 to 29.4) | 4 · withheld | unknown |
+| solumbe | 129 | 18.6% (12.8 to 26.2) | deterministic | 98 · 18.4% (11.9 to 27.2) | 30 · 16.7% (7.3 to 33.6) | 1 · withheld | unknown |
+| solumbe | | | offline | 63 · 17.5% (10.0 to 28.6) | 65 · 18.5% (10.9 to 29.6) | 1 · withheld | unknown |
+| solumbe | | | jev | 29 · withheld | 94 · 20.2% (13.3 to 29.4) | 4 · withheld | unknown |
 
 What the corrected corpus says:
 
@@ -875,12 +875,12 @@ What the corrected corpus says:
   it.
 - **The centre candidate's pass does not survive.** Re-swept on the corrected
   tuning runs, no centre from 0.1 to 0.5 clears criterion 1 or 2 on
-  bashbop-api, and `c = 0.2` fails criterion 3 on otito and on
+  bashbop-api, and `c = 0.2` fails criterion 3 on solumbe and on
   bashbop-event-web. Its confirmation failure stands for a further reason.
 - **One lane moves the right way, on the run too small to grade it.** On
-  otito the model's cheap lane under a centre is repaired 4.9% (41 commits,
+  solumbe the model's cheap lane under a centre is repaired 4.9% (41 commits,
   `c = 0.1`) to 5.8% (52, `c = 0.2`) against 23 to 26% for its mid lane; the
-  intervals separate at `c = 0.2`. otito's premium lane is one commit, so the
+  intervals separate at `c = 0.2`. solumbe's premium lane is one commit, so the
   bar cannot see this, and it is one repository.
 
 The bar as written cannot currently be met on these runs: criterion 1 needs
@@ -903,7 +903,7 @@ with no model call: is `repaired` an outcome a tier can be graded against on
 these repositories, or is the join itself what the tables are measuring?
 Four cuts, all on the corpus without release commits, under the shipped
 arithmetic. The scripts, the per-fix blame tables and every output are beside
-the frozen runs in `.otito/runs/2026-09-26/tier-arithmetic/join-audit/`
+the frozen runs in `.solumbe/runs/2026-09-26/tier-arithmetic/join-audit/`
 (local only, like the runs).
 
 - **The join reproduces.** A fresh blame pass at each repository's frozen head
@@ -927,9 +927,9 @@ the frozen runs in `.otito/runs/2026-09-26/tier-arithmetic/join-audit/`
   fixes and bashbop-event-web's 472 from 284, a median of one row each. The
   ten largest fixes by files touched account for 6% and 11% of repairs, and
   dropping them leaves every tier where it was (bashbop-api cheap 36.7%, mid
-  35.3%, premium 41.1%). otito is the opposite case: 21 of its 24 repairs are
+  35.3%, premium 41.1%). solumbe is the opposite case: 21 of its 24 repairs are
   ten sweeping fixes, and a fix of at most 5 files with at least 2 overlapping
-  lines repairs nothing, so its proxy measures those sweeps. otito was already
+  lines repairs nothing, so its proxy measures those sweeps. solumbe was already
   ungradable, with one premium commit.
 - **Fixes the rule did not label.** `FIX_SUBJECT` matched `fix`, `hotfix`,
   `bugfix` and `revert`, and the bashbop histories write `hot-fix(...)`,
@@ -942,9 +942,9 @@ the frozen runs in `.otito/runs/2026-09-26/tier-arithmetic/join-audit/`
 - **The two remaining suspects.** There are no dependency bumps on either
   bashbop repository in this corpus. `Develop (#N)` squash merges are 24 and 7
   rows, almost all routed `premium`, and leaving them out changes nothing. On
-  otito the 17 dependency bumps do what the release commits did (16 of 17
+  solumbe the 17 dependency bumps do what the release commits did (16 of 17
   routed cheap, 1 repaired; the keyless cheap lane goes from 17.5% to 21.3%
-  without them), but there is no ordering on otito for a corpus rule to
+  without them), but there is no ordering on solumbe for a corpus rule to
   rescue.
 
 Rescored under 0.4.1 (release commits and the newly labelled fixes out):
@@ -957,7 +957,7 @@ Rescored under 0.4.1 (release commits and the newly labelled fixes out):
 | bashbop-event-web | 894 | 50.0% (46.7 to 53.3) | deterministic | 165 · 44.8% (37.5 to 52.5) | 438 · 52.3% (47.6 to 56.9) | 291 · 49.5% (43.8 to 55.2) | no |
 | bashbop-event-web | | | offline | 50 · 44.0% (31.2 to 57.7) | 383 · 48.8% (43.9 to 53.8) | 461 · 51.6% (47.1 to 56.2) | yes, overlapping |
 | bashbop-event-web | | | jev | 8 · withheld | 268 · 46.6% (40.8 to 52.6) | 618 · 51.8% (47.8 to 55.7) | unknown |
-| otito | 129 | 18.6% (12.8 to 26.2) | unchanged | | | | |
+| solumbe | 129 | 18.6% (12.8 to 26.2) | unchanged | | | | |
 
 The conclusion is the one worth having before anyone touches the arithmetic
 again: **commit history cannot grade the router on these repositories.** The
@@ -981,9 +981,9 @@ prompt in the session is a correction, an outcome available minutes after the
 request instead of thirty days after the commit. It was audited before the log
 existed, on the corpus that already did: every Claude Code transcript on this
 machine (twenty days, one user, 1,122 prompt records) and the tiers the canvas
-had recorded when the hook ran (376 routed prompts, otito only, since the hook
+had recorded when the hook ran (376 routed prompts, solumbe only, since the hook
 was wired in one repository). Evidence beside the frozen runs in
-`.otito/runs/2026-09-26/session-correction/`, local only.
+`.solumbe/runs/2026-09-26/session-correction/`, local only.
 
 | | count |
 | --- | --: |
@@ -1027,8 +1027,8 @@ than one user's sessions.
 - TypeSafe AI, _System One_: <https://docs.typesafe.ai/concepts/system-one>
 - TypeSafe AI, _Composite scoring_: <https://docs.typesafe.ai/patterns/composite-scoring>
 - TypeSafe AI, _Confidence_: <https://docs.typesafe.ai/confidence>
-- otito, [Calibration Thesis](../17-calibration-thesis/README.md)
-- otito, [Deterministic Verification](../07-deterministic-verification/README.md)
-- Implementation: `src/lib/model-route.js` and `src/lib/render/route.js`, reachable as `otito route`
+- solumbe, [Calibration Thesis](../17-calibration-thesis/README.md)
+- solumbe, [Deterministic Verification](../07-deterministic-verification/README.md)
+- Implementation: `src/lib/model-route.js` and `src/lib/render/route.js`, reachable as `solumbe route`
 - `scripts/model-route.mjs` is a thin wrapper kept for the 1.12.0 prototype invocation
 - Host-agnostic skill: `codex/skills/model-router/`

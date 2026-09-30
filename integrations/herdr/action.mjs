@@ -2,35 +2,35 @@
 
 import { pathToFileURL } from "node:url";
 import {
-  buildOtitoArgs,
+  buildSolumbeArgs,
   formatModelRoute,
   parseInvocationContext,
   requestFromContext,
   resolveBase,
   resolveRepoRoot,
   routeModelTier,
-  runOtito,
+  runSolumbe,
 } from "./runtime.mjs";
 
 export function runAction(action, options = {}) {
   const context = options.context ?? parseInvocationContext();
   if (action === "doctor") {
-    return runOtito(buildOtitoArgs(action, {}));
+    return runSolumbe(buildSolumbeArgs(action, {}));
   }
 
   const repo = options.repo ?? resolveRepoRoot(context);
   const request = requestFromContext(action, context, options.request);
   const base = options.base ?? resolveBase(repo);
-  process.stdout.write(`Otito · ${action}\nRepository: ${repo}\nRequest: ${request}\n\n`);
+  process.stdout.write(`Solumbe · ${action}\nRepository: ${repo}\nRequest: ${request}\n\n`);
 
   if (action === "model-route") {
-    const result = runOtito(buildOtitoArgs(action, { repo, request, base }), {
+    const result = runSolumbe(buildSolumbeArgs(action, { repo, request, base }), {
       cwd: repo,
       capture: true,
     });
     if (result.error) return result;
     if ((result.status ?? 1) !== 0) {
-      process.stderr.write(result.stderr || result.stdout || "otito ax failed\n");
+      process.stderr.write(result.stderr || result.stdout || "solumbe ax failed\n");
       return result;
     }
 
@@ -38,7 +38,7 @@ export function runAction(action, options = {}) {
     try {
       report = JSON.parse(String(result.stdout || "{}"));
     } catch {
-      process.stderr.write("Otito AX JSON parse failed; showing raw output.\n");
+      process.stderr.write("Solumbe AX JSON parse failed; showing raw output.\n");
       process.stdout.write(result.stdout || "");
       return result;
     }
@@ -64,12 +64,12 @@ export function runAction(action, options = {}) {
     return { status: 0 };
   }
 
-  return runOtito(buildOtitoArgs(action, { repo, request, base }), { cwd: repo });
+  return runSolumbe(buildSolumbeArgs(action, { repo, request, base }), { cwd: repo });
 }
 
 export function main(argv = process.argv.slice(2)) {
   const action = argv[0];
-  if (!action) throw new Error("Expected an Otito Herdr action name.");
+  if (!action) throw new Error("Expected an Solumbe Herdr action name.");
   const result = runAction(action);
   if (result.error) throw result.error;
   process.exitCode = result.status ?? 1;
@@ -81,7 +81,7 @@ if (isMain) {
   try {
     main();
   } catch (error) {
-    process.stderr.write(`Otito Herdr plugin: ${error.message ?? String(error)}\n`);
+    process.stderr.write(`Solumbe Herdr plugin: ${error.message ?? String(error)}\n`);
     process.exitCode = 1;
   }
 }

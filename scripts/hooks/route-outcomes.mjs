@@ -11,7 +11,7 @@
 //   corrected  the next prompt inside the window is an interruption, or opens
 //              by pushing back (no / wrong / still / undo / why did you ...)
 //   reworked   the assistant's next turn edits a file this turn edited, the
-//              session-turn analogue of the commit join in `otito regret`
+//              session-turn analogue of the commit join in `solumbe regret`
 //
 // Both are proxies with known failure modes, measured on 2026-09-26 and
 // written up in docs/18: pushback catches the user's own typos and deploy
@@ -29,7 +29,7 @@
 //        [--window-min 60] [--min-sample 30] [--arm delegate|control|advisory] [--json]
 //
 // `--arm` grades one arm of the enforce-mode trial (route-prompt's
-// OTITO_ROUTE_MODE=delegate). Rows logged before the trial have no arm and
+// SOLUMBE_ROUTE_MODE=delegate). Rows logged before the trial have no arm and
 // count as `advisory`.
 
 import crypto from "node:crypto";
@@ -335,7 +335,7 @@ function main() {
   const flags = parseArgs(process.argv.slice(2));
   const logPath = typeof flags.log === "string" ? flags.log : routeLogPath();
   const transcripts = typeof flags.transcripts === "string" ? flags.transcripts : path.join(os.homedir(), ".claude", "projects");
-  if (!logPath) throw new Error("no decision log: OTITO_ROUTE_LOG is off; pass --log <file>");
+  if (!logPath) throw new Error("no decision log: SOLUMBE_ROUTE_LOG is off; pass --log <file>");
   let raw = "";
   try {
     raw = fs.readFileSync(logPath, "utf8");

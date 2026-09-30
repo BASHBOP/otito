@@ -26,7 +26,7 @@ const MODEL_MODULES = ["jev.js", "model-route.js", "context-read.js"];
 /**
  * Static, transitive, relative imports of a module: `import … from "./x.js"`
  * and `import("./x.js")`. Package imports are not followed; the guarantee is
- * about otito's own code.
+ * about solumbe's own code.
  * @param {string} entry absolute path
  * @returns {Set<string>} absolute paths, entry included
  */
@@ -70,6 +70,6 @@ for (const name of GATE_MODULES) {
 }
 
 test("the How It Works page still states the guarantee this test enforces", () => {
-  const html = fs.readFileSync(path.join(repoRoot, "docs", "assets", "otito-how-it-works.html"), "utf8");
+  const html = fs.readFileSync(path.join(repoRoot, "docs", "assets", "solumbe-how-it-works.html"), "utf8");
   assert.match(html, /The gate never consults a model/);
 });

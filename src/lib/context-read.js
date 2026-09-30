@@ -1,16 +1,16 @@
 // Opt-in: sharpen a context pack with a System One read of the request.
 //
-// otito ranks files from repository evidence: paths, symbols, imports. It has
+// solumbe ranks files from repository evidence: paths, symbols, imports. It has
 // never read a request as language, so it cannot tell what kind of work a
 // request asks for, and it ranks a file that merely shares vocabulary with the
 // request next to the file that owns it. This asks TypeSafe's Jev both
 // questions in one call and applies the answers only where they clear a gate:
 //
-//   - intent: an answer at or above CHOICE_FLOOR replaces otito's action word;
+//   - intent: an answer at or above CHOICE_FLOOR replaces solumbe's action word;
 //   - relevance: a file under DEMOTE_BELOW leaves the ranked lists and is kept,
 //     with its score, in `modelRead.demoted`; the rest are re-ranked by it.
 //
-// Off unless a caller asks (`context_pack { online: true }`, `otito context
+// Off unless a caller asks (`context_pack { online: true }`, `solumbe context
 // --online`), so a pack stays a pure function of repository state by default.
 // Any failure returns the pack unchanged and says why in `modelRead`. Nothing
 // here is read by a gate.
@@ -29,7 +29,7 @@ export async function readContextPack(pack, options = {}) {
   // In a multi-repo pack two repos can share a path (both `src/events.js`), so
   // label each file with its repo — otherwise the model is asked two identical
   // questions. The label rides copies, never the file objects that flow back
-  // into the pack, so the output is byte-for-byte otito's plus modelRead.
+  // into the pack, so the output is byte-for-byte solumbe's plus modelRead.
   const multiRepo = (data.repos ?? []).length > 1;
   const labeled = files.map((file) => ({ ...file, label: multiRepo ? `${file.repo?.name ?? "?"}:${file.path}` : file.path }));
   const state = {
@@ -75,10 +75,10 @@ export async function readContextPack(pack, options = {}) {
   const related = applyRelevance(data.relatedFiles ?? [], relevanceByKey);
 
   // A read that rejects every primary file is saying the candidates are wrong,
-  // not that the agent should read nothing. Keep otito's list and say so, the
+  // not that the agent should read nothing. Keep solumbe's list and say so, the
   // same way the router treats a read with no evidence behind it.
   if (primary.kept.length === 0 && primary.demoted.length > 0) {
-    modelRead.notApplied = `Every primary file scored under ${DEMOTE_BELOW}; kept otito's primary files rather than an empty list. Refine the request.`;
+    modelRead.notApplied = `Every primary file scored under ${DEMOTE_BELOW}; kept solumbe's primary files rather than an empty list. Refine the request.`;
     data.primaryFiles = [...primary.demoted.map((entry) => entry.file)].sort(byRank);
   } else {
     data.primaryFiles = primary.kept;
@@ -113,7 +113,7 @@ function candidateFiles(data) {
 
 /**
  * Annotate, demote and re-rank one list. Files the read did not score keep
- * their place after the scored ones, in otito's order.
+ * their place after the scored ones, in solumbe's order.
  * @param {any[]} list
  * @param {Map<string, number|null>} relevanceByKey
  */

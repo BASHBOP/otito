@@ -29,7 +29,7 @@ Split the work by what each half is good at.
 
 Both halves are necessary. Ambiguous requirements, natural language and unfamiliar code are exactly where a probabilistic model earns its cost. Deciding whether a diff touches authentication, whether its owners reviewed it, and whether its tests ran are questions with one correct answer that does not depend on who asks.
 
-otito is the second column. It recomputes the same evidence from the same repository state: which files a change touches, how far it reaches, who owns them, what validation exists, and whether the diff matches what was asked for. Every number traces to a measurement, the analysis runs locally with no network or vendor, and the same inputs always produce the same output.
+solumbe is the second column. It recomputes the same evidence from the same repository state: which files a change touches, how far it reaches, who owns them, what validation exists, and whether the diff matches what was asked for. Every number traces to a measurement, the analysis runs locally with no network or vendor, and the same inputs always produce the same output.
 
 ## Why stronger models make this more valuable, not less
 
@@ -39,7 +39,7 @@ Capability and accountability are different axes. A more capable model writes la
 
 A harness that depends on no particular model outlives every model it is used with. Agent orchestration is converging quickly across vendors; independent merge evidence is not, and it is the part a team cannot buy twice.
 
-## What otito computes
+## What solumbe computes
 
 **Context before the edit.** `context_pack` and the code map rank what a request actually touches from repository facts: paths, symbols, exports, imports and tests. This is retrieval grounded in the repository rather than in a model's memory of it.
 
@@ -47,7 +47,7 @@ A harness that depends on no particular model outlives every model it is used wi
 
 **Intent against execution.** `convergence_score` measures the gap between what was asked and what was actually done, and stamps the measurement with a receipt that recomputes to the same value from the same inputs. This is the check a model structurally cannot run on itself: it requires an independent statement of intent to compare against. The method is in the [convergence score spec](./convergence-score-spec.md).
 
-**The gate.** `review_gate` and `review_verdict` return PASS, WARN or FAIL from repository state alone: changed paths and their risk classification, ownership, validation command availability, secret heuristics and policy profile. No model is consulted. The verdict names the policy profile and governance it ran under, which come from the caller or else from the repository's `.otitorc.json` and the user config, and anyone with the same checkout and those two settings reproduces it.
+**The gate.** `review_gate` and `review_verdict` return PASS, WARN or FAIL from repository state alone: changed paths and their risk classification, ownership, validation command availability, secret heuristics and policy profile. No model is consulted. The verdict names the policy profile and governance it ran under, which come from the caller or else from the repository's `.solumberc.json` and the user config, and anyone with the same checkout and those two settings reproduces it.
 
 ## Clean code, expressed as procedure
 
@@ -57,7 +57,7 @@ What does transfer is structural, and all of it is measurable: a change should t
 
 ## What this is not
 
-This is not an argument that models are unreliable or that agents should be distrusted. Generation is the half where a model is genuinely better than a deterministic system, and otito does not compete with it.
+This is not an argument that models are unreliable or that agents should be distrusted. Generation is the half where a model is genuinely better than a deterministic system, and solumbe does not compete with it.
 
 It is not a claim that deterministic checks catch everything. They catch what repository state can express: reach, ownership, risk classification, drift from intent, missing validation. Whether an implementation is correct is not among them.
 

@@ -10,7 +10,7 @@ import { createRenderer } from "./render/fancy.js";
  */
 
 /**
- * Render a compact, human-first terminal summary in otito's shared shape: the
+ * Render a compact, human-first terminal summary in solumbe's shared shape: the
  * header box, the facts as a table, each section as a list (a file list as a
  * tree), and the closing line last. JSON and Markdown callers should continue
  * using their dedicated serializers instead of this helper.
@@ -88,58 +88,58 @@ export function printJson(value) {
 }
 
 export function printHelp() {
-  printText(`otito
+  printText(`solumbe
 
 Usage:
-  otito --version | -v
-  otito doctor [--json]
-  otito repo <path> [--json]
-  otito discover <root...> [--depth n] [--limit n] [--json]
-  otito index <repo...> [--discover] [--catalog file] [--json]
-  otito catalog [--catalog file] [--json]
-  otito search <query> [--catalog file] [--limit n] [--offline] [--json]
-  otito context <query> [--path repo] [--limit n] [--online] [--out file] [--json]
-  otito impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--mermaid]
-  otito obsidian <repo> [--query text] [--out vault-dir] [--limit n] [--top n] [--json]
-  otito ax <repo> <query> [--top n] [--out file] [--json]
-  otito route <repo> <query> [--host id] [--tier-only] [--offline] [--top n] [--out file] [--json]   # recommend a model tier before spending on the task
-  otito converge <repo> <query> --base <ref> [--head ref | --staged] [--include-untracked] [--top n] [--out file] [--json]
-  otito attest [repo] --verdict file --merge sha [--prev sha] [--pr n] [--author name] [--committed iso] [--ledger file] [--json]   # append a hash-chained record of a merged commit
-  otito attest [repo] --verify [--ledger file] [--json]                                     # recompute the chain; exits 1 if any record was altered
-  otito calibrate <repo> [--window days] [--min-sample n] [--since date] [--max n] [--json]   # grade risk flags against this repo's own history
-  otito regret <repo> [--window days] [--min-sample n] [--since date] [--max commits] [--offline] [--quiet] [--out file] [--json]   # grade route tiers against this repo's own history
-  otito regret --rescore run.json [--out file] [--json]                                     # regrade a saved run with the current arithmetic; replays and calls nothing
-  otito pass <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json]
-  otito gate [repo | --path repo] [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json]
-  otito pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json]
-  otito review [repo | --path repo] [request] [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--min-convergence n] [--receipt hash|file] [--json] [--mermaid]
-  otito install|i [--global|--link] [--json]
-  otito map <path> [--out file] [--json] [--mermaid]
-  otito structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
-  otito deps <package> [--query text] [--limit n] [--json]
-  otito init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--no-gates] [--no-precommit] [--hooks-path] [--yes] [--json]
-  otito matrix [--json]
-  otito mcp
-  otito pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
-  otito report <path> [--out file] [--json] [--mermaid]
-  otito workspace <repo...> [--out file] [--json] [--mermaid]
-  otito workspace-gate <repo...> [--base ref] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--json]
-  otito harness <path> [--out file] [--json]
-  otito eval <path> [--query text] [--naive-cap n] [--out file] [--json]
-  otito eval --accuracy|--harness|--gate-effectiveness [--corpus file] [--out file] [--json]
-  otito data-access <path> [--out file] [--json] [--mermaid]
-  otito agent-tools [--json|--markdown]
-  otito dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]   # local usage & performance UI (HTML)
-  otito telemetry [status|on|off|clear] [--json]                                          # opt-in local usage capture
-  otito telemetry share [status|on|off]                                                    # separate anonymous sharing opt-in
-  otito config [list]                           # show config with source annotations
-  otito config get [key]                        # show one or all resolved values
-  otito config set <key> <value> [--local]      # write to user (or local) config
-  otito config set color true                   # enable color in user config
-  otito config set theme high-contrast          # set theme (default|color|minimal|high-contrast)
-  otito config set emoji true                   # opt back into emoji glyphs in user config
-  otito config set telemetry true               # opt in to local usage capture for the dashboard
-  otito telemetry share on                      # optionally share a minimal anonymous usage shape
+  solumbe --version | -v
+  solumbe doctor [--json]
+  solumbe repo <path> [--json]
+  solumbe discover <root...> [--depth n] [--limit n] [--json]
+  solumbe index <repo...> [--discover] [--catalog file] [--json]
+  solumbe catalog [--catalog file] [--json]
+  solumbe search <query> [--catalog file] [--limit n] [--offline] [--json]
+  solumbe context <query> [--path repo] [--limit n] [--online] [--out file] [--json]
+  solumbe impact <repo> <query> [--top n] [--diff-base ref] [--out file] [--json] [--mermaid]
+  solumbe obsidian <repo> [--query text] [--out vault-dir] [--limit n] [--top n] [--json]
+  solumbe ax <repo> <query> [--top n] [--out file] [--json]
+  solumbe route <repo> <query> [--host id] [--tier-only] [--offline] [--top n] [--out file] [--json]   # recommend a model tier before spending on the task
+  solumbe converge <repo> <query> --base <ref> [--head ref | --staged] [--include-untracked] [--top n] [--out file] [--json]
+  solumbe attest [repo] --verdict file --merge sha [--prev sha] [--pr n] [--author name] [--committed iso] [--ledger file] [--json]   # append a hash-chained record of a merged commit
+  solumbe attest [repo] --verify [--ledger file] [--json]                                     # recompute the chain; exits 1 if any record was altered
+  solumbe calibrate <repo> [--window days] [--min-sample n] [--since date] [--max n] [--json]   # grade risk flags against this repo's own history
+  solumbe regret <repo> [--window days] [--min-sample n] [--since date] [--max commits] [--offline] [--quiet] [--out file] [--json]   # grade route tiers against this repo's own history
+  solumbe regret --rescore run.json [--out file] [--json]                                     # regrade a saved run with the current arithmetic; replays and calls nothing
+  solumbe pass <repo> [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json]
+  solumbe gate [repo | --path repo] [--base ref] [--head ref | --staged] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json]
+  solumbe pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json]
+  solumbe review [repo | --path repo] [request] [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--min-convergence n] [--receipt hash|file] [--json] [--mermaid]
+  solumbe install|i [--global|--link] [--json]
+  solumbe map <path> [--out file] [--json] [--mermaid]
+  solumbe structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
+  solumbe deps <package> [--query text] [--limit n] [--json]
+  solumbe init <path> [--tool-repo owner/repo] [--tool-ref ref] [--force] [--no-workflow] [--no-gates] [--no-precommit] [--hooks-path] [--yes] [--json]
+  solumbe matrix [--json]
+  solumbe mcp
+  solumbe pr <path> [--number n] [--base ref] [--head ref] [--out file] [--comment] [--json]
+  solumbe report <path> [--out file] [--json] [--mermaid]
+  solumbe workspace <repo...> [--out file] [--json] [--mermaid]
+  solumbe workspace-gate <repo...> [--base ref] [--run-validation] [--policy standard|company|high-risk] [--governance team|solo] [--request text] [--json]
+  solumbe harness <path> [--out file] [--json]
+  solumbe eval <path> [--query text] [--naive-cap n] [--out file] [--json]
+  solumbe eval --accuracy|--harness|--gate-effectiveness [--corpus file] [--out file] [--json]
+  solumbe data-access <path> [--out file] [--json] [--mermaid]
+  solumbe agent-tools [--json|--markdown]
+  solumbe dashboard [<repo>] [--out file] [--json] [--clear] [--no-artifacts] [--no-git]   # local usage & performance UI (HTML)
+  solumbe telemetry [status|on|off|clear] [--json]                                          # opt-in local usage capture
+  solumbe telemetry share [status|on|off]                                                    # separate anonymous sharing opt-in
+  solumbe config [list]                           # show config with source annotations
+  solumbe config get [key]                        # show one or all resolved values
+  solumbe config set <key> <value> [--local]      # write to user (or local) config
+  solumbe config set color true                   # enable color in user config
+  solumbe config set theme high-contrast          # set theme (default|color|minimal|high-contrast)
+  solumbe config set emoji true                   # opt back into emoji glyphs in user config
+  solumbe config set telemetry true               # opt in to local usage capture for the dashboard
+  solumbe telemetry share on                      # optionally share a minimal anonymous usage shape
 
 Global flags (every command that prints for a terminal):
   --emoji | --no-emoji        emoji glyphs on, or ASCII glyphs off; the default is plain Unicode (ASCII under CI, NO_EMOJI=1 or TERM=dumb)
@@ -159,13 +159,13 @@ Examples:
   node src/cli.js init ../my-repo
   node src/cli.js init ../my-repo --hooks-path --yes
   node src/cli.js mcp
-  node src/cli.js pr . --base origin/main --out .otito/pr-review.md
-  node src/cli.js harness . --out .otito/harness.md
+  node src/cli.js pr . --base origin/main --out .solumbe/pr-review.md
+  node src/cli.js harness . --out .solumbe/harness.md
   node src/cli.js deps zod --query parse
-  node src/cli.js report . --out .otito/report.md
-  node src/cli.js workspace ../web ../api --out .otito/workspace.md
-  node src/cli.js structure ../web --pattern 'app/**/*.tsx' --out .otito/app.html
-  node src/cli.js eval . --out .otito/eval.md
+  node src/cli.js report . --out .solumbe/report.md
+  node src/cli.js workspace ../web ../api --out .solumbe/workspace.md
+  node src/cli.js structure ../web --pattern 'app/**/*.tsx' --out .solumbe/app.html
+  node src/cli.js eval . --out .solumbe/eval.md
   node src/cli.js eval --gate-effectiveness
   node src/cli.js attest . --verify
 `);

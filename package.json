@@ -1,11 +1,11 @@
 {
-  "name": "@bashbop/otito",
+  "name": "@bashbop/solumbe",
   "version": "3.5.0",
-  "mcpName": "io.github.BASHBOP/otito",
-  "description": "Òtítọ́: deterministic local repository context, impact analysis, and merge evidence.",
+  "mcpName": "io.github.BASHBOP/solumbe",
+  "description": "Solumbe: deterministic local repository context, impact analysis, and merge evidence.",
   "type": "module",
   "bin": {
-    "otito": "src/cli.js"
+    "solumbe": "src/cli.js"
   },
   "files": [
     "assets",
@@ -28,7 +28,7 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "version:check": "node scripts/check-version.js",
-    "version": "node scripts/sync-server-version.mjs && npm run docs:diagram && git add server.json docs/index.md RELEASE.md docs/assets/otito-how-it-works.html",
+    "version": "node scripts/sync-server-version.mjs && npm run docs:diagram && git add server.json docs/index.md RELEASE.md docs/assets/solumbe-how-it-works.html",
     "test": "node --test tests/*.test.js",
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.js\" --test-coverage-lines=70 --test-coverage-branches=60 --test-coverage-functions=75 tests/*.test.js",
     "audit": "npm audit --omit=dev",
@@ -57,11 +57,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/BASHBOP/otito.git"
+    "url": "git+https://github.com/BASHBOP/solumbe.git"
   },
-  "homepage": "https://bashbop.github.io/otito/",
+  "homepage": "https://bashbop.github.io/solumbe/",
   "bugs": {
-    "url": "https://github.com/BASHBOP/otito/issues"
+    "url": "https://github.com/BASHBOP/solumbe/issues"
   },
   "keywords": [
     "cli",

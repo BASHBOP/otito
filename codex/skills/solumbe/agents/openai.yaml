@@ -1,0 +1,4 @@
+interface:
+  display_name: "Solumbe"
+  short_description: "Generate repo maps, harnesses, and PR context"
+  default_prompt: "Use $solumbe to generate repository context before planning, editing, or reviewing this change."

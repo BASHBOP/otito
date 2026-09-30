@@ -131,7 +131,7 @@ import { listRepoFiles } from "./repo.js";
 // classified, are caught automatically by `codeMapCapabilitySignature()`
 // below; they do not need a bump here.
 const cacheVersion = 11;
-const externalCacheDirectory = "otito-index-cache";
+const externalCacheDirectory = "solumbe-index-cache";
 
 // Bound on the in-process memo. MCP hosts call repo-map tools repeatedly for the
 // same repo; without this we re-read and re-JSON.parse the on-disk index every call.
@@ -378,7 +378,7 @@ function warnWriteFailureOnce(cachePath, error) {
   }
   warnedPaths.add(cachePath);
   const reason = error instanceof Error ? error.message : String(error);
-  console.warn(`otito: could not write repo index cache at ${cachePath}: ${reason}`);
+  console.warn(`solumbe: could not write repo index cache at ${cachePath}: ${reason}`);
 }
 
 /**

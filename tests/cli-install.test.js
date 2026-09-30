@@ -13,7 +13,7 @@ const postinstall = path.join(here, "..", "scripts", "postinstall.mjs");
  */
 function runPostinstall(extraEnv) {
   // Start from a clean slate for the guard vars so the host CI env can't leak in.
-  const env = { ...process.env, CI: "", OTITO_SKIP_POSTINSTALL: "", npm_config_global: "", ...extraEnv };
+  const env = { ...process.env, CI: "", SOLUMBE_SKIP_POSTINSTALL: "", npm_config_global: "", ...extraEnv };
   const result = spawnSync(process.execPath, [postinstall], { env, encoding: "utf8" });
   return { status: result.status, stderr: result.stderr ?? "" };
 }
@@ -35,7 +35,7 @@ test("postinstall is skipped in CI and when opted out", () => {
   assert.equal(inCi.status, 0);
   assert.equal(inCi.stderr.trim(), "");
 
-  const optedOut = runPostinstall({ npm_config_global: "true", OTITO_SKIP_POSTINSTALL: "1" });
+  const optedOut = runPostinstall({ npm_config_global: "true", SOLUMBE_SKIP_POSTINSTALL: "1" });
   assert.equal(optedOut.status, 0);
   assert.equal(optedOut.stderr.trim(), "");
 });

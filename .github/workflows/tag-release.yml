@@ -1,13 +1,13 @@
 name: Tag release
 
 # The release decision is the merge that brings a version bump to main. Once
-# otito CI passes on that commit, this tags it from package.json and starts
+# solumbe CI passes on that commit, this tags it from package.json and starts
 # the Release workflow, so a release no longer waits on a tag somebody has to
 # remember to push. Every other main push carries a version that is already
 # tagged and does nothing.
 on:
   workflow_run:
-    workflows: ["otito CI"]
+    workflows: ["solumbe CI"]
     types: [completed]
 
 permissions:
@@ -15,7 +15,7 @@ permissions:
   contents: write # push the tag
 
 concurrency:
-  group: otito-tag-release
+  group: solumbe-tag-release
   cancel-in-progress: false
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
       - name: Tag the version if it is new
         id: tag
         env:
-          OTITO_TAG_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOLUMBE_TAG_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

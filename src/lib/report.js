@@ -111,7 +111,7 @@ function formatReportMarkdown(data) {
   const present = data.doctor.tools.filter((tool) => tool.available);
 
   return [
-    "# otito Report",
+    "# solumbe Report",
     "",
     `Generated: ${data.generatedAt}`,
     "",
@@ -159,7 +159,7 @@ function formatReportMarkdown(data) {
  * The report has no glyphs of its own yet, so the renderer changes nothing it
  * prints today; it is created here, from the same preferences every other
  * command honours, so `--no-emoji`, `--color` and `--theme` reach the report
- * and its blocks can use it when they take otito's shared shape.
+ * and its blocks can use it when they take solumbe's shared shape.
  * @param {ReportData} data
  * @param {{ columns?: number, emoji?: boolean, color?: boolean, theme?: string }} [options]
  * @returns {string}
@@ -171,8 +171,8 @@ export function formatReportTerminal(data, options = {}) {
   const missing = data.doctor.tools.filter((tool) => !tool.available);
   const present = data.doctor.tools.filter((tool) => tool.available);
   const lines = [
-    "otito Field Report",
-    "=".repeat("otito Field Report".length),
+    "solumbe Field Report",
+    "=".repeat("solumbe Field Report".length),
     `Generated: ${data.generatedAt}`,
     ...formatLabeledParagraph("Status", formatStatusLine(data), layout),
   ];

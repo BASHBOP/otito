@@ -2,9 +2,9 @@
 // Thin wrapper kept for the prototype invocation shipped in 1.12.0.
 //
 // The routing logic now lives in `src/lib/model-route.js` and is reachable as
-// `otito route`, which computes the impact pass once instead of twice. Prefer:
+// `solumbe route`, which computes the impact pass once instead of twice. Prefer:
 //
-//   otito route <repo> "<prompt>" [--json|--tier-only|--host <id>] [--offline]
+//   solumbe route <repo> "<prompt>" [--json|--tier-only|--host <id>] [--offline]
 //
 // This file forwards to the same code so there is one implementation to reason
 // about, and one place a defect can be fixed.
@@ -25,7 +25,7 @@ const [repo, prompt] = positional;
 
 if (!repo || !prompt) {
   console.error('usage: node scripts/model-route.mjs <repo> "<prompt>" [--json|--tier-only|--host <id>] [--offline]');
-  console.error("note: `otito route` is the supported entry point and runs the same code.");
+  console.error("note: `solumbe route` is the supported entry point and runs the same code.");
   process.exit(2);
 }
 

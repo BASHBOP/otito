@@ -34,11 +34,11 @@ const FIXED_TIMESTAMP = "2026-01-01T00:00:00.000Z";
 const TASK = "add Stripe refunds to the payment webhook";
 
 // A fixed workspace path keeps the index-cache key, and so the data, stable.
-const WORK = path.join(os.tmpdir(), "otito-formatters-golden");
+const WORK = path.join(os.tmpdir(), "solumbe-formatters-golden");
 fs.rmSync(WORK, { recursive: true, force: true });
 fs.mkdirSync(path.join(WORK, "home"), { recursive: true });
 
-const skip = (name) => name === ".git" || name === "node_modules" || name === ".otito";
+const skip = (name) => name === ".git" || name === "node_modules" || name === ".solumbe";
 function copyContents(source, destination) {
   fs.mkdirSync(destination, { recursive: true });
   for (const ent of fs.readdirSync(source, { withFileTypes: true })) {
@@ -71,8 +71,8 @@ function gateRepo(changeSet) {
   const source = path.join(fixturesRoot, "gate-node");
   copyContents(path.join(source, "base"), dir);
   git(dir, ["init", "--quiet", "--initial-branch=main"]);
-  git(dir, ["config", "user.email", "golden@otito.local"]);
-  git(dir, ["config", "user.name", "otito golden"]);
+  git(dir, ["config", "user.email", "golden@solumbe.local"]);
+  git(dir, ["config", "user.name", "solumbe golden"]);
   git(dir, ["config", "commit.gpgsign", "false"]);
   git(dir, ["add", "--all"]);
   git(dir, ["commit", "--quiet", "-m", "baseline"]);
@@ -91,13 +91,13 @@ function stripAllowMarkers(dir) {
       continue;
     }
     const text = fs.readFileSync(full, "utf8");
-    if (!text.includes("otito:allow-secret")) continue;
+    if (!text.includes("solumbe:allow-secret")) continue;
     fs.writeFileSync(
       full,
       text
         .split(/\r?\n/)
-        .filter((line) => line.trim() !== "// otito:allow-secret")
-        .map((line) => line.replace(/\s*(?:\/\/|#)\s*otito:allow-secret\s*$/, ""))
+        .filter((line) => line.trim() !== "// solumbe:allow-secret")
+        .map((line) => line.replace(/\s*(?:\/\/|#)\s*solumbe:allow-secret\s*$/, ""))
         .join("\n"),
     );
   }
@@ -234,7 +234,7 @@ const passPrOpen = {
   policy: "standard",
   governance: "team",
   request: "",
-  contextEvidence: ['otito impact . "review this change" --json', "otito pr . --number 42 --out .otito/pr-review.md"],
+  contextEvidence: ['solumbe impact . "review this change" --json', "solumbe pr . --number 42 --out .solumbe/pr-review.md"],
   changedFiles: ["src/payment/refund.service.ts", "src/payment/stripe.webhook.ts"],
   checks: passPrChecks(),
 };
@@ -256,7 +256,7 @@ const passPrMerged = {
 };
 
 const summary = {
-  title: "otito repo · repository overview",
+  title: "solumbe repo · repository overview",
   glyph: "📦",
   subtitle: "<work>/fixtures/shop-api",
   facts: [
@@ -312,7 +312,7 @@ await add("index", "index", () => indexRepositories([shopApi, sampleApi], { cata
 await add("catalog", "catalog", () => listCatalog({ catalog }));
 await add("search", "search", () => searchCatalog("payment webhook", { catalog, offline: true }));
 await add("init", "init", () => initProject(initTarget));
-await add("install", "install", () => ({ ...getInstallPlan(), installed: true, binaryPath: "/usr/local/bin/otito" }));
+await add("install", "install", () => ({ ...getInstallPlan(), installed: true, binaryPath: "/usr/local/bin/solumbe" }));
 
 const out = {
   generatedFrom: "tests/golden/generate-formatters.mjs",
