@@ -206,8 +206,11 @@ export function planRebrand(repo, cfg) {
   const unhandled = [];
   for (const file of trackedFiles(repo)) {
     if (isKept(file, cfg)) continue;
-    const buf = fs.readFileSync(path.join(repo, file));
-    if (!isBinary(buf)) {
+    // A symlink's contents belong to its target, which may sit outside the
+    // repo: only its own path is renamed.
+    const link = fs.lstatSync(path.join(repo, file)).isSymbolicLink();
+    const buf = link ? Buffer.alloc(0) : fs.readFileSync(path.join(repo, file));
+    if (!link && !isBinary(buf)) {
       const result = rewriteText(buf.toString("utf8"), cfg);
       if (result.count > 0) edits.push({ file, count: result.count, next: result.text });
       for (const u of result.unhandled) unhandled.push({ file, ...u });
@@ -237,9 +240,18 @@ function removeEmptyDirs(repo, dir) {
  * @param {ReturnType<typeof planRebrand>} plan
  */
 export function applyRebrand(repo, plan) {
-  for (const edit of plan.edits) fs.writeFileSync(path.join(repo, edit.file), edit.next);
+  // Every rename is checked before anything is written, so a collision leaves
+  // the repo untouched instead of half rewritten. Targets are compared without
+  // case too, because macOS and Windows file systems do.
+  const seen = new Map();
   for (const rename of plan.renames) {
     if (fs.existsSync(path.join(repo, rename.to))) throw new Error(`cannot rename ${rename.from}: ${rename.to} already exists`);
+    const key = rename.to.toLowerCase();
+    if (seen.has(key)) throw new Error(`cannot rename both ${seen.get(key)} and ${rename.from} to ${rename.to}`);
+    seen.set(key, rename.from);
+  }
+  for (const edit of plan.edits) fs.writeFileSync(path.join(repo, edit.file), edit.next);
+  for (const rename of plan.renames) {
     fs.mkdirSync(path.dirname(path.join(repo, rename.to)), { recursive: true });
     git(repo, ["mv", rename.from, rename.to]);
     removeEmptyDirs(repo, path.dirname(rename.from));

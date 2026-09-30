@@ -156,8 +156,26 @@ test("workflow dependencies use setup-node v7 and TypeScript majors require migr
 test("release publishing uses GitHub OIDC without a stored npm token", () => {
   const workflow = read(".github/workflows/release.yml");
   assert.match(workflow, /id-token: write/);
-  assert.match(workflow, /- name: Publish\n\s+run: npm publish/);
+  assert.match(workflow, /- name: Publish\n\s+if: steps\.npm\.outputs\.published != 'true'\n\s+run: npm publish/);
   assert.doesNotMatch(workflow, /NPM_TOKEN|NODE_AUTH_TOKEN/);
+});
+
+test("release skips npm publish for a version npm already has, so the later jobs still run", () => {
+  const workflow = read(".github/workflows/release.yml");
+  // Only the publish step is skipped: the GitHub Release and MCP Registry jobs
+  // need it to succeed, and a skipped step still leaves the job green.
+  assert.match(workflow, /id: npm\n\s+run: \|[\s\S]*?npm view "\$NAME@\$VERSION" version[\s\S]*?published=true" >> "\$GITHUB_OUTPUT"/);
+  assert.match(workflow, /github-release:[\s\S]*?needs: publish/);
+  assert.match(workflow, /publish-mcp:[\s\S]*?needs: publish/);
+});
+
+test("the pre-rename MCP listing is retired only by hand, only once the new listing is live", () => {
+  const workflow = read(".github/workflows/retire-legacy-listing.yml");
+  assert.match(workflow, /^on:\n\s+workflow_dispatch:\n\n/m, "manual trigger only");
+  const guard = workflow.indexOf("Refuse unless the new listing is live");
+  const deprecate = workflow.indexOf("mcp-publisher status");
+  assert.ok(guard > 0 && guard < deprecate, "the live-listing guard runs before the status change");
+  assert.match(workflow, /status --status deprecated --message "[^"]+" --all-versions --yes io\.github\.BASHBOP\/\w+ /, "flags before the server name");
 });
 
 test("MCP Registry identity matches Bashbop's granted OIDC namespace", () => {

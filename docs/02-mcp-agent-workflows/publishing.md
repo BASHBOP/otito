@@ -136,7 +136,7 @@ If 2FA is on your account, npm prompts for an OTP. After success you'll
 see:
 
 ```
-+ @bashbop/solumbe@1.0.0
++ @bashbop/solumbe@4.0.0
 ```
 
 Verify immediately:

@@ -1,0 +1,39 @@
+name: Retire the pre-rename MCP Registry listing
+
+# Run by hand from the Actions tab, once, after the first Solumbe release is on
+# the MCP Registry. It marks every version of the pre-rename listing
+# deprecated and points readers at the new one. GitHub OIDC already grants the
+# io.github.BASHBOP namespace, so there is no token or local login.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # MCP Registry GitHub OIDC login
+
+jobs:
+  deprecate:
+    name: Deprecate the pre-rename listing
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz" | tar xz mcp-publisher
+
+      # Deprecating the old listing before the new one exists would leave
+      # nothing current to point at.
+      - name: Refuse unless the new listing is live
+        run: |
+          if ! curl -sf "https://registry.modelcontextprotocol.io/v0/servers?search=io.github.BASHBOP/solumbe" | grep -q '"io.github.BASHBOP/solumbe"'; then
+            echo "io.github.BASHBOP/solumbe is not on the MCP Registry yet; release v4.0.0 first." >&2
+            exit 1
+          fi
+
+      - name: Log in to the MCP Registry (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      # Go's flag parsing stops at the first argument, so every flag goes
+      # before the server name.
+      - name: Deprecate every version of the pre-rename listing
+        run: ./mcp-publisher status --status deprecated --message "Renamed to io.github.BASHBOP/solumbe (npm @bashbop/solumbe)." --all-versions --yes io.github.BASHBOP/otito # rebrand-keep
