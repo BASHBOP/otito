@@ -108,7 +108,7 @@ test("shared payload contains only the documented anonymous allowlist", () => {
     "duration_bucket",
     "installation_id",
     "node_major",
-    "solumbe_version",
+    "otito_version",
     "outcome",
     "platform",
     "schema_version",

@@ -1010,7 +1010,7 @@ function prepareGateFixture(source, changeSet) {
 }
 
 /**
- * Credential-shaped fixture lines carry an `solumbe:allow-secret` marker so the
+ * Credential-shaped fixture lines carry a `solumbe:allow-secret` marker so the
  * committed corpus never trips solumbe's own secret gate. The marker is removed
  * from the isolated copy before the gate runs, so the case exercises real
  * detection rather than the suppression path. This only deletes a suppression

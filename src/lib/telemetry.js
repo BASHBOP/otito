@@ -26,7 +26,10 @@ import { loadConfig } from "./config.js";
 
 export const TELEMETRY_SCHEMA_VERSION = 1;
 export const TELEMETRY_SHARE_SCHEMA_VERSION = 1;
-export const DEFAULT_TELEMETRY_SHARE_ENDPOINT = "https://api.bashbop.com/api/v1/analytics/solumbe";
+// The shared payload's route and its version field keep their pre-rename names
+// on purpose: bashbop-api's analytics controller and DTO define them, and both
+// sides have to move together (rebrand-keep: analytics/otito, TrackOtitoEventDto).
+export const DEFAULT_TELEMETRY_SHARE_ENDPOINT = "https://api.bashbop.com/api/v1/analytics/otito";
 const MAX_LOG_BYTES = 5 * 1024 * 1024; // rotate at 5MB to a single .1 generation
 const MAX_ERROR_LEN = 60;
 const DEFAULT_SHARE_TIMEOUT_MS = 750;
@@ -329,7 +332,7 @@ export function buildSharedTelemetryPayload(record, opts = {}) {
     command: normalizedCommand(record.cmd),
     outcome: ["error", "fail", "ok"].includes(record.outcome) ? record.outcome : "error",
     duration_bucket: durationBucket(record.durationMs),
-    solumbe_version: normalizedVersion(record.solumbeVersion),
+    otito_version: normalizedVersion(record.solumbeVersion),
     node_major: Number.isInteger(nodeMajor) && nodeMajor >= 18 && nodeMajor <= 100 ? nodeMajor : 18,
     platform: normalizedPlatform(opts.platform ?? process.platform),
   };

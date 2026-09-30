@@ -466,7 +466,10 @@ test("list renders one command per line with what it does", () => {
     ["solumbe gate", "runs the gate"],
     ["solumbe context", "builds a context pack"],
   ]);
-  assert.equal(createRenderer({ glyphs: "unicode", color: false }).list(items), "- `solumbe gate` – runs the gate\n- `solumbe context` – builds a context pack");
+  assert.equal(
+    createRenderer({ glyphs: "unicode", color: false }).list(items),
+    "- `solumbe gate` – runs the gate\n- `solumbe context` – builds a context pack",
+  );
   assert.equal(createRenderer({ glyphs: "ascii", color: false }).list(items), "- `solumbe gate` - runs the gate\n- `solumbe context` - builds a context pack");
   assert.equal(createRenderer({ glyphs: "unicode", color: false }).list([]), "");
 });

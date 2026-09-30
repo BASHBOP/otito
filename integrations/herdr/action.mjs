@@ -69,7 +69,7 @@ export function runAction(action, options = {}) {
 
 export function main(argv = process.argv.slice(2)) {
   const action = argv[0];
-  if (!action) throw new Error("Expected an Solumbe Herdr action name.");
+  if (!action) throw new Error("Expected a Solumbe Herdr action name.");
   const result = runAction(action);
   if (result.error) throw result.error;
   process.exitCode = result.status ?? 1;

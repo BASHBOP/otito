@@ -324,7 +324,7 @@ export function rescoreRegret(saved, options = {}) {
   const score = options.score ?? scoreDecision;
   const rows = Array.isArray(saved?.commits) ? saved.commits : null;
   if (!rows?.length || !saved.method) {
-    throw new Error("rescore needs the JSON of an `solumbe regret --json` run");
+    throw new Error("rescore needs the JSON of a `solumbe regret --json` run");
   }
   if (rows.some((row) => typeof row.containment !== "number" || !row.inputs?.offline)) {
     throw new Error(

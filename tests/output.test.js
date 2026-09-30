@@ -25,7 +25,7 @@ test("a summary is a header, the facts as a table, sections as lists or trees, a
   const unicode = formatTerminalSummary({ ...input, close: { status: "verified" }, options: { glyphs: "unicode", color: false, width: 60 } });
   assert.deepEqual(unicode.split("\n"), [
     "╭──────────────────────────────────────────────────────────╮",
-    "│  solumbe init · trust harness setup                        │",
+    "│  solumbe init · trust harness setup                      │",
     "│  /tmp/repo                                               │",
     "╰──────────────────────────────────────────────────────────╯",
     "",

@@ -449,7 +449,7 @@ test("rescore refuses a run that did not keep its inputs, and anything that is n
     commits: saved.commits.map(({ containment: _containment, riskPaths: _riskPaths, inputs: _inputs, ...row }) => row),
   };
   assert.throws(() => rescoreRegret(before), /saved by regret 0\.2\.0, which did not keep the signals and answers a rescore needs/);
-  assert.throws(() => rescoreRegret({}), /needs the JSON of an `solumbe regret --json` run/);
+  assert.throws(() => rescoreRegret({}), /needs the JSON of a `solumbe regret --json` run/);
 });
 
 test("the CLI rescores a saved run from a file, and says what --rescore needs when it has no path", async () => {

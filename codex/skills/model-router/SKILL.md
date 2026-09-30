@@ -65,7 +65,7 @@ Map final score with the same AX table (≥75 cheap, 45–74 mid, <45 premium).
 | Tier        | Use for                                                                           | Avoid for                            |
 | ----------- | --------------------------------------------------------------------------------- | ------------------------------------ |
 | **cheap**   | Typos, formatting, small renames, boilerplate, test-only tweaks, changelog        | Security, payments, ambiguous design |
-| **mid**     | Default feature work, focused refactors, most PR review, Solumbe gate follow-ups    | Novel architecture across many repos |
+| **mid**     | Default feature work, focused refactors, most PR review, Solumbe gate follow-ups  | Novel architecture across many repos |
 | **premium** | Hard bugs, security/auth/payments, multi-repo design, weak AX / huge blast radius | Pure nits (waste)                    |
 
 Default when unsure: **mid**, not premium.

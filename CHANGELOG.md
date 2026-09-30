@@ -6,6 +6,25 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+### Changed
+
+- **Òtítọ́ is now Solumbe.** Every name moves in one cut, with no fallback to the old ones:
+
+  | Was | Now |
+  | --- | --- |
+  | npm `@bashbop/otito` | `@bashbop/solumbe` |
+  | CLI `otito` | `solumbe` |
+  | MCP Registry `io.github.BASHBOP/otito`, host key `otito` (`mcp__otito__*` tools) | `io.github.BASHBOP/solumbe`, `solumbe` (`mcp__solumbe__*`) |
+  | Config `.otitorc.json`, gate config `otito.gate.json` | `.solumberc.json`, `solumbe.gate.json` |
+  | Evidence `.otito/`, user state `~/.otito/` | `.solumbe/`, `~/.solumbe/` |
+  | Environment `OTITO_*` | `SOLUMBE_*` |
+  | Skills `otito-*`, secret marker `otito:allow-secret`, PR comment marker `<!-- otito-pr-review -->` | `solumbe-*`, `solumbe:allow-secret`, `<!-- solumbe-pr-review -->` |
+  | Repository `BASHBOP/otito`, docs `bashbop.github.io/otito` | `BASHBOP/solumbe`, `bashbop.github.io/solumbe` |
+
+  To upgrade, install `@bashbop/solumbe`; rename `.otitorc.json`, `otito.gate.json` and any `otito:allow-secret` markers; move `.otito/` and `~/.otito/`; rename `OTITO_*` variables; and point MCP host configs at the new package and server key. Two things keep the old name on purpose: telemetry sharing still posts to bashbop-api's `analytics/otito` route with an `otito_version` field, because both sides of that contract have to move together, and links to releases before 4.0.0 still point at `@bashbop/otito`, where those versions live.
+
+- `scripts/rebrand.mjs` (`plan`, `apply`, `check`) made the rename from `.rebrandrc.json`: case-preserving, git-moved paths, idempotent. `npm run quality` now runs `rebrand:check`, so the old name cannot creep back outside the CHANGELOG and the preserved links.
+
 ## [3.5.0] - 2026-09-30
 
 Model routing can now make a share of requests follow the tier it picks instead of only recommending one, and on Claude Code the premium tier names the model that actually runs. No command, field or schema was removed.

@@ -2,6 +2,8 @@
 
 **Models generate the change. Solumbe proves whether it is safe to merge.**
 
+Formerly **Òtítọ́** (`@bashbop/otito`), renamed in 4.0.0; the [CHANGELOG](CHANGELOG.md) maps every old name to its new one. <!-- rebrand-keep -->
+
 [![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/solumbe/solumbe-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/solumbe/actions/workflows/solumbe-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/solumbe?style=flat-square)](https://www.npmjs.com/package/@bashbop/solumbe) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/) [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/bashbop/otito) [![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/score.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
 
 ![solumbe demo](solumbe-demo.gif)
@@ -70,33 +72,33 @@ The convergence score is the part a model cannot grade for itself: it compares t
 
 Three commands are the product. They call no model, open no socket, and read nothing outside the repository.
 
-| Step             | Command                                                                    |
-| ---------------- | -------------------------------------------------------------------------- |
+| Step             | Command                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
 | Before the edit  | `solumbe context "add refund handling" --path .`                             |
 | Before the merge | `solumbe gate . --staged --base origin/main --request "add refund handling"` |
-| For the reviewer | `solumbe pr . --base origin/main --out .solumbe/pr-review.md`                  |
+| For the reviewer | `solumbe pr . --base origin/main --out .solumbe/pr-review.md`                |
 
 Nothing hosted is required, and nothing hosted can change a verdict. [Local Core, Optional Hosted](https://bashbop.github.io/solumbe/19-local-core-optional-hosted/) lists exactly what the optional pieces send, and where.
 
 ## Supporting commands
 
-| Goal                               | Command                                                                     |
-| ---------------------------------- | --------------------------------------------------------------------------- |
-| Rank change blast radius           | `solumbe impact . "add refund handling" --top 12`                             |
-| Score intent vs. execution         | `solumbe converge "add refunds" --path . --base HEAD --staged`                |
-| Score a committed change exactly   | `solumbe converge "add refunds" --path . --base HEAD~1 --head HEAD`           |
-| Gate a product change across repos | `solumbe workspace-gate ../web ../api --request "ship change"`                |
-| Grade risk flags against history   | `solumbe calibrate . --window 30`                                             |
-| Grade route tiers against history  | `solumbe regret . --window 30 --offline`                                      |
-| Regrade a saved run, same answers  | `solumbe regret --rescore run.json`                                           |
-| Score Agent Experience             | `solumbe ax . "add a new MCP tool"`                                           |
-| Recommend a model tier             | `solumbe route . "add a new MCP tool"`                                        |
-| Sharpen context with a model read  | `solumbe context "add a new MCP tool" --path . --online`                      |
-| Inspect one repo                   | `solumbe repo . --json`                                                       |
-| Build a code map                   | `solumbe map . --json`                                                        |
+| Goal                               | Command                                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| Rank change blast radius           | `solumbe impact . "add refund handling" --top 12`                               |
+| Score intent vs. execution         | `solumbe converge "add refunds" --path . --base HEAD --staged`                  |
+| Score a committed change exactly   | `solumbe converge "add refunds" --path . --base HEAD~1 --head HEAD`             |
+| Gate a product change across repos | `solumbe workspace-gate ../web ../api --request "ship change"`                  |
+| Grade risk flags against history   | `solumbe calibrate . --window 30`                                               |
+| Grade route tiers against history  | `solumbe regret . --window 30 --offline`                                        |
+| Regrade a saved run, same answers  | `solumbe regret --rescore run.json`                                             |
+| Score Agent Experience             | `solumbe ax . "add a new MCP tool"`                                             |
+| Recommend a model tier             | `solumbe route . "add a new MCP tool"`                                          |
+| Sharpen context with a model read  | `solumbe context "add a new MCP tool" --path . --online`                        |
+| Inspect one repo                   | `solumbe repo . --json`                                                         |
+| Build a code map                   | `solumbe map . --json`                                                          |
 | Index and search local projects    | `solumbe index ~/projects --discover` then `solumbe search "events controller"` |
 | Generate an agent harness          | `solumbe harness . --out .solumbe/harness.md`                                   |
-| Run the MCP server                 | `solumbe mcp`                                                                 |
+| Run the MCP server                 | `solumbe mcp`                                                                   |
 
 Every command takes `--json`, and `solumbe help` lists the full set with flags.
 

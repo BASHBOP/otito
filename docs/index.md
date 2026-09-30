@@ -6,6 +6,8 @@
 
 **v3.5.0** is published to npm, GitHub Releases, and the official MCP Registry. Solumbe is a Bashbop Ltd product, MIT licensed.
 
+Formerly **Òtítọ́** (`@bashbop/otito`), renamed in 4.0.0. <!-- rebrand-keep -->
+
 ---
 
 !!! info "About Solumbe"

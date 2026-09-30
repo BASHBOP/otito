@@ -1,6 +1,6 @@
 # Audit-layer pilot
 
-Turns an `solumbe review --json` verdict into an **immutable, hash-chained attestation** bound to a merged commit. Models the "after-merge, complete, tamper-evident" audit layer — the ledger here stands in for an append-only row in a hosted audit store.
+Turns a `solumbe review --json` verdict into an **immutable, hash-chained attestation** bound to a merged commit. Models the "after-merge, complete, tamper-evident" audit layer — the ledger here stands in for an append-only row in a hosted audit store.
 
 The attestation itself is a CLI command, `solumbe attest` (source: `src/lib/attest.js`). This directory holds the ledger and the verdicts the workflow writes.
 

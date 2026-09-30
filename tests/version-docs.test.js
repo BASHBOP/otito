@@ -8,7 +8,7 @@ const WHATS_NEW = `
 !!! tip "v1.9.2 published (2026-09-07)"
     - solumbe is now listed on mcpservers.org.
 
-    [npm v1.9.2](https://www.npmjs.com/package/@bashbop/otito/v/1.9.2) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v1.9.2)
+    [npm v1.9.2](https://www.npmjs.com/package/@bashbop/solumbe/v/1.9.2) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v1.9.2)
 `;
 
 function indexFixture(version) {

@@ -489,7 +489,7 @@ test("askJev folds the request read into the same call and keeps it out of the s
     createRenderer({ color: false, emoji: false }),
   );
   assert.match(terminal, /request read {2}\(reported, never scored\)/);
-  assert.match(terminal, /solumbe tool {6}model_route {2}0\.20 {2}under the floor/);
+  assert.match(terminal, /solumbe tool {4}model_route {2}0\.20 {2}under the floor/);
 });
 
 /** @param {Record<string, any>} answers */
