@@ -29,7 +29,7 @@ This project follows SemVer.
 
 - A manually run workflow, `retire-legacy-listing.yml`, marks every version of the pre-rename MCP Registry listing deprecated and points it at `io.github.BASHBOP/solumbe`. It refuses to run until the new listing is live.
 - The Release workflow skips `npm publish` when npm already has the version, instead of failing and taking the GitHub Release and MCP Registry jobs down with it. A new package name's first publish has to be done by hand, because npm Trusted Publishing is configured per existing package; re-running a release after a later job failed also hits this.
-- `scripts/rebrand.mjs` (`plan`, `apply`, `check`) made the rename from `.rebrandrc.json`: case-preserving, git-moved paths, idempotent. `npm run quality` now runs `rebrand:check`, so the old name cannot creep back outside the CHANGELOG and the preserved links.
+- `scripts/rebrand.mjs` (`plan`, `apply`, `check`) made the rename from `.rebrandrc.json`: case-preserving, git-moved paths, idempotent. `npm run quality` now runs `rebrand:check`, which also flags accented spellings no alias covers, so the old name cannot creep back outside the CHANGELOG and the preserved links.
 
 ## [3.5.0] - 2026-09-30
 

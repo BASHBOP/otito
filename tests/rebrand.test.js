@@ -85,6 +85,18 @@ test("rewriteText covers identifiers, env vars, dotfiles, scoped packages and al
   assert.deepEqual(unhandled, []);
 });
 
+test("rewriteText reports an accented spelling no alias covers, and an alias for it renames it", () => {
+  // cfg aliases "Ácmé" only: its upper-case form must not pass as clean.
+  const missed = rewriteText('<text fill="url(#rainbow)">ÁCMÉ</text>', cfg);
+  assert.equal(missed.count, 0);
+  assert.equal(missed.unhandled.length, 1);
+
+  const withUpper = validateConfig({ from: "acme", to: "zenith", aliases: { Ácmé: "Zenith", ÁCMÉ: "ZENITH" } });
+  const fixed = rewriteText('<text fill="url(#rainbow)">ÁCMÉ</text>', withUpper);
+  assert.equal(fixed.text, '<text fill="url(#rainbow)">ZENITH</text>');
+  assert.deepEqual(fixed.unhandled, []);
+});
+
 test("rewriteText leaves marked lines and reports mixed case", () => {
   const { text, count, unhandled } = rewriteText("formerly acme <!-- rebrand-keep -->\nweird aCmE here", cfg);
   assert.equal(text, "formerly acme <!-- rebrand-keep -->\nweird aCmE here");
