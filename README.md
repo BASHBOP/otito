@@ -4,11 +4,11 @@
 
 Formerly **Òtítọ́** (`@bashbop/otito`), renamed in 4.0.0; the [CHANGELOG](CHANGELOG.md) maps every old name to its new one. <!-- rebrand-keep -->
 
-[![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/solumbe/solumbe-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/solumbe/actions/workflows/solumbe-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/solumbe?style=flat-square)](https://www.npmjs.com/package/@bashbop/solumbe) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/) [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/bashbop/otito) [![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/score.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
+[![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/solumbe/solumbe-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/solumbe/actions/workflows/solumbe-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/solumbe?style=flat-square)](https://www.npmjs.com/package/@bashbop/solumbe) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/) [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/bashbop/otito) [![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/solumbe/badges/score.svg)](https://glama.ai/mcp/servers/BASHBOP/solumbe)
 
 ![solumbe demo](solumbe-demo.gif)
 
-[![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/card.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
+[![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/solumbe/badges/card.svg)](https://glama.ai/mcp/servers/BASHBOP/solumbe)
 
 Solumbe is a local-first, deterministic, model-agnostic trust layer for AI-assisted development. It builds task-aware repository context before an agent edits, scores how much a change actually touches, and gates merge readiness against the exact staged tree, with no server, no account, and no code leaving the machine.
 

@@ -9,7 +9,6 @@
   "preserve": [
     "npmjs.com/package/@bashbop/otito/v/",
     "io.github.BASHBOP%2Fotito",
-    "glama.ai/mcp/servers/BASHBOP/otito",
     "mcpservers.org/servers/bashbop/otito",
     "api.bashbop.com/api/v1/analytics/otito",
     "otito_version",
