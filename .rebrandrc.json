@@ -12,6 +12,7 @@
     "mcpservers.org/servers/bashbop/otito",
     "api.bashbop.com/api/v1/analytics/otito",
     "otito_version",
-    "\"otito\""
+    "\"otito\"",
+    "/Users/segzy/dev/otito"
   ]
 }

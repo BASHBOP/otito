@@ -12,7 +12,7 @@ Close the loop when `context_pack` / `solumbe context` is a weak map: turn the m
 
 1. Detect and score the gap.
 2. Add or update an accuracy eval case (fixture when possible; live-repo note when not).
-3. Implement the smallest ranking/extractor fix in `/Users/segzy/dev/solumbe`.
+3. Implement the smallest ranking/extractor fix in `/Users/segzy/dev/otito`.
 4. Re-run targeted tests + `npm run eval:accuracy` (or the skill script).
 5. Report before/after. **Do not commit or open a PR unless the user asks.**
 
@@ -45,7 +45,7 @@ If the user did not label expected files, infer from what the agent actually edi
 Prefer the helper (from a solumbe checkout):
 
 ```bash
-node /Users/segzy/dev/solumbe/codex/skills/solumbe-self-improve/scripts/score-gap.mjs \
+node /Users/segzy/dev/otito/codex/skills/solumbe-self-improve/scripts/score-gap.mjs \
   --query "…" \
   --path /path/to/repo \
   --expect-primary "src/email/email.service.ts" \
@@ -92,7 +92,7 @@ If only a live repo can reproduce today: keep a markdown note under `codex/skill
 
 ### 4) Implement the fix
 
-Work only in the solumbe checkout (`/Users/segzy/dev/solumbe` unless the user moved it).
+Work only in the solumbe checkout (`/Users/segzy/dev/otito` unless the user moved it).
 
 - Smallest change that makes the new case pass.
 - Update unit tests next to the change (`tests/context-engine.test.js`, `tests/code-map.test.js`, …).
@@ -102,7 +102,7 @@ Work only in the solumbe checkout (`/Users/segzy/dev/solumbe` unless the user mo
 ### 5) Verify
 
 ```bash
-cd /Users/segzy/dev/solumbe
+cd /Users/segzy/dev/otito
 node --test tests/code-map.test.js tests/context-engine.test.js tests/index-cache.test.js
 npm run eval:accuracy
 # re-score the original gap

@@ -141,9 +141,34 @@ test("plan writes nothing; apply rewrites and git-moves; a second apply is a no-
   assert.deepEqual([again.edits, again.renames, again.unhandled], [[], [], []]);
 });
 
-test("apply refuses to overwrite an existing target path", () => {
-  const dir = fixtureRepo({ "acme.md": "a\n", "zenith.md": "b\n" });
+test("apply refuses to overwrite an existing target path and writes nothing first", () => {
+  const dir = fixtureRepo({ "acme.md": "a\n", "zenith.md": "b\n", "notes.md": "acme notes\n" });
+  const before = snapshot(dir);
   assert.throws(() => applyRebrand(dir, planRebrand(dir, cfg)), /already exists/);
+  assert.deepEqual(snapshot(dir), before, "a collision leaves every file as it was");
+});
+
+test("apply refuses two renames that differ only in case", () => {
+  const dir = fixtureRepo({ "acme.md": "a\n", "sub/readme.md": "b\n" });
+  const plan = planRebrand(dir, cfg);
+  plan.renames.push({ from: "sub/readme.md", to: "ZENITH.md" });
+  assert.throws(() => applyRebrand(dir, plan), /cannot rename both acme\.md and sub\/readme\.md/);
+});
+
+test("a symlink is renamed but its target is never read or written", () => {
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "rebrand-outside-"));
+  fs.writeFileSync(path.join(outside, "target.md"), "acme outside the repo\n");
+  const dir = fixtureRepo({ "README.md": "acme\n" });
+  fs.symlinkSync(path.join(outside, "target.md"), path.join(dir, "acme-link.md"));
+  git(dir, ["add", "acme-link.md"]);
+  const plan = planRebrand(dir, cfg);
+  assert.deepEqual(
+    plan.edits.map((e) => e.file),
+    ["README.md"],
+  );
+  applyRebrand(dir, plan);
+  assert.equal(fs.readFileSync(path.join(outside, "target.md"), "utf8"), "acme outside the repo\n");
+  assert.equal(fs.lstatSync(path.join(dir, "zenith-link.md")).isSymbolicLink(), true);
 });
 
 test("the CLI check fails while the old name remains and passes after apply", () => {

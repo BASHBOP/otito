@@ -1,7 +1,7 @@
 // Opt-in: show an MCP host's requests on a local Solumbe Realtime Canvas.
 //
-// The canvas is an observer, never a participant (see the solumbe-canvas
-// README). Claude Code reaches it through a prompt hook; Cursor, VS Code,
+// The canvas is an observer, never a participant (see the Realtime Canvas
+// repository README). Claude Code reaches it through a prompt hook; Cursor, VS Code,
 // Codex and the other MCP hosts have no such hook, so without this tap their
 // requests never appear on it.
 //
