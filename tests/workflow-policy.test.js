@@ -169,6 +169,15 @@ test("release skips npm publish for a version npm already has, so the later jobs
   assert.match(workflow, /publish-mcp:[\s\S]*?needs: publish/);
 });
 
+test("the pre-rename MCP listing is retired only by hand, only once the new listing is live", () => {
+  const workflow = read(".github/workflows/retire-legacy-listing.yml");
+  assert.match(workflow, /^on:\n\s+workflow_dispatch:\n\n/m, "manual trigger only");
+  const guard = workflow.indexOf("Refuse unless the new listing is live");
+  const deprecate = workflow.indexOf("mcp-publisher status");
+  assert.ok(guard > 0 && guard < deprecate, "the live-listing guard runs before the status change");
+  assert.match(workflow, /status --status deprecated --message "[^"]+" --all-versions --yes io\.github\.BASHBOP\/\w+ /, "flags before the server name");
+});
+
 test("MCP Registry identity matches Bashbop's granted OIDC namespace", () => {
   const manifest = JSON.parse(read("package.json"));
   const server = JSON.parse(read("server.json"));
