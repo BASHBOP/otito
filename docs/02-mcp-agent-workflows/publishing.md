@@ -1,7 +1,7 @@
 # 🚀 Publishing an MCP Server to npm + the MCP Registry
 
 This guide walks the full publish path for a stdio MCP server, using
-`@bashbop/otito` as the worked example. Follow it once and your server
+`@bashbop/solumbe` as the worked example. Follow it once and your server
 becomes installable by anyone via `npm install -g`, discoverable by any
 registry-aware MCP host (Claude Desktop, Claude Code, Codex CLI, Cursor,
 Goose), and verifiably owned by you.
@@ -28,17 +28,17 @@ Two options:
 
 | Option | Format | When to use |
 | --- | --- | --- |
-| Bare name | `otito` | Only if `npm view <name>` returns 404 |
-| Scoped name | `@yourorg/otito` | **Recommended**: free, immediate, brand-consistent with your GitHub org |
+| Bare name | `solumbe` | Only if `npm view <name>` returns 404 |
+| Scoped name | `@yourorg/solumbe` | **Recommended**: free, immediate, brand-consistent with your GitHub org |
 
 Check availability before deciding:
 
 ```bash
-npm view otito version          # 404 = free; any version number = taken
-npm view @yourorg/otito version
+npm view solumbe version          # 404 = free; any version number = taken
+npm view @yourorg/solumbe version
 ```
 
-For this guide we use `@bashbop/otito`.
+For this guide we use `@bashbop/solumbe`.
 
 ---
 
@@ -48,11 +48,11 @@ Add or update these fields:
 
 ```json
 {
-  "name": "@bashbop/otito",
+  "name": "@bashbop/solumbe",
   "version": "1.0.2",
-  "mcpName": "io.github.BASHBOP/otito",
+  "mcpName": "io.github.BASHBOP/solumbe",
   "bin": {
-    "otito": "src/cli.js"
+    "solumbe": "src/cli.js"
   },
   "files": [
     "src",
@@ -69,11 +69,11 @@ Add or update these fields:
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/BASHBOP/otito.git"
+    "url": "https://github.com/BASHBOP/solumbe.git"
   },
-  "homepage": "https://bashbop.github.io/otito/",
+  "homepage": "https://bashbop.github.io/solumbe/",
   "bugs": {
-    "url": "https://github.com/BASHBOP/otito/issues"
+    "url": "https://github.com/BASHBOP/solumbe/issues"
   },
   "keywords": ["mcp", "mcp-server", "cli", "developer-tools"]
 }
@@ -96,7 +96,7 @@ npm publish --dry-run
 ```
 
 Eyeball the file list. Your tarball should contain only what's in the
-`files` array. **If you see `tests/`, `node_modules/`, `.otito/`, or
+`files` array. **If you see `tests/`, `node_modules/`, `.solumbe/`, or
 `coverage/` listed, stop and tighten your `files` array.**
 
 A healthy CLI tarball is typically 50–200 kB.
@@ -136,14 +136,14 @@ If 2FA is on your account, npm prompts for an OTP. After success you'll
 see:
 
 ```
-+ @bashbop/otito@1.0.0
++ @bashbop/solumbe@4.0.0
 ```
 
 Verify immediately:
 
 ```bash
-npm view @bashbop/otito version       # → 1.0.0
-npx -y @bashbop/otito --help          # after publication: downloads fresh and runs the CLI
+npm view @bashbop/solumbe version       # → 1.0.0
+npx -y @bashbop/solumbe --help          # after publication: downloads fresh and runs the CLI
 ```
 
 !!! warning "npm versions are immutable"
@@ -176,12 +176,12 @@ your repo (next to `package.json`). Minimal valid example:
 ```json
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.BASHBOP/otito",
-  "title": "otito",
+  "name": "io.github.BASHBOP/solumbe",
+  "title": "solumbe",
   "description": "Local-first code context, impact analysis, and merge-readiness verdicts for AI agents.",
-  "websiteUrl": "https://bashbop.github.io/otito/",
+  "websiteUrl": "https://bashbop.github.io/solumbe/",
   "repository": {
-    "url": "https://github.com/BASHBOP/otito",
+    "url": "https://github.com/BASHBOP/solumbe",
     "source": "github",
     "id": "1242199320"
   },
@@ -189,7 +189,7 @@ your repo (next to `package.json`). Minimal valid example:
   "packages": [
     {
       "registryType": "npm",
-      "identifier": "@bashbop/otito",
+      "identifier": "@bashbop/solumbe",
       "version": "1.0.2",
       "transport": {
         "type": "stdio"
@@ -221,7 +221,7 @@ your repo (next to `package.json`). Minimal valid example:
 | `packages[0].packageArguments` | array of arg specs | Required if your server entry point needs subcommand args. Each entry is `{"type":"positional","value":"<arg>"}` or `{"type":"positional","valueHint":"<hint>"}` |
 
 !!! danger "Common error: description too long"
-    First publish attempt for `@bashbop/otito` failed with:
+    First publish attempt for `@bashbop/solumbe` failed with:
     ```
     HTTP 422 Unprocessable Entity
     {"message":"expected length <= 100","location":"body.description"}
@@ -239,7 +239,7 @@ mcp-publisher login github
 
 Device-code OAuth flow opens your browser. The GitHub account you log in
 with **must own** the `<your-username>` namespace in `server.json.name`.
-For `io.github.BASHBOP/otito` the GitHub organization must be `BASHBOP`; preserve the exact casing the registry grants to its GitHub OIDC publisher.
+For `io.github.BASHBOP/solumbe` the GitHub organization must be `BASHBOP`; preserve the exact casing the registry grants to its GitHub OIDC publisher.
 
 ---
 
@@ -255,8 +255,8 @@ The CLI reads `server.json` from the current directory and submits it.
     Most common first-publish failure:
     ```
     HTTP 400 Bad Request
-    NPM package '@bashbop/otito' is missing required 'mcpName' field.
-    Add this to your package.json: "mcpName": "io.github.BASHBOP/otito"
+    NPM package '@bashbop/solumbe' is missing required 'mcpName' field.
+    Add this to your package.json: "mcpName": "io.github.BASHBOP/solumbe"
     ```
     This is the registry's **ownership-proof** check: it downloads the
     `package.json` from the published npm tarball and looks for
@@ -274,7 +274,7 @@ Success looks like:
 ```
 Publishing to https://registry.modelcontextprotocol.io...
 ✓ Successfully published
-✓ Server io.github.BASHBOP/otito version 1.0.2
+✓ Server io.github.BASHBOP/solumbe version 1.0.2
 ```
 
 ---

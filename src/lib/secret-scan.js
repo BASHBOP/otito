@@ -12,11 +12,11 @@
 // value assigned to an obviously secret-bearing name. Anything that looks like
 // a placeholder, an environment lookup, or a template expression is ignored.
 //
-// Escape hatch: put `otito:allow-secret` on the matching line (or the line
+// Escape hatch: put `solumbe:allow-secret` on the matching line (or the line
 // above it) to silence a reviewed false positive.
 
 /** Marker that suppresses a finding on the line it appears on, or the next line. */
-export const ALLOW_MARKER = "otito:allow-secret";
+export const ALLOW_MARKER = "solumbe:allow-secret";
 
 /** Files larger than this are not scanned; the gate reports them as skipped. */
 export const MAX_SCAN_BYTES = 1024 * 1024;
@@ -69,7 +69,7 @@ const INDIRECTION_PATTERNS = [/process\s*\.\s*env/i, /import\.meta\.env/i, /os\.
  */
 
 // The PEM header is assembled from parts so this rule cannot match its own
-// source text when otito gates its own repository.
+// source text when solumbe gates its own repository.
 const PEM_HEADER = ["-----BEGIN ", "(?:RSA |DSA |EC |OPENSSH |ENCRYPTED )?", "PRIVATE KEY", "-----"].join("");
 
 /** @type {SecretRule[]} */

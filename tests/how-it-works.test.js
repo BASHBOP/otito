@@ -9,7 +9,7 @@ import { tools } from "../src/lib/mcp.js";
 import { SUPPORTING_COMMANDS } from "../scripts/how-it-works/content.js";
 
 // The How It Works page is linked from the docs home page as *the* visual
-// explanation of otito. It was hand-maintained and drifted for eighteen
+// explanation of solumbe. It was hand-maintained and drifted for eighteen
 // releases: it advertised a `repo_catalog` tool that no longer exists and
 // never gained `agent_experience` or `convergence_score`. It is now generated
 // from the same tool catalog the MCP server is derived from, and these tests
@@ -20,7 +20,7 @@ import { SUPPORTING_COMMANDS } from "../scripts/how-it-works/content.js";
 // actually misled readers, each with a message that says how to fix it.
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const diagramPath = path.join(repoRoot, "docs", "assets", "otito-how-it-works.html");
+const diagramPath = path.join(repoRoot, "docs", "assets", "solumbe-how-it-works.html");
 const packageVersion = String(JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")).version);
 
 /** Tool names carried by the page's card titles. */
@@ -33,12 +33,12 @@ function diagramCommands(html) {
   return new Set([...html.matchAll(/data-command="([a-z-]+)"/g)].map((match) => match[1]));
 }
 
-/** Command words from the Usage block of `otito help`, `install|i` split. */
+/** Command words from the Usage block of `solumbe help`, `install|i` split. */
 function helpCommands() {
   const help = execFileSync(process.execPath, [path.join(repoRoot, "src", "cli.js"), "help"], { encoding: "utf8" });
   const usage = help.split(/\n(?=Examples:)/)[0];
   const commands = new Set();
-  for (const match of usage.matchAll(/^\s+otito (\S+)/gm)) {
+  for (const match of usage.matchAll(/^\s+solumbe (\S+)/gm)) {
     for (const word of match[1].split("|")) {
       if (!word.startsWith("-")) commands.add(word);
     }
@@ -87,7 +87,7 @@ test("the page names every tool in its MCP surface description", () => {
   }
 });
 
-test("every command in `otito help` is a card on the page or an explained supporting command", () => {
+test("every command in `solumbe help` is a card on the page or an explained supporting command", () => {
   const html = fs.readFileSync(diagramPath, "utf8");
   const onPage = diagramCommands(html);
   const inHelp = helpCommands();
@@ -128,7 +128,7 @@ test("the page carries the package version, so a release re-renders it", () => {
   const html = fs.readFileSync(diagramPath, "utf8");
   assert.match(
     html,
-    new RegExp(`<meta name="otito:version" content="${packageVersion.replace(/\./g, "\\.")}"`),
+    new RegExp(`<meta name="solumbe:version" content="${packageVersion.replace(/\./g, "\\.")}"`),
     `the page was rendered for a different version — \`npm version\` regenerates it; otherwise run \`npm run docs:diagram\``,
   );
 });

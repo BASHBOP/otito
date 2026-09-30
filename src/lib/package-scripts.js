@@ -1,5 +1,5 @@
 // Package script names are free text, and the harness, the PR review and
-// `otito init` each read them on their own. A repository whose type check is
+// `solumbe init` each read them on their own. A repository whose type check is
 // `tsc:check` fell through all three: the harness never listed it, the review
 // listed it and could not say why, and the pre-commit hook left it out. The
 // rules live here so the three cannot drift apart again.

@@ -1,20 +1,20 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.BASHBOP/otito",
-  "title": "Òtítọ́",
+  "name": "io.github.BASHBOP/solumbe",
+  "title": "Solumbe",
   "description": "Deterministic local repository context, impact analysis, and merge-readiness evidence for AI agents.",
-  "websiteUrl": "https://bashbop.github.io/otito/",
+  "websiteUrl": "https://bashbop.github.io/solumbe/",
   "repository": {
-    "url": "https://github.com/BASHBOP/otito",
+    "url": "https://github.com/BASHBOP/solumbe",
     "source": "github",
     "id": "1242199320"
   },
-  "version": "3.5.0",
+  "version": "4.0.0",
   "packages": [
     {
       "registryType": "npm",
-      "identifier": "@bashbop/otito",
-      "version": "3.5.0",
+      "identifier": "@bashbop/solumbe",
+      "version": "4.0.0",
       "transport": {
         "type": "stdio"
       },

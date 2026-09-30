@@ -1,11 +1,11 @@
 # Spec: Convergence Score
 
-**Status:** Implemented in task mode (`otito converge`) + `convergence_score` MCP tool, including exact change-subject receipt v2.
+**Status:** Implemented in task mode (`solumbe converge`) + `convergence_score` MCP tool, including exact change-subject receipt v2.
 **Depends on:** `src/lib/impact.js` (`generateImpact`, `validateAgainstDiff`),
 `src/lib/risk-paths.js` (`classifyPath`, `isSecretPath`, `RISK_FLAGS`),
 `src/lib/tools.js` (`runCommand`), `node:crypto`.
 **Implementation:** `src/lib/converge.js` (`generateConvergence`, `makeReceipt`),
-CLI `otito converge`, MCP `convergence_score`, tests in `tests/converge.test.js`.
+CLI `solumbe converge`, MCP `convergence_score`, tests in `tests/converge.test.js`.
 
 ## 1. Summary
 
@@ -15,7 +15,7 @@ actual git diff (execution)**, the buildable core of the convergence argument
 *measurement*, computed out-of-band where the agent cannot fake it.
 
 ```bash
-otito converge "add Stripe refunds" --base origin/main
+solumbe converge "add Stripe refunds" --base origin/main
 ```
 
 ## 2. Why this is low-risk to build
@@ -212,11 +212,11 @@ paths listed).
 ## 6. Surface
 
 ```bash
-otito converge "<task>" --base origin/main                  # task mode, cwd, tracked changes
-otito converge <repo> "<task>" --base HEAD~1 --json          # explicit repo, machine-readable
-otito converge "<task>" --base HEAD~1 --head HEAD --json     # exact base..head commit subject
-otito converge "<task>" --base HEAD --staged --json          # exact Git-index subject
-otito converge "<task>" --base origin/main --include-untracked  # also score untracked files
+solumbe converge "<task>" --base origin/main                  # task mode, cwd, tracked changes
+solumbe converge <repo> "<task>" --base HEAD~1 --json          # explicit repo, machine-readable
+solumbe converge "<task>" --base HEAD~1 --head HEAD --json     # exact base..head commit subject
+solumbe converge "<task>" --base HEAD --staged --json          # exact Git-index subject
+solumbe converge "<task>" --base origin/main --include-untracked  # also score untracked files
 ```
 
 MCP: `convergence_score` (requires `query` + `base`, accepts `head`, `staged`, and
@@ -244,11 +244,11 @@ Convergence can now be made load-bearing by passing a task plus either a minimum
 score, a receipt, or both to the local/PR gate:
 
 ```bash
-otito gate . --base origin/main --request "update the greeting" --min-convergence 80
-otito converge . "update the greeting" --base origin/main --staged --json > .otito/convergence.json
-otito gate . --base origin/main --staged --request "update the greeting" --receipt .otito/convergence.json
-otito converge . "update the greeting" --base HEAD~1 --head HEAD --json > .otito/convergence.json
-otito gate . --base HEAD~1 --head HEAD --request "update the greeting" --receipt .otito/convergence.json
+solumbe gate . --base origin/main --request "update the greeting" --min-convergence 80
+solumbe converge . "update the greeting" --base origin/main --staged --json > .solumbe/convergence.json
+solumbe gate . --base origin/main --staged --request "update the greeting" --receipt .solumbe/convergence.json
+solumbe converge . "update the greeting" --base HEAD~1 --head HEAD --json > .solumbe/convergence.json
+solumbe gate . --base HEAD~1 --head HEAD --request "update the greeting" --receipt .solumbe/convergence.json
 ```
 
 The gate recomputes the score from the selected diff and fails when the score is
@@ -264,8 +264,8 @@ gate verdicts remain backward-compatible.
 
 This is an exact **convergence receipt**, not yet a complete Gate attestation. Release checks,
 optional local analyzers, base-branch CODEOWNERS, GitHub review state, and signer identity are
-not all bound into this envelope yet. In staged mode, `otito gate --run-validation` can produce
-a separate validation receipt: a versioned `otito.gate.json` plan is read from the selected base
+not all bound into this envelope yet. In staged mode, `solumbe gate --run-validation` can produce
+a separate validation receipt: a versioned `solumbe.gate.json` plan is read from the selected base
 commit, run against an isolated materialisation of the exact staged tree, and binds command
 outcomes plus output hashes without retaining raw output. A linked local `node_modules` directory,
 when present, is reported as not attested. The Gate still reports every remaining working-tree

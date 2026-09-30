@@ -6,7 +6,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 test("mcp server initializes, lists tools, and calls repo_inspect", async () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-mcp-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-mcp-"));
   fs.mkdirSync(path.join(fixture, "src", "lib"), { recursive: true });
   fs.mkdirSync(path.join(fixture, "tests"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
@@ -53,7 +53,7 @@ test("mcp server initializes, lists tools, and calls repo_inspect", async () => 
     messages.push(JSON.parse(buffer));
   }
   assert.equal(exitCode, 0);
-  assert.equal(messages[0].result.serverInfo.name, "@bashbop/otito");
+  assert.equal(messages[0].result.serverInfo.name, "@bashbop/solumbe");
   const listedNames = messages[1].result.tools.map((tool) => tool.name);
   assert.equal(listedNames.length, 14, `tools/list must expose exactly 14 tools, got ${listedNames.length}: ${listedNames.join(", ")}`);
   for (const expected of ["repo_map", "repo_index", "repo_search", "context_pack", "agent_experience", "convergence_score", "review_context", "repo_harness"]) {

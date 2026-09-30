@@ -25,18 +25,18 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "src", "cli.js");
 
 function tmpLog() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-telemetry-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-telemetry-"));
   return path.join(dir, "usage.jsonl");
 }
 
 function on(logPath) {
-  return { OTITO_TELEMETRY: "1", OTITO_TELEMETRY_PATH: logPath };
+  return { SOLUMBE_TELEMETRY: "1", SOLUMBE_TELEMETRY_PATH: logPath };
 }
 
 test("appendEvent writes nothing when telemetry is off", () => {
   resetTelemetryCache();
   const logPath = tmpLog();
-  appendEvent({ surface: "cli", cmd: "ax" }, { env: { OTITO_TELEMETRY: "0", OTITO_TELEMETRY_PATH: logPath } });
+  appendEvent({ surface: "cli", cmd: "ax" }, { env: { SOLUMBE_TELEMETRY: "0", SOLUMBE_TELEMETRY_PATH: logPath } });
   assert.equal(fs.existsSync(logPath), false, "no log file when disabled");
 });
 
@@ -69,19 +69,19 @@ test("appendEvent writes one stamped JSON line when on", () => {
   assert.equal(rec.repo.includes("/some/repo"), false, "raw path never stored");
 });
 
-test("CI forces telemetry off unless OTITO_TELEMETRY explicitly opts in", () => {
+test("CI forces telemetry off unless SOLUMBE_TELEMETRY explicitly opts in", () => {
   resetTelemetryCache();
   assert.equal(isTelemetryEnabled({ env: { CI: "true" }, fresh: true }), false, "CI default is off");
-  assert.equal(isTelemetryEnabled({ env: { CI: "true", OTITO_TELEMETRY: "1" }, fresh: true }), true, "explicit opt-in wins in CI");
-  assert.equal(isTelemetryEnabled({ env: { OTITO_TELEMETRY: "1" }, fresh: true }), true, "env opt-in outside CI");
-  assert.equal(isTelemetryEnabled({ env: { OTITO_TELEMETRY: "0" }, fresh: true }), false, "env opt-out");
+  assert.equal(isTelemetryEnabled({ env: { CI: "true", SOLUMBE_TELEMETRY: "1" }, fresh: true }), true, "explicit opt-in wins in CI");
+  assert.equal(isTelemetryEnabled({ env: { SOLUMBE_TELEMETRY: "1" }, fresh: true }), true, "env opt-in outside CI");
+  assert.equal(isTelemetryEnabled({ env: { SOLUMBE_TELEMETRY: "0" }, fresh: true }), false, "env opt-out");
 });
 
 test("anonymous sharing stays off when only local telemetry is enabled", () => {
   resetTelemetryCache();
-  assert.equal(isTelemetrySharingEnabled({ env: { OTITO_TELEMETRY: "1" }, fresh: true }), false);
-  assert.equal(isTelemetrySharingEnabled({ env: { OTITO_TELEMETRY_SHARE: "1" }, fresh: true }), true);
-  assert.equal(isTelemetrySharingEnabled({ env: { CI: "true", OTITO_TELEMETRY_SHARE: "1" }, fresh: true }), true);
+  assert.equal(isTelemetrySharingEnabled({ env: { SOLUMBE_TELEMETRY: "1" }, fresh: true }), false);
+  assert.equal(isTelemetrySharingEnabled({ env: { SOLUMBE_TELEMETRY_SHARE: "1" }, fresh: true }), true);
+  assert.equal(isTelemetrySharingEnabled({ env: { CI: "true", SOLUMBE_TELEMETRY_SHARE: "1" }, fresh: true }), true);
   assert.equal(isTelemetrySharingEnabled({ env: { CI: "true" }, fresh: true }), false);
 });
 
@@ -93,14 +93,14 @@ test("shared payload contains only the documented anonymous allowlist", () => {
       cmd: "context",
       outcome: "ok",
       durationMs: 1_250,
-      otitoVersion: "1.2.0",
+      solumbeVersion: "1.2.0",
       node: "v22.17.0",
       repo: "private-repo-hash",
       argsShape: { flags: ["path"], positionals: 1 },
       error: "private error",
       signals: { receiptId: "private-receipt" },
     },
-    { env: { OTITO_TELEMETRY_ID_PATH: idPath }, platform: "darwin" },
+    { env: { SOLUMBE_TELEMETRY_ID_PATH: idPath }, platform: "darwin" },
   );
 
   assert.deepEqual(Object.keys(payload).sort(), [
@@ -133,14 +133,14 @@ test("shareEvent posts only after explicit sharing opt-in", async () => {
     cmd: "context_pack",
     outcome: "ok",
     durationMs: 88,
-    otitoVersion: "1.2.0",
+    solumbeVersion: "1.2.0",
     node: "v22.17.0",
     repo: "must-not-leave",
   };
   const idPath = tmpLog();
   const baseEnv = {
-    OTITO_TELEMETRY_ENDPOINT: "https://telemetry.example.test/otito",
-    OTITO_TELEMETRY_ID_PATH: idPath,
+    SOLUMBE_TELEMETRY_ENDPOINT: "https://telemetry.example.test/solumbe",
+    SOLUMBE_TELEMETRY_ID_PATH: idPath,
   };
 
   assert.equal(await shareEvent(record, { env: baseEnv, fetchImpl }), false);
@@ -149,7 +149,7 @@ test("shareEvent posts only after explicit sharing opt-in", async () => {
   resetTelemetryCache();
   assert.equal(
     await shareEvent(record, {
-      env: { ...baseEnv, OTITO_TELEMETRY_SHARE: "1" },
+      env: { ...baseEnv, SOLUMBE_TELEMETRY_SHARE: "1" },
       fetchImpl,
     }),
     true,
@@ -183,7 +183,7 @@ test("readTelemetryLog tolerates torn lines and skips newer schema versions", ()
   const logPath = tmpLog();
   fs.mkdirSync(path.dirname(logPath), { recursive: true });
   fs.writeFileSync(logPath, [JSON.stringify({ v: 1, cmd: "ax" }), "{ this is a torn line", JSON.stringify({ v: 999, cmd: "from-the-future" }), ""].join("\n"));
-  const { events, skipped, skippedNewerSchema } = readTelemetryLog({ env: { OTITO_TELEMETRY_PATH: logPath } });
+  const { events, skipped, skippedNewerSchema } = readTelemetryLog({ env: { SOLUMBE_TELEMETRY_PATH: logPath } });
   assert.equal(events.length, 1);
   assert.equal(events[0].cmd, "ax");
   assert.equal(skipped, 1, "the torn line is skipped, not thrown");
@@ -195,7 +195,7 @@ test("clearTelemetryLog removes the log and its rotated generation", () => {
   fs.mkdirSync(path.dirname(logPath), { recursive: true });
   fs.writeFileSync(logPath, "x\n");
   fs.writeFileSync(`${logPath}.1`, "y\n");
-  const { removed } = clearTelemetryLog({ env: { OTITO_TELEMETRY_PATH: logPath } });
+  const { removed } = clearTelemetryLog({ env: { SOLUMBE_TELEMETRY_PATH: logPath } });
   assert.equal(removed.length, 2);
   assert.equal(fs.existsSync(logPath), false);
   assert.equal(fs.existsSync(`${logPath}.1`), false);
@@ -208,11 +208,11 @@ test("CLI --json stdout is byte-identical with telemetry on vs off", () => {
   const onLog = tmpLog();
   const off = spawnSync(process.execPath, [cli, ...args], {
     encoding: "utf8",
-    env: { ...process.env, OTITO_TELEMETRY: "0", OTITO_TELEMETRY_PATH: offLog },
+    env: { ...process.env, SOLUMBE_TELEMETRY: "0", SOLUMBE_TELEMETRY_PATH: offLog },
   });
   const onRun = spawnSync(process.execPath, [cli, ...args], {
     encoding: "utf8",
-    env: { ...process.env, OTITO_TELEMETRY: "1", OTITO_TELEMETRY_PATH: onLog },
+    env: { ...process.env, SOLUMBE_TELEMETRY: "1", SOLUMBE_TELEMETRY_PATH: onLog },
   });
   assert.equal(onRun.stdout, off.stdout, "stdout must not change when telemetry is enabled");
   assert.equal(fs.existsSync(offLog), false, "off run writes no log");
@@ -231,7 +231,7 @@ async function runMcp(messages, env) {
     buffer = lines.pop() ?? "";
     for (const line of lines.filter(Boolean)) frames.push(line);
   });
-  const saved = { t: process.env.OTITO_TELEMETRY, p: process.env.OTITO_TELEMETRY_PATH };
+  const saved = { t: process.env.SOLUMBE_TELEMETRY, p: process.env.SOLUMBE_TELEMETRY_PATH };
   Object.assign(process.env, env);
   resetTelemetryCache();
   try {
@@ -240,8 +240,8 @@ async function runMcp(messages, env) {
     input.end();
     await done;
   } finally {
-    process.env.OTITO_TELEMETRY = saved.t;
-    process.env.OTITO_TELEMETRY_PATH = saved.p;
+    process.env.SOLUMBE_TELEMETRY = saved.t;
+    process.env.SOLUMBE_TELEMETRY_PATH = saved.p;
     resetTelemetryCache();
   }
   if (buffer.trim()) frames.push(buffer.trim());
@@ -255,12 +255,12 @@ test("MCP JSON-RPC frames are byte-identical with telemetry on vs off, and the o
   ];
   const offLog = tmpLog();
   const onLog = tmpLog();
-  const offFrames = await runMcp(calls, { OTITO_TELEMETRY: "0", OTITO_TELEMETRY_PATH: offLog });
-  const onFrames = await runMcp(calls, { OTITO_TELEMETRY: "1", OTITO_TELEMETRY_PATH: onLog });
+  const offFrames = await runMcp(calls, { SOLUMBE_TELEMETRY: "0", SOLUMBE_TELEMETRY_PATH: offLog });
+  const onFrames = await runMcp(calls, { SOLUMBE_TELEMETRY: "1", SOLUMBE_TELEMETRY_PATH: onLog });
 
   assert.deepEqual(onFrames, offFrames, "the JSON-RPC channel must be unchanged by telemetry");
   assert.equal(fs.existsSync(offLog), false, "off run writes no log");
-  const { events } = readTelemetryLog({ env: { OTITO_TELEMETRY_PATH: onLog } });
+  const { events } = readTelemetryLog({ env: { SOLUMBE_TELEMETRY_PATH: onLog } });
   const toolEvent = events.find((e) => e.surface === "mcp" && e.cmd === "repo_inspect");
   assert.ok(toolEvent, "the tool call was recorded on the MCP surface");
   assert.equal(typeof toolEvent.durationMs, "number");

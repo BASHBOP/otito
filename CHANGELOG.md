@@ -6,6 +6,31 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-09-30
+
+Òtítọ́ is now Solumbe: the package, binary, MCP server, config files, evidence folders and environment variables all take the new name, with no fallback to the old ones. Behaviour is unchanged from 3.5.0.
+
+### Changed
+
+- **Òtítọ́ is now Solumbe.** Every name moves in one cut, with no fallback to the old ones:
+
+  | Was | Now |
+  | --- | --- |
+  | npm `@bashbop/otito` | `@bashbop/solumbe` |
+  | CLI `otito` | `solumbe` |
+  | MCP Registry `io.github.BASHBOP/otito`, host key `otito` (`mcp__otito__*` tools) | `io.github.BASHBOP/solumbe`, `solumbe` (`mcp__solumbe__*`) |
+  | Config `.otitorc.json`, gate config `otito.gate.json` | `.solumberc.json`, `solumbe.gate.json` |
+  | Evidence `.otito/`, user state `~/.otito/` | `.solumbe/`, `~/.solumbe/` |
+  | Environment `OTITO_*` | `SOLUMBE_*` |
+  | Skills `otito-*`, secret marker `otito:allow-secret`, PR comment marker `<!-- otito-pr-review -->` | `solumbe-*`, `solumbe:allow-secret`, `<!-- solumbe-pr-review -->` |
+  | Repository `BASHBOP/otito`, docs `bashbop.github.io/otito` | `BASHBOP/solumbe`, `bashbop.github.io/solumbe` |
+
+  To upgrade, install `@bashbop/solumbe`; rename `.otitorc.json`, `otito.gate.json` and any `otito:allow-secret` markers; move `.otito/` and `~/.otito/`; rename `OTITO_*` variables; and point MCP host configs at the new package and server key. Two things keep the old name on purpose: telemetry sharing still posts to bashbop-api's `analytics/otito` route with an `otito_version` field, because both sides of that contract have to move together, and links to releases before 4.0.0 still point at `@bashbop/otito`, where those versions live.
+
+- A manually run workflow, `retire-legacy-listing.yml`, marks every version of the pre-rename MCP Registry listing deprecated and points it at `io.github.BASHBOP/solumbe`. It refuses to run until the new listing is live.
+- The Release workflow skips `npm publish` when npm already has the version, instead of failing and taking the GitHub Release and MCP Registry jobs down with it. A new package name's first publish has to be done by hand, because npm Trusted Publishing is configured per existing package; re-running a release after a later job failed also hits this.
+- `scripts/rebrand.mjs` (`plan`, `apply`, `check`) made the rename from `.rebrandrc.json`: case-preserving, git-moved paths, idempotent. `npm run quality` now runs `rebrand:check`, which also flags accented spellings no alias covers, so the old name cannot creep back outside the CHANGELOG and the preserved links.
+
 ## [3.5.0] - 2026-09-30
 
 Model routing can now make a share of requests follow the tier it picks instead of only recommending one, and on Claude Code the premium tier names the model that actually runs. No command, field or schema was removed.

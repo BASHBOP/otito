@@ -1,6 +1,6 @@
-.otito/
+.solumbe/
 .cursor/
-# Legacy generated reports from the pre-Otito name must not block source checks.
+# Legacy generated reports from the pre-Solumbe name must not block source checks.
 .dev-context/
 **/.dev-context/
 coverage/

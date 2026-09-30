@@ -1,12 +1,12 @@
 # Trust-Layer Demo
 
-## Òtítọ́ review rhythm
+## Solumbe review rhythm
 
 This walkthrough shows the operating model behind the tools:
 
 ```text
-Òtítọ́ -> context before change
-Òtítọ́ -> validation before merge
+Solumbe -> context before change
+Solumbe -> validation before merge
 Humans   -> accountability before release
 ```
 
@@ -22,9 +22,9 @@ The goal is not to replace review. The goal is to make review easier to trust.
 | Role | Responsibility |
 | --- | --- |
 | Contributor | Opens a focused PR with tests or a no-test rationale |
-| Agent | Uses otito to understand scope before suggesting changes |
+| Agent | Uses solumbe to understand scope before suggesting changes |
 | Maintainer | Reviews the PR context, risk areas, and test evidence |
-| Òtítọ́ merge gate | Checks merge readiness, review state, CODEOWNERS, CI, conversations, and branch protection |
+| Solumbe merge gate | Checks merge readiness, review state, CODEOWNERS, CI, conversations, and branch protection |
 
 !!! note "Solo now, company-ready later"
     A solo maintainer can use the same rhythm by recording owner decisions when an admin merge is needed. As the repo is shared with companies, that owner decision becomes a team review path with CODEOWNERS, required approvals, resolved conversations, and release evidence.
@@ -36,8 +36,8 @@ The goal is not to replace review. The goal is to make review easier to trust.
 ### 1. Build context before touching code
 
 ```bash
-otito context "ship the change" --path . --json
-otito harness . --out .otito/harness.md
+solumbe context "ship the change" --path . --json
+solumbe harness . --out .solumbe/harness.md
 ```
 
 Evidence to expect:
@@ -59,7 +59,7 @@ Keep the PR easy to review:
 ### 3. Generate PR review context
 
 ```bash
-otito pr . --base origin/main --out .otito/pr-review.md
+solumbe pr . --base origin/main --out .solumbe/pr-review.md
 ```
 
 Evidence to expect:
@@ -73,8 +73,8 @@ Evidence to expect:
 ### 4. Run the merge-safety gate
 
 ```bash
-otito gate .
-otito gate --pr 123 --path . --json
+solumbe gate .
+solumbe gate --pr 123 --path . --json
 ```
 
 Evidence to expect:
@@ -88,7 +88,7 @@ Evidence to expect:
 
 ### 5. Keep the human decision explicit
 
-The Òtítọ́ merge gate can report `PASS`, `WARN`, or `FAIL`, but the maintainer still owns the merge decision.
+The Solumbe merge gate can report `PASS`, `WARN`, or `FAIL`, but the maintainer still owns the merge decision.
 
 | Verdict | Meaning |
 | --- | --- |
@@ -101,15 +101,15 @@ The Òtítọ́ merge gate can report `PASS`, `WARN`, or `FAIL`, but the maintai
 After merge, bind the review verdict to the merge commit as tamper-evident evidence:
 
 ```bash
-otito review . --pr 123 --json > verdict.json
-otito attest . --verdict verdict.json --merge <sha> --prev <base> \
+solumbe review . --pr 123 --json > verdict.json
+solumbe attest . --verdict verdict.json --merge <sha> --prev <base> \
      --pr 123 --author "Name" --committed <iso>
-otito attest . --verify        # exits non-zero if any record was altered
+solumbe attest . --verify        # exits non-zero if any record was altered
 ```
 
 Records go to `audit-pilot/ledger.jsonl` under the repository unless `--ledger` names another file. Each carries a `schemaVersion`, and the verdict it was built from carries its own.
 
-See [audit-pilot/README.md](https://github.com/BASHBOP/otito/blob/main/audit-pilot/README.md) for the hash-chained ledger pilot and production notes.
+See [audit-pilot/README.md](https://github.com/BASHBOP/solumbe/blob/main/audit-pilot/README.md) for the hash-chained ledger pilot and production notes.
 
 ---
 
@@ -117,10 +117,10 @@ See [audit-pilot/README.md](https://github.com/BASHBOP/otito/blob/main/audit-pil
 
 Use this checklist when publishing a demo, release note, or case study.
 
-- otito context or harness artifact exists
+- solumbe context or harness artifact exists
 - PR review context exists
 - CI result is visible
-- Òtítọ́ merge-gate report is attached or summarized
+- Solumbe merge-gate report is attached or summarized
 - Required human review is recorded
 - CODEOWNERS approval is present when required
 - Branch protection is enabled on the base branch
@@ -137,10 +137,10 @@ Use this checklist when publishing a demo, release note, or case study.
 
 ```mermaid
 flowchart LR
-    A[Task request] --> B[otito context]
+    A[Task request] --> B[solumbe context]
     B --> C[Focused change]
-    C --> D[otito PR review context]
-    D --> E[Òtítọ́ gate]
+    C --> D[solumbe PR review context]
+    D --> E[Solumbe gate]
     E --> F{Verdict}
     F -->|PASS| G[Human merge decision]
     F -->|WARN| H[Maintainer inspection]
@@ -157,9 +157,9 @@ flowchart LR
 Use this short version in a README, video, or issue comment:
 
 ```bash
-otito context "describe the change" --path . --json
-otito pr . --base origin/main --out .otito/pr-review.md
-otito gate --pr 123 --path .
+solumbe context "describe the change" --path . --json
+solumbe pr . --base origin/main --out .solumbe/pr-review.md
+solumbe gate --pr 123 --path .
 ```
 
 The public story is simple: context first, validation second, human accountability always.

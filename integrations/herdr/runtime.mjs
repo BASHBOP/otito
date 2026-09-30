@@ -14,7 +14,7 @@ export const DEFAULT_REQUESTS = Object.freeze({
 });
 
 /**
- * Map Otito AX (0–100) to a vendor-neutral model tier.
+ * Map Solumbe AX (0–100) to a vendor-neutral model tier.
  * @param {number|null|undefined} ax
  * @param {{ containment?: number|null, riskBump?: boolean }} [opts]
  */
@@ -67,7 +67,7 @@ export function parseInvocationContext(raw = process.env.HERDR_PLUGIN_CONTEXT_JS
 }
 
 export function requestFromContext(action, context, override) {
-  const explicit = String(override ?? process.env.OTITO_REQUEST ?? "").trim();
+  const explicit = String(override ?? process.env.SOLUMBE_REQUEST ?? "").trim();
   if (explicit) return explicit;
   const selection = String(context.selected_text ?? "").trim();
   return selection || DEFAULT_REQUESTS[action] || DEFAULT_REQUESTS.review;
@@ -83,7 +83,7 @@ function git(args, cwd) {
 
 export function resolveRepoRoot(context = parseInvocationContext()) {
   const candidates = [
-    process.env.OTITO_REPO,
+    process.env.SOLUMBE_REPO,
     context.focused_pane_cwd,
     context.worktree?.checkout_path,
     context.workspace_cwd,
@@ -112,15 +112,15 @@ export function resolveBase(repo) {
   return undefined;
 }
 
-export function resolveOtitoCommand(env = process.env) {
-  const configured = String(env.OTITO_BIN ?? "").trim();
+export function resolveSolumbeCommand(env = process.env) {
+  const configured = String(env.SOLUMBE_BIN ?? "").trim();
   if (configured) return { command: configured, prefix: [] };
 
-  const installed = spawnSync("otito", ["--version"], {
+  const installed = spawnSync("solumbe", ["--version"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
-  if (installed.status === 0) return { command: "otito", prefix: [] };
+  if (installed.status === 0) return { command: "solumbe", prefix: [] };
 
   const sourceCli = resolve(pluginRoot, "..", "..", "src", "cli.js");
   const sourceDependency = resolve(pluginRoot, "..", "..", "node_modules", "typescript");
@@ -128,10 +128,10 @@ export function resolveOtitoCommand(env = process.env) {
     return { command: process.execPath, prefix: [sourceCli] };
   }
 
-  throw new Error("Otito is not installed. Run `npm install -g @bashbop/otito`, then reopen this action. Set OTITO_BIN to use another binary.");
+  throw new Error("Solumbe is not installed. Run `npm install -g @bashbop/solumbe`, then reopen this action. Set SOLUMBE_BIN to use another binary.");
 }
 
-export function buildOtitoArgs(action, { repo, request, base }) {
+export function buildSolumbeArgs(action, { repo, request, base }) {
   if (action === "doctor") return ["doctor"];
   if (action === "context") {
     return ["context", request, "--path", repo];
@@ -154,11 +154,11 @@ export function buildOtitoArgs(action, { repo, request, base }) {
   if (action === "model-route") {
     return ["ax", request, "--path", repo, "--json"];
   }
-  throw new Error(`Unknown Otito Herdr action: ${action}`);
+  throw new Error(`Unknown Solumbe Herdr action: ${action}`);
 }
 
-export function runOtito(args, options = {}) {
-  const executable = resolveOtitoCommand();
+export function runSolumbe(args, options = {}) {
+  const executable = resolveSolumbeCommand();
   const capture = options.capture ?? false;
   return spawnSync(executable.command, [...executable.prefix, ...args], {
     cwd: options.cwd,

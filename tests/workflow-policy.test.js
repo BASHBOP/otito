@@ -20,14 +20,14 @@ function git(cwd, args) {
 }
 
 function createLinearRepo() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-attest-reconcile-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-attest-reconcile-"));
   fs.mkdirSync(path.join(root, "scripts"), { recursive: true });
   fs.mkdirSync(path.join(root, "audit-pilot"), { recursive: true });
   fs.copyFileSync(path.join(repoRoot, "scripts", "reconcile-attestations.sh"), path.join(root, "scripts", "reconcile-attestations.sh"));
 
   git(root, ["init", "-q"]);
-  git(root, ["config", "user.name", "Òtítọ́ Test"]);
-  git(root, ["config", "user.email", "otito@example.test"]);
+  git(root, ["config", "user.name", "Solumbe Test"]);
+  git(root, ["config", "user.email", "solumbe@example.test"]);
 
   const commits = [];
   for (const name of ["one", "two", "three"]) {
@@ -42,13 +42,13 @@ function createLinearRepo() {
 // A repository whose first commit is 1.0.0 and whose head carries `version`,
 // with a CHANGELOG section for each of `changelog` and `tags` on the first.
 function createReleaseRepo({ version, changelog, tags }) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-tag-release-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-tag-release-"));
   fs.mkdirSync(path.join(root, "scripts"), { recursive: true });
   fs.copyFileSync(path.join(repoRoot, "scripts", "tag-release.sh"), path.join(root, "scripts", "tag-release.sh"));
 
   git(root, ["init", "-q"]);
-  git(root, ["config", "user.name", "Òtítọ́ Test"]);
-  git(root, ["config", "user.email", "otito@example.test"]);
+  git(root, ["config", "user.name", "Solumbe Test"]);
+  git(root, ["config", "user.email", "solumbe@example.test"]);
 
   let commits = 0;
   const commit = (packageVersion, sections) => {
@@ -73,12 +73,12 @@ function tagRelease(root, env = {}) {
     cwd: root,
     encoding: "utf8",
     // Never inherit a CI job's GITHUB_OUTPUT: the script would write to it.
-    env: { ...process.env, OTITO_TAG_SHA: "", OTITO_TAG_DRY_RUN: "1", GITHUB_OUTPUT: "", ...env },
+    env: { ...process.env, SOLUMBE_TAG_SHA: "", SOLUMBE_TAG_DRY_RUN: "1", GITHUB_OUTPUT: "", ...env },
   });
 }
 
 test("CI validates PRs once and reserves push validation for main", () => {
-  const workflow = read(".github/workflows/otito-ci.yml");
+  const workflow = read(".github/workflows/solumbe-ci.yml");
   assert.match(workflow, /pull_request:\n\s+types:/);
   assert.match(workflow, /push:\n\s+branches: \[main\]/);
   assert.doesNotMatch(workflow, /attest-main:/);
@@ -89,11 +89,11 @@ test("post-merge workflow reconciles successful CI into a durable audit branch",
   // is the reusable workflow, which any repository can call the same way.
   const caller = read(".github/workflows/post-merge-attest.yml");
   assert.match(caller, /workflow_run:/);
-  assert.match(caller, /workflows: \["otito CI"\]/);
+  assert.match(caller, /workflows: \["solumbe CI"\]/);
   assert.match(caller, /github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(caller, /uses: \.\/\.github\/workflows\/attest\.yml/);
-  // otito attests its own commit with the engine that commit ships.
-  assert.match(caller, /otito_ref: \$\{\{ needs\.resolve\.outputs\.target_sha \}\}/);
+  // solumbe attests its own commit with the engine that commit ships.
+  assert.match(caller, /solumbe_ref: \$\{\{ needs\.resolve\.outputs\.target_sha \}\}/);
 
   const reusable = read(".github/workflows/attest.yml");
   assert.match(reusable, /^on:\s+workflow_call:/m);
@@ -102,10 +102,10 @@ test("post-merge workflow reconciles successful CI into a durable audit branch",
   assert.match(reusable, /ledger_branch:[\s\S]*?default: audit-ledger/);
   assert.match(reusable, /HEAD:refs\/heads\/\$LEDGER_BRANCH/);
   // The tool is checked out beside the repository under attestation and kept
-  // out of its tree, so the review never sees otito's own files as a change.
-  assert.match(reusable, /OTITO_REPO: \$\{\{ github\.workspace \}\}/);
-  assert.match(reusable, /OTITO_BIN: node \$\{\{ github\.workspace \}\}\/\$\{\{ env\.OTITO_TOOL_DIR \}\}\/src\/cli\.js/);
-  assert.match(reusable, /echo "\$OTITO_TOOL_DIR\/" >> \.git\/info\/exclude/);
+  // out of its tree, so the review never sees solumbe's own files as a change.
+  assert.match(reusable, /SOLUMBE_REPO: \$\{\{ github\.workspace \}\}/);
+  assert.match(reusable, /SOLUMBE_BIN: node \$\{\{ github\.workspace \}\}\/\$\{\{ env\.SOLUMBE_TOOL_DIR \}\}\/src\/cli\.js/);
+  assert.match(reusable, /echo "\$SOLUMBE_TOOL_DIR\/" >> \.git\/info\/exclude/);
 });
 
 test("the attestation target is passed in a variable the workflow can actually set", () => {
@@ -115,14 +115,14 @@ test("the attestation target is passed in a variable the workflow can actually s
   assert.doesNotMatch(caller, /^\s+GITHUB_SHA:/m);
   assert.doesNotMatch(reusable, /^\s+GITHUB_SHA:/m);
   assert.match(caller, /target_sha: \$\{\{ needs\.resolve\.outputs\.target_sha \}\}/);
-  assert.match(reusable, /OTITO_TARGET_SHA: \$\{\{ inputs\.target_sha \}\}/);
+  assert.match(reusable, /SOLUMBE_TARGET_SHA: \$\{\{ inputs\.target_sha \}\}/);
 });
 
 test("the repository is solo-maintained, so its gate and attestation default to solo governance", () => {
   // A solo maintainer has no second reviewer: under team governance every merge
   // records a FAIL for a missing approval nobody can give. An explicit
   // --governance flag still overrides this default.
-  assert.equal(JSON.parse(read(".otitorc.json")).governance, "solo");
+  assert.equal(JSON.parse(read(".solumberc.json")).governance, "solo");
 });
 
 test("only a manual run can reset the audit ledger, and the archived chain is kept", () => {
@@ -134,9 +134,9 @@ test("only a manual run can reset the audit ledger, and the archived chain is ke
   assert.equal((caller.match(/reset_ledger: \$\{\{/g) ?? []).length, 1);
   assert.match(caller, /reset_ledger: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.reset_ledger \|\| false \}\}/);
   // The reusable workflow sets the script variable in one place, from that input.
-  assert.equal((reusable.match(/OTITO_ATTEST_RESET_LEDGER/g) ?? []).length, 1);
-  assert.match(reusable, /OTITO_ATTEST_RESET_LEDGER: \$\{\{ inputs\.reset_ledger && '1' \|\| '0' \}\}/);
-  assert.doesNotMatch(caller, /OTITO_ATTEST_RESET_LEDGER/);
+  assert.equal((reusable.match(/SOLUMBE_ATTEST_RESET_LEDGER/g) ?? []).length, 1);
+  assert.match(reusable, /SOLUMBE_ATTEST_RESET_LEDGER: \$\{\{ inputs\.reset_ledger && '1' \|\| '0' \}\}/);
+  assert.doesNotMatch(caller, /SOLUMBE_ATTEST_RESET_LEDGER/);
   // The superseded chain reaches the ledger branch and the uploaded evidence.
   assert.match(reusable, /for archive in "\$LEDGER_DIR"\/ledger-orphaned-\*\.jsonl; do/);
   assert.match(reusable, /path: \|[\s\S]*ledger-orphaned-\*\.jsonl/);
@@ -156,14 +156,32 @@ test("workflow dependencies use setup-node v7 and TypeScript majors require migr
 test("release publishing uses GitHub OIDC without a stored npm token", () => {
   const workflow = read(".github/workflows/release.yml");
   assert.match(workflow, /id-token: write/);
-  assert.match(workflow, /- name: Publish\n\s+run: npm publish/);
+  assert.match(workflow, /- name: Publish\n\s+if: steps\.npm\.outputs\.published != 'true'\n\s+run: npm publish/);
   assert.doesNotMatch(workflow, /NPM_TOKEN|NODE_AUTH_TOKEN/);
+});
+
+test("release skips npm publish for a version npm already has, so the later jobs still run", () => {
+  const workflow = read(".github/workflows/release.yml");
+  // Only the publish step is skipped: the GitHub Release and MCP Registry jobs
+  // need it to succeed, and a skipped step still leaves the job green.
+  assert.match(workflow, /id: npm\n\s+run: \|[\s\S]*?npm view "\$NAME@\$VERSION" version[\s\S]*?published=true" >> "\$GITHUB_OUTPUT"/);
+  assert.match(workflow, /github-release:[\s\S]*?needs: publish/);
+  assert.match(workflow, /publish-mcp:[\s\S]*?needs: publish/);
+});
+
+test("the pre-rename MCP listing is retired only by hand, only once the new listing is live", () => {
+  const workflow = read(".github/workflows/retire-legacy-listing.yml");
+  assert.match(workflow, /^on:\n\s+workflow_dispatch:\n\n/m, "manual trigger only");
+  const guard = workflow.indexOf("Refuse unless the new listing is live");
+  const deprecate = workflow.indexOf("mcp-publisher status");
+  assert.ok(guard > 0 && guard < deprecate, "the live-listing guard runs before the status change");
+  assert.match(workflow, /status --status deprecated --message "[^"]+" --all-versions --yes io\.github\.BASHBOP\/\w+ /, "flags before the server name");
 });
 
 test("MCP Registry identity matches Bashbop's granted OIDC namespace", () => {
   const manifest = JSON.parse(read("package.json"));
   const server = JSON.parse(read("server.json"));
-  assert.equal(manifest.mcpName, "io.github.BASHBOP/otito");
+  assert.equal(manifest.mcpName, "io.github.BASHBOP/solumbe");
   assert.equal(server.name, manifest.mcpName);
 });
 
@@ -177,8 +195,8 @@ test("reconciliation dry-run lists missing first-parent commits oldest-first", (
     env: {
       ...process.env,
       GITHUB_SHA: commits[2],
-      OTITO_TARGET_SHA: "",
-      OTITO_ATTEST_DRY_RUN: "1",
+      SOLUMBE_TARGET_SHA: "",
+      SOLUMBE_ATTEST_DRY_RUN: "1",
     },
   });
 
@@ -199,8 +217,8 @@ test("reconciliation rejects a cryptographically valid ledger with a first-paren
     env: {
       ...process.env,
       GITHUB_SHA: commits[2],
-      OTITO_TARGET_SHA: "",
-      OTITO_ATTEST_DRY_RUN: "1",
+      SOLUMBE_TARGET_SHA: "",
+      SOLUMBE_ATTEST_DRY_RUN: "1",
     },
   });
 
@@ -210,13 +228,13 @@ test("reconciliation rejects a cryptographically valid ledger with a first-paren
 
 test("a version bump that reaches main is tagged once CI passes on it, and the tag starts Release", () => {
   const workflow = read(".github/workflows/tag-release.yml");
-  assert.match(workflow, /workflow_run:\n\s+workflows: \["otito CI"\]\n\s+types: \[completed\]/);
+  assert.match(workflow, /workflow_run:\n\s+workflows: \["solumbe CI"\]\n\s+types: \[completed\]/);
   assert.match(workflow, /github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(workflow, /github\.event\.workflow_run\.event == 'push'/);
   assert.match(workflow, /github\.event\.workflow_run\.head_branch == 'main'/);
   // The script needs every tag to tell a new version from a tagged one.
   assert.match(workflow, /ref: \$\{\{ github\.event\.workflow_run\.head_sha \}\}\n\s+fetch-depth: 0/);
-  assert.match(workflow, /OTITO_TAG_SHA: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/);
+  assert.match(workflow, /SOLUMBE_TAG_SHA: \$\{\{ github\.event\.workflow_run\.head_sha \}\}/);
   assert.match(workflow, /bash scripts\/tag-release\.sh/);
   // A tag pushed with GITHUB_TOKEN starts no workflow, so Release is dispatched on it.
   assert.match(workflow, /if: steps\.tag\.outputs\.tag != ''/);
@@ -268,12 +286,12 @@ test("tag-release refuses a version CHANGELOG.md has no section for", () => {
 
 test("tag-release pushes the tag to origin and hands it to the step that starts Release", () => {
   const { root, head } = createReleaseRepo({ version: "1.1.0", changelog: ["1.1.0"], tags: ["v1.0.0"] });
-  const remote = fs.mkdtempSync(path.join(os.tmpdir(), "otito-tag-release-remote-"));
+  const remote = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-tag-release-remote-"));
   git(remote, ["init", "-q", "--bare"]);
   git(root, ["remote", "add", "origin", remote]);
-  const output = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "otito-tag-release-output-")), "github-output");
+  const output = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-tag-release-output-")), "github-output");
 
-  const result = tagRelease(root, { OTITO_TAG_SHA: head, OTITO_TAG_DRY_RUN: "0", GITHUB_OUTPUT: output });
+  const result = tagRelease(root, { SOLUMBE_TAG_SHA: head, SOLUMBE_TAG_DRY_RUN: "0", GITHUB_OUTPUT: output });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(git(remote, ["rev-parse", "v1.1.0^{commit}"]), head);
   assert.equal(git(remote, ["cat-file", "-t", "v1.1.0"]), "tag");

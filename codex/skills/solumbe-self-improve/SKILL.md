@@ -1,12 +1,12 @@
 ---
-name: otito-self-improve
+name: solumbe-self-improve
 description: >-
-  Self-evaluates otito context packs against expected files/symbols, records labeled gaps as eval corpus cases, and implements ranking/extractor fixes when retrieval fails. Use when otito missed the right file, hotspots were wrong, the user says otito was not useful, or asks to self-evaluate / auto-improve otito. Default mode is gated: detect → eval case → fix → verify; commit/PR only when the user asks.
+  Self-evaluates solumbe context packs against expected files/symbols, records labeled gaps as eval corpus cases, and implements ranking/extractor fixes when retrieval fails. Use when solumbe missed the right file, hotspots were wrong, the user says solumbe was not useful, or asks to self-evaluate / auto-improve solumbe. Default mode is gated: detect → eval case → fix → verify; commit/PR only when the user asks.
 ---
 
-# otito self-evaluate + auto-improve
+# solumbe self-evaluate + auto-improve
 
-Close the loop when `context_pack` / `otito context` is a weak map: turn the miss into a labeled regression, fix the engine, prove it, then stop for commit approval.
+Close the loop when `context_pack` / `solumbe context` is a weak map: turn the miss into a labeled regression, fix the engine, prove it, then stop for commit approval.
 
 ## Default autonomy (gated)
 
@@ -20,7 +20,7 @@ Do **not** silently lower corpus thresholds to make a bad pack pass.
 
 ## When to run
 
-- User says otito missed / was not useful / should self-improve.
+- User says solumbe missed / was not useful / should self-improve.
 - After a task where the agent needed grep because hotspots/primary files were wrong.
 - After changing `src/lib/context-engine.js`, `src/lib/code-map/ast.js`, or index cache version.
 
@@ -42,10 +42,10 @@ If the user did not label expected files, infer from what the agent actually edi
 
 ### 1) Score the gap
 
-Prefer the helper (from a otito checkout):
+Prefer the helper (from a solumbe checkout):
 
 ```bash
-node /Users/segzy/dev/otito/codex/skills/otito-self-improve/scripts/score-gap.mjs \
+node /Users/segzy/dev/otito/codex/skills/solumbe-self-improve/scripts/score-gap.mjs \
   --query "…" \
   --path /path/to/repo \
   --expect-primary "src/email/email.service.ts" \
@@ -53,7 +53,7 @@ node /Users/segzy/dev/otito/codex/skills/otito-self-improve/scripts/score-gap.mj
   --json
 ```
 
-Or equivalent MCP/`otito context … --json` and check:
+Or equivalent MCP/`solumbe context … --json` and check:
 
 - Is each `expectedPrimary` in `primaryFiles` (top 5 ideal)?
 - Is each `expectedHotspot` in `hotspots`?
@@ -88,11 +88,11 @@ Minimal retrieval case shape:
 
 For Nest method hotspots, extend a small fixture service with named methods rather than depending on live BashBop trees in CI.
 
-If only a live repo can reproduce today: keep a markdown note under `codex/skills/otito-self-improve/gaps/` with query + expected paths, and still add the smallest fixture that encodes the same shape.
+If only a live repo can reproduce today: keep a markdown note under `codex/skills/solumbe-self-improve/gaps/` with query + expected paths, and still add the smallest fixture that encodes the same shape.
 
 ### 4) Implement the fix
 
-Work only in the otito checkout (`/Users/segzy/dev/otito` unless the user moved it).
+Work only in the solumbe checkout (`/Users/segzy/dev/otito` unless the user moved it).
 
 - Smallest change that makes the new case pass.
 - Update unit tests next to the change (`tests/context-engine.test.js`, `tests/code-map.test.js`, …).
@@ -106,7 +106,7 @@ cd /Users/segzy/dev/otito
 node --test tests/code-map.test.js tests/context-engine.test.js tests/index-cache.test.js
 npm run eval:accuracy
 # re-score the original gap
-node codex/skills/otito-self-improve/scripts/score-gap.mjs --query "…" --path "…" --expect-primary "…" --expect-hotspot "…" --json
+node codex/skills/solumbe-self-improve/scripts/score-gap.mjs --query "…" --path "…" --expect-primary "…" --expect-hotspot "…" --json
 ```
 
 Pass criteria: gap script `ok: true`, accuracy eval exit 0, targeted unit tests green.
@@ -114,7 +114,7 @@ Pass criteria: gap script `ok: true`, accuracy eval exit 0, targeted unit tests 
 ### 6) Report (always)
 
 ```markdown
-## otito gap report
+## solumbe gap report
 
 - Query: …
 - Before: primary=[…]; hotspots=[…]
@@ -136,10 +136,10 @@ Pass criteria: gap script `ok: true`, accuracy eval exit 0, targeted unit tests 
 
 ## Sync to Cursor
 
-From the otito checkout:
+From the solumbe checkout:
 
 ```bash
-codex/skills/otito-self-improve/scripts/sync-installed.sh
+codex/skills/solumbe-self-improve/scripts/sync-installed.sh
 ```
 
-Installs to `~/.cursor/skills/otito-self-improve` (and `~/.codex/skills/otito-self-improve` when present).
+Installs to `~/.cursor/skills/solumbe-self-improve` (and `~/.codex/skills/solumbe-self-improve` when present).

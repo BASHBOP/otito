@@ -98,7 +98,7 @@ export function formatWorkspaceGateMarkdown(data) {
   /** @type {Array<{ identity: string, gate: Record<string, any> }>} */
   const repositories = data.repositories;
   const lines = [
-    "# Otito Workspace Gate",
+    "# Solumbe Workspace Gate",
     "",
     `Verdict: **${data.verdict}**`,
     `Scope: ${data.scope}`,

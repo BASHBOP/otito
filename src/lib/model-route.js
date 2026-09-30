@@ -1,6 +1,6 @@
 // Model routing: score a coding task before spending tokens on it.
 //
-// Two halves that must not be confused. otito answers the REPOSITORY half
+// Two halves that must not be confused. solumbe answers the REPOSITORY half
 // deterministically (AX, containment, canonical risk flags). A System One model
 // answers the REQUEST half with calibrated probabilities. Combining them is
 // arithmetic you can read, in code, here.
@@ -42,7 +42,7 @@ export const BAND_MID = 45;
 export const CONFIDENCE_FLOOR = 0.55;
 
 /**
- * A risk flag escalates a tier only when otito already weights it at top
+ * A risk flag escalates a tier only when solumbe already weights it at top
  * severity. Reading RISK_SCORE_WEIGHTS keeps one source of truth instead of a
  * second hand-written list of scary paths.
  */
@@ -62,8 +62,8 @@ export const CONTAINMENT_THRESHOLD = 40;
 
 /**
  * The deterministic half on its own: every model term at zero, so the route
- * is AX plus containment plus the bumps. `otito regret` grades it as a variant
- * and `otito route` reports it beside the scored tier.
+ * is AX plus containment plus the bumps. `solumbe regret` grades it as a variant
+ * and `solumbe route` reports it beside the scored tier.
  */
 export const NEUTRAL_ANSWERS = {
   specificity: { score: 0, confidence: null },
@@ -73,8 +73,8 @@ export const NEUTRAL_ANSWERS = {
 
 /**
  * Only claude-code ships filled in, because those are the ids this repository
- * can verify. Add others in `.otito/model-route.json` (repo) or
- * `~/.otito/model-route.json` (user); the repo file wins.
+ * can verify. Add others in `.solumbe/model-route.json` (repo) or
+ * `~/.solumbe/model-route.json` (user); the repo file wins.
  */
 export const BUILTIN_HOSTS = {
   "claude-code": {
@@ -122,7 +122,7 @@ export const QUESTIONS = {
 export function loadHosts(repo = ".") {
   /** @type {Record<string, Record<string, string>>} */
   const hosts = { ...BUILTIN_HOSTS };
-  const files = [path.join(os.homedir(), ".otito", "model-route.json"), path.join(path.resolve(repo), ".otito", "model-route.json")];
+  const files = [path.join(os.homedir(), ".solumbe", "model-route.json"), path.join(path.resolve(repo), ".solumbe", "model-route.json")];
   for (const file of files) {
     try {
       const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
@@ -148,14 +148,14 @@ export function hostModelFor(repo, host, tier) {
   const hosts = loadHosts(repo);
   const map = hosts[host];
   if (!map) {
-    throw new Error(`no model map for host "${host}". Known: ${Object.keys(hosts).join(", ")}. ` + "Add one in .otito/model-route.json, or use --tier-only.");
+    throw new Error(`no model map for host "${host}". Known: ${Object.keys(hosts).join(", ")}. ` + "Add one in .solumbe/model-route.json, or use --tier-only.");
   }
   return map[tier];
 }
 
 /**
  * Derive the deterministic half from an impact pass and an AX score that the
- * caller already computed. Taking both as arguments is what lets `otito route`
+ * caller already computed. Taking both as arguments is what lets `solumbe route`
  * run one impact pass instead of the two a naive composition would run.
  * @param {any} impact
  * @param {any} ax
@@ -184,7 +184,7 @@ export function signalsFrom(impact, ax) {
   // Fixture corpora and tests still count toward reach, but they never carry a
   // risk flag: routing this repository read its own shop-api eval fixture as
   // money-flow code and escalated a request that touched nothing shipped.
-  // The evals run otito inside those fixture directories, where the paths
+  // The evals run solumbe inside those fixture directories, where the paths
   // are fixture-relative, so a fixture's own risk is still visible to the run
   // it is a fixture for.
   //
@@ -272,7 +272,7 @@ function nameProbabilities(answer, levels) {
  *
  * Folding the read into the route call is TypeSafe's speculative fan-out: the
  * questions are evaluated independently against one state, so asking what kind
- * of work this is, which otito tool answers it, and whether each ranked file
+ * of work this is, which solumbe tool answers it, and whether each ranked file
  * matters costs input tokens and no extra round trip. The read is REPORTED in
  * `read`; `scoreDecision` never sees it, so it cannot move a tier.
  *
@@ -389,7 +389,7 @@ const round2 = (/** @type {number} */ value) => Number(Number(value).toFixed(2))
 
 /**
  * The arithmetic. Every term is visible so a tier can be traced to its inputs.
- * `signals` names only the fields read here: `otito regret` saves exactly these
+ * `signals` names only the fields read here: `solumbe regret` saves exactly these
  * per row so a saved run can be rescored, and reading a new one must fail the
  * type check there rather than rescore on a field the run never kept.
  * @param {{ answers: any, signals: Pick<ReturnType<typeof signalsFrom>, "ax" | "containment" | "candidates" | "riskPaths"> }} input
@@ -399,7 +399,7 @@ export function scoreDecision({ answers, signals }) {
   /** @type {{label: string, detail: string, delta: number|null, from: number, to: number}[]} */
   const steps = [];
   let running = ax;
-  steps.push({ label: "AX", detail: "otito, deterministic", delta: null, from: 0, to: running });
+  steps.push({ label: "AX", detail: "solumbe, deterministic", delta: null, from: 0, to: running });
 
   // `score` is the expectation over that question's own level distribution, so
   // a spread answer already pulls its own term toward the expensive end. That
@@ -457,7 +457,7 @@ export function scoreDecision({ answers, signals }) {
     blast_radius: typeof answers.blast_radius.confidence === "number" ? answers.blast_radius.confidence : null,
   };
 
-  // Zero candidates is ABSENCE, not containment. When otito matches nothing, AX
+  // Zero candidates is ABSENCE, not containment. When solumbe matches nothing, AX
   // is describing an empty set and `containment` reads high for the same
   // reason there is nothing to spread across — so the arithmetic produces a
   // confident-looking cheap tier for the request the repository understood
@@ -476,7 +476,7 @@ export function scoreDecision({ answers, signals }) {
       name: "no evidence",
       fired: noEvidence,
       note: noEvidence
-        ? "otito matched no files; the score describes an empty set, not a contained change"
+        ? "solumbe matched no files; the score describes an empty set, not a contained change"
         : `${candidates} candidate file${candidates === 1 ? "" : "s"} matched`,
     },
     {
@@ -532,7 +532,7 @@ export function scoreDecision({ answers, signals }) {
 export async function generateRoute(request, options = {}) {
   const normalized = String(request ?? "").trim();
   if (!normalized) {
-    throw new Error('route requires a change request, e.g. `otito route . "add a --json flag"`');
+    throw new Error('route requires a change request, e.g. `solumbe route . "add a --json flag"`');
   }
   const repoPath = options.path ?? ".";
   const top = options.top ?? 8;
@@ -565,7 +565,7 @@ export async function generateRoute(request, options = {}) {
     generatedAt: new Date().toISOString(),
     /** Filled in by a caller that resolved a host map. */
     hostModel: /** @type {string | undefined} */ (undefined),
-    /** Enforce-mode arm, set by the CLI when OTITO_ROUTE_MODE=delegate. */
+    /** Enforce-mode arm, set by the CLI when SOLUMBE_ROUTE_MODE=delegate. */
     enforce: /** @type {{ mode: string, arm: string, share: number|null, agentModel: string|null } | undefined} */ (undefined),
     modelRouteEngineVersion,
     request: normalized,
@@ -582,7 +582,7 @@ export async function generateRoute(request, options = {}) {
 
 /**
  * One advisory line for commands that already computed impact and AX. Offline
- * and pure: an ordinary otito command must not make a network call.
+ * and pure: an ordinary solumbe command must not make a network call.
  * @param {string} request
  * @param {any} impact
  * @param {any} ax

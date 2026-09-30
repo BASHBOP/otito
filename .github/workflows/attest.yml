@@ -1,4 +1,4 @@
-name: Otito post-merge attestation
+name: Solumbe post-merge attestation
 
 # Reusable: call this from your own repository to keep a hash-chained,
 # per-merge-commit record of what shipped and under which review verdict.
@@ -6,7 +6,7 @@ name: Otito post-merge attestation
 #
 #   jobs:
 #     attest:
-#       uses: BASHBOP/otito/.github/workflows/attest.yml@main
+#       uses: BASHBOP/solumbe/.github/workflows/attest.yml@main
 #       with:
 #         target_sha: ${{ github.sha }}
 #       permissions:
@@ -18,7 +18,7 @@ name: Otito post-merge attestation
 # `ledger_branch` (default audit-ledger). Every first-parent commit between
 # the ledger tip and `target_sha` is attested oldest-first, so a merge that
 # skipped CI is still recorded. Verify at any time with
-# `npx @bashbop/otito attest . --verify --ledger <file>`.
+# `npx @bashbop/solumbe attest . --verify --ledger <file>`.
 on:
   workflow_call:
     inputs:
@@ -36,13 +36,13 @@ on:
         required: false
         type: string
         default: audit-ledger
-      otito_repository:
-        description: Where to fetch the otito tool from.
+      solumbe_repository:
+        description: Where to fetch the solumbe tool from.
         required: false
         type: string
-        default: BASHBOP/otito
-      otito_ref:
-        description: The otito ref to run. Pin a tag for a stable engine version.
+        default: BASHBOP/solumbe
+      solumbe_ref:
+        description: The solumbe ref to run. Pin a tag for a stable engine version.
         required: false
         type: string
         default: main
@@ -54,7 +54,7 @@ on:
         default: false
 
 concurrency:
-  group: otito-attest-${{ inputs.ledger_branch }}
+  group: solumbe-attest-${{ inputs.ledger_branch }}
   cancel-in-progress: false
 
 jobs:
@@ -65,7 +65,7 @@ jobs:
       contents: write
       pull-requests: read
     env:
-      OTITO_TOOL_DIR: .otito-tool
+      SOLUMBE_TOOL_DIR: .solumbe-tool
     steps:
       - name: Checkout the commit to attest
         uses: actions/checkout@v7
@@ -73,12 +73,12 @@ jobs:
           ref: ${{ inputs.target_sha }}
           fetch-depth: 0
 
-      - name: Checkout otito
+      - name: Checkout solumbe
         uses: actions/checkout@v7
         with:
-          repository: ${{ inputs.otito_repository }}
-          ref: ${{ inputs.otito_ref }}
-          path: ${{ env.OTITO_TOOL_DIR }}
+          repository: ${{ inputs.solumbe_repository }}
+          ref: ${{ inputs.solumbe_ref }}
+          path: ${{ env.SOLUMBE_TOOL_DIR }}
 
       - name: Keep the tool out of the attested tree
         env:
@@ -86,7 +86,7 @@ jobs:
         id: ledger
         run: |
           set -euo pipefail
-          echo "$OTITO_TOOL_DIR/" >> .git/info/exclude
+          echo "$SOLUMBE_TOOL_DIR/" >> .git/info/exclude
           echo "dir=$(dirname "$LEDGER_PATH")" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
@@ -94,8 +94,8 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install otito
-        working-directory: ${{ env.OTITO_TOOL_DIR }}
+      - name: Install solumbe
+        working-directory: ${{ env.SOLUMBE_TOOL_DIR }}
         run: npm ci --omit=dev
 
       - name: Restore the ledger
@@ -115,13 +115,13 @@ jobs:
       - name: Attest every missing first-parent commit
         env:
           GH_TOKEN: ${{ github.token }}
-          OTITO_REPO: ${{ github.workspace }}
-          OTITO_BIN: node ${{ github.workspace }}/${{ env.OTITO_TOOL_DIR }}/src/cli.js
-          OTITO_LEDGER: ${{ github.workspace }}/${{ inputs.ledger_path }}
+          SOLUMBE_REPO: ${{ github.workspace }}
+          SOLUMBE_BIN: node ${{ github.workspace }}/${{ env.SOLUMBE_TOOL_DIR }}/src/cli.js
+          SOLUMBE_LEDGER: ${{ github.workspace }}/${{ inputs.ledger_path }}
           # Not GITHUB_SHA: the runner keeps its own value for GITHUB_* variables.
-          OTITO_TARGET_SHA: ${{ inputs.target_sha }}
-          OTITO_ATTEST_RESET_LEDGER: ${{ inputs.reset_ledger && '1' || '0' }}
-        run: bash "$OTITO_TOOL_DIR/scripts/reconcile-attestations.sh"
+          SOLUMBE_TARGET_SHA: ${{ inputs.target_sha }}
+          SOLUMBE_ATTEST_RESET_LEDGER: ${{ inputs.reset_ledger && '1' || '0' }}
+        run: bash "$SOLUMBE_TOOL_DIR/scripts/reconcile-attestations.sh"
 
       - name: Persist the ledger
         env:
@@ -132,7 +132,7 @@ jobs:
           set -euo pipefail
           SHORT_SHA="$(printf '%s' "$TARGET_SHA" | cut -c1-12)"
           LEDGER_DIR="$(dirname "$LEDGER_PATH")"
-          WORK="$RUNNER_TEMP/otito-audit-ledger"
+          WORK="$RUNNER_TEMP/solumbe-audit-ledger"
           rm -rf "$WORK"
 
           if git show-ref --verify --quiet "refs/remotes/origin/$LEDGER_BRANCH"; then
@@ -175,7 +175,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: otito-audit-attestation-${{ inputs.target_sha }}
+          name: solumbe-audit-attestation-${{ inputs.target_sha }}
           path: |
             ${{ inputs.ledger_path }}
             ${{ steps.ledger.outputs.dir }}/verdict-latest.json

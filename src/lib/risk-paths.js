@@ -176,7 +176,7 @@ const TEST_DATA_SEGMENTS = new Set(["fixtures", "__fixtures__", "testdata", "tes
 // in. Keeps the 300-line boundary used by the existing pr-review heuristic.
 export const LARGE_DIFF_LINES = 300;
 
-// Score contribution per flag, summed by `inferRisk`. Exported so `otito
+// Score contribution per flag, summed by `inferRisk`. Exported so `solumbe
 // calibrate` can report a measured lift beside the weight that flag actually
 // carries, instead of keeping a second copy of these numbers in sync by hand.
 // `dependency` is deliberately zero — see the pattern comment above.
@@ -443,7 +443,7 @@ export function isProseFile(filePath, kind) {
 // True when the path is a test file or lives in a fixture corpus. Used by
 // patterns that opt in via `excludeTestData`, so a config-shaped fixture is
 // not mistaken for this repository's own configuration. Note the evals run
-// otito *inside* those fixture directories, where paths are fixture-relative
+// solumbe *inside* those fixture directories, where paths are fixture-relative
 // (`package.json`, not `evals/fixtures/x/package.json`), so this never hides
 // a fixture's configuration from the run it is a fixture for.
 /**

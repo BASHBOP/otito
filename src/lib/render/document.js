@@ -3,12 +3,12 @@
 // Commands like `ax`, `calibrate` and `harness` each build their own Markdown
 // and printed it raw, so they looked nothing like `review` or `impact`. Rather
 // than hand-write a bespoke renderer per command, this gives them all the same
-// treatment: otito's header box, headings that read as headings, quiet
+// treatment: solumbe's header box, headings that read as headings, quiet
 // structure around tables and lists, aligned table columns, and the closing
 // line last.
 //
 // It changes presentation only. Every character of the source Markdown still
-// reaches the terminal, so anything that greps otito's output keeps working,
+// reaches the terminal, so anything that greps solumbe's output keeps working,
 // and `--json` and `--out` never come through here at all.
 
 import { visualWidth } from "./fancy.js";

@@ -40,7 +40,7 @@ import { executeValidationPlan } from "./validation-attestation.js";
 const passEngineVersion = 2;
 
 /** Sentinel for a blob that exists but is too large to scan. */
-const OVERSIZED = "\u0000otito:oversized";
+const OVERSIZED = "\u0000solumbe:oversized";
 
 /** Ceiling on one batched `git cat-file` read of a whole changed-file set. */
 const MAX_BATCH_BYTES = 256 * 1024 * 1024;
@@ -333,7 +333,7 @@ function exactCheckoutFailure(root, expectedHead, requireClean) {
 
 /**
  * Accept a receipt id/hash directly, a JSON receipt object, or a path to a JSON
- * artifact produced from `otito converge --json`. A JSON receipt also yields
+ * artifact produced from `solumbe converge --json`. A JSON receipt also yields
  * the exact subject it was bound to, when it has one.
  * @param {string} root
  * @param {string} value
@@ -748,7 +748,7 @@ const BOUNCER_PACKAGE = "@nugehs/bouncer";
  * @returns {Check | null}
  */
 function complianceControlsCheck(root) {
-  const cfg = findToolConfig(root, "bouncer.config.json", "OTITO_BOUNCER_CONFIG");
+  const cfg = findToolConfig(root, "bouncer.config.json", "SOLUMBE_BOUNCER_CONFIG");
   if (!cfg) return null;
   const cwd = path.dirname(cfg);
   const bin = resolveToolBin("bouncer", cwd, root);
@@ -824,7 +824,7 @@ function complianceControlsCheck(root) {
  * @returns {Check | null}
  */
 function aiGovernanceCheck(root) {
-  if (process.env.OTITO_AIGLARE !== "1") return null;
+  if (process.env.SOLUMBE_AIGLARE !== "1") return null;
   const bin = resolveToolBin("aiglare", root, root);
   if (!bin) return null;
   const result = runCommand(bin, [root, "--json", "--ci"], { cwd: root, timeout: 60000 });
@@ -863,7 +863,7 @@ function aiGovernanceCheck(root) {
  * @returns {string | null}
  */
 function findTielineConfig(root) {
-  return findToolConfig(root, "tieline.config.json", "OTITO_TIELINE_CONFIG");
+  return findToolConfig(root, "tieline.config.json", "SOLUMBE_TIELINE_CONFIG");
 }
 
 /**
@@ -910,7 +910,7 @@ function findWorkflowReference(root, packageName) {
 }
 
 /**
- * Resolve a configured, workspace-local, otito-local, IDE-bundled, or PATH
+ * Resolve a configured, workspace-local, solumbe-local, IDE-bundled, or PATH
  * tool binary without invoking a shell.
  * @param {string} name
  * @param {string} cwd
@@ -918,7 +918,7 @@ function findWorkflowReference(root, packageName) {
  * @returns {string | null}
  */
 function resolveToolBin(name, cwd, root) {
-  const environmentVariable = `OTITO_${name.toUpperCase()}_BIN`;
+  const environmentVariable = `SOLUMBE_${name.toUpperCase()}_BIN`;
   const configured = process.env[environmentVariable];
   if (configured && exists(configured)) return path.resolve(configured);
   const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -1054,7 +1054,7 @@ function typeScriptFallback(runner) {
  */
 function contextEvidence(base, request) {
   const quoted = JSON.stringify(request && request.trim() ? request : "review this change");
-  return [`otito impact . ${quoted} --json`, `otito pr . --base ${base} --out .otito/pr-review.md`];
+  return [`solumbe impact . ${quoted} --json`, `solumbe pr . --base ${base} --out .solumbe/pr-review.md`];
 }
 
 /** @param {string} filePath */
@@ -1121,7 +1121,7 @@ export function formatPassTerminal(data, rendererFactory) {
   } else if (data.subject?.treeSha) {
     sub.push({ text: `staged tree: ${data.subject.treeSha.slice(0, 12)}`, glyph: "🧾" });
   }
-  lines.push(renderer.header({ text: "otito pass · merge readiness", glyph: "📋" }, sub));
+  lines.push(renderer.header({ text: "solumbe pass · merge readiness", glyph: "📋" }, sub));
   lines.push("");
 
   for (const check of data.checks) {
@@ -1188,7 +1188,7 @@ function nextStepFor(data, blocked, warning) {
  */
 export function formatPassMarkdown(data) {
   const lines = [
-    `# otito pass: ${data.repo.name}`,
+    `# solumbe pass: ${data.repo.name}`,
     "",
     `Verdict: **${data.verdict}**`,
     `Repository: \`${data.repo.root}\``,

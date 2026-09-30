@@ -1,11 +1,11 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/BASHBOP/otito/security/advisories/new
+    url: https://github.com/BASHBOP/solumbe/security/advisories/new
     about: Please report suspected vulnerabilities privately.
   - name: Contributor guide
-    url: https://github.com/BASHBOP/otito/blob/main/CONTRIBUTING.md
+    url: https://github.com/BASHBOP/solumbe/blob/main/CONTRIBUTING.md
     about: Setup, validation, and pull request expectations.
   - name: Code of Conduct
-    url: https://github.com/BASHBOP/otito/blob/main/CODE_OF_CONDUCT.md
+    url: https://github.com/BASHBOP/solumbe/blob/main/CODE_OF_CONDUCT.md
     about: Community standards and how to report conduct issues privately.

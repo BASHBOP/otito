@@ -263,7 +263,7 @@ function convergeGit(cwd, ...args) {
 }
 
 function driftFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-converge-drift-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-converge-drift-"));
   for (const [file, body] of Object.entries({
     "src/index.ts": "export const a = 1;\n",
     "src/payment/checkout.service.ts": "export const c = 1;\n",
@@ -317,7 +317,7 @@ test("a genuinely risky drifted path is still penalised more than a doc", () => 
 // --- exact commit subject: score base..head without the working tree ---
 
 function featureCommitFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-converge-head-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-converge-head-"));
   const write = (files) => {
     for (const [file, body] of Object.entries(files)) {
       fs.mkdirSync(path.join(root, path.dirname(file)), { recursive: true });

@@ -1,8 +1,8 @@
 # Audit-layer pilot
 
-Turns an `otito review --json` verdict into an **immutable, hash-chained attestation** bound to a merged commit. Models the "after-merge, complete, tamper-evident" audit layer — the ledger here stands in for an append-only row in a hosted audit store.
+Turns a `solumbe review --json` verdict into an **immutable, hash-chained attestation** bound to a merged commit. Models the "after-merge, complete, tamper-evident" audit layer — the ledger here stands in for an append-only row in a hosted audit store.
 
-The attestation itself is a CLI command, `otito attest` (source: `src/lib/attest.js`). This directory holds the ledger and the verdicts the workflow writes.
+The attestation itself is a CLI command, `solumbe attest` (source: `src/lib/attest.js`). This directory holds the ledger and the verdicts the workflow writes.
 
 ## What it proves
 
@@ -25,16 +25,16 @@ Two properties an auditor actually tests:
 
 ```bash
 # Attest a merged commit (post-merge CI pipes the review verdict in)
-otito review . --pr 75 --json > verdict.json   # production: PR mode for full controls
-otito attest . --verdict verdict.json --merge <sha> --prev <base> \
+solumbe review . --pr 75 --json > verdict.json   # production: PR mode for full controls
+solumbe attest . --verdict verdict.json --merge <sha> --prev <base> \
      --pr 75 --author "Name" --committed <iso>
 
 # Verify the whole chain (CI gate / auditor spot-check)
-otito attest . --verify        # exits non-zero if any record was altered
-otito attest . --verify --json # the same, as data
+solumbe attest . --verify        # exits non-zero if any record was altered
+solumbe attest . --verify --json # the same, as data
 ```
 
-The ledger defaults to `audit-pilot/ledger.jsonl` under the repository; `--ledger <file>` (or `OTITO_LEDGER` for the scripts) names another. Every record written by `otito attest` carries `schemaVersion: 1` and the `verdictSchemaVersion` of the verdict it was built from. Records written before those fields existed verify unchanged: the hash covers whatever body was stored.
+The ledger defaults to `audit-pilot/ledger.jsonl` under the repository; `--ledger <file>` (or `SOLUMBE_LEDGER` for the scripts) names another. Every record written by `solumbe attest` carries `schemaVersion: 1` and the `verdictSchemaVersion` of the verdict it was built from. Records written before those fields existed verify unchanged: the hash covers whatever body was stored.
 
 ## CI on main
 
@@ -49,7 +49,7 @@ The workflow:
 2. Restores the latest ledger from the dedicated `audit-ledger` branch.
 3. Runs `scripts/reconcile-attestations.sh` to backfill every missing first-parent commit in chronological order.
 4. Runs exact diff-mode review for historical gaps and PR-mode review for the newly merged target when its subject references `#NNN`.
-5. Appends and verifies the hash chain with `otito attest`.
+5. Appends and verifies the hash chain with `solumbe attest`.
 6. Commits the ledger and latest verdict to `audit-ledger`, keeping bot-generated evidence commits off `main`.
 7. Uploads commit-specific evidence artifacts for convenient review.
 
@@ -66,21 +66,21 @@ The attestation job is a reusable workflow. Call it after your own CI passes on 
 ```yaml
 jobs:
   attest:
-    uses: BASHBOP/otito/.github/workflows/attest.yml@main
+    uses: BASHBOP/solumbe/.github/workflows/attest.yml@main
     with:
       target_sha: ${{ github.sha }}
       # ledger_path: audit-pilot/ledger.jsonl   # where records go
       # ledger_branch: audit-ledger             # the branch that carries them
-      # otito_ref: v3.0.0                       # pin the engine
+      # solumbe_ref: v3.0.0                       # pin the engine
     permissions:
       actions: read
       contents: write
       pull-requests: read
 ```
 
-It checks otito out beside your repository, attests every first-parent commit between the ledger tip and `target_sha`, and commits the ledger to `ledger_branch`. Nothing leaves your repository. Verify at any time with `npx @bashbop/otito attest . --verify --ledger <file>`.
+It checks solumbe out beside your repository, attests every first-parent commit between the ledger tip and `target_sha`, and commits the ledger to `ledger_branch`. Nothing leaves your repository. Verify at any time with `npx @bashbop/solumbe attest . --verify --ledger <file>`.
 
-The scripts behind it take three variables when run by hand: `OTITO_REPO` (the repository to attest), `OTITO_BIN` (the otito command) and `OTITO_LEDGER` (the ledger file). Unset, they attest the checkout they ship in.
+The scripts behind it take three variables when run by hand: `SOLUMBE_REPO` (the repository to attest), `SOLUMBE_BIN` (the solumbe command) and `SOLUMBE_LEDGER` (the ledger file). Unset, they attest the checkout they ship in.
 
 ## Notes / next steps
 

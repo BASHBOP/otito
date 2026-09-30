@@ -11,7 +11,7 @@ import { startMcpServer } from "../src/lib/mcp.js";
 import { createRenderer } from "../src/lib/render/fancy.js";
 
 function makeFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-read-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-read-"));
   const files = {
     "package.json": JSON.stringify({ name: "read-fixture", scripts: { test: "node --test", lint: "eslint ." } }),
     "src/events/events.controller.ts": "export class EventsController { list() {} findEvent() {} }\n",
@@ -59,7 +59,7 @@ test("a confident read relabels the intent, demotes a strong no, and re-ranks th
   const pack = generateContextPack("events listing is slow for organisers", { path: makeFixture() });
   const files = candidates(pack);
   assert.ok(pack.data.primaryFiles.length >= 2, "the fixture must give the read something to re-rank");
-  assert.equal(pack.data.intent.action, "unknown", "no action word, so otito cannot name the work");
+  assert.equal(pack.data.intent.action, "unknown", "no action word, so solumbe cannot name the work");
   assert.ok(pack.data.openQuestions.includes(AMBIGUOUS_ACTION_QUESTION));
 
   // Demote the first-ranked file, and put the last primary file on top.
@@ -108,7 +108,7 @@ test("a confident read relabels the intent, demotes a strong no, and re-ranks th
   assert.equal(data.modelRead.model, "jev-test");
   assert.equal(data.modelRead.costUsd, 0.000042);
   assert.match(read.markdown, /## Model Read/);
-  assert.match(read.markdown, /Intent: debug \(confidence 0\.91; otito's own reading was unknown\)/);
+  assert.match(read.markdown, /Intent: debug \(confidence 0\.91; solumbe's own reading was unknown\)/);
   assert.match(read.markdown, /Demoted 1 file\(s\)/);
 
   const terminal = formatContextPackTerminal(data, (options) => createRenderer({ ...options, color: false, emoji: false }));
@@ -129,7 +129,7 @@ test("an unsure intent is reported, not applied", async () => {
   assert.equal(read.data.intent.action, "unknown");
   assert.equal(read.data.modelRead.intent.accepted, false);
   assert.ok(read.data.openQuestions.includes(AMBIGUOUS_ACTION_QUESTION));
-  assert.match(read.markdown, /under the floor; kept otito's reading \(unknown\)/);
+  assert.match(read.markdown, /under the floor; kept solumbe's reading \(unknown\)/);
   assert.deepEqual(
     read.data.primaryFiles.map((file) => file.path),
     pack.data.primaryFiles.map((file) => file.path),
@@ -143,7 +143,7 @@ test("two repos that share a name and a path are kept distinct, not merged", asy
   // by root they stay separate, so a low score demotes only the repo it was
   // asked about.
   function sameNameRepo(marker) {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-multi-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-multi-"));
     fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "shared", scripts: { test: "node --test" } }));
     fs.mkdirSync(path.join(root, "src"));
     fs.writeFileSync(path.join(root, "src", "events.js"), `export function listEvents() { return '${marker} events'; }\n`);
@@ -183,7 +183,7 @@ test("two repos that share a name and a path are kept distinct, not merged", asy
   );
 });
 
-test("a read that rejects every primary file keeps otito's list and says so", async () => {
+test("a read that rejects every primary file keeps solumbe's list and says so", async () => {
   const pack = generateContextPack("list events", { path: makeFixture() });
   const files = candidates(pack);
   const read = await readContextPack(pack, { apiKey: "k", fetchImpl: replyWith(relevanceAnswers(files, () => 0.01)) });
@@ -195,7 +195,7 @@ test("a read that rejects every primary file keeps otito's list and says so", as
   assert.ok(read.data.modelRead.demoted.every((entry) => entry.from === "relatedFiles"));
 });
 
-test("a failed or unkeyed call returns otito's pack unchanged and says why", async (t) => {
+test("a failed or unkeyed call returns solumbe's pack unchanged and says why", async (t) => {
   const pack = generateContextPack("list events", { path: makeFixture() });
   const failed = await readContextPack(pack, {
     apiKey: "k",

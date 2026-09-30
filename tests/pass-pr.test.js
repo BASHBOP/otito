@@ -97,7 +97,7 @@ test("evaluatePR returns PASS-grade checks when approved with clean CI and prote
 
 test("PR convergence receipt is bound to GitHub's exact base and head commits", async () => {
   const root = gitInit("exact-subject", {
-    ".gitignore": ".otito/\n",
+    ".gitignore": ".solumbe/\n",
     "package.json": JSON.stringify({ name: "fixture", version: "1.0.0", scripts: { test: "node --test" } }),
     "src/index.ts": "export const greeting = 'hi';\n",
   });
@@ -152,7 +152,7 @@ test("PR convergence receipt is bound to GitHub's exact base and head commits", 
 
 test("PR convergence fails closed when the local checkout is not the GitHub head", async () => {
   const root = gitInit("head-mismatch", {
-    ".gitignore": ".otito/\n",
+    ".gitignore": ".solumbe/\n",
     "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
     "src/index.ts": "export const greeting = 'hi';\n",
   });
@@ -175,7 +175,7 @@ test("PR convergence fails closed when the local checkout is not the GitHub head
 
 test("PR convergence fails closed when GitHub omits exact OIDs or a complete file list", async () => {
   const root = gitInit("incomplete-subject", {
-    ".gitignore": ".otito/\n",
+    ".gitignore": ".solumbe/\n",
     "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }),
   });
   const missingOid = {
@@ -622,7 +622,7 @@ test("evaluatePR reports a MERGED PR as merged, not pending, and keeps its revie
     "src/utils/format.ts": "export const fmt = 1;\n",
     ".github/CODEOWNERS": "src/utils/format.ts @alice\n",
   });
-  // What GitHub returns once a PR merges (BASHBOP/otito#214): mergeability UNKNOWN.
+  // What GitHub returns once a PR merges (BASHBOP/solumbe#214): mergeability UNKNOWN.
   const merged = { state: "MERGED", mergedAt: "2026-09-26T17:33:49Z", mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" };
   const data = await evaluatePR(root, "42", {
     runner: fakeRunner({ ...baselineCanned, "pr view": prView({ ...merged, files: [{ path: "src/utils/format.ts" }] }) }),
@@ -663,7 +663,7 @@ test("evaluatePR FAILs a MERGED PR on missing CODEOWNERS approval, not on its st
 
 test("evaluatePR FAILs a CLOSED PR as closed, whatever mergeability GitHub last reported", async () => {
   const root = gitInit("state-closed", { "package.json": JSON.stringify({ name: "fixture", version: "1.0.0" }) });
-  // BASHBOP/otito#188 closed BLOCKED and #153 closed CONFLICTING; a closed draft is closed first.
+  // BASHBOP/solumbe#188 closed BLOCKED and #153 closed CONFLICTING; a closed draft is closed first.
   for (const last of [{ mergeable: "MERGEABLE", mergeStateStatus: "BLOCKED" }, { mergeable: "CONFLICTING", mergeStateStatus: "DIRTY" }, { isDraft: true }]) {
     const data = await evaluatePR(root, "42", { runner: fakeRunner({ ...baselineCanned, "pr view": prView({ state: "CLOSED", ...last }) }) });
     const state = data.checks.find((c) => c.name === "PR state");
@@ -690,14 +690,14 @@ test("formatPassPrTerminal and formatPassPrMarkdown render the verdict and check
   const data = await evaluatePR(root, "42", { runner: fakeRunner(canned) });
 
   const plain = formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: false, width: 80 }));
-  assert.match(plain, /otito pass-pr/);
+  assert.match(plain, /solumbe pass-pr/);
   assert.match(plain, /Context evidence/);
 
   const fancy = formatPassPrTerminal(data, (opts) => createRenderer({ ...opts, emoji: true, width: 80 }));
   assert.match(fancy, /merge readiness/);
 
   const markdown = formatPassPrMarkdown(data);
-  assert.match(markdown, /# otito pass-pr/);
+  assert.match(markdown, /# solumbe pass-pr/);
   assert.match(markdown, /Verdict:/);
   assert.match(markdown, /## Checks/);
   assert.match(markdown, /Branch protection/);

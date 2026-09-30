@@ -15,5 +15,5 @@
 ## Herdr
 
 ```bash
-herdr plugin action invoke bashbop.otito.model-route
+herdr plugin action invoke bashbop.solumbe.model-route
 ```

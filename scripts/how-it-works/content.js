@@ -10,14 +10,14 @@
 
 /**
  * The loop, top to bottom. `actor` says who does the work in that phase; the
- * point of the page is that otito is absent from exactly one of them.
+ * point of the page is that solumbe is absent from exactly one of them.
  */
 export const PHASES = [
   {
     id: "know",
     index: "01",
     title: "Know the repository",
-    actor: "otito · reads the checkout",
+    actor: "solumbe · reads the checkout",
     color: "var(--cyan)",
     sub: "Shape, symbols, commands and ownership, from the code rather than from a rules file. Cached per user; the repository itself is never written to.",
   },
@@ -25,7 +25,7 @@ export const PHASES = [
     id: "before",
     index: "02",
     title: "Before the edit",
-    actor: "otito · deterministic, with one optional advisory read",
+    actor: "solumbe · deterministic, with one optional advisory read",
     color: "var(--teal)",
     sub: "What the request actually touches, what it will cost an agent, and how much model it deserves. All of it is computed before a token is spent on the change.",
   },
@@ -35,13 +35,13 @@ export const PHASES = [
     title: "The edit",
     actor: "the model · through its own harness",
     color: "var(--violet)",
-    sub: "Otito does not generate code. The agent writes the change in Claude Code, Codex, Cursor, Gemini or any MCP host, calling the tools above through MCP or the CLI.",
+    sub: "Solumbe does not generate code. The agent writes the change in Claude Code, Codex, Cursor, Gemini or any MCP host, calling the tools above through MCP or the CLI.",
   },
   {
     id: "merge",
     index: "04",
     title: "Before the merge",
-    actor: "otito · from the diff and the repository, never from the model",
+    actor: "solumbe · from the diff and the repository, never from the model",
     color: "var(--green)",
     sub: "Did the intent happen, did only the intent happen, and is the exact staged tree safe to merge? The verdict recomputes to the same value on any checkout.",
   },
@@ -49,7 +49,7 @@ export const PHASES = [
     id: "after",
     index: "05",
     title: "After the merge",
-    actor: "CI · otito attest",
+    actor: "CI · solumbe attest",
     color: "var(--amber)",
     sub: "Every merge to main leaves a hash-chained record of what shipped and under which verdict, in your own repository, verifiable by anyone.",
   },
@@ -57,7 +57,7 @@ export const PHASES = [
     id: "time",
     index: "06",
     title: "Over time",
-    actor: "otito · graded against the repository's own history",
+    actor: "solumbe · graded against the repository's own history",
     color: "var(--slate)",
     sub: "The risk flags and the router are measured against what this repository actually needed to fix, and decline to answer when the sample is too small.",
   },
@@ -90,7 +90,7 @@ export const LAYOUT = [
  * Entry surfaces, the edit itself, CLI-only stages and outputs are not catalog
  * tools, so they are declared whole. A surface with a `command` stands for
  * that CLI command on the page; the test checks the command still exists and
- * that no command in `otito help` is left unaccounted for.
+ * that no command in `solumbe help` is left unaccounted for.
  */
 export const SURFACES = [
   {
@@ -99,9 +99,9 @@ export const SURFACES = [
     kind: "surface",
     command: "doctor",
     title: "CLI",
-    sub: "otito <command> --json",
+    sub: "solumbe <command> --json",
     blurb: "Human and script entrypoint. Every command takes --json, prints the same evidence a tool returns, and runs without a server or an account.",
-    chips: ["npm install -g @bashbop/otito", "otito doctor", "otito context", "otito gate"],
+    chips: ["npm install -g @bashbop/solumbe", "solumbe doctor", "solumbe context", "solumbe gate"],
   },
   {
     id: "mcp",
@@ -109,9 +109,9 @@ export const SURFACES = [
     kind: "surface",
     command: "mcp",
     title: "MCP server",
-    sub: "otito mcp · stdio",
+    sub: "solumbe mcp · stdio",
     blurb: "",
-    chips: ["otito mcp", "context_pack", "review_gate", "io.github.BASHBOP/otito"],
+    chips: ["solumbe mcp", "context_pack", "review_gate", "io.github.BASHBOP/solumbe"],
   },
   {
     id: "ci",
@@ -119,10 +119,10 @@ export const SURFACES = [
     kind: "surface",
     command: "init",
     title: "CI, hooks and skills",
-    sub: "otito init",
+    sub: "solumbe init",
     blurb:
-      "otito init writes otito-ci.yml, a pre-commit hook and .otito/ assets into a target repository. A UserPromptSubmit hook routes every request before work starts, and the model-router skill teaches an agent to call otito first.",
-    chips: ["otito init .", "otito-ci.yml", "attest.yml", "model-router skill"],
+      "solumbe init writes solumbe-ci.yml, a pre-commit hook and .solumbe/ assets into a target repository. A UserPromptSubmit hook routes every request before work starts, and the model-router skill teaches an agent to call solumbe first.",
+    chips: ["solumbe init .", "solumbe-ci.yml", "attest.yml", "model-router skill"],
   },
 
   {
@@ -132,7 +132,7 @@ export const SURFACES = [
     title: "The edit",
     sub: "the model writes the change",
     blurb:
-      "The agent generates the change in its own harness. Otito never writes code and is handed only the request text and the checkout. What it produced before the edit is context; what it produces after is evidence about the diff that appeared.",
+      "The agent generates the change in its own harness. Solumbe never writes code and is handed only the request text and the checkout. What it produced before the edit is context; what it produces after is evidence about the diff that appeared.",
     chips: ["Claude Code", "Codex", "Cursor", "Gemini", "VS Code", "any MCP host"],
     hosts: ["Claude Code", "Codex", "Cursor", "Gemini", "VS Code", "any MCP host"],
   },
@@ -142,22 +142,22 @@ export const SURFACES = [
     section: "after",
     kind: "cli",
     command: "attest",
-    title: "otito attest",
+    title: "solumbe attest",
     sub: "hash-chained record",
     blurb:
       "After a merge to main, CI appends a record of the merge commit, its verdict and their hashes to a ledger branch in your own repository. Never the diff or the source. A reusable workflow does it with one uses: line.",
-    chips: ["otito attest --verdict … --merge <sha>", ".github/workflows/attest.yml", "audit-pilot/ledger.jsonl"],
+    chips: ["solumbe attest --verdict … --merge <sha>", ".github/workflows/attest.yml", "audit-pilot/ledger.jsonl"],
   },
   {
     id: "verify",
     section: "after",
     kind: "cli",
     command: "attest",
-    title: "otito attest --verify",
+    title: "solumbe attest --verify",
     sub: "recompute the chain",
     blurb:
       "Walks the ledger, recomputes every hash and exits 1 if any record was altered or any merge is missing. Open JSON Lines with a schemaVersion on every record; the export is the file itself.",
-    chips: ["otito attest --verify", "schemaVersion: 1"],
+    chips: ["solumbe attest --verify", "schemaVersion: 1"],
   },
 
   {
@@ -165,33 +165,33 @@ export const SURFACES = [
     section: "time",
     kind: "cli",
     command: "calibrate",
-    title: "otito calibrate",
+    title: "solumbe calibrate",
     sub: "risk flags vs history",
     blurb:
       "Grades the gate's risk flags against this repository's own history, joining fix commits to the commits they repaired by line overlap rather than by filename. Below the minimum sample it declines to answer, which is the honest result.",
-    chips: ["otito calibrate <repo>", "--window 30", "--min-sample"],
+    chips: ["solumbe calibrate <repo>", "--window 30", "--min-sample"],
   },
   {
     id: "regret",
     section: "time",
     kind: "cli",
     command: "regret",
-    title: "otito regret",
+    title: "solumbe regret",
     sub: "router tiers vs history",
     blurb:
-      "Grades the router's tiers the same way, three variants side by side: the deterministic half alone, the offline heuristic, and the model read. --rescore regrades a saved run on frozen answers with no checkout and no model call. Never a saving: otito does not know which model a host used.",
-    chips: ["otito regret <repo>", "otito regret --rescore run.json"],
+      "Grades the router's tiers the same way, three variants side by side: the deterministic half alone, the offline heuristic, and the model read. --rescore regrades a saved run on frozen answers with no checkout and no model call. Never a saving: solumbe does not know which model a host used.",
+    chips: ["solumbe regret <repo>", "solumbe regret --rescore run.json"],
   },
 
   {
     id: "artifacts",
     section: "output",
     kind: "surface",
-    title: ".otito/ artifacts",
+    title: ".solumbe/ artifacts",
     sub: "Markdown and JSON",
     blurb:
-      "Durable evidence a reviewer can read: context-pack.md, pr-review.md, harness.md, workspace.md. Gitignored by init; kept under .otito/runs/ when you want it to survive.",
-    chips: [".otito/pr-review.md", ".otito/harness.md", ".otito/runs/"],
+      "Durable evidence a reviewer can read: context-pack.md, pr-review.md, harness.md, workspace.md. Gitignored by init; kept under .solumbe/runs/ when you want it to survive.",
+    chips: [".solumbe/pr-review.md", ".solumbe/harness.md", ".solumbe/runs/"],
   },
   {
     id: "receipt",
@@ -201,7 +201,7 @@ export const SURFACES = [
     sub: "bound to the tree",
     blurb:
       "A timestamp-free hash binding the score to the exact base, parent and staged tree or commit it measured. Anyone with the checkout recomputes it; a receipt whose subject does not match what the gate measured fails with the mode to rerun in.",
-    chips: ["rcpt_…", "otito converge --staged", "otito gate --receipt <hash>"],
+    chips: ["rcpt_…", "solumbe converge --staged", "solumbe gate --receipt <hash>"],
   },
   {
     id: "verdictout",
@@ -227,7 +227,7 @@ export const SURFACES = [
 
 /**
  * CLI commands that are deliberately not a card on the page, each with the
- * reason. Every command `otito help` lists must be either on the page or
+ * reason. Every command `solumbe help` lists must be either on the page or
  * here, so a new command cannot ship without deciding where it belongs; and
  * a command that leaves the CLI must leave this table too.
  */
@@ -243,7 +243,7 @@ export const SUPPORTING_COMMANDS = {
   deps: "package lookup, not a stage of the loop",
   obsidian: "an export format, not a stage of the loop",
   matrix: "the host compatibility matrix, not a stage of the loop",
-  eval: "grades otito itself against fixtures; docs/EVALS.md is its page",
+  eval: "grades solumbe itself against fixtures; docs/EVALS.md is its page",
   "agent-tools": "prints the catalog this page is generated from",
   dashboard: "the local usage UI",
   telemetry: "opt-in local usage capture",
@@ -257,7 +257,7 @@ export const STEPS = [
   { node: "mcp", title: "Connect", text: "Install the CLI or wire the MCP server into any host; init scaffolds CI and hooks." },
   { node: "map", title: "Know the repository", text: "Inspect, map, index and search the checkout; infer its commands." },
   { node: "context", title: "Before the edit", text: "Build the task pack, rank what the request touches, score AX, pick a tier." },
-  { node: "edit", title: "The edit", text: "The model writes the change in its own harness. Otito waits." },
+  { node: "edit", title: "The edit", text: "The model writes the change in its own harness. Solumbe waits." },
   { node: "gate", title: "Before the merge", text: "Score intent against the diff, then gate the exact staged tree." },
   { node: "attest", title: "After the merge", text: "CI appends a hash-chained record; anyone can verify the chain." },
   { node: "calibrate", title: "Over time", text: "Grade the flags and the router against what the repository actually had to fix." },
@@ -271,7 +271,7 @@ export const GUARANTEES = [
   {
     color: "var(--green)",
     title: "The gate never consults a model",
-    text: "PASS, WARN and FAIL are computed from repository state. The one model read otito can make, for a tier or a context pack, is advisory and has no path into the verdict.",
+    text: "PASS, WARN and FAIL are computed from repository state. The one model read solumbe can make, for a tier or a context pack, is advisory and has no path into the verdict.",
   },
   {
     color: "var(--teal)",

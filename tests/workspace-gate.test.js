@@ -34,7 +34,7 @@ function makeRepo(parent, name, value) {
 }
 
 test("workspace gate binds exact staged subjects from each repository into one deterministic parent receipt", () => {
-  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "otito-workspace-gate-"));
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-workspace-gate-"));
   const web = makeRepo(parent, "web", "web");
   const api = makeRepo(parent, "api", "api");
 
@@ -49,13 +49,13 @@ test("workspace gate binds exact staged subjects from each repository into one d
   assert.equal(first.receipt.repositories[0].subject.kind, "git-index");
   assert.equal(first.receipt.repositories[1].subject.kind, "git-index");
   assert.equal(makeWorkspaceGateReceipt(first).inputsHash, first.receipt.inputsHash);
-  assert.match(formatWorkspaceGateMarkdown(first), /Otito Workspace Gate/);
+  assert.match(formatWorkspaceGateMarkdown(first), /Solumbe Workspace Gate/);
   assert.match(formatWorkspaceGateMarkdown(first), /example.test\/product\/web.git/);
   assert.match(formatWorkspaceGateMarkdown(first), /Changed-file scope and convergence evidence/);
 });
 
 test("workspace gate canonicalizes remotes without credentials and deduplicates Git roots", () => {
-  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "otito-workspace-gate-identity-"));
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-workspace-gate-identity-"));
   const web = makeRepo(parent, "web", "web");
   const api = makeRepo(parent, "api", "api");
   git(web, "remote", "set-url", "origin", "https://ci-user:top-secret@example.test/product/web.git");
@@ -70,7 +70,7 @@ test("workspace gate canonicalizes remotes without credentials and deduplicates 
 });
 
 test("workspace gate refuses a parent receipt when any repository has no staged subject", () => {
-  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "otito-workspace-gate-missing-"));
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-workspace-gate-missing-"));
   const web = makeRepo(parent, "web", "web");
   const api = makeRepo(parent, "api", "api");
   git(api, "reset", "--hard", "HEAD");

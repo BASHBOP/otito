@@ -47,12 +47,12 @@ export function generateAxScore(query, options = {}) {
   const top = options.top ?? 8;
   const normalizedQuery = String(query ?? "").trim();
   if (!normalizedQuery) {
-    throw new Error('ax requires a change request, e.g. `otito ax "add a new MCP tool" --path .`');
+    throw new Error('ax requires a change request, e.g. `solumbe ax "add a new MCP tool" --path .`');
   }
 
   /** @type {any} */
   // An impact pass is the expensive half of this score. A caller that already
-  // has one (for example `otito route`) hands it in rather than paying twice.
+  // has one (for example `solumbe route`) hands it in rather than paying twice.
   const impact = options.impact ?? generateImpact(normalizedQuery, { path: repoPath, top }).data;
   /** @type {any} */
   const repo = inspectRepo(repoPath);
@@ -174,7 +174,7 @@ function buildRecommendations({ guardrails, tokens, meanFanOut, concepts }) {
   if (!guardrails.tests) recs.push("Add a `test` script or a tests/ directory so changes are verifiable before merge (+6 AX).");
   if (!guardrails.validation) recs.push("Add lint/typecheck/test/build scripts agents can run as guardrails (+6 AX).");
   if (!guardrails.owners) recs.push("Add a CODEOWNERS file so required reviewers resolve automatically (+6 AX).");
-  if (!guardrails.ci) recs.push("Add a CI workflow under .github/workflows to gate merges — `otito init` scaffolds one (+6 AX).");
+  if (!guardrails.ci) recs.push("Add a CI workflow under .github/workflows to gate merges — `solumbe init` scaffolds one (+6 AX).");
   if (tokens > TOKEN_FLOOR * 3) {
     recs.push(`Context pack is large (~${tokens} tokens); tighten module boundaries and docs so agents load less to make this change.`);
   }

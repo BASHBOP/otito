@@ -78,7 +78,7 @@ function writeFiles(root, files) {
 }
 
 function makeRepoFixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-"));
   writeFiles(root, {
     "package.json": JSON.stringify({
       name: "fixture-cli",
@@ -101,7 +101,7 @@ function makeRepoFixture() {
 }
 
 function makeGitFixture(prefix) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), `otito-cli-git-${prefix}-`));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), `solumbe-cli-git-${prefix}-`));
   git(root, "init", "-q", "-b", "main");
   git(root, "config", "commit.gpgsign", "false");
   writeFiles(root, {
@@ -135,7 +135,7 @@ test("unknown command prints help and exits 1", async () => {
 test("--help on known command prints help and exits 0", async () => {
   const result = await runCli(["doctor", "--help"]);
   assert.equal(result.exitCode, 0);
-  assert.match(result.stdout, /otito doctor/);
+  assert.match(result.stdout, /solumbe doctor/);
 });
 
 test("explicit help command exits 0", async () => {
@@ -161,7 +161,7 @@ test("lightweight commands do not load the TypeScript analysis engine", () => {
     const result = spawnSync(process.execPath, ["--no-warnings", "--experimental-loader", loader, cli, ...args], {
       cwd: path.dirname(cli),
       encoding: "utf8",
-      env: { ...process.env, OTITO_TELEMETRY: "0" },
+      env: { ...process.env, SOLUMBE_TELEMETRY: "0" },
     });
     assert.equal(result.status, 0, `${args.join(" ")} failed: ${result.stderr}`);
     assert.doesNotMatch(result.stderr, /typescript analysis engine/i);
@@ -179,7 +179,7 @@ test("error path prints JSON when --json flag is set", async () => {
 test("error path prints to stderr when no --json flag", async () => {
   const result = await runCli(["impact"]);
   assert.equal(result.exitCode, 1);
-  assert.match(result.stderr, /otito: /);
+  assert.match(result.stderr, /solumbe: /);
 });
 
 test("doctor renders text and json", async () => {
@@ -189,11 +189,11 @@ test("doctor renders text and json", async () => {
 
   const text = await runCli(["doctor", "--no-emoji"]);
   assert.equal(text.exitCode, 0);
-  assert.match(text.stdout, /otito doctor/);
+  assert.match(text.stdout, /solumbe doctor/);
 
   const emojiText = await runCli(["doctor", "--emoji"]);
   assert.equal(emojiText.exitCode, 0);
-  assert.match(emojiText.stdout, /otito doctor/);
+  assert.match(emojiText.stdout, /solumbe doctor/);
 });
 
 test("repo command renders json and text summary", async () => {
@@ -204,7 +204,7 @@ test("repo command renders json and text summary", async () => {
   assert.equal(payload.root, fixture);
 
   const textResult = await runCli(["repo", fixture]);
-  assert.match(textResult.stdout, /otito repo · repository overview/);
+  assert.match(textResult.stdout, /solumbe repo · repository overview/);
   assert.match(textResult.stdout, /At a glance/);
   assert.match(textResult.stdout, /Files scanned\s+\d/);
 });
@@ -223,7 +223,7 @@ test("discover command lists discovered repositories", async () => {
 
 test("index, catalog, and search round-trip a catalog", async () => {
   const fixture = makeRepoFixture();
-  const catalogFile = path.join(os.tmpdir(), `otito-cli-catalog-${path.basename(fixture)}.json`);
+  const catalogFile = path.join(os.tmpdir(), `solumbe-cli-catalog-${path.basename(fixture)}.json`);
 
   const indexJson = await runCli(["index", fixture, "--catalog", catalogFile, "--json"]);
   assert.equal(indexJson.exitCode, 0);
@@ -253,10 +253,10 @@ test("context command emits json, text, and writes an artifact", async () => {
 
   const text = await runCli(["context", "add events tool", "--path", fixture]);
   assert.equal(text.exitCode, 0);
-  assert.match(text.stdout, /otito context · repository guide/);
+  assert.match(text.stdout, /solumbe context · repository guide/);
   assert.match(text.stdout, /Primary files/);
 
-  const out = path.join(os.tmpdir(), `otito-cli-context-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `solumbe-cli-context-${Date.now()}.md`);
   const written = await runCli(["context", "add events tool", "--path", fixture, "--out", out]);
   assert.equal(written.exitCode, 0);
   assert.match(written.stdout, /Context pack written/);
@@ -264,7 +264,7 @@ test("context command emits json, text, and writes an artifact", async () => {
   fs.unlinkSync(out);
 });
 
-test("context --online adds a model read, and falls back to otito's pack without a key", async (t) => {
+test("context --online adds a model read, and falls back to solumbe's pack without a key", async (t) => {
   const fixture = makeRepoFixture();
   const savedKey = process.env.TYPESAFE_API_KEY;
   const savedFetch = globalThis.fetch;
@@ -314,7 +314,7 @@ test("impact accepts both positional and --path forms and writes artifacts", asy
   assert.equal(text.exitCode, 0);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `otito-cli-impact-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `solumbe-cli-impact-${Date.now()}.md`);
   const written = await runCli(["impact", fixture, "rename events controller", "--out", out]);
   assert.equal(written.exitCode, 0);
   assert.match(written.stdout, /Change impact written/);
@@ -368,13 +368,13 @@ test("converge --head and gate --head score the exact committed change", async (
 test("gate --run-validation records an exact staged validation receipt", async () => {
   const fixture = makeGitFixture("gate-validation");
   fs.writeFileSync(
-    path.join(fixture, "otito.gate.json"),
+    path.join(fixture, "solumbe.gate.json"),
     JSON.stringify({
       version: 1,
       validation: { commands: [{ id: "unit", command: `${process.execPath} -e "process.exit(0)"` }] },
     }),
   );
-  git(fixture, "add", "otito.gate.json");
+  git(fixture, "add", "solumbe.gate.json");
   git(fixture, "commit", "-q", "-m", "add validation policy");
   fs.writeFileSync(path.join(fixture, "src", "index.ts"), "export const greet = () => 'staged validation';\n");
   git(fixture, "add", "src/index.ts");
@@ -398,7 +398,7 @@ test("pass evaluates merge readiness on a git fixture", async () => {
   const text = await runCli(["pass", fixture, "--base", "HEAD~1"]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `otito-cli-pass-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `solumbe-cli-pass-${Date.now()}.md`);
   const written = await runCli(["pass", fixture, "--base", "HEAD~1", "--out", out]);
   assert.match(written.stdout, /Pass report written/);
   fs.unlinkSync(out);
@@ -444,11 +444,11 @@ test("gate --pr, review --pr and pass-pr refuse a PR selector that is there but 
     const result = await runCli([...argv, "--json"]);
     return { exitCode: result.exitCode, error: parseJsonOutput(result.stdout).error };
   };
-  const gate = { exitCode: 1, error: "gate --pr needs a PR number or URL, e.g. `otito gate --pr 123 --path .`" };
-  const review = { exitCode: 1, error: "review --pr needs a PR number or URL, e.g. `otito review . --pr 123`" };
+  const gate = { exitCode: 1, error: "gate --pr needs a PR number or URL, e.g. `solumbe gate --pr 123 --path .`" };
+  const review = { exitCode: 1, error: "review --pr needs a PR number or URL, e.g. `solumbe review . --pr 123`" };
   const passPr = {
     exitCode: 1,
-    error: "pass-pr was given a blank PR selector; name the PR, e.g. `otito pass-pr 123 --path .`, or leave it out to gate the current branch's PR",
+    error: "pass-pr was given a blank PR selector; name the PR, e.g. `solumbe pass-pr 123 --path .`, or leave it out to gate the current branch's PR",
   };
 
   // `--pr "$PR_NUMBER"` with the variable unset reaches the parser as `--pr ""`:
@@ -468,7 +468,7 @@ test("gate --pr, review --pr and pass-pr refuse a PR selector that is there but 
 
   const text = await runCli(["gate", "--pr=", "--path", fixture]);
   assert.equal(text.exitCode, 1);
-  assert.equal(text.stderr, `otito: ${gate.error}\n`);
+  assert.equal(text.stderr, `solumbe: ${gate.error}\n`);
 
   // Leaving pass-pr's selector out still gates the current branch's PR.
   const current = parseJsonOutput((await runCli(["pass-pr", "--path", fixture, "--json"])).stdout);
@@ -478,11 +478,11 @@ test("gate --pr, review --pr and pass-pr refuse a PR selector that is there but 
 test("gate takes the repository from the positional or --path, and refuses two different ones", async (t) => {
   withEmptyUserConfig(t);
   const fixture = makeGitFixture("gate-repo");
-  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
+  fs.writeFileSync(path.join(fixture, ".solumberc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
   // Run from another repository, so a gate that dropped the one it was given
   // would gate this one instead, under this one's config.
   const cwd = makeGitFixture("gate-repo-cwd");
-  fs.writeFileSync(path.join(cwd, ".otitorc.json"), JSON.stringify({ policy: "company", governance: "team" }));
+  fs.writeFileSync(path.join(cwd, ".solumberc.json"), JSON.stringify({ policy: "company", governance: "team" }));
   withCwd(t, cwd);
   const gate = async (...argv) => {
     const report = parseJsonOutput((await runCli(["gate", ...argv, "--base", "HEAD~1", "--json"])).stdout);
@@ -504,13 +504,13 @@ test("gate takes the repository from the positional or --path, and refuses two d
   assert.equal(parseJsonOutput(refused.stdout).error, `gate was given two repositories (${fixture} and --path ${cwd}); pass only one`);
   const bare = await runCli(["gate", "--path", "--json"]);
   assert.equal(bare.exitCode, 1);
-  assert.equal(parseJsonOutput(bare.stdout).error, "gate --path needs a repository, e.g. `otito gate --path .`");
+  assert.equal(parseJsonOutput(bare.stdout).error, "gate --path needs a repository, e.g. `solumbe gate --path .`");
 });
 
 test("gate --pr takes the repository from the positional or --path, and refuses two different ones", async (t) => {
   withEmptyUserConfig(t);
   const fixture = makeGitFixture("gate-pr-repo");
-  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  fs.writeFileSync(path.join(fixture, ".solumberc.json"), JSON.stringify({ governance: "solo" }));
   withFakeGh(t, pullRequest42(fixture));
   // Run from another repository, one with no config, so a gate that dropped
   // the one it was given would gate this one instead, under team governance.
@@ -534,13 +534,13 @@ test("gate --pr takes the repository from the positional or --path, and refuses 
 test("help lists the gate command and the canonical-vs-legacy guidance", async () => {
   const result = await runCli(["help"]);
   assert.equal(result.exitCode, 0);
-  assert.match(result.stdout, /otito gate/);
+  assert.match(result.stdout, /solumbe gate/);
   assert.match(result.stdout, /Canonical vs legacy/);
   // The legacy MCP tool note once promised removal "until 3.0" and linked
-  // docs/MIGRATION-2.0.md, which the otito rebrand deleted; the section it
+  // docs/MIGRATION-2.0.md, which the solumbe rebrand deleted; the section it
   // links now has to exist.
   assert.doesNotMatch(result.stdout, /until 3\.0|MIGRATION-2\.0/);
-  assert.match(result.stdout, /https:\/\/bashbop\.github\.io\/otito\/02-mcp-agent-workflows\/#legacy-tool-names/);
+  assert.match(result.stdout, /https:\/\/bashbop\.github\.io\/solumbe\/02-mcp-agent-workflows\/#legacy-tool-names/);
   const mcpDoc = fs.readFileSync(new URL("../docs/02-mcp-agent-workflows/README.md", import.meta.url), "utf8");
   assert.match(mcpDoc, /^### Legacy tool names$/m);
 });
@@ -558,11 +558,11 @@ test("review runs the composite review on a git fixture", async () => {
 test("review takes the repository from --path or the positional, and the request from the positionals left", async (t) => {
   withEmptyUserConfig(t);
   const fixture = makeGitFixture("review-repo");
-  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
+  fs.writeFileSync(path.join(fixture, ".solumberc.json"), JSON.stringify({ policy: "high-risk", governance: "solo" }));
   // Run from another repository, so a review that dropped the one it was given
   // would review this one instead, under this one's config.
   const cwd = makeGitFixture("review-repo-cwd");
-  fs.writeFileSync(path.join(cwd, ".otitorc.json"), JSON.stringify({ policy: "company", governance: "team" }));
+  fs.writeFileSync(path.join(cwd, ".solumberc.json"), JSON.stringify({ policy: "company", governance: "team" }));
   withCwd(t, cwd);
   const review = async (...argv) => {
     const report = parseJsonOutput((await runCli(["review", ...argv, "--base", "HEAD~1", "--json"])).stdout);
@@ -577,13 +577,13 @@ test("review takes the repository from --path or the positional, and the request
 
   const bare = await runCli(["review", "--path", "--json"]);
   assert.equal(bare.exitCode, 1);
-  assert.equal(parseJsonOutput(bare.stdout).error, "review --path needs a repository, e.g. `otito review --path .`");
+  assert.equal(parseJsonOutput(bare.stdout).error, "review --path needs a repository, e.g. `solumbe review --path .`");
 });
 
 test("review --pr takes the repository from --path or the positional", async (t) => {
   withEmptyUserConfig(t);
   const fixture = makeGitFixture("review-pr-repo");
-  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  fs.writeFileSync(path.join(fixture, ".solumberc.json"), JSON.stringify({ governance: "solo" }));
   withFakeGh(t, pullRequest42(fixture));
   // Run from another repository, one with no config, so a review that dropped
   // the one it was given would review this one instead, under team governance.
@@ -599,17 +599,17 @@ test("review --pr takes the repository from --path or the positional", async (t)
 });
 
 // Pin the user config tier to an empty directory, so a developer's own
-// ~/.config/otito/config.json cannot decide a gate's policy or governance.
+// ~/.config/solumbe/config.json cannot decide a gate's policy or governance.
 function withEmptyUserConfig(t) {
   const saved = process.env.XDG_CONFIG_HOME;
-  process.env.XDG_CONFIG_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-xdg-"));
+  process.env.XDG_CONFIG_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-xdg-"));
   t.after(() => {
     if (saved === undefined) delete process.env.XDG_CONFIG_HOME;
     else process.env.XDG_CONFIG_HOME = saved;
   });
 }
 
-// Run otito from `dir`, the way `otito pass ../other-repo` runs from inside
+// Run solumbe from `dir`, the way `solumbe pass ../other-repo` runs from inside
 // one repository while gating another.
 function withCwd(t, dir) {
   const saved = process.cwd();
@@ -618,15 +618,15 @@ function withCwd(t, dir) {
 }
 
 function makeConfiguredDir(prefix, config) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `otito-cli-${prefix}-`));
-  fs.writeFileSync(path.join(dir, ".otitorc.json"), JSON.stringify(config));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), `solumbe-cli-${prefix}-`));
+  fs.writeFileSync(path.join(dir, ".solumberc.json"), JSON.stringify(config));
   return dir;
 }
 
 // Put a `gh` on PATH that answers the GitHub gate from canned JSON, keyed by
 // argument prefix, so a PR-mode gate runs evaluatePR end to end offline.
 function withFakeGh(t, responses) {
-  const bin = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-gh-"));
+  const bin = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-gh-"));
   const gh = path.join(bin, "gh");
   fs.writeFileSync(
     gh,
@@ -684,18 +684,18 @@ function pullRequest42(fixture) {
   };
 }
 
-test("pass, gate and review take policy and governance from the gated repository's config, not the directory otito runs in", async (t) => {
+test("pass, gate and review take policy and governance from the gated repository's config, not the directory solumbe runs in", async (t) => {
   withEmptyUserConfig(t);
   const configured = makeGitFixture("gate-config");
-  fs.writeFileSync(path.join(configured, ".otitorc.json"), JSON.stringify({ policy: "high-risk", governance: "solo", emoji: false }));
+  fs.writeFileSync(path.join(configured, ".solumberc.json"), JSON.stringify({ policy: "high-risk", governance: "solo", emoji: false }));
   const unconfigured = makeGitFixture("gate-no-config");
-  // The directory otito runs in names other settings, so a lookup from the cwd
+  // The directory solumbe runs in names other settings, so a lookup from the cwd
   // instead of the gated repository would show in every assertion below.
   withCwd(t, makeConfiguredDir("gate-cwd", { policy: "company", governance: "team", emoji: true }));
   const gate = async (...argv) => parseJsonOutput((await runCli([...argv, "--base", "HEAD~1", "--json"])).stdout);
   const settings = (report) => ({ policy: report.policy, governance: report.governance });
 
-  assert.deepEqual(settings(await gate("pass", configured)), { policy: "high-risk", governance: "solo" }, "pass reads the gated repository's .otitorc.json");
+  assert.deepEqual(settings(await gate("pass", configured)), { policy: "high-risk", governance: "solo" }, "pass reads the gated repository's .solumberc.json");
   assert.deepEqual(settings(await gate("gate", configured)), { policy: "high-risk", governance: "solo" }, "gate reads it too");
   assert.deepEqual(settings((await gate("review", configured)).pass), { policy: "high-risk", governance: "solo" }, "review gates under it");
   assert.deepEqual(
@@ -714,20 +714,20 @@ test("pass, gate and review take policy and governance from the gated repository
     "a blank flag counts as omitted",
   );
 
-  // Rendering preferences still come from the directory otito runs in.
+  // Rendering preferences still come from the directory solumbe runs in.
   const text = await runCli(["pass", configured, "--base", "HEAD~1"]);
-  assert.match(text.stdout, /📋 {2}otito pass/);
+  assert.match(text.stdout, /📋 {2}solumbe pass/);
 });
 
 test("pass-pr, gate --pr and review --pr take the config of the repository they gate", async (t) => {
   withEmptyUserConfig(t);
   const fixture = makeGitFixture("gate-pr-config");
   writeFiles(fixture, {
-    ".otitorc.json": JSON.stringify({ governance: "solo" }),
+    ".solumberc.json": JSON.stringify({ governance: "solo" }),
     ".github/CODEOWNERS": "src/index.ts @alice\n",
   });
   withFakeGh(t, pullRequest42(fixture));
-  // `otito pass-pr 42 --path <repo>` run from another directory, one whose
+  // `solumbe pass-pr 42 --path <repo>` run from another directory, one whose
   // config says team.
   withCwd(t, makeConfiguredDir("gate-pr-cwd", { governance: "team" }));
   const gate = async (...argv) => parseJsonOutput((await runCli([...argv, "--json"])).stdout);
@@ -738,12 +738,12 @@ test("pass-pr, gate --pr and review --pr take the config of the repository they 
     ["gate", "--pr", "42", "--path", fixture],
   ]) {
     const report = await gate(...argv);
-    assert.equal(report.governance, "solo", `${argv[0]} reads the --path repository's .otitorc.json`);
+    assert.equal(report.governance, "solo", `${argv[0]} reads the --path repository's .solumberc.json`);
     assert.equal(codeowners(report).status, "WARN");
     assert.match(codeowners(report).summary, /solo-maintainer mode requires an explicit owner\/admin merge decision/);
   }
   const review = await gate("review", fixture, "--pr", "42");
-  assert.equal(review.pass.governance, "solo", "review --pr reads the positional repository's .otitorc.json");
+  assert.equal(review.pass.governance, "solo", "review --pr reads the positional repository's .solumberc.json");
   assert.equal(codeowners(review.pass).status, "WARN");
 
   const team = await gate("pass-pr", "42", "--path", fixture, "--governance", "team");
@@ -761,7 +761,7 @@ test("workspace-gate runs every repository under the config they agree on, and r
   };
   const web = stage(makeGitFixture("workspace-web"));
   const api = stage(makeGitFixture("workspace-api"));
-  fs.writeFileSync(path.join(api, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  fs.writeFileSync(path.join(api, ".solumberc.json"), JSON.stringify({ governance: "solo" }));
   withCwd(t, makeConfiguredDir("workspace-cwd", { governance: "team" }));
   const workspaceGate = async (...flags) => {
     const result = await runCli(["workspace-gate", web, api, "--base", "HEAD", ...flags, "--json"]);
@@ -782,8 +782,8 @@ test("workspace-gate runs every repository under the config they agree on, and r
   assert.ok(settled.report.receipt, "the settled workspace still gets its parent receipt");
 
   // When each repository's own config agrees, that is the setting, whatever
-  // the directory otito runs in says.
-  fs.writeFileSync(path.join(web, ".otitorc.json"), JSON.stringify({ governance: "solo" }));
+  // the directory solumbe runs in says.
+  fs.writeFileSync(path.join(web, ".solumberc.json"), JSON.stringify({ governance: "solo" }));
   const agreed = await workspaceGate();
   assert.deepEqual(governance(agreed.report), ["solo", "solo", "solo"]);
 });
@@ -800,7 +800,7 @@ test("map renders json, markdown, and writes an artifact", async () => {
   assert.match(text.stdout, /CODE MAP/);
   assert.match(text.stdout, /Source files:/);
 
-  const out = path.join(os.tmpdir(), `otito-cli-map-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `solumbe-cli-map-${Date.now()}.md`);
   const written = await runCli(["map", fixture, "--out", out]);
   assert.match(written.stdout, /Code map written/);
   fs.unlinkSync(out);
@@ -849,7 +849,7 @@ test("matrix renders the tool matrix", async () => {
 });
 
 test("init scaffolds a project into a target directory", async () => {
-  const target = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-init-"));
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-init-"));
   const json = await runCli(["init", target, "--force", "--no-workflow", "--json"]);
   assert.equal(json.exitCode, 0);
   const payload = parseJsonOutput(json.stdout);
@@ -869,7 +869,7 @@ test("pr renders json, text, and writes an artifact", async () => {
   const text = await runCli(["pr", fixture, "--base", "HEAD~1"]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `otito-cli-pr-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `solumbe-cli-pr-${Date.now()}.md`);
   const written = await runCli(["pr", fixture, "--base", "HEAD~1", "--out", out]);
   assert.match(written.stdout, /PR review context written/);
   fs.unlinkSync(out);
@@ -884,7 +884,7 @@ test("report renders json and text", async () => {
   const text = await runCli(["report", fixture]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `otito-cli-report-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `solumbe-cli-report-${Date.now()}.md`);
   const written = await runCli(["report", fixture, "--out", out]);
   assert.match(written.stdout, /Report written/);
   fs.unlinkSync(out);
@@ -904,7 +904,7 @@ test("workspace requires at least two repos and produces a multi-repo summary", 
   const text = await runCli(["workspace", fixtureA, fixtureB]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `otito-cli-workspace-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `solumbe-cli-workspace-${Date.now()}.md`);
   const written = await runCli(["workspace", fixtureA, fixtureB, "--out", out]);
   assert.match(written.stdout, /Workspace report written/);
   fs.unlinkSync(out);
@@ -918,7 +918,7 @@ test("harness renders json, text, and writes an artifact", async () => {
   const text = await runCli(["harness", fixture]);
   assert.ok(text.stdout.length > 0);
 
-  const out = path.join(os.tmpdir(), `otito-cli-harness-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `solumbe-cli-harness-${Date.now()}.md`);
   const written = await runCli(["harness", fixture, "--out", out]);
   assert.match(written.stdout, /Harness written/);
   fs.unlinkSync(out);
@@ -932,7 +932,7 @@ test("eval and data-access produce reports", async () => {
   const evalText = await runCli(["eval", fixture, "--query", "events"]);
   assert.ok(evalText.stdout.length > 0);
 
-  const evalOut = path.join(os.tmpdir(), `otito-cli-eval-${Date.now()}.md`);
+  const evalOut = path.join(os.tmpdir(), `solumbe-cli-eval-${Date.now()}.md`);
   const evalWritten = await runCli(["eval", fixture, "--out", evalOut]);
   assert.match(evalWritten.stdout, /Eval written/);
   fs.unlinkSync(evalOut);
@@ -943,7 +943,7 @@ test("eval and data-access produce reports", async () => {
   const daText = await runCli(["data-access", fixture]);
   assert.ok(daText.stdout.length > 0);
 
-  const daOut = path.join(os.tmpdir(), `otito-cli-data-${Date.now()}.md`);
+  const daOut = path.join(os.tmpdir(), `solumbe-cli-data-${Date.now()}.md`);
   const daWritten = await runCli(["data-access", fixture, "--out", daOut]);
   assert.match(daWritten.stdout, /Data-access report written/);
   fs.unlinkSync(daOut);
@@ -1035,14 +1035,14 @@ const lastLine = (stdout) => stdout.trimEnd().split("\n").at(-1);
 // Keep the user's real config and usage log out of commands that read or write them.
 function withIsolatedUser(t) {
   withEmptyUserConfig(t);
-  const saved = { path: process.env.OTITO_TELEMETRY_PATH, id: process.env.OTITO_TELEMETRY_ID_PATH };
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-user-"));
-  process.env.OTITO_TELEMETRY_PATH = path.join(dir, "usage.jsonl");
-  process.env.OTITO_TELEMETRY_ID_PATH = path.join(dir, "anonymous-id");
+  const saved = { path: process.env.SOLUMBE_TELEMETRY_PATH, id: process.env.SOLUMBE_TELEMETRY_ID_PATH };
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-user-"));
+  process.env.SOLUMBE_TELEMETRY_PATH = path.join(dir, "usage.jsonl");
+  process.env.SOLUMBE_TELEMETRY_ID_PATH = path.join(dir, "anonymous-id");
   t.after(() => {
     for (const [key, value] of [
-      ["OTITO_TELEMETRY_PATH", saved.path],
-      ["OTITO_TELEMETRY_ID_PATH", saved.id],
+      ["SOLUMBE_TELEMETRY_PATH", saved.path],
+      ["SOLUMBE_TELEMETRY_ID_PATH", saved.id],
     ]) {
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
@@ -1055,7 +1055,7 @@ test("advisory commands end with `Runs without errors.`", async (t) => {
   withIsolatedUser(t);
   const fixture = makeRepoFixture();
   const gitFixture = makeGitFixture("closing-advisory");
-  withCwd(t, fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-closing-")));
+  withCwd(t, fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-closing-")));
   for (const argv of [
     ["repo", fixture],
     ["discover", path.dirname(fixture), "--depth", "1", "--limit", "5"],
@@ -1084,9 +1084,9 @@ test("advisory commands end with `Runs without errors.`", async (t) => {
 test("writers end with `Verified.` once what they wrote re-reads", async (t) => {
   const userDir = withIsolatedUser(t);
   const fixture = makeRepoFixture();
-  const work = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-writers-"));
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-writers-"));
   withCwd(t, work);
-  const initTarget = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-init-"));
+  const initTarget = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-init-"));
   const ledger = path.join(work, "ledger.jsonl");
   const verdict = path.join(work, "verdict.json");
   fs.writeFileSync(
@@ -1112,14 +1112,14 @@ test("writers end with `Verified.` once what they wrote re-reads", async (t) => 
     assert.equal(lastLine(result.stdout), "Verified.", `${argv.join(" ")}\n${result.stdout}`);
   }
   // The writes landed where the closing line says they did.
-  assert.equal(JSON.parse(fs.readFileSync(path.join(work, ".otitorc.json"), "utf8")).theme, "minimal");
+  assert.equal(JSON.parse(fs.readFileSync(path.join(work, ".solumberc.json"), "utf8")).theme, "minimal");
   assert.ok(fs.existsSync(path.join(work, "vault", "Home.md")));
   assert.equal(fs.existsSync(path.join(userDir, "usage.jsonl")), false);
 });
 
 test("health checks end with `Verified.` or name what failed", async (t) => {
   withIsolatedUser(t);
-  const work = fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-health-"));
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-health-"));
   const ledger = path.join(work, "ledger.jsonl");
   const verdict = path.join(work, "verdict.json");
   fs.writeFileSync(
@@ -1154,7 +1154,7 @@ test("a gate that did not pass ends by naming the check to look at", async (t) =
   };
   const web = stage(makeGitFixture("closing-web"));
   const api = stage(makeGitFixture("closing-api"));
-  withCwd(t, fs.mkdtempSync(path.join(os.tmpdir(), "otito-cli-gate-")));
+  withCwd(t, fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-cli-gate-")));
   const json = parseJsonOutput((await runCli(["workspace-gate", web, api, "--base", "HEAD", "--governance", "team", "--json"])).stdout);
   const text = await runCli(["workspace-gate", web, api, "--base", "HEAD", "--governance", "team", "--no-emoji", "--no-color"]);
   if (json.verdict === "PASS") {
@@ -1185,7 +1185,7 @@ test("machine formats and bare values carry no closing line", async (t) => {
     const result = await runCli(argv);
     assert.doesNotMatch(result.stdout, closing, argv.join(" "));
   }
-  const out = path.join(os.tmpdir(), `otito-cli-closing-${Date.now()}.md`);
+  const out = path.join(os.tmpdir(), `solumbe-cli-closing-${Date.now()}.md`);
   const written = await runCli(["map", fixture, "--out", out]);
   assert.match(written.stdout, /^Code map written: /);
   assert.doesNotMatch(written.stdout, closing);
@@ -1214,8 +1214,8 @@ test("config list is a key, value and source table; telemetry status is a table 
   const telemetry = await runCli(["telemetry", "--no-emoji", "--no-color"]);
   assert.match(telemetry.stdout, /^Telemetry\s+off$/m);
   assert.match(telemetry.stdout, /^Events\s+0$/m);
-  assert.match(telemetry.stdout, /^- `otito telemetry on` - enable local capture$/m);
-  assert.match(telemetry.stdout, /^- `otito telemetry clear` - clear the log$/m);
+  assert.match(telemetry.stdout, /^- `solumbe telemetry on` - enable local capture$/m);
+  assert.match(telemetry.stdout, /^- `solumbe telemetry clear` - clear the log$/m);
 });
 
 test("help documents the presentation flags once, as global flags", async () => {

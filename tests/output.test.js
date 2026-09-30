@@ -7,7 +7,7 @@ import path from "node:path";
 import { formatTerminalSummary, verifyWrittenFiles } from "../src/lib/output.js";
 
 const input = {
-  title: "otito init · trust harness setup",
+  title: "solumbe init · trust harness setup",
   glyph: "🛠️",
   subtitle: "/tmp/repo",
   facts: /** @type {[string, string | number][]} */ ([
@@ -15,7 +15,7 @@ const input = {
     ["Files", 3],
   ]),
   sections: [
-    { title: "Created", glyph: "✅", items: [".otito/README.md", ".githooks/pre-commit"], kind: /** @type {const} */ ("tree") },
+    { title: "Created", glyph: "✅", items: [".solumbe/README.md", ".githooks/pre-commit"], kind: /** @type {const} */ ("tree") },
     { title: "Skipped", glyph: "⏭️", items: [] },
     { title: "Next steps", glyph: "📝", items: ["Review the generated workflow before opening a PR."] },
   ],
@@ -25,7 +25,7 @@ test("a summary is a header, the facts as a table, sections as lists or trees, a
   const unicode = formatTerminalSummary({ ...input, close: { status: "verified" }, options: { glyphs: "unicode", color: false, width: 60 } });
   assert.deepEqual(unicode.split("\n"), [
     "╭──────────────────────────────────────────────────────────╮",
-    "│  otito init · trust harness setup                        │",
+    "│  solumbe init · trust harness setup                      │",
     "│  /tmp/repo                                               │",
     "╰──────────────────────────────────────────────────────────╯",
     "",
@@ -34,7 +34,7 @@ test("a summary is a header, the facts as a table, sections as lists or trees, a
     "  Files  3",
     "",
     "▾ Created",
-    "  ├── .otito/README.md",
+    "  ├── .solumbe/README.md",
     "  └── .githooks/pre-commit",
     "",
     "▾ Skipped",
@@ -53,13 +53,13 @@ test("a summary is a header, the facts as a table, sections as lists or trees, a
   });
   // eslint-disable-next-line no-control-regex
   assert.match(ascii.replace("·", "."), /^[\x00-\x7f]*$/, "ascii mode adds no glyph of its own");
-  assert.ok(ascii.includes("  |-- .otito/README.md\n  `-- .githooks/pre-commit"));
+  assert.ok(ascii.includes("  |-- .solumbe/README.md\n  `-- .githooks/pre-commit"));
   assert.equal(ascii.split("\n").at(-1), "Not verified - manual check needed: .gitignore did not re-read after writing.");
 });
 
 test("the emoji set keeps its section glyphs and bullets", () => {
   const emoji = formatTerminalSummary({ ...input, options: { emoji: true, color: false, width: 60 } });
-  for (const mark of ["🛠️  otito init", "💬  /tmp/repo", "▾ 📌 At a glance", "▾ ✅ Created", "▾ 📝 Next steps", "  • none"]) {
+  for (const mark of ["🛠️  solumbe init", "💬  /tmp/repo", "▾ 📌 At a glance", "▾ ✅ Created", "▾ 📝 Next steps", "  • none"]) {
     assert.ok(emoji.includes(mark), `emoji summary lost ${JSON.stringify(mark)}`);
   }
   assert.doesNotMatch(emoji, /Verified\.|Runs without errors\./, "no closing line unless the caller passes one");
@@ -76,7 +76,7 @@ test("a long fact wraps under its own column and stays inside the terminal", () 
 });
 
 test("verifyWrittenFiles re-reads every file a writer reports", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-output-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-output-"));
   fs.mkdirSync(path.join(root, "nested"));
   fs.writeFileSync(path.join(root, "a.md"), "a\n");
   fs.writeFileSync(path.join(root, "nested", "b.md"), "b\n");

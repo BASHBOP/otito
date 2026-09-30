@@ -1,4 +1,4 @@
-# otito - Executive Summary
+# solumbe - Executive Summary
 
 **Purpose:** Independent trust and merge evidence for AI-assisted software teams<br>
 **Maintainer:** Oluwasegun Olumbe<br>
@@ -8,13 +8,13 @@
 
 ## Overview
 
-otito answers one practical question:
+solumbe answers one practical question:
 
 ```text
 Is this generated change safe to merge, and can a human recompute the evidence?
 ```
 
-It is a Node.js CLI and MCP server that produces deterministic, local-first repository context and merge evidence for coding agents, maintainers, and reviewers. Native agent harnesses generate the change. Otito proves whether it is safe to merge.
+It is a Node.js CLI and MCP server that produces deterministic, local-first repository context and merge evidence for coding agents, maintainers, and reviewers. Native agent harnesses generate the change. Solumbe proves whether it is safe to merge.
 
 ---
 
@@ -30,7 +30,7 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Local catalog         | Discovery, indexing, and search across local repositories                                                      |
 | PR review context     | Diff-aware review prompts, changed domains, risk flags, Go test-file detection, and optional GitHub comments   |
 | MCP support           | Agent-callable tools for repo inspection, maps, search, harnesses, workspaces, and PR review                   |
-| Governance            | CI gates, Òtítọ́ readiness, CODEOWNERS, SemVer guidance, security reporting, templates, and review policy      |
+| Governance            | CI gates, Solumbe readiness, CODEOWNERS, SemVer guidance, security reporting, templates, and review policy      |
 | Demo packet           | Company-facing packet that links the executive summary, case study, proof run, launch note, and pilot checklist |
 | Pilot runbook         | Step-by-step first repository and pull request pilot with roles, evidence, stop conditions, and triage          |
 | Thesis pack           | Public explainer pages for harness, tutorials, convergence, usage, determinism, dual-mode, prompt determinism, the trust harness, and clean code |
@@ -38,24 +38,24 @@ It is a Node.js CLI and MCP server that produces deterministic, local-first repo
 | Review policy         | Branch protection, required checks, CODEOWNERS, conversation-resolution, and admin-decision snapshot           |
 | Feedback loop         | Structured public pilot intake that turns reviewer concerns into docs, gates, proof, or roadmap work           |
 | Company adoption      | Screenshot-style case study for evaluation, pilot rollout, and governance decision records                     |
-| Public launch note    | Short external-facing story for Òtítọ́, proof runs, and next trust-layer gates                                |
+| Public launch note    | Short external-facing story for Solumbe, proof runs, and next trust-layer gates                                |
 | Operating loop        | Repeatable session rhythm for context, focused change, visible gates, human decisions, and durable evidence    |
 
 ---
 
 ## Product Position
 
-otito is the independent trust layer beside native agent harnesses:
+solumbe is the independent trust layer beside native agent harnesses:
 
 ```text
-Models generate the change. Otito proves whether it is safe to merge.
+Models generate the change. Solumbe proves whether it is safe to merge.
 
 native hosts -> generation (Codex, Claude Code, Gemini, Cursor)
-otito        -> context before change, evidence before merge
+solumbe        -> context before change, evidence before merge
 Humans       -> accountability before release
 ```
 
-This makes otito useful for maintainers who want AI-assisted development without losing the shape of the repository, test expectations, ownership boundaries, and review discipline. It does not compete with generic orchestration. Deterministic merge evidence is the differentiated core; organisation-level governance is the commercial edge.
+This makes solumbe useful for maintainers who want AI-assisted development without losing the shape of the repository, test expectations, ownership boundaries, and review discipline. It does not compete with generic orchestration. Deterministic merge evidence is the differentiated core; organisation-level governance is the commercial edge.
 
 ---
 
@@ -63,19 +63,19 @@ This makes otito useful for maintainers who want AI-assisted development without
 
 | Signal                        | Current Handling                                                                  |
 | ----------------------------- | --------------------------------------------------------------------------------- |
-| Unknown repository shape      | `otito repo` surfaces package, language, script, and git state                  |
-| Unclear task scope            | `otito context` generates task-aware primary and related files                  |
+| Unknown repository shape      | `solumbe repo` surfaces package, language, script, and git state                  |
+| Unclear task scope            | `solumbe context` generates task-aware primary and related files                  |
 | Agent invents extra structure | Context packs and CONTRIBUTING keep the change in the smallest owner files      |
-| Multi-repo context missing    | `otito workspace` builds a product-level context report                         |
-| PR review surface hidden      | `otito pr` summarizes changed files, risks, prompts, and comments               |
-| Merge readiness hidden        | Òtítọ́ PR readiness runs on pull requests and records owner-decision warnings     |
-| Context evidence disconnected | Òtítọ́ reports include `Context Evidence` commands for context packs and PR review reports |
-| Agent tool integration needed | `otito mcp` exposes repository context through MCP                              |
+| Multi-repo context missing    | `solumbe workspace` builds a product-level context report                         |
+| PR review surface hidden      | `solumbe pr` summarizes changed files, risks, prompts, and comments               |
+| Merge readiness hidden        | Solumbe PR readiness runs on pull requests and records owner-decision warnings     |
+| Context evidence disconnected | Solumbe reports include `Context Evidence` commands for context packs and PR review reports |
+| Agent tool integration needed | `solumbe mcp` exposes repository context through MCP                              |
 | MCP setup unclear             | MCP workflow docs include generic stdio, Claude Desktop, VS Code, and Cursor examples |
 | Contributor readiness         | CONTRIBUTING.md, Code of Conduct, CI, CODEOWNERS, templates, security, release docs, and branch protection guidance |
 | Review policy visibility      | Review-policy snapshot summarizes branch protection and owner/admin decision boundaries |
-| Gate behaviour needs proof    | `otito eval --gate-effectiveness` checks one valid control and six expected blocks against the real local gate |
-| Trust-layer demo              | Public walkthrough for Òtítọ́ context, PR review context, and human merge accountability |
+| Gate behaviour needs proof    | `solumbe eval --gate-effectiveness` checks one valid control and six expected blocks against the real local gate |
+| Trust-layer demo              | Public walkthrough for Solumbe context, PR review context, and human merge accountability |
 | Session continuity            | Builder-founder operating loop keeps proof, gates, and next actions outside chat memory |
 
 ---
@@ -92,7 +92,7 @@ This makes otito useful for maintainers who want AI-assisted development without
 
 ## Next Steps
 
-1. Keep the company adoption packet current as Òtítọ́ evolves.
+1. Keep the company adoption packet current as Solumbe evolves.
 2. Run one real repository and pull request through the company pilot runbook.
 3. Keep the proof index current as public artifacts and private proof boundaries evolve.
 4. Capture feedback from real company reviewers through the pilot feedback loop and turn it into docs, gates, proof, or roadmap work.

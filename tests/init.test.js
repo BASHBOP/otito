@@ -8,18 +8,18 @@ import { fileURLToPath } from "node:url";
 import { WORKFLOW_ACTION_VERSIONS, initProject } from "../src/lib/init.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const hookGateLine = /otito gate \. --staged --policy standard --out \.otito\/gate\.md/;
+const hookGateLine = /solumbe gate \. --staged --policy standard --out \.solumbe\/gate\.md/;
 
-test("initProject scaffolds otito files without overwriting by default", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-"));
-  const result = initProject(fixture, { toolRepo: "example/otito", toolRef: "stable" });
+test("initProject scaffolds solumbe files without overwriting by default", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-"));
+  const result = initProject(fixture, { toolRepo: "example/solumbe", toolRef: "stable" });
 
   assert.equal(result.ok, true);
-  assert.deepEqual(result.created.sort(), [".otito/README.md", ".githooks/pre-commit", ".github/workflows/otito-ci.yml", ".gitignore"].sort());
+  assert.deepEqual(result.created.sort(), [".solumbe/README.md", ".githooks/pre-commit", ".github/workflows/solumbe-ci.yml", ".gitignore"].sort());
 
-  const generatedWorkflowPath = path.join(fixture, ".github", "workflows", "otito-ci.yml");
+  const generatedWorkflowPath = path.join(fixture, ".github", "workflows", "solumbe-ci.yml");
   const workflow = fs.readFileSync(generatedWorkflowPath, "utf8");
-  assert.match(workflow, /repository: example\/otito/);
+  assert.match(workflow, /repository: example\/solumbe/);
   assert.match(workflow, /ref: stable/);
   assert.match(workflow, /pull_request:/);
   assert.match(workflow, /push:/);
@@ -27,32 +27,32 @@ test("initProject scaffolds otito files without overwriting by default", () => {
   assert.match(workflow, /if: github\.event_name == 'pull_request'/);
   assert.match(workflow, /Checkout pushed commit/);
   assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
-  assert.match(workflow, /Install otito dependencies/);
-  assert.match(workflow, /working-directory: \.otito\/tool/);
-  assert.match(workflow, /secrets\.OTITO_REPO_TOKEN/);
+  assert.match(workflow, /Install solumbe dependencies/);
+  assert.match(workflow, /working-directory: \.solumbe\/tool/);
+  assert.match(workflow, /secrets\.SOLUMBE_REPO_TOKEN/);
   assert.match(workflow, /git fetch origin "\+\$\{\{ github\.base_ref \}\}:refs\/remotes\/origin\/\$\{\{ github\.base_ref \}\}"/);
   assert.match(workflow, /Generate commit review context/);
-  assert.match(workflow, /node \.otito\/tool\/src\/cli\.js pr \./);
+  assert.match(workflow, /node \.solumbe\/tool\/src\/cli\.js pr \./);
 
   fs.writeFileSync(generatedWorkflowPath, "custom workflow\n");
   const skipped = initProject(fixture);
-  assert.ok(skipped.skipped.includes(".github/workflows/otito-ci.yml"));
+  assert.ok(skipped.skipped.includes(".github/workflows/solumbe-ci.yml"));
   assert.equal(fs.readFileSync(generatedWorkflowPath, "utf8"), "custom workflow\n");
 });
 
-test("initProject adds .otito/ to .gitignore (creating it when absent)", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
+test("initProject adds .solumbe/ to .gitignore (creating it when absent)", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-gitignore-"));
   const result = initProject(fixture, { noWorkflow: true });
 
   const gitignorePath = path.join(fixture, ".gitignore");
   assert.ok(fs.existsSync(gitignorePath), ".gitignore must be created");
   const contents = fs.readFileSync(gitignorePath, "utf8");
-  assert.match(contents, /^\.otito\/$/m);
+  assert.match(contents, /^\.solumbe\/$/m);
   assert.ok(result.created.includes(".gitignore"));
 });
 
-test("initProject appends .otito/ to an existing .gitignore without clobbering it", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
+test("initProject appends .solumbe/ to an existing .gitignore without clobbering it", () => {
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-gitignore-"));
   const gitignorePath = path.join(fixture, ".gitignore");
   fs.writeFileSync(gitignorePath, "node_modules\ndist\n");
 
@@ -60,12 +60,12 @@ test("initProject appends .otito/ to an existing .gitignore without clobbering i
   const contents = fs.readFileSync(gitignorePath, "utf8");
   assert.match(contents, /node_modules/);
   assert.match(contents, /dist/);
-  assert.match(contents, /^\.otito\/$/m);
+  assert.match(contents, /^\.solumbe\/$/m);
   assert.ok(result.updated.includes(".gitignore"));
 });
 
 test("initProject is idempotent about .gitignore and respects covering patterns", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-gitignore-"));
   const gitignorePath = path.join(fixture, ".gitignore");
 
   initProject(fixture, { noWorkflow: true });
@@ -76,30 +76,30 @@ test("initProject is idempotent about .gitignore and respects covering patterns"
   assert.equal(afterFirst, afterSecond, "second run must not duplicate the entry");
   assert.ok(second.skipped.includes(".gitignore"));
 
-  // A bare ".otito" (no trailing slash) already covers the directory.
-  const covered = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gitignore-"));
-  fs.writeFileSync(path.join(covered, ".gitignore"), ".otito\n");
+  // A bare ".solumbe" (no trailing slash) already covers the directory.
+  const covered = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-gitignore-"));
+  fs.writeFileSync(path.join(covered, ".gitignore"), ".solumbe\n");
   const result = initProject(covered, { noWorkflow: true });
-  assert.equal(fs.readFileSync(path.join(covered, ".gitignore"), "utf8"), ".otito\n");
+  assert.equal(fs.readFileSync(path.join(covered, ".gitignore"), "utf8"), ".solumbe\n");
   assert.ok(result.skipped.includes(".gitignore"));
 });
 
 test("initProject can force overwrite and skip workflow", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-"));
   initProject(fixture);
 
   const forced = initProject(fixture, { force: true });
-  assert.ok(forced.updated.includes(".otito/README.md"));
-  assert.ok(forced.updated.includes(".github/workflows/otito-ci.yml"));
+  assert.ok(forced.updated.includes(".solumbe/README.md"));
+  assert.ok(forced.updated.includes(".github/workflows/solumbe-ci.yml"));
 
-  const noWorkflow = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-"));
+  const noWorkflow = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-"));
   const result = initProject(noWorkflow, { noWorkflow: true });
-  assert.ok(result.created.includes(".otito/README.md"));
-  assert.equal(fs.existsSync(path.join(noWorkflow, ".github", "workflows", "otito-ci.yml")), false);
+  assert.ok(result.created.includes(".solumbe/README.md"));
+  assert.equal(fs.existsSync(path.join(noWorkflow, ".github", "workflows", "solumbe-ci.yml")), false);
 });
 
 test("initProject injects a harness-driven quality job and pre-commit hook from package scripts", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-gates-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-gates-"));
   fs.writeFileSync(
     path.join(fixture, "package.json"),
     JSON.stringify({ name: "sample", scripts: { lint: "eslint .", typecheck: "tsc --noEmit", test: "node --test" } }, null, 2),
@@ -113,7 +113,7 @@ test("initProject injects a harness-driven quality job and pre-commit hook from 
   assert.equal(result.precommitStatus, "applied");
   assert.ok(result.created.includes(".githooks/pre-commit"));
 
-  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "solumbe-ci.yml"), "utf8");
   const qualitySection = workflow.split("  review:")[0];
   assert.match(workflow, /^ {2}quality:$/m);
   assert.match(workflow, /actions\/setup-node@v7/);
@@ -138,7 +138,7 @@ test("initProject injects a harness-driven quality job and pre-commit hook from 
 });
 
 test("initProject omits gates and pre-commit when disabled", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-nogates-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-nogates-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint ." } }, null, 2));
 
   const result = initProject(fixture, { gates: false, precommit: false });
@@ -149,13 +149,13 @@ test("initProject omits gates and pre-commit when disabled", () => {
   assert.equal(result.precommitStatus, "disabled");
   assert.equal(fs.existsSync(path.join(fixture, ".githooks", "pre-commit")), false);
 
-  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "solumbe-ci.yml"), "utf8");
   assert.doesNotMatch(workflow, /^ {2}quality:$/m);
   assert.match(workflow, /name: Generate PR review context/);
 });
 
 test("initProject installs the staged safety hook even when no static scripts are detected", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-bare-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-bare-"));
   const result = initProject(fixture);
 
   assert.equal(result.gatesApplied, false);
@@ -167,19 +167,19 @@ test("initProject installs the staged safety hook even when no static scripts ar
 });
 
 test("initProject uses npm ci when package-lock.json is present", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-lock-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-lock-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint .", test: "node --test" } }, null, 2));
   fs.writeFileSync(path.join(fixture, "package-lock.json"), JSON.stringify({ name: "sample", lockfileVersion: 3, packages: {} }, null, 2));
 
   initProject(fixture);
 
-  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "solumbe-ci.yml"), "utf8");
   const qualitySection = workflow.split("  review:")[0];
   assert.match(qualitySection, /install Node dependencies\n {8}run: npm ci/);
 });
 
 test("initProject excludes non-static script names from the pre-commit hook", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-precommit-filter-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-precommit-filter-"));
   fs.writeFileSync(
     path.join(fixture, "package.json"),
     JSON.stringify({ name: "sample", scripts: { lint: "eslint .", prototype: "node prototype.js", test: "node --test" } }, null, 2),
@@ -196,7 +196,7 @@ test("initProject excludes non-static script names from the pre-commit hook", ()
 });
 
 test("initProject runs a type check named with a tsc segment in the quality job and the pre-commit hook", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-tsc-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-tsc-"));
   fs.writeFileSync(
     path.join(fixture, "package.json"),
     JSON.stringify(
@@ -217,7 +217,7 @@ test("initProject runs a type check named with a tsc segment in the quality job 
 
   initProject(fixture);
 
-  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8");
+  const workflow = fs.readFileSync(path.join(fixture, ".github", "workflows", "solumbe-ci.yml"), "utf8");
   assert.match(workflow, /type contract checks\n {8}run: npm run tsc:check/);
   assert.doesNotMatch(workflow, /tsc:watch|tsconfig:sync/);
 
@@ -230,7 +230,7 @@ test("initProject runs a type check named with a tsc segment in the quality job 
 });
 
 test("initProject sets core.hooksPath only when requested, inside a git repo", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-hooks-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-hooks-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint ." } }, null, 2));
   execFileSync("git", ["init"], { cwd: fixture, stdio: "ignore" });
 
@@ -243,7 +243,7 @@ test("initProject sets core.hooksPath only when requested, inside a git repo", (
 });
 
 test("initProject skips hooks path when no pre-commit hook was scaffolded", () => {
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-hooks-skip-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-hooks-skip-"));
   execFileSync("git", ["init"], { cwd: fixture, stdio: "ignore" });
 
   const result = initProject(fixture, { hooksPath: true, gates: false, precommit: false });
@@ -254,16 +254,16 @@ test("initProject skips hooks path when no pre-commit hook was scaffolded", () =
 });
 
 test("the pre-commit hook gates under --policy standard so a strict repository policy cannot fail every local commit", () => {
-  // A repository that sets `policy: company` in .otitorc.json means it for
+  // A repository that sets `policy: company` in .solumberc.json means it for
   // merge time: the company policy requires an approving review, which a
   // commit that has not been pushed yet can never have. Without the flag the
   // hook would inherit that policy and refuse every local commit.
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-policy-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-policy-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint ." } }, null, 2));
-  fs.writeFileSync(path.join(fixture, ".otitorc.json"), JSON.stringify({ policy: "company", governance: "team" }, null, 2));
+  fs.writeFileSync(path.join(fixture, ".solumberc.json"), JSON.stringify({ policy: "company", governance: "team" }, null, 2));
   fs.writeFileSync(path.join(fixture, "index.js"), "export const value = 1;\n");
   const git = (/** @type {string[]} */ args) =>
-    execFileSync("git", ["-c", "user.name=otito", "-c", "user.email=otito@example.com", "-c", "commit.gpgsign=false", ...args], {
+    execFileSync("git", ["-c", "user.name=solumbe", "-c", "user.email=solumbe@example.com", "-c", "commit.gpgsign=false", ...args], {
       cwd: fixture,
       stdio: "ignore",
     });
@@ -281,7 +281,7 @@ test("the pre-commit hook gates under --policy standard so a strict repository p
     const result = spawnSync(process.execPath, [path.join(repoRoot, "src", "cli.js"), "gate", ".", "--staged", ...extra, "--json"], {
       cwd: fixture,
       encoding: "utf8",
-      env: { ...process.env, OTITO_TELEMETRY: "0", OTITO_TELEMETRY_SHARE: "0" },
+      env: { ...process.env, SOLUMBE_TELEMETRY: "0", SOLUMBE_TELEMETRY_SHARE: "0" },
     });
     return { exitCode: result.status, data: JSON.parse(result.stdout) };
   };
@@ -297,7 +297,7 @@ test("the pre-commit hook gates under --policy standard so a strict repository p
 });
 
 test("the generated workflow pins the same action majors as this repository's own CI", () => {
-  // The template is shipped in the package and cannot read otito-ci.yml at
+  // The template is shipped in the package and cannot read solumbe-ci.yml at
   // run time, so the majors are constants. This test is what keeps them from
   // drifting behind the workflow the project itself runs on.
   const usesOf = (/** @type {string} */ yaml) => {
@@ -312,18 +312,18 @@ test("the generated workflow pins the same action majors as this repository's ow
     return majors;
   };
 
-  const own = usesOf(fs.readFileSync(path.join(repoRoot, ".github", "workflows", "otito-ci.yml"), "utf8"));
+  const own = usesOf(fs.readFileSync(path.join(repoRoot, ".github", "workflows", "solumbe-ci.yml"), "utf8"));
   for (const [action, major] of Object.entries(WORKFLOW_ACTION_VERSIONS)) {
-    assert.equal(own.get(action), major, `${action}: template pins ${major}, otito-ci.yml uses ${own.get(action) ?? "nothing"}`);
+    assert.equal(own.get(action), major, `${action}: template pins ${major}, solumbe-ci.yml uses ${own.get(action) ?? "nothing"}`);
   }
 
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "otito-init-majors-"));
+  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-init-majors-"));
   fs.writeFileSync(path.join(fixture, "package.json"), JSON.stringify({ name: "sample", scripts: { lint: "eslint .", test: "node --test" } }, null, 2));
   initProject(fixture);
-  const generated = usesOf(fs.readFileSync(path.join(fixture, ".github", "workflows", "otito-ci.yml"), "utf8"));
+  const generated = usesOf(fs.readFileSync(path.join(fixture, ".github", "workflows", "solumbe-ci.yml"), "utf8"));
   assert.ok(generated.size >= 3, "the generated workflow should use checkout, setup-node and upload-artifact");
   for (const [action, major] of generated) {
     if (!own.has(action)) continue;
-    assert.equal(major, own.get(action), `${action}: generated workflow pins ${major}, otito-ci.yml uses ${own.get(action)}`);
+    assert.equal(major, own.get(action), `${action}: generated workflow pins ${major}, solumbe-ci.yml uses ${own.get(action)}`);
   }
 });

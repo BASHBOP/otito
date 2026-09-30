@@ -4,7 +4,7 @@
  *
  * The unit suite imports main() in-process and the CLI smoke runs
  * `node src/cli.js` directly — neither crosses the npm bin-shim seam, which is
- * how v1.4.0–1.4.2 shipped with a silently broken `otito` executable
+ * how v1.4.0–1.4.2 shipped with a silently broken `solumbe` executable
  * (entrypoint guard never fired through the bin symlink). This script packs
  * the real tarball, installs it into a temp project, and runs the installed
  * bin the way npx / npm i -g users do.
@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const packageVersion = String(JSON.parse(fs.readFileSync(path.join(packageRoot, "package.json"), "utf8")).version);
-const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "otito-tarball-smoke-"));
+const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-tarball-smoke-"));
 const npmCache = path.join(workDir, "npm-cache");
 
 function run(command, args, options = {}) {
@@ -35,14 +35,14 @@ try {
   fs.writeFileSync(path.join(projectDir, "package.json"), JSON.stringify({ name: "smoke", private: true }));
   run("npm", ["install", "--no-audit", "--no-fund", "--prefer-offline", "--cache", npmCache, tarball], { cwd: projectDir });
 
-  const bin = path.join(projectDir, "node_modules", ".bin", "otito");
+  const bin = path.join(projectDir, "node_modules", ".bin", "solumbe");
   const versionOutput = run(bin, ["--version"], { cwd: projectDir }).trim();
   if (versionOutput !== packageVersion) {
     throw new Error(`installed bin reported version ${JSON.stringify(versionOutput)} instead of ${packageVersion}`);
   }
 
   const helpOutput = run(bin, ["help"], { cwd: projectDir });
-  if (!helpOutput.includes("otito")) {
+  if (!helpOutput.includes("solumbe")) {
     throw new Error(`installed bin produced unexpected help output: ${JSON.stringify(helpOutput.slice(0, 200))}`);
   }
 

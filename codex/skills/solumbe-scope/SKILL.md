@@ -1,9 +1,9 @@
 ---
-name: otito-scope
+name: solumbe-scope
 description: Scope a change before implementation — impact ranking, AX score, and adversarial questions. Invoke when the task is ambiguous or blast radius matters.
 ---
 
-# otito scope (procedure)
+# solumbe scope (procedure)
 
 Use this **after** context, **before** editing — especially for risky or vague tasks.
 
@@ -12,13 +12,13 @@ Use this **after** context, **before** editing — especially for risky or vague
 1. Rank likely owner files:
 
    ```bash
-   otito impact . "<task>" --json
+   solumbe impact . "<task>" --json
    ```
 
 2. Score agent experience for the task:
 
    ```bash
-   otito ax "<task>" --path . --json
+   solumbe ax "<task>" --path . --json
    ```
 
 3. Ask the user (or yourself) adversarially:
@@ -26,20 +26,20 @@ Use this **after** context, **before** editing — especially for risky or vague
    - Which tests prove this worked?
    - What would a maintainer reject?
 
-4. Only then run `otito context` and start edits.
+4. Only then run `solumbe context` and start edits.
 
 ## After implementation
 
 Measure intent vs execution:
 
 ```bash
-otito converge "<task>" --base origin/main --path .
+solumbe converge "<task>" --base origin/main --path .
 ```
 
 Once the work is committed, score the commits themselves so local edits and untracked files cannot count as drift:
 
 ```bash
-otito converge "<task>" --base origin/main --head HEAD --path .
+solumbe converge "<task>" --base origin/main --head HEAD --path .
 ```
 
 ## MCP equivalents

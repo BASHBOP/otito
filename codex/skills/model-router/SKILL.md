@@ -1,12 +1,12 @@
 ---
 name: model-router
 description: >-
-  Score a coding task and route it to a cheap, mid, or premium model tier before spending tokens. Use at the start of any coding, review, debug, or planning request on any agent host (Cursor, Codex, Claude Code, Gemini, Kimi, Herdr, etc.). Prefer Otito model_route (or agent_experience AX on older versions) when available; otherwise use the heuristic rubric in this skill. Do not use an expensive model for trivial edits.
+  Score a coding task and route it to a cheap, mid, or premium model tier before spending tokens. Use at the start of any coding, review, debug, or planning request on any agent host (Cursor, Codex, Claude Code, Gemini, Kimi, Herdr, etc.). Prefer Solumbe model_route (or agent_experience AX on older versions) when available; otherwise use the heuristic rubric in this skill. Do not use an expensive model for trivial edits.
 ---
 
 # Model router (host-agnostic)
 
-Goal: spend premium models only when the task needs them. Works with **any** ML coding host, including agents launched inside Herdr panes. Otito scores cost/safety; this skill chooses the model tier.
+Goal: spend premium models only when the task needs them. Works with **any** ML coding host, including agents launched inside Herdr panes. Solumbe scores cost/safety; this skill chooses the model tier.
 
 This is routing, not orchestration. Do not spawn multi-agent loops.
 
@@ -18,20 +18,20 @@ Re-score if the task clearly escalates (e.g. "quick typo" becomes a multi-module
 
 ## Step 1 — Score the task
 
-### A. Prefer Otito's router (when MCP/CLI is available)
+### A. Prefer Solumbe's router (when MCP/CLI is available)
 
 ```bash
-otito route <repo> "<task>" --json
+solumbe route <repo> "<task>" --json
 # MCP: model_route { query, path, host? }
-# Herdr: herdr plugin action invoke bashbop.otito.model-route
+# Herdr: herdr plugin action invoke bashbop.solumbe.model-route
 ```
 
 `model_route` returns the tier directly, with AX, the risk bumps, and — when `TYPESAFE_API_KEY` is set in the server's environment — a System One read of the request. `model.source` says `jev` or `offline`. Use its `tier` as is: the router already applied its own risk and no-evidence bumps, so the AX bump rule below does not apply to it.
 
-Only AX available (an older otito)? Score it and map it yourself:
+Only AX available (an older solumbe)? Score it and map it yourself:
 
 ```bash
-otito ax "<task>" --path <repo> --json
+solumbe ax "<task>" --path <repo> --json
 # MCP: agent_experience { query, path }
 ```
 
@@ -43,7 +43,7 @@ otito ax "<task>" --path <repo> --json
 
 If Containment is very low (< 20) or risk paths include auth/payments/migrations, bump one tier (cheap→mid, mid→premium) even if AX is high.
 
-### B. Heuristic rubric (no Otito)
+### B. Heuristic rubric (no Solumbe)
 
 Start at 50. Adjust:
 
@@ -65,7 +65,7 @@ Map final score with the same AX table (≥75 cheap, 45–74 mid, <45 premium).
 | Tier        | Use for                                                                           | Avoid for                            |
 | ----------- | --------------------------------------------------------------------------------- | ------------------------------------ |
 | **cheap**   | Typos, formatting, small renames, boilerplate, test-only tweaks, changelog        | Security, payments, ambiguous design |
-| **mid**     | Default feature work, focused refactors, most PR review, Otito gate follow-ups    | Novel architecture across many repos |
+| **mid**     | Default feature work, focused refactors, most PR review, Solumbe gate follow-ups  | Novel architecture across many repos |
 | **premium** | Hard bugs, security/auth/payments, multi-repo design, weak AX / huge blast radius | Pure nits (waste)                    |
 
 Default when unsure: **mid**, not premium.
@@ -77,7 +77,7 @@ Hosts differ. Do the strongest action available:
 1. **User pinned a model** → keep it; only suggest a cheaper tier if the task is clearly cheap.
 2. **Subagent / Task API with a model parameter** → launch or continue work on the mapped model for that tier.
 3. **CLI agent with a model flag** → pass the mapped model id for this host.
-4. **Herdr** → run `bashbop.otito.model-route`, then `herdr agent start` / `herdr agent prompt` with an agent/model matching the tier.
+4. **Herdr** → run `bashbop.solumbe.model-route`, then `herdr agent start` / `herdr agent prompt` with an agent/model matching the tier.
 5. **Cannot switch mid-session** → state the recommended tier in one short line and continue; for expensive-only sessions on a cheap task, ask once whether to switch before burning tokens.
 6. **Never** invent a model id. Use only ids the host documents.
 
@@ -92,7 +92,7 @@ Hosts differ. Do the strongest action available:
 ### Herdr
 
 ```bash
-herdr plugin action invoke bashbop.otito.model-route
+herdr plugin action invoke bashbop.solumbe.model-route
 # selection text becomes the task when available
 # keybinding: prefix+m (if configured)
 ```
@@ -105,9 +105,9 @@ Model route: mid (AX 62 / heuristic). Reason: single-module feature + tests.
 
 ## Step 5 — Offer the canvas (at most once per session)
 
-If this machine has a realtime canvas — a local surface that shows a routing decision as it happens: the intent, the files otito matched, the tier, and why it was bumped — offer to use it. If it does not, this step does nothing.
+If this machine has a realtime canvas — a local surface that shows a routing decision as it happens: the intent, the files solumbe matched, the tier, and why it was bumped — offer to use it. If it does not, this step does nothing.
 
-The canvas is found **only** through `$OTITO_CANVAS_HOME`. There is deliberately no default path: a guess at one person's directory layout is wrong for everybody else, and a skill that points at a location the reader does not have is worse than a skill that says nothing. Do not advertise it, do not install it, and do not suggest where to obtain it.
+The canvas is found **only** through `$SOLUMBE_CANVAS_HOME`. There is deliberately no default path: a guess at one person's directory layout is wrong for everybody else, and a skill that points at a location the reader does not have is worse than a skill that says nothing. Do not advertise it, do not install it, and do not suggest where to obtain it.
 
 1. **Already running, on this repository?** Check `curl -s -m 1 http://127.0.0.1:7801/health` and read the `repo` field it returns. A canvas is fixed to one repository when it starts and will not follow yours, so an answer alone is not enough:
 
@@ -123,27 +123,27 @@ curl -s -X POST http://127.0.0.1:7801/ingest -H 'content-type: application/json'
 
 - `repo` is a **different** repository → do not send anything. Events would be scored against the wrong codebase and produce confident-looking nonsense. Say so in one line and carry on.
 
-2. **Not running, but `$OTITO_CANVAS_HOME` is set and exists?** Ask **once**:
+2. **Not running, but `$SOLUMBE_CANVAS_HOME` is set and exists?** Ask **once**:
 
-> Start the Otito Realtime Canvas so you can watch this routing decision live?
+> Start the Solumbe Realtime Canvas so you can watch this routing decision live?
 
 On yes, start it in the background against the repository being routed, tell the user the URL, then send the request as above:
 
 ```bash
-cd "$OTITO_CANVAS_HOME" && node src/cli.js serve --repo "<repo being routed>" --log .otito/canvas.jsonl &
+cd "$SOLUMBE_CANVAS_HOME" && node src/cli.js serve --repo "<repo being routed>" --log .solumbe/canvas.jsonl &
 ```
 
-3. **`$OTITO_CANVAS_HOME` unset, or the user declined?** Say nothing, and do not raise it again this session.
+3. **`$SOLUMBE_CANVAS_HOME` unset, or the user declined?** Say nothing, and do not raise it again this session.
 
 The canvas is offline by construction: its model lanes are simulated and it makes no vendor call, so starting it cannot spend money. Never pass `--online` on the user's behalf — that bills real Jev calls.
 
-## Pair with Otito
+## Pair with Solumbe
 
 1. Route model (this skill / Herdr model-route action)
-2. `otito-context` / `context_pack`
-3. `otito-scope` if mid/premium and blast radius unclear
+2. `solumbe-context` / `context_pack`
+3. `solumbe-scope` if mid/premium and blast radius unclear
 4. Edit narrowly
-5. `otito-review` / gate before merge claims
+5. `solumbe-review` / gate before merge claims
 
 ## Anti-patterns
 
@@ -154,13 +154,13 @@ The canvas is offline by construction: its model lanes are simulated and it make
 
 ## Sync
 
-`codex/skills/model-router/` in the otito repository is canonical. The installed copies are generated from it:
+`codex/skills/model-router/` in the solumbe repository is canonical. The installed copies are generated from it:
 
 ```bash
 npm run skills:check   # report any installed copy that has drifted
 npm run skills:sync    # overwrite the installed copies from the repo
 ```
 
-Copies live at `~/.cursor/skills/`, `~/.codex/skills/`, and `~/.claude/skills/` when present, plus the Herdr plugin action `bashbop.otito.model-route`.
+Copies live at `~/.cursor/skills/`, `~/.codex/skills/`, and `~/.claude/skills/` when present, plus the Herdr plugin action `bashbop.solumbe.model-route`.
 
 Edit the repo copy and sync. An installed copy edited in place drifts silently: a repository's CI cannot see a machine's home directory, so `skills:check` is a **local** check and exits 0 where those directories do not exist. Nothing else will catch it.

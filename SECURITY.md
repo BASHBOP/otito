@@ -6,7 +6,7 @@ Security fixes are made against the default branch and the latest published pack
 
 ## Reporting a Vulnerability
 
-Do not open public issues for suspected vulnerabilities. Use GitHub private vulnerability reporting for `BASHBOP/otito` when available, or contact the maintainers privately before sharing exploit details.
+Do not open public issues for suspected vulnerabilities. Use GitHub private vulnerability reporting for `BASHBOP/solumbe` when available, or contact the maintainers privately before sharing exploit details.
 
 Code of Conduct reports are not vulnerabilities. Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) instead of this policy.
 
@@ -17,11 +17,11 @@ Please include:
 - Expected and actual impact.
 - Any logs, inputs, generated artifacts, or repository shapes needed to reproduce.
 
-The project avoids secrets in generated `.otito/` artifacts, but users should still review artifacts before sharing them outside their organization.
+The project avoids secrets in generated `.solumbe/` artifacts, but users should still review artifacts before sharing them outside their organization.
 
 ## Security Expectations
 
 - `npm run audit` must pass for production dependencies before release.
-- Generated artifacts must stay under `.otito/` and out of published package contents.
+- Generated artifacts must stay under `.solumbe/` and out of published package contents.
 - External command execution must use explicit argument arrays where possible.
 - Changes that touch git, GitHub, filesystem writes, dependency lookup, or MCP dispatch require focused tests and reviewer attention.

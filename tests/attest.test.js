@@ -143,8 +143,8 @@ test("post-merge attestation records a valid FAIL verdict even when review exits
   fs.chmodSync(fakeGh, 0o755);
 
   git(root, ["init", "-q"]);
-  git(root, ["config", "user.name", "Òtítọ́ Test"]);
-  git(root, ["config", "user.email", "otito@example.test"]);
+  git(root, ["config", "user.name", "Solumbe Test"]);
+  git(root, ["config", "user.email", "solumbe@example.test"]);
   git(root, ["add", "."]);
   git(root, ["commit", "-qm", "base"]);
   const base = git(root, ["rev-parse", "HEAD"]);
@@ -160,7 +160,7 @@ test("post-merge attestation records a valid FAIL verdict even when review exits
       ...process.env,
       PATH: `${binDir}:${process.env.PATH}`,
       GITHUB_SHA: merge,
-      OTITO_TARGET_SHA: "",
+      SOLUMBE_TARGET_SHA: "",
       GITHUB_EVENT_BEFORE: base,
     },
   });
@@ -172,14 +172,14 @@ test("post-merge attestation records a valid FAIL verdict even when review exits
   assert.equal(row.mergeSha, merge);
 });
 
-test("the scripts attest another repository when OTITO_REPO, OTITO_BIN and OTITO_LEDGER are set", () => {
+test("the scripts attest another repository when SOLUMBE_REPO, SOLUMBE_BIN and SOLUMBE_LEDGER are set", () => {
   // This is the reusable-workflow mode: the tool is this checkout, the
   // repository under attestation is somewhere else, and the ledger lives
   // where the caller says. Nothing may be written under this checkout.
   const target = fs.mkdtempSync(path.join(os.tmpdir(), "attest-consumer-"));
   git(target, ["init", "-q"]);
-  git(target, ["config", "user.name", "Òtítọ́ Test"]);
-  git(target, ["config", "user.email", "otito@example.test"]);
+  git(target, ["config", "user.name", "Solumbe Test"]);
+  git(target, ["config", "user.email", "solumbe@example.test"]);
   fs.writeFileSync(path.join(target, "package.json"), JSON.stringify({ name: "consumer", version: "1.0.0", scripts: { test: "true" } }));
   fs.writeFileSync(path.join(target, "index.js"), "module.exports = 1;\n");
   git(target, ["add", "."]);
@@ -190,22 +190,22 @@ test("the scripts attest another repository when OTITO_REPO, OTITO_BIN and OTITO
   git(target, ["commit", "-qm", "feat: bump (#7)"]);
   const merge = git(target, ["rev-parse", "HEAD"]);
 
-  const ledger = path.join(target, ".otito", "audit", "ledger.jsonl");
+  const ledger = path.join(target, ".solumbe", "audit", "ledger.jsonl");
   const ownLedgerBefore = fs.readFileSync(path.join(repoRoot, "audit-pilot", "ledger.jsonl"), "utf8");
   const result = spawnSync("bash", [path.join(repoRoot, "scripts", "reconcile-attestations.sh")], {
     cwd: os.tmpdir(),
     encoding: "utf8",
     env: {
       ...process.env,
-      OTITO_REPO: target,
-      OTITO_BIN: `${process.execPath} ${cli}`,
-      OTITO_LEDGER: ledger,
-      OTITO_TARGET_SHA: merge,
+      SOLUMBE_REPO: target,
+      SOLUMBE_BIN: `${process.execPath} ${cli}`,
+      SOLUMBE_LEDGER: ledger,
+      SOLUMBE_TARGET_SHA: merge,
       GITHUB_SHA: "",
       GITHUB_EVENT_BEFORE: "",
-      OTITO_ATTEST_MODE: "diff",
-      OTITO_ATTEST_RESET_LEDGER: "0",
-      OTITO_ATTEST_DRY_RUN: "0",
+      SOLUMBE_ATTEST_MODE: "diff",
+      SOLUMBE_ATTEST_RESET_LEDGER: "0",
+      SOLUMBE_ATTEST_DRY_RUN: "0",
     },
   });
   assert.equal(result.status, 0, result.stderr || result.stdout);
@@ -222,15 +222,15 @@ test("the scripts attest another repository when OTITO_REPO, OTITO_BIN and OTITO
   );
   assert.equal(rows[1].pr, 7);
   assert.equal(rows[1].schemaVersion, 1);
-  assert.ok(fs.existsSync(path.join(target, ".otito", "audit", "verdict-latest.json")), "the verdict is written beside the ledger");
+  assert.ok(fs.existsSync(path.join(target, ".solumbe", "audit", "verdict-latest.json")), "the verdict is written beside the ledger");
   assert.equal(fs.readFileSync(path.join(repoRoot, "audit-pilot", "ledger.jsonl"), "utf8"), ownLedgerBefore, "the tool's own ledger is untouched");
 });
 
 /**
  * A repository whose ledger chains against commits that are not in it.
  * That is what a rename or a history rewrite leaves behind, and it is the
- * state otito's own `audit-ledger` branch was in: 97 records keyed to
- * repoctx merge SHAs, none reachable from otito's `main`.
+ * state solumbe's own `audit-ledger` branch was in: 97 records keyed to
+ * repoctx merge SHAs, none reachable from solumbe's `main`.
  */
 function orphanedLedgerRepo() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "reconcile-orphan-"));
@@ -241,8 +241,8 @@ function orphanedLedgerRepo() {
   fs.copyFileSync(path.join(repoRoot, "scripts", "reconcile-attestations.sh"), path.join(scriptsDir, "reconcile-attestations.sh"));
 
   git(root, ["init", "-q"]);
-  git(root, ["config", "user.name", "Òtítọ́ Test"]);
-  git(root, ["config", "user.email", "otito@example.test"]);
+  git(root, ["config", "user.name", "Solumbe Test"]);
+  git(root, ["config", "user.email", "solumbe@example.test"]);
   fs.writeFileSync(path.join(root, "a.txt"), "a\n");
   git(root, ["add", "."]);
   git(root, ["commit", "-qm", "first commit"]);
@@ -276,10 +276,10 @@ function runReconcile(root, target, env = {}) {
     env: {
       ...process.env,
       GITHUB_SHA: target,
-      OTITO_TARGET_SHA: "",
+      SOLUMBE_TARGET_SHA: "",
       GITHUB_EVENT_BEFORE: "",
-      OTITO_ATTEST_RESET_LEDGER: "0",
-      OTITO_ATTEST_DRY_RUN: "1",
+      SOLUMBE_ATTEST_RESET_LEDGER: "0",
+      SOLUMBE_ATTEST_DRY_RUN: "1",
       ...env,
     },
   });
@@ -297,12 +297,12 @@ test("an orphaned ledger is diagnosed, not reported as git's invalid revision ra
   assert.notEqual(result.status, 128);
   assert.doesNotMatch(result.stderr, /Invalid revision range/);
   assert.match(result.stderr, /not in this repository|not an ancestor/);
-  assert.match(result.stderr, /OTITO_ATTEST_RESET_LEDGER=1/, "must name the recovery");
+  assert.match(result.stderr, /SOLUMBE_ATTEST_RESET_LEDGER=1/, "must name the recovery");
 });
 
 test("resetting an orphaned ledger archives the old chain and starts at the tip", () => {
   const { root, target } = orphanedLedgerRepo();
-  const result = runReconcile(root, target, { OTITO_ATTEST_RESET_LEDGER: "1" });
+  const result = runReconcile(root, target, { SOLUMBE_ATTEST_RESET_LEDGER: "1" });
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /archived superseded chain/);
@@ -327,13 +327,13 @@ test("resetting an orphaned ledger archives the old chain and starts at the tip"
   assert.deepEqual(attested, [target]);
 });
 
-test("the target comes from OTITO_TARGET_SHA, because a workflow cannot override the runner's GITHUB_SHA", () => {
+test("the target comes from SOLUMBE_TARGET_SHA, because a workflow cannot override the runner's GITHUB_SHA", () => {
   // Regression: the workflow set GITHUB_SHA on the reconcile step, GitHub kept
   // its own value (the default branch head at run time), and a run meant to
   // start the new chain at b3f795d attested the newer fc0a7b9 instead.
   const { root, target } = orphanedLedgerRepo();
   const runnerHead = git(root, ["rev-list", "--max-parents=0", "HEAD"]);
-  const result = runReconcile(root, target, { OTITO_ATTEST_RESET_LEDGER: "1", GITHUB_SHA: runnerHead, OTITO_TARGET_SHA: target });
+  const result = runReconcile(root, target, { SOLUMBE_ATTEST_RESET_LEDGER: "1", GITHUB_SHA: runnerHead, SOLUMBE_TARGET_SHA: target });
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   const attested = result.stdout

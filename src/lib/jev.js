@@ -1,12 +1,12 @@
-// A System One client, and the request-read questions otito asks it.
+// A System One client, and the request-read questions solumbe asks it.
 //
 // A System One model (TypeSafe's Jev) takes a state and typed questions and
-// returns typed answers with probabilities. otito asks two kinds of question
+// returns typed answers with probabilities. solumbe asks two kinds of question
 // and keeps them apart:
 //
 //   - the ROUTE questions in model-route.js, whose answers the router scores;
 //   - the READ questions here: what kind of work a request asks for, which
-//     otito tool answers it, and whether each candidate file matters. Their
+//     solumbe tool answers it, and whether each candidate file matters. Their
 //     answers are reported, and applied only where a caller opted in and the
 //     answer clears its gate.
 //
@@ -15,18 +15,18 @@
 
 import { readFileSync } from "node:fs";
 
-let otitoVersion = "0.0.0";
+let solumbeVersion = "0.0.0";
 try {
-  otitoVersion = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version ?? "0.0.0";
+  solumbeVersion = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version ?? "0.0.0";
 } catch {
   // best-effort; the version only labels the client
 }
 
 /**
  * Every call identifies its client, and only its client: the tag carries
- * Otito's name and version, never a user, a repository or a key.
+ * Solumbe's name and version, never a user, a repository or a key.
  */
-export const JEV_USER_AGENT = `otito/${otitoVersion}`;
+export const JEV_USER_AGENT = `solumbe/${solumbeVersion}`;
 
 export const JEV_API_URL = "https://api.typesafe.ai/v1/systemone";
 export const JEV_MODEL = "jev-latest";
@@ -128,7 +128,7 @@ export const INTENTS = {
 };
 
 /**
- * Which otito tool answers a request. The keys other than `none` must match
+ * Which solumbe tool answers a request. The keys other than `none` must match
  * the MCP tool catalog; a test holds the two in parity. Kept here rather than
  * read from mcp.js because mcp.js imports the router, and the router imports
  * this file.

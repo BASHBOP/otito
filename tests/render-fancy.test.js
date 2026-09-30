@@ -25,19 +25,19 @@ test("explicit color options keep renderer tests stable when color is forced", (
 test("header uses Unicode box drawing and includes title text", () => {
   // The assertions describe visible box geometry, not terminal escape bytes.
   const r = createRenderer({ emoji: true, color: false, width: 60 });
-  const out = r.header({ text: "otito doctor", glyph: "📋" });
+  const out = r.header({ text: "solumbe doctor", glyph: "📋" });
   assert.match(out, /^╭/);
   assert.match(out, /╯$/);
-  assert.match(out, /otito doctor/);
+  assert.match(out, /solumbe doctor/);
   assert.match(out, /📋/);
 });
 
 test("header in plain mode strips glyphs and uses ASCII box", () => {
   const r = createRenderer({ emoji: false, color: false, width: 60 });
-  const out = r.header({ text: "otito doctor", glyph: "📋" });
+  const out = r.header({ text: "solumbe doctor", glyph: "📋" });
   assert.match(out, /^\+/);
   assert.match(out, /\+$/);
-  assert.match(out, /otito doctor/);
+  assert.match(out, /solumbe doctor/);
   assert.ok(!out.includes("📋"), "plain mode should drop the title glyph");
 });
 
@@ -264,7 +264,7 @@ test("every line of a box has the same display width", () => {
       const r = createRenderer({ glyphs: mode, color: false, width });
       const boxes = [
         r.header("Scan → Questions ✓", ["日本語 subtitle", "plain ascii line"]),
-        r.header({ text: "otito repo · repository overview", glyph: "📦" }, [{ text: long, glyph: "💬" }]),
+        r.header({ text: "solumbe repo · repository overview", glyph: "📦" }, [{ text: long, glyph: "💬" }]),
         r.verdict({ verdict: "PASS" }),
         r.verdict({ verdict: "WARN", nextStep: "run the validation plan" }),
         r.verdict({ verdict: "FAIL", blockedBy: long, nextStep: "/a/path/with/no/spaces/that/is/longer/than/the/box/is/wide/by/quite/a/lot/really/it/is.ts" }),
@@ -291,7 +291,7 @@ test("wrap breaks on display width and never splits a word", () => {
  */
 function renderEverything(r) {
   return [
-    r.header({ text: "otito setup", glyph: "🛠️" }, [{ text: "a subtitle", glyph: "💬" }, "plain line"]),
+    r.header({ text: "solumbe setup", glyph: "🛠️" }, [{ text: "a subtitle", glyph: "💬" }, "plain line"]),
     r.statusLine("pass", "node", "v22"),
     r.statusLine("warn", "rg", "missing", ["install it"]),
     r.statusLine("fail", "git", "missing"),
@@ -316,8 +316,8 @@ function renderEverything(r) {
     r.code("npm test"),
     r.ref("src/cli.js", 42),
     r.list([
-      ["otito gate", "runs the gate"],
-      ["otito context", "builds a context pack"],
+      ["solumbe gate", "runs the gate"],
+      ["solumbe context", "builds a context pack"],
     ]),
     r.phase("scan"),
     r.phase("questions", { done: true }),
@@ -337,7 +337,7 @@ test("unicode mode never emits an Extended_Pictographic character", () => {
   // The header glyph and bullet glyph passed by callers are emoji; unicode drops them.
   assert.ok(!out.includes("🛠"));
   assert.ok(!out.includes("🔥"));
-  assert.ok(out.includes("otito setup"));
+  assert.ok(out.includes("solumbe setup"));
 });
 
 test("ascii mode output is pure ASCII", () => {
@@ -463,11 +463,14 @@ test("code and ref render backticked text, cyan when colour is on", () => {
 
 test("list renders one command per line with what it does", () => {
   const items = /** @type {[string, string][]} */ ([
-    ["otito gate", "runs the gate"],
-    ["otito context", "builds a context pack"],
+    ["solumbe gate", "runs the gate"],
+    ["solumbe context", "builds a context pack"],
   ]);
-  assert.equal(createRenderer({ glyphs: "unicode", color: false }).list(items), "- `otito gate` – runs the gate\n- `otito context` – builds a context pack");
-  assert.equal(createRenderer({ glyphs: "ascii", color: false }).list(items), "- `otito gate` - runs the gate\n- `otito context` - builds a context pack");
+  assert.equal(
+    createRenderer({ glyphs: "unicode", color: false }).list(items),
+    "- `solumbe gate` – runs the gate\n- `solumbe context` – builds a context pack",
+  );
+  assert.equal(createRenderer({ glyphs: "ascii", color: false }).list(items), "- `solumbe gate` - runs the gate\n- `solumbe context` - builds a context pack");
   assert.equal(createRenderer({ glyphs: "unicode", color: false }).list([]), "");
 });
 
@@ -557,7 +560,7 @@ test("boxed content wraps at 60 columns instead of breaking the right border", (
       const continuation = lines.find((line) => /^[│|] {6,}\S/.test(line));
       assert.ok(continuation, `${mode}: expected an indented continuation line`);
 
-      const header = r.header({ text: "otito repo · repository overview of a repository with a much longer name than fits", glyph: "📦" }, [
+      const header = r.header({ text: "solumbe repo · repository overview of a repository with a much longer name than fits", glyph: "📦" }, [
         { text: nextStep, glyph: "💬" },
       ]);
       const headerLines = middleLines(header);

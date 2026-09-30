@@ -8,7 +8,7 @@ import { AMBIGUOUS_ACTION_QUESTION, formatContextPackTerminal, generateContextPa
 import { createRenderer } from "../src/lib/render/fancy.js";
 
 test("generateContextPack returns task-aware files, tests, and commands", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-"));
   fs.mkdirSync(path.join(root, "src", "lib"), { recursive: true });
   fs.mkdirSync(path.join(root, "tests"), { recursive: true });
   fs.writeFileSync(
@@ -19,7 +19,7 @@ test("generateContextPack returns task-aware files, tests, and commands", () => 
         test: "node --test",
       },
       bin: {
-        otito: "./src/cli.js",
+        solumbe: "./src/cli.js",
       },
     }),
   );
@@ -59,7 +59,7 @@ test("generateContextPack returns task-aware files, tests, and commands", () => 
 });
 
 test("generateContextPack gates imports/exports/symbols evidence behind includeEvidence", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-evidence-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-evidence-"));
   fs.mkdirSync(path.join(root, "src", "lib"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "evidence-fixture", scripts: { test: "node --test" } }));
   fs.writeFileSync(
@@ -91,7 +91,7 @@ test("generateContextPack gates imports/exports/symbols evidence behind includeE
 });
 
 test("generateContextPack falls back to entrypoints and configs when no task keywords match", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-fallback-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-fallback-"));
   fs.mkdirSync(path.join(root, "src", "components"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fallback-fixture", scripts: { build: "vite build" } }));
   fs.writeFileSync(path.join(root, "vite.config.ts"), "export default { plugins: [] };\n");
@@ -113,7 +113,7 @@ test("generateContextPack falls back to entrypoints and configs when no task key
 });
 
 test("generateContextPack fallback ranking is deterministic across runs", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-fallback-det-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-fallback-det-"));
   fs.mkdirSync(path.join(root, "src"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "fallback-det-fixture" }));
   fs.writeFileSync(path.join(root, "src", "main.ts"), "export function bootstrap() { return 1; }\n");
@@ -130,7 +130,7 @@ test("generateContextPack fallback ranking is deterministic across runs", () => 
 });
 
 test("generateContextPack falls back to low-scored matches for narrow symbol queries", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-symbol-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-symbol-"));
   fs.mkdirSync(path.join(root, "src", "services"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "symbol-fixture" }));
   fs.writeFileSync(path.join(root, "src", "services", "events-service.ts"), "export function submitRsvp() { return true; }\n");
@@ -142,7 +142,7 @@ test("generateContextPack falls back to low-scored matches for narrow symbol que
 });
 
 test("generateContextPack ranks email service methods as hotspots over booking controllers", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-hotspots-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-hotspots-"));
   fs.mkdirSync(path.join(root, "src", "email"), { recursive: true });
   fs.mkdirSync(path.join(root, "src", "booking"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "hotspot-fixture", scripts: { test: "node --test" } }));
@@ -185,7 +185,7 @@ test("generateContextPack ranks email service methods as hotspots over booking c
 });
 
 test("generateContextPack keeps the signup verification auth flow ahead of generic email services", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-auth-flow-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-auth-flow-"));
   fs.mkdirSync(path.join(root, "src", "authentication"), { recursive: true });
   fs.mkdirSync(path.join(root, "src", "email"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "auth-flow-fixture", scripts: { test: "node --test" } }));
@@ -227,7 +227,7 @@ test("generateContextPack keeps the signup verification auth flow ahead of gener
   assert.ok(result.data.hotspots.some((hotspot) => hotspot.path === "src/authentication/auth.controller.ts" && hotspot.symbol === "sendRegistrationOtp"));
 
   const terminal = formatContextPackTerminal(result.data, (options) => createRenderer({ ...options, emoji: true, color: true, width: 78 }));
-  assert.match(terminal, /otito context · repository guide/);
+  assert.match(terminal, /solumbe context · repository guide/);
   assert.match(terminal, /🔥 Start here/);
   assert.match(terminal, /🥇 Primary files/);
   assert.match(terminal, /POST register/);
@@ -275,7 +275,7 @@ test("generateContextPack keeps an explicit Handlebars message template beside i
 // literally reference the compound field (dateOfBirth), not files that merely
 // share one or two generic single-token overlaps with the query.
 test("generateContextPack surfaces literal dateOfBirth references over generic date/booking token overlap", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-dob-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-dob-"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "sample-events-app", scripts: { test: "node --test" } }));
 
   const write = (relPath, content) => {
@@ -379,7 +379,7 @@ test("generateContextPack surfaces literal dateOfBirth references over generic d
 });
 
 test("generateContextPack reports the live working tree, not the one the cached index saw", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-live-git-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-live-git-"));
   const git = (...args) => execFileSync("git", args, { cwd: root, stdio: "pipe" });
   git("init", "-q");
   git("config", "user.email", "t@example.com");
@@ -465,14 +465,14 @@ test("generateContextPack puts a named test note in Primary Files rather than dr
 
 // --- Regression: "review/debug bugs" queries with no action verb, and a
 // multi-repo request naming one repo by a word from its own folder name ---
-// Recorded gap: `otito context "ticket scanning (QR check-in) and date/time
+// Recorded gap: `solumbe context "ticket scanning (QR check-in) and date/time
 // display formatting bugs in the mobile app"` across [mobile, api] repos came
 // back with intent "unknown", the ambiguous-action open question, and primary
 // files almost entirely from the larger API repo even though the request said
 // "in the mobile app".
 
 test("generateContextPack infers a debug intent from bug-report language that names no action verb", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-bugreport-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-bugreport-"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "bugreport-fixture", scripts: { test: "node --test" } }));
   fs.mkdirSync(path.join(root, "lib"), { recursive: true });
   fs.writeFileSync(path.join(root, "lib", "scanner.ts"), "export function scanTicket(code) { return code; }\n");
@@ -486,7 +486,7 @@ test("generateContextPack infers a debug intent from bug-report language that na
 });
 
 test("generateContextPack still reports an unknown intent when the request names neither a verb nor a bug word", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-context-noaction-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-context-noaction-"));
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "noaction-fixture", scripts: { test: "node --test" } }));
   fs.mkdirSync(path.join(root, "lib"), { recursive: true });
   fs.writeFileSync(path.join(root, "lib", "scanner.ts"), "export function scanTicket(code) { return code; }\n");

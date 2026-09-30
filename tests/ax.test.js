@@ -12,7 +12,7 @@ import { generateAxScore, changeabilityFromTokens, bandFor } from "../src/lib/ax
  * @returns {string}
  */
 function makeRepo(opts = {}) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "otito-ax-"));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "solumbe-ax-"));
   fs.mkdirSync(path.join(root, "src", "events"), { recursive: true });
   fs.writeFileSync(path.join(root, "package.json"), JSON.stringify({ name: "events-api", scripts: opts.scripts ?? {} }));
   fs.writeFileSync(

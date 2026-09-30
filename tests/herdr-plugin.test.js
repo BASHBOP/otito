@@ -2,14 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_REQUESTS, buildOtitoArgs, parseInvocationContext, requestFromContext } from "../integrations/herdr/runtime.mjs";
+import { DEFAULT_REQUESTS, buildSolumbeArgs, parseInvocationContext, requestFromContext } from "../integrations/herdr/runtime.mjs";
 import { formatActionBar, formatTrustError, formatTrustSummary } from "../integrations/herdr/trust-pane.mjs";
 
 const manifestPath = fileURLToPath(new URL("../integrations/herdr/herdr-plugin.toml", import.meta.url));
 
-test("Herdr manifest exposes the bounded Otito trust workflow", () => {
+test("Herdr manifest exposes the bounded Solumbe trust workflow", () => {
   const manifest = readFileSync(manifestPath, "utf8");
-  assert.match(manifest, /id = "bashbop\.otito"/);
+  assert.match(manifest, /id = "bashbop\.solumbe"/);
   assert.match(manifest, /min_herdr_version = "0\.8\.2"/);
   for (const action of ["doctor", "context", "impact", "review", "gate-staged", "model-route"]) {
     assert.match(manifest, new RegExp(`id = "${action}"`));
@@ -26,7 +26,7 @@ test("invocation context is defensive and selected text becomes the request", ()
 });
 
 test("staged gate arguments bind request, base, validation, and staged tree", () => {
-  const args = buildOtitoArgs("gate-staged", {
+  const args = buildSolumbeArgs("gate-staged", {
     repo: "/tmp/repo",
     request: "ship the plugin",
     base: "origin/main",
@@ -34,8 +34,8 @@ test("staged gate arguments bind request, base, validation, and staged tree", ()
   assert.deepEqual(args, ["gate", "/tmp/repo", "--staged", "--run-validation", "--request", "ship the plugin", "--base", "origin/main"]);
 });
 
-test("model-route arguments call otito ax as JSON", () => {
-  const args = buildOtitoArgs("model-route", {
+test("model-route arguments call solumbe ax as JSON", () => {
+  const args = buildSolumbeArgs("model-route", {
     repo: "/tmp/repo",
     request: "fix a typo in README",
   });
