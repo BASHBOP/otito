@@ -15,7 +15,7 @@ This project follows SemVer.
 - **Post-merge attestation keeps to main's first-parent line.** A PR into `develop` whose CI finished after it merged resolved to its `develop` merge commit, and reconciliation walked `develop`'s first-parent line into the main ledger (four records on 2026-09-29), so every main attestation since v3.4.0 failed with a coverage gap. The resolve step now attests a PR's merge commit only when the PR merged into `main`, and `reconcile-attestations.sh` refuses any target whose first-parent history does not pass through the ledger tip, before writing a record.
 - **README Glama badges point at the Solumbe listing.** The score badge and the card linked the pre-rename `BASHBOP/otito` listing on Glama; both now use `BASHBOP/solumbe`, and `rebrand:check` no longer lets the old Glama URL through.
 - **Host configs start under GUI hosts.** They now pin the absolute `node` binary and CLI path instead of a bare `solumbe` command. GUI hosts such as Claude Desktop, Cursor and VS Code do not inherit a shell `PATH`, so under nvm, Volta or Homebrew the documented `"command": "solumbe"` could not start. When run through `npx`, the installer starts the server through `npx` rather than pinning a path inside the npx cache.
-- **The MCP setup guide has a Claude Code section.** It now has the Claude Code section the README linked to.
+- **The MCP setup guide has a Claude Code section.** The README linked to one that did not exist.
 
 ## [4.0.0] - 2026-09-30
 
