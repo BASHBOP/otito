@@ -4,7 +4,7 @@
 
 > For teams that want any coding agent to produce evidence a human can trust before merge.
 
-**v4.0.0** is published to npm, GitHub Releases, and the official MCP Registry. Solumbe is a Bashbop Ltd product, MIT licensed.
+**v4.1.0** is published to npm, GitHub Releases, and the official MCP Registry. Solumbe is a Bashbop Ltd product, MIT licensed.
 
 Formerly **Òtítọ́** (`@bashbop/otito`), renamed in 4.0.0. <!-- rebrand-keep -->
 
@@ -20,6 +20,15 @@ Formerly **Òtítọ́** (`@bashbop/otito`), renamed in 4.0.0. <!-- rebrand-keep
 ---
 
 ## What's New
+
+!!! tip "v4.1.0 published (2026-10-01)"
+    One command connects Solumbe to your agents. No command, field or schema was removed.
+
+    - `solumbe install --host all` adds the `solumbe` MCP server to Claude Code, Claude Desktop, Codex CLI, Cursor, VS Code, Gemini CLI and Kimi Code CLI, wherever it finds them; `--host claude-code,cursor` names hosts instead, and `--dry-run` shows the plan. It checks that the server answers before writing anything, keeps a `.solumbe.bak` of each config it changes, and lists leftover entries from the 4.0.0 rename for you to remove. [docs/02](02-mcp-agent-workflows/README.md#connect-your-agents) has the detail.
+    - Host configs pin the absolute `node` and CLI path, so Claude Desktop, Cursor and VS Code start the server under nvm, Volta or Homebrew, where a bare `solumbe` command could not be found.
+    - The MCP setup guide has its Claude Code section, and post-merge attestation stays on `main`'s first-parent line.
+
+    [npm v4.1.0](https://www.npmjs.com/package/@bashbop/solumbe/v/4.1.0) · [GitHub Release](https://github.com/BASHBOP/solumbe/releases/tag/v4.1.0) · [MCP Registry](https://registry.modelcontextprotocol.io/?q=io.github.BASHBOP%2Fsolumbe)
 
 !!! tip "v4.0.0 published (2026-09-30)"
     Òtítọ́ is now Solumbe. Behaviour is unchanged from 3.5.0; every name moves, with no fallback to the old ones. <!-- rebrand-keep -->
@@ -199,7 +208,7 @@ flowchart LR
 === "Install"
 
     ```bash
-    npm install -g @bashbop/solumbe@4.0.0
+    npm install -g @bashbop/solumbe@4.1.0
     solumbe doctor
     solumbe context "review this change" --path .
     ```
@@ -207,7 +216,7 @@ flowchart LR
 === "No Global Install"
 
     ```bash
-    npx -y @bashbop/solumbe@4.0.0 doctor
+    npx -y @bashbop/solumbe@4.1.0 doctor
     ```
 
 === "Source Checkout"
