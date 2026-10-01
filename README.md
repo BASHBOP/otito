@@ -21,7 +21,10 @@ A passing local gate is never an automatic merge approval: hosted CI, GitHub rev
 ```bash
 npm install -g @bashbop/solumbe
 solumbe doctor
+solumbe install --host all
 ```
+
+The last command connects Solumbe's MCP server to every agent host it finds: Claude Code, Claude Desktop, Codex CLI, Cursor, VS Code, Gemini CLI and Kimi Code CLI. Add `--dry-run` to see the plan first, or name hosts with `--host claude-code,cursor`. Restart each host afterwards.
 
 Or without installing: `npx -y @bashbop/solumbe doctor`.
 
@@ -117,7 +120,7 @@ Solumbe ships a stdio MCP server exposing **14 tools**: `repo_inspect`, `repo_ma
 }
 ```
 
-Published in the MCP Registry as `io.github.BASHBOP/solumbe`. Repo-map lookups use an external per-user cache and never write into the inspected repository. Host-specific setup for Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI, and Kimi Code is in [MCP and Agent Workflows](https://bashbop.github.io/solumbe/02-mcp-agent-workflows/).
+`solumbe install --host all` writes this entry for you, using absolute paths so hosts that do not inherit your shell `PATH` can still start it. Published in the MCP Registry as `io.github.BASHBOP/solumbe`. Repo-map lookups use an external per-user cache and never write into the inspected repository. Host-specific setup for Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI, and Kimi Code is in [MCP and Agent Workflows](https://bashbop.github.io/solumbe/02-mcp-agent-workflows/).
 
 ## How it compares
 
