@@ -1007,6 +1007,10 @@ async function handleReview(parsed) {
 async function handleInstall(parsed) {
   const { formatInstallSummary, getInstallPlan, getWelcomeMessage, installSolumbe } = await import("./lib/install.js");
 
+  if (parsed.flags.host !== undefined) {
+    return handleHostInstall(parsed);
+  }
+
   let global = Boolean(parsed.flags.global);
   let link = Boolean(parsed.flags.link);
 
@@ -1022,7 +1026,11 @@ async function handleInstall(parsed) {
       { value: "plan", label: "Just show me the plan (no changes)" },
       { value: "global", label: "Install globally (npm install -g .)" },
       { value: "link", label: "Link for development (npm link)" },
+      { value: "hosts", label: "Connect the agents on this machine (Claude, Codex, Cursor, VS Code, Gemini, Kimi)" },
     ]);
+    if (mode === "hosts") {
+      return handleHostInstall({ ...parsed, flags: { ...parsed.flags, host: "all" } });
+    }
     global = mode === "global";
     link = mode === "link";
   }
@@ -1049,6 +1057,50 @@ async function handleInstall(parsed) {
   if (result.applied === false) {
     process.exitCode = 1;
   }
+}
+
+/** @param {CliArgs} parsed */
+async function handleHostInstall(parsed) {
+  const { formatHostInstallSummary, installHosts, parseHostList } = await import("./lib/hosts.js");
+  const value = typeof parsed.flags.host === "string" ? parsed.flags.host : "";
+  const hosts = parseHostList(value);
+  const conflict =
+    parsed.flags.global || parsed.flags.link
+      ? "--host cannot be combined with --global or --link; install first, then run `solumbe install --host` from the installed binary."
+      : undefined;
+  const error = conflict ?? ("error" in hosts ? hosts.error : undefined);
+  if (error || "error" in hosts) {
+    if (parsed.flags.json) {
+      printJson({ ok: false, error });
+    } else {
+      printText(String(error));
+    }
+    process.exitCode = 1;
+    return;
+  }
+
+  const canvas = typeof parsed.flags.canvas === "string" ? parsed.flags.canvas : undefined;
+  const result = installHosts({
+    hosts,
+    all: value.split(",").some((item) => item.trim().toLowerCase() === "all"),
+    dryRun: Boolean(parsed.flags.dry_run),
+    canvasUrl: canvas,
+  });
+  if (!result.ok) {
+    process.exitCode = 1;
+  }
+  if (parsed.flags.json) {
+    printJson(result);
+    return;
+  }
+
+  /** @type {ClosingLine} */
+  const close = result.dryRun
+    ? { status: "runs" }
+    : result.ok
+      ? { status: "verified" }
+      : { status: "not-verified", detail: result.serverCheck?.ok === false ? result.serverCheck.detail : "one or more hosts could not be connected" };
+  printText(formatHostInstallSummary(result, { emoji: emojiPreference(parsed), color: colorPreference(parsed), theme: themePreference(parsed) }, close));
 }
 
 /** @param {CliArgs} parsed */

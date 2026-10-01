@@ -6,6 +6,21 @@ This project follows SemVer.
 
 ## [Unreleased]
 
+## [4.1.0] - 2026-10-01
+
+One command connects Solumbe to every agent host on the machine, and host configs now start under GUI hosts. No command, field or schema was removed.
+
+### Added
+
+- **`solumbe install --host` connects Solumbe to your agents in one step.** `--host all` finds Claude Code, Claude Desktop, Codex CLI, Cursor, VS Code, Gemini CLI and Kimi Code CLI on the machine and adds a `solumbe` MCP server to each; name hosts instead (`--host claude-code,cursor`) to configure only those. Before writing anything it starts the server once and checks that it answers an MCP `initialize` request, so a host is never given a command that cannot start. JSON configs are merged in place with a `.solumbe.bak` backup, and a config it cannot parse is left untouched; Claude Code and Codex go through `claude mcp add-json` and `codex mcp add`. Leftover entries under another name that still launch Solumbe or Òtítọ́ are reported, never removed. `--dry-run` prints the plan, and `--canvas <url>` adds the Realtime Canvas variables. Re-running it repairs hosts still pointing at a pre-4.0.0 `otito` path.
+
+### Fixed
+
+- **Post-merge attestation keeps to main's first-parent line.** A PR into `develop` whose CI finished after it merged resolved to its `develop` merge commit, and reconciliation walked `develop`'s first-parent line into the main ledger (four records on 2026-09-29), so every main attestation since v3.4.0 failed with a coverage gap. The resolve step now attests a PR's merge commit only when the PR merged into `main`, and `reconcile-attestations.sh` refuses any target whose first-parent history does not pass through the ledger tip, before writing a record.
+- **README Glama badges point at the Solumbe listing.** The score badge and the card linked the pre-rename `BASHBOP/otito` listing on Glama; both now use `BASHBOP/solumbe`, and `rebrand:check` no longer lets the old Glama URL through.
+- **Host configs start under GUI hosts.** They now pin the absolute `node` binary and CLI path instead of a bare `solumbe` command. GUI hosts such as Claude Desktop, Cursor and VS Code do not inherit a shell `PATH`, so under nvm, Volta or Homebrew the documented `"command": "solumbe"` could not start. When run through `npx`, the installer starts the server through `npx` rather than pinning a path inside the npx cache.
+- **The MCP setup guide has a Claude Code section.** The README linked to one that did not exist.
+
 ## [4.0.0] - 2026-09-30
 
 Òtítọ́ is now Solumbe: the package, binary, MCP server, config files, evidence folders and environment variables all take the new name, with no fallback to the old ones. Behaviour is unchanged from 3.5.0.

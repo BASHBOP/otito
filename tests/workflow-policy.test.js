@@ -226,6 +226,40 @@ test("reconciliation rejects a cryptographically valid ledger with a first-paren
   assert.match(result.stderr, /first-parent coverage gap/);
 });
 
+test("reconciliation refuses a target on another first-parent line, such as a develop merge commit", () => {
+  const { root, commits } = createLinearRepo();
+  // develop branches off the first commit and later merges main in, so main's
+  // tip is an ancestor of its merge commit, but only through the second parent.
+  git(root, ["switch", "-q", "-c", "develop", commits[0]]);
+  fs.writeFileSync(path.join(root, "develop.txt"), "develop\n");
+  git(root, ["add", "."]);
+  git(root, ["commit", "-qm", "develop work"]);
+  git(root, ["merge", "-q", "--no-ff", "-m", "merge main into develop", commits[2]]);
+  const developMerge = git(root, ["rev-parse", "HEAD"]);
+  fs.writeFileSync(path.join(root, "audit-pilot", "ledger.jsonl"), `${commits.map((sha) => JSON.stringify({ mergeSha: sha })).join("\n")}\n`);
+
+  const result = spawnSync("bash", [path.join(root, "scripts", "reconcile-attestations.sh")], {
+    cwd: root,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      GITHUB_SHA: developMerge,
+      SOLUMBE_TARGET_SHA: "",
+      SOLUMBE_ATTEST_DRY_RUN: "1",
+    },
+  });
+
+  assert.equal(result.status, 1, result.stdout);
+  assert.match(result.stderr, /does not continue the ledger/);
+  assert.equal(result.stdout.trim(), "", "nothing is listed for attestation");
+});
+
+test("only a PR merged into main resolves to a commit for the main ledger", () => {
+  const workflow = read(".github/workflows/post-merge-attest.yml");
+  assert.match(workflow, /BASE_REF="\$\(gh api "repos\/\$\{GITHUB_REPOSITORY\}\/pulls\/\$\{PR_NUMBER\}" --jq '\.base\.ref'\)"/);
+  assert.match(workflow, /if \[ "\$BASE_REF" = "main" \]; then\n\s+TARGET_SHA="\$\(gh api [^\n]+merge_commit_sha'\)"\n\s+else/);
+});
+
 test("a version bump that reaches main is tagged once CI passes on it, and the tag starts Release", () => {
   const workflow = read(".github/workflows/tag-release.yml");
   assert.match(workflow, /workflow_run:\n\s+workflows: \["solumbe CI"\]\n\s+types: \[completed\]/);

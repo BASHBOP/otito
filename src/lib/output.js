@@ -114,6 +114,7 @@ Usage:
   solumbe pass-pr [selector] [--path repo] [--policy x] [--governance x] [--request text] [--min-convergence n] [--receipt hash|file] [--out file] [--json]
   solumbe review [repo | --path repo] [request] [--request text] [--base ref] [--pr selector] [--policy x] [--governance x] [--min-convergence n] [--receipt hash|file] [--json] [--mermaid]
   solumbe install|i [--global|--link] [--json]
+  solumbe install --host all|claude-code,claude-desktop,codex,cursor,vscode,gemini,kimi [--dry-run] [--canvas url] [--json]   # connect the MCP server to agent hosts
   solumbe map <path> [--out file] [--json] [--mermaid]
   solumbe structure <path> [--pattern glob] [--out file] [--exclude file] [--json]
   solumbe deps <package> [--query text] [--limit n] [--json]

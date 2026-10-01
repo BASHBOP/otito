@@ -25,13 +25,38 @@ node src/cli.js doctor
 node src/cli.js mcp
 ```
 
-From a local checkout:
+The MCP server uses stdio. The agent host starts `solumbe mcp` as a child process and speaks JSON-RPC over standard input and output.
+
+---
+
+## Connect Your Agents
+
+One command adds Solumbe to every agent host it finds on the machine:
 
 ```bash
-node src/cli.js mcp
+solumbe install --host all
 ```
 
-The MCP server uses stdio. The agent host starts `solumbe mcp` as a child process and speaks JSON-RPC over standard input and output.
+| Host | Where the entry goes |
+| --- | --- |
+| Claude Code | user scope, through `claude mcp add-json` |
+| Claude Desktop | `claude_desktop_config.json` |
+| Codex CLI | `~/.codex/config.toml`, through `codex mcp add` |
+| Cursor | `~/.cursor/mcp.json` |
+| VS Code | user `mcp.json` |
+| Gemini CLI | `~/.gemini/settings.json` |
+| Kimi Code CLI | `~/.kimi-code/mcp.json` |
+
+- `--host claude-code,cursor` configures only the hosts you name, and fails if one of them is missing.
+- `--dry-run` prints what would change and touches nothing.
+- `--canvas http://127.0.0.1:7801` adds the [Realtime Canvas](#realtime-canvas-and-model-routing-opt-in) variables to each host.
+- `--json` returns the result for scripts.
+
+Before it writes anything, the installer starts the server once and checks that it answers an MCP `initialize` request. Each host gets the absolute path of `node` and of Solumbe's CLI, not a bare `solumbe` command, because Claude Desktop, Cursor and VS Code start servers without your shell `PATH`, so under nvm, Volta or Homebrew they cannot find `solumbe` or `node` on their own. JSON configs are merged in place, and the original is kept as `<file>.solumbe.bak`. A config it cannot parse, such as a `mcp.json` with comments, is left untouched and reported. An existing `solumbe` entry is replaced. Other entries that still launch Solumbe, such as one left from before the 4.0.0 rename, are listed so you can remove them.
+
+Restart each host after running it. Run it again after you upgrade Node or move a checkout, so the pinned paths stay current.
+
+The sections below show what the installer writes, for setting up a host by hand.
 
 ---
 
@@ -74,6 +99,16 @@ For a local checkout instead of a global install:
 
 Keep `/path/to/solumbe` as a private local path. Do not commit machine-specific absolute paths to public documentation or shared repositories.
 
+### Claude Code
+
+Add the server at user scope so every project sees it:
+
+```bash
+claude mcp add-json solumbe '{"type":"stdio","command":"solumbe","args":["mcp"]}' --scope user
+```
+
+Use `--scope project` to write a shared `.mcp.json` into one repository instead. Run `claude mcp list` to confirm it shows `solumbe ... Connected`, then start a new session; the tools appear as `mcp__solumbe__*`.
+
 ### Claude Desktop
 
 Claude Desktop uses `claude_desktop_config.json` with a top-level `mcpServers` object.
@@ -95,6 +130,8 @@ Claude Desktop uses `claude_desktop_config.json` with a top-level `mcpServers` o
   }
 }
 ```
+
+Claude Desktop starts servers without your shell `PATH`, so under nvm, Volta or Homebrew a bare `solumbe` may not be found. Use the absolute paths from `which node` and `npm root -g` (`"command": "/path/to/node"`, `"args": ["/path/to/node_modules/@bashbop/solumbe/src/cli.js", "mcp"]`), or let `solumbe install --host claude-desktop` write them. The same applies to Cursor and VS Code.
 
 After editing the config, fully restart Claude Desktop. If the server does not appear, run `solumbe doctor` and `solumbe mcp` manually in a terminal first, then check the MCP logs for the host.
 

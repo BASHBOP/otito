@@ -4,11 +4,11 @@
 
 Formerly **Òtítọ́** (`@bashbop/otito`), renamed in 4.0.0; the [CHANGELOG](CHANGELOG.md) maps every old name to its new one. <!-- rebrand-keep -->
 
-[![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/solumbe/solumbe-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/solumbe/actions/workflows/solumbe-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/solumbe?style=flat-square)](https://www.npmjs.com/package/@bashbop/solumbe) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/) [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/bashbop/otito) [![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/score.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
+[![CI](https://img.shields.io/github/actions/workflow/status/BASHBOP/solumbe/solumbe-ci.yml?style=flat-square&label=CI)](https://github.com/BASHBOP/solumbe/actions/workflows/solumbe-ci.yml) [![npm](https://img.shields.io/npm/v/@bashbop/solumbe?style=flat-square)](https://www.npmjs.com/package/@bashbop/solumbe) [![license: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE) [![node](https://img.shields.io/badge/node-%E2%89%A518.18-339933?style=flat-square)](https://nodejs.org/) [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/bashbop/otito) [![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/solumbe/badges/score.svg)](https://glama.ai/mcp/servers/BASHBOP/solumbe)
 
 ![solumbe demo](solumbe-demo.gif)
 
-[![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/otito/badges/card.svg)](https://glama.ai/mcp/servers/BASHBOP/otito)
+[![Solumbe MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/BASHBOP/solumbe/badges/card.svg)](https://glama.ai/mcp/servers/BASHBOP/solumbe)
 
 Solumbe is a local-first, deterministic, model-agnostic trust layer for AI-assisted development. It builds task-aware repository context before an agent edits, scores how much a change actually touches, and gates merge readiness against the exact staged tree, with no server, no account, and no code leaving the machine.
 
@@ -21,7 +21,10 @@ A passing local gate is never an automatic merge approval: hosted CI, GitHub rev
 ```bash
 npm install -g @bashbop/solumbe
 solumbe doctor
+solumbe install --host all
 ```
+
+The last command connects Solumbe's MCP server to every agent host it finds: Claude Code, Claude Desktop, Codex CLI, Cursor, VS Code, Gemini CLI and Kimi Code CLI. Add `--dry-run` to see the plan first, or name hosts with `--host claude-code,cursor`. Restart each host afterwards.
 
 Or without installing: `npx -y @bashbop/solumbe doctor`.
 
@@ -117,7 +120,7 @@ Solumbe ships a stdio MCP server exposing **14 tools**: `repo_inspect`, `repo_ma
 }
 ```
 
-Published in the MCP Registry as `io.github.BASHBOP/solumbe`. Repo-map lookups use an external per-user cache and never write into the inspected repository. Host-specific setup for Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI, and Kimi Code is in [MCP and Agent Workflows](https://bashbop.github.io/solumbe/02-mcp-agent-workflows/).
+`solumbe install --host all` writes this entry for you, using absolute paths so hosts that do not inherit your shell `PATH` can still start it. Published in the MCP Registry as `io.github.BASHBOP/solumbe`. Repo-map lookups use an external per-user cache and never write into the inspected repository. Host-specific setup for Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI, and Kimi Code is in [MCP and Agent Workflows](https://bashbop.github.io/solumbe/02-mcp-agent-workflows/).
 
 ## How it compares
 
